@@ -2,19 +2,22 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import { GET as getLeaderboardRoute } from '../../app/api/leaderboard+api';
 import { getLeaderboard } from '../../src/backend/leaderboard';
+import { memoryContext } from '../../src/backend/http';
 import {
   DEMO_USER_ID,
   resetStore,
   setState,
 } from '../../src/backend/store';
 
+const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+
 afterEach(() => {
   resetStore();
 });
 
 describe('getLeaderboard', () => {
-  test('ranks seed users by missionsCompleted desc then xp desc', () => {
-    const { leaders } = getLeaderboard(DEMO_USER_ID);
+  test('ranks seed users by missionsCompleted desc then xp desc', async () => {
+    const { leaders } = await getLeaderboard(ctx());
 
     expect(leaders.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(leaders.map((entry) => entry.user.name)).toEqual([
@@ -33,7 +36,7 @@ describe('getLeaderboard', () => {
     ]);
   });
 
-  test('breaks missionsCompleted ties by xp desc', () => {
+  test('breaks missionsCompleted ties by xp desc', async () => {
     setState((state) => ({
       ...state,
       users: state.users.map((user) =>
@@ -41,7 +44,7 @@ describe('getLeaderboard', () => {
       ),
     }));
 
-    const { leaders } = getLeaderboard(DEMO_USER_ID);
+    const { leaders } = await getLeaderboard(ctx());
 
     expect(leaders.slice(0, 2).map((entry) => entry.user.id)).toEqual([
       'user-mia',
@@ -49,8 +52,8 @@ describe('getLeaderboard', () => {
     ]);
   });
 
-  test('excludes users with zero completed missions', () => {
-    const { leaders } = getLeaderboard(DEMO_USER_ID);
+  test('excludes users with zero completed missions', async () => {
+    const { leaders } = await getLeaderboard(ctx());
     const ids = leaders.map((entry) => entry.user.id);
 
     expect(leaders).toHaveLength(6);
@@ -58,31 +61,31 @@ describe('getLeaderboard', () => {
     expect(ids).not.toContain('user-riley');
   });
 
-  test('marks only the requesting user with isMe', () => {
-    const { leaders } = getLeaderboard(DEMO_USER_ID);
+  test('marks only the requesting user with isMe', async () => {
+    const { leaders } = await getLeaderboard(ctx());
 
     expect(
       leaders.filter((entry) => entry.isMe).map((entry) => entry.user.id),
     ).toEqual([DEMO_USER_ID]);
   });
 
-  test('marks a different requesting user with isMe on their row', () => {
-    const { leaders } = getLeaderboard('user-mia');
+  test('marks a different requesting user with isMe on their row', async () => {
+    const { leaders } = await getLeaderboard(ctx('user-mia'));
 
     expect(
       leaders.filter((entry) => entry.isMe).map((entry) => entry.user.id),
     ).toEqual(['user-mia']);
   });
 
-  test('computes design rankDelta values from stored previousRank', () => {
-    const { leaders } = getLeaderboard(DEMO_USER_ID);
+  test('computes design rankDelta values from stored previousRank', async () => {
+    const { leaders } = await getLeaderboard(ctx());
 
     expect(leaders.map((entry) => entry.rankDelta)).toEqual([
       0, 1, -1, 2, 0, 1,
     ]);
   });
 
-  test('rankDelta is 0 for a newly ranked user without a previousRank', () => {
+  test('rankDelta is 0 for a newly ranked user without a previousRank', async () => {
     setState((state) => ({
       ...state,
       users: state.users.map((user) =>
@@ -90,7 +93,7 @@ describe('getLeaderboard', () => {
       ),
     }));
 
-    const { leaders } = getLeaderboard(DEMO_USER_ID);
+    const { leaders } = await getLeaderboard(ctx());
     const riley = leaders.find((entry) => entry.user.id === 'user-riley');
 
     expect(riley?.rank).toBe(7);

@@ -5,8 +5,19 @@ import type { UserProgress } from './types';
 
 export const DEFAULT_PROGRESS_TITLE = 'LAKE EXPLORER';
 
-export function buildUserProgress(user: StoredUser | undefined): UserProgress {
-  const xp = user?.xp ?? 0;
+interface ProgressStats {
+  readonly xp: number;
+  readonly streakDays: number;
+  readonly missionsCompleted: number;
+  readonly title: string;
+}
+
+export function buildProgress({
+  missionsCompleted,
+  streakDays,
+  title,
+  xp,
+}: ProgressStats): UserProgress {
   const { level, xpForNextLevel, xpIntoLevel, xpToNextLevel } =
     computeProgress(xp);
 
@@ -16,8 +27,17 @@ export function buildUserProgress(user: StoredUser | undefined): UserProgress {
     xpIntoLevel,
     xpForNextLevel,
     xpToNextLevel,
+    streakDays,
+    missionsCompleted,
+    title,
+  };
+}
+
+export function buildUserProgress(user: StoredUser | undefined): UserProgress {
+  return buildProgress({
+    xp: user?.xp ?? 0,
     streakDays: user?.streakDays ?? 0,
     missionsCompleted: user?.missionsCompleted ?? 0,
     title: user?.title ?? DEFAULT_PROGRESS_TITLE,
-  };
+  });
 }

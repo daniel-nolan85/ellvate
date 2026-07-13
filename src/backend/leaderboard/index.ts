@@ -3,4 +3,4 @@ export type {
   LeaderboardEntry,
   LeaderboardResult,
   PersonRef,
-} from './leaderboard';
+} from './types';

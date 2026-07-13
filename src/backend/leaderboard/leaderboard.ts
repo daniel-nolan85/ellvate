@@ -1,23 +1,13 @@
+import type { RequestContext } from '@/src/backend/http';
 import { getState } from '@/src/backend/store';
 import type { StoredUser } from '@/src/backend/store';
 
-export interface PersonRef {
-  readonly id: string;
-  readonly name: string;
-}
+import { getLeaderboardSupabase } from './leaderboard-supabase';
+import type { LeaderboardEntry, LeaderboardResult } from './types';
 
-export interface LeaderboardEntry {
-  readonly rank: number;
-  readonly user: PersonRef;
-  readonly isMe: boolean;
-  readonly missionsCompleted: number;
-  readonly xp: number;
-  readonly rankDelta: number;
-}
-
-export interface LeaderboardResult {
-  readonly leaders: readonly LeaderboardEntry[];
-}
+// ---------------------------------------------------------------------------
+// In-memory backend (tests / no-DB dev)
+// ---------------------------------------------------------------------------
 
 const byMissionsThenXp = (a: StoredUser, b: StoredUser): number =>
   b.missionsCompleted - a.missionsCompleted || b.xp - a.xp;
@@ -35,7 +25,7 @@ const toEntry = (
   rankDelta: user.previousRank === null ? 0 : user.previousRank - rank,
 });
 
-export function getLeaderboard(userId: string): LeaderboardResult {
+function getLeaderboardMemory(userId: string): LeaderboardResult {
   const ranked = getState()
     .users.filter((user) => user.missionsCompleted > 0)
     .sort(byMissionsThenXp);
@@ -43,4 +33,16 @@ export function getLeaderboard(userId: string): LeaderboardResult {
   return {
     leaders: ranked.map((user, index) => toEntry(user, index + 1, userId)),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Backend dispatch
+// ---------------------------------------------------------------------------
+
+export async function getLeaderboard(
+  ctx: RequestContext,
+): Promise<LeaderboardResult> {
+  return ctx.supabase
+    ? getLeaderboardSupabase(ctx.supabase, ctx.userId)
+    : getLeaderboardMemory(ctx.userId);
 }

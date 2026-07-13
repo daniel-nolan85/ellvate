@@ -1,10 +1,12 @@
+import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, getState, setState } from '@/src/backend/store';
 
 import { getUserMissionEntry, resolveMissionStatus } from './mission-view';
-import { buildUserProgress } from './user-progress';
+import { checkInSupabase } from './missions-supabase';
 import type { CheckInResult, Mission } from './types';
+import { buildUserProgress } from './user-progress';
 
-export function checkIn(userId: string, missionId: string): CheckInResult {
+function checkInMemory(userId: string, missionId: string): CheckInResult {
   ensureUser(userId);
   const mission = getState().missions.find((item) => item.id === missionId);
 
@@ -95,4 +97,13 @@ export function checkIn(userId: string, missionId: string): CheckInResult {
       ),
     },
   };
+}
+
+export async function checkIn(
+  ctx: RequestContext,
+  missionId: string,
+): Promise<CheckInResult> {
+  return ctx.supabase
+    ? checkInSupabase(ctx.supabase, ctx.userId, missionId)
+    : checkInMemory(ctx.userId, missionId);
 }

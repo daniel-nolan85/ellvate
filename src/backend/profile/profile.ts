@@ -1,3 +1,4 @@
+import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, setState } from '@/src/backend/store';
 import type {
   AiComfortLevel,
@@ -6,6 +7,7 @@ import type {
   StoredProfile,
 } from '@/src/backend/store';
 
+import { getProfileSupabase, updateProfileSupabase } from './profile-supabase';
 import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate, ProfileValidationFailure } from './validate';
 
@@ -69,12 +71,12 @@ const isOnboardingComplete = (profile: StoredProfile): boolean =>
   profile.aiComfort !== null &&
   profile.interests.length >= ONBOARDING_MIN_INTERESTS;
 
-export function getProfile(userId: string): ProfileResult {
+function getProfileMemory(userId: string): ProfileResult {
   const user = ensureUser(userId);
   return { profile: toUserProfile(userId, user.profile) };
 }
 
-export function updateProfile(
+function updateProfileMemory(
   userId: string,
   input: unknown,
 ): UpdateProfileResult {
@@ -98,4 +100,21 @@ export function updateProfile(
   }));
 
   return { ok: true, profile: toUserProfile(userId, next) };
+}
+
+export async function getProfile(
+  ctx: RequestContext,
+): Promise<ProfileResult> {
+  return ctx.supabase
+    ? getProfileSupabase(ctx.supabase, ctx.userId)
+    : getProfileMemory(ctx.userId);
+}
+
+export async function updateProfile(
+  ctx: RequestContext,
+  input: unknown,
+): Promise<UpdateProfileResult> {
+  return ctx.supabase
+    ? updateProfileSupabase(ctx.supabase, ctx.userId, input)
+    : updateProfileMemory(ctx.userId, input);
 }

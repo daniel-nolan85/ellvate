@@ -5,7 +5,10 @@ import {
   PUT as putProfileRoute,
 } from '../../app/api/me/profile+api';
 import { getProfile, updateProfile } from '../../src/backend/profile';
+import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+
+const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 const defaultPrefs = {
   events: true,
@@ -20,7 +23,7 @@ afterEach(() => {
 });
 
 const expectFailure = (
-  result: ReturnType<typeof updateProfile>,
+  result: Awaited<ReturnType<typeof updateProfile>>,
   code: string,
 ): void => {
   expect(result.ok).toBe(false);
@@ -30,8 +33,8 @@ const expectFailure = (
 };
 
 describe('getProfile', () => {
-  test('returns the seeded default profile for demo-user', () => {
-    expect(getProfile(DEMO_USER_ID)).toEqual({
+  test('returns the seeded default profile for demo-user', async () => {
+    expect(await getProfile(ctx())).toEqual({
       profile: {
         userId: DEMO_USER_ID,
         role: null,
@@ -43,12 +46,12 @@ describe('getProfile', () => {
     });
   });
 
-  test('lazily creates a default profile for an unknown user', () => {
+  test('lazily creates a default profile for an unknown user', async () => {
     expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
       false,
     );
 
-    const { profile } = getProfile('user-ghost');
+    const { profile } = await getProfile(ctx('user-ghost'));
 
     expect(profile).toEqual({
       userId: 'user-ghost',
@@ -63,8 +66,8 @@ describe('getProfile', () => {
     );
   });
 
-  test('created users start off the leaderboard with no progress', () => {
-    getProfile('user-ghost');
+  test('created users start off the leaderboard with no progress', async () => {
+    await getProfile(ctx('user-ghost'));
     const created = getState().users.find((user) => user.id === 'user-ghost');
 
     expect(created).toMatchObject({
@@ -77,8 +80,8 @@ describe('getProfile', () => {
 });
 
 describe('updateProfile', () => {
-  test('applies a partial update without touching other fields', () => {
-    const result = updateProfile(DEMO_USER_ID, { role: 'resident' });
+  test('applies a partial update without touching other fields', async () => {
+    const result = await updateProfile(ctx(), { role: 'resident' });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -90,17 +93,17 @@ describe('updateProfile', () => {
     }
   });
 
-  test('persists updates to the store', () => {
-    updateProfile(DEMO_USER_ID, { interests: ['Boating', 'Dining'] });
+  test('persists updates to the store', async () => {
+    await updateProfile(ctx(), { interests: ['Boating', 'Dining'] });
 
-    expect(getProfile(DEMO_USER_ID).profile.interests).toEqual([
+    expect((await getProfile(ctx())).profile.interests).toEqual([
       'Boating',
       'Dining',
     ]);
   });
 
-  test('merges partial notification prefs over existing values', () => {
-    const result = updateProfile(DEMO_USER_ID, {
+  test('merges partial notification prefs over existing values', async () => {
+    const result = await updateProfile(ctx(), {
       notificationPrefs: { digest: true },
     });
 
@@ -113,80 +116,83 @@ describe('updateProfile', () => {
     }
   });
 
-  test('rejects a non-object body', () => {
-    expectFailure(updateProfile(DEMO_USER_ID, 'resident'), 'invalid_body');
-    expectFailure(updateProfile(DEMO_USER_ID, null), 'invalid_body');
-    expectFailure(updateProfile(DEMO_USER_ID, ['resident']), 'invalid_body');
+  test('rejects a non-object body', async () => {
+    expectFailure(await updateProfile(ctx(), 'resident'), 'invalid_body');
+    expectFailure(await updateProfile(ctx(), null), 'invalid_body');
+    expectFailure(await updateProfile(ctx(), ['resident']), 'invalid_body');
   });
 
-  test('rejects an unknown role', () => {
-    expectFailure(updateProfile(DEMO_USER_ID, { role: 'mayor' }), 'invalid_role');
-  });
-
-  test('rejects non-array interests', () => {
+  test('rejects an unknown role', async () => {
     expectFailure(
-      updateProfile(DEMO_USER_ID, { interests: 'Boating' }),
+      await updateProfile(ctx(), { role: 'mayor' }),
+      'invalid_role',
+    );
+  });
+
+  test('rejects non-array interests', async () => {
+    expectFailure(
+      await updateProfile(ctx(), { interests: 'Boating' }),
       'invalid_interests',
     );
   });
 
-  test('rejects interests with non-string items', () => {
+  test('rejects interests with non-string items', async () => {
     expectFailure(
-      updateProfile(DEMO_USER_ID, { interests: ['Boating', 42] }),
+      await updateProfile(ctx(), { interests: ['Boating', 42] }),
       'invalid_interests',
     );
   });
 
-  test('rejects more than 12 interests', () => {
+  test('rejects more than 12 interests', async () => {
     const interests = Array.from({ length: 13 }, (_, i) => `interest-${i}`);
 
     expectFailure(
-      updateProfile(DEMO_USER_ID, { interests }),
+      await updateProfile(ctx(), { interests }),
       'invalid_interests',
     );
   });
 
-  test('rejects an interest longer than 40 characters', () => {
+  test('rejects an interest longer than 40 characters', async () => {
     expectFailure(
-      updateProfile(DEMO_USER_ID, { interests: ['x'.repeat(41)] }),
+      await updateProfile(ctx(), { interests: ['x'.repeat(41)] }),
       'invalid_interests',
     );
   });
 
-  test('accepts 12 interests of exactly 40 characters', () => {
+  test('accepts 12 interests of exactly 40 characters', async () => {
     const interests = Array.from({ length: 12 }, (_, i) =>
       `${i}`.padEnd(40, 'x'),
     );
 
-    expect(updateProfile(DEMO_USER_ID, { interests }).ok).toBe(true);
+    expect((await updateProfile(ctx(), { interests })).ok).toBe(true);
   });
 
-  test('rejects an unknown aiComfort level', () => {
+  test('rejects an unknown aiComfort level', async () => {
     expectFailure(
-      updateProfile(DEMO_USER_ID, { aiComfort: 'expert' }),
+      await updateProfile(ctx(), { aiComfort: 'expert' }),
       'invalid_ai_comfort',
     );
   });
 
-  test('rejects non-boolean notification prefs', () => {
+  test('rejects non-boolean notification prefs', async () => {
     expectFailure(
-      updateProfile(DEMO_USER_ID, { notificationPrefs: { digest: 'yes' } }),
+      await updateProfile(ctx(), { notificationPrefs: { digest: 'yes' } }),
       'invalid_notification_prefs',
     );
     expectFailure(
-      updateProfile(DEMO_USER_ID, { notificationPrefs: null }),
+      await updateProfile(ctx(), { notificationPrefs: null }),
       'invalid_notification_prefs',
     );
   });
 
-  test('a failed update does not mutate the stored profile', () => {
-    updateProfile(DEMO_USER_ID, { role: 'mayor' });
+  test('a failed update does not mutate the stored profile', async () => {
+    await updateProfile(ctx(), { role: 'mayor' });
 
-    expect(getProfile(DEMO_USER_ID).profile.role).toBeNull();
+    expect((await getProfile(ctx())).profile.role).toBeNull();
   });
 
-  test('does not stamp onboardedAt until all onboarding fields are set', () => {
-    const result = updateProfile(DEMO_USER_ID, {
+  test('does not stamp onboardedAt until all onboarding fields are set', async () => {
+    const result = await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining'],
       aiComfort: 'casual',
@@ -198,10 +204,10 @@ describe('updateProfile', () => {
     }
   });
 
-  test('stamps onboardedAt when role, 3+ interests, and aiComfort are set', () => {
+  test('stamps onboardedAt when role, 3+ interests, and aiComfort are set', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
 
-    const result = updateProfile(DEMO_USER_ID, {
+    const result = await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining', 'Trails'],
       aiComfort: 'casual',
@@ -213,29 +219,29 @@ describe('updateProfile', () => {
     }
   });
 
-  test('stamps onboardedAt across incremental updates', () => {
+  test('stamps onboardedAt across incremental updates', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
-    updateProfile(DEMO_USER_ID, { role: 'new' });
-    updateProfile(DEMO_USER_ID, { aiComfort: 'power' });
-    expect(getProfile(DEMO_USER_ID).profile.onboardedAt).toBeNull();
+    await updateProfile(ctx(), { role: 'new' });
+    await updateProfile(ctx(), { aiComfort: 'power' });
+    expect((await getProfile(ctx())).profile.onboardedAt).toBeNull();
 
-    updateProfile(DEMO_USER_ID, { interests: ['A', 'B', 'C'] });
+    await updateProfile(ctx(), { interests: ['A', 'B', 'C'] });
 
-    expect(getProfile(DEMO_USER_ID).profile.onboardedAt).toBe(
+    expect((await getProfile(ctx())).profile.onboardedAt).toBe(
       '2026-07-12T10:00:00.000Z',
     );
   });
 
-  test('stamps onboardedAt exactly once', () => {
+  test('stamps onboardedAt exactly once', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
-    updateProfile(DEMO_USER_ID, {
+    await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining', 'Trails'],
       aiComfort: 'casual',
     });
 
     setSystemTime(new Date('2026-07-13T09:00:00.000Z'));
-    const result = updateProfile(DEMO_USER_ID, {
+    const result = await updateProfile(ctx(), {
       interests: ['Boating', 'Dining', 'Trails', 'Events'],
     });
 

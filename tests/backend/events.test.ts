@@ -3,15 +3,18 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { GET as getEvents } from '../../app/api/events+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
 import { getEventsView, toggleJoin } from '../../src/backend/events';
+import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+
+const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
 });
 
 describe('getEventsView', () => {
-  test('returns featured events first, then upcoming by startsAt', () => {
-    const { events } = getEventsView(DEMO_USER_ID);
+  test('returns featured events first, then upcoming by startsAt', async () => {
+    const { events } = await getEventsView(ctx());
 
     expect(events.map((event) => event.id)).toEqual([
       'event-1',
@@ -28,16 +31,16 @@ describe('getEventsView', () => {
     );
   });
 
-  test('week strip has 7 days with isToday exactly once', () => {
-    const { week } = getEventsView(DEMO_USER_ID);
+  test('week strip has 7 days with isToday exactly once', async () => {
+    const { week } = await getEventsView(ctx());
 
     expect(week).toHaveLength(7);
     expect(week.filter((day) => day.isToday)).toHaveLength(1);
     expect(week.find((day) => day.isToday)?.dayLabel).toBe('FRI');
   });
 
-  test('maps attendees to PersonRef with id and name only', () => {
-    const { events } = getEventsView(DEMO_USER_ID);
+  test('maps attendees to PersonRef with id and name only', async () => {
+    const { events } = await getEventsView(ctx());
     const featured = events[0];
 
     expect(featured?.attendees).toEqual([
@@ -48,17 +51,17 @@ describe('getEventsView', () => {
     ]);
   });
 
-  test('derives joined per requesting user', () => {
+  test('derives joined per requesting user', async () => {
     expect(
-      getEventsView(DEMO_USER_ID).events.every((event) => !event.joined),
+      (await getEventsView(ctx())).events.every((event) => !event.joined),
     ).toBe(true);
 
-    toggleJoin(DEMO_USER_ID, 'event-2');
+    await toggleJoin(ctx(), 'event-2');
 
-    const forMe = getEventsView(DEMO_USER_ID).events.find(
+    const forMe = (await getEventsView(ctx())).events.find(
       (event) => event.id === 'event-2',
     );
-    const forOther = getEventsView('user-mia').events.find(
+    const forOther = (await getEventsView(ctx('user-mia'))).events.find(
       (event) => event.id === 'event-2',
     );
 
@@ -68,30 +71,30 @@ describe('getEventsView', () => {
 });
 
 describe('toggleJoin', () => {
-  test('joining increments going and marks joined', () => {
-    const result = toggleJoin(DEMO_USER_ID, 'event-1');
+  test('joining increments going and marks joined', async () => {
+    const result = await toggleJoin(ctx(), 'event-1');
 
     expect(result).toEqual({ id: 'event-1', going: 49, joined: true });
   });
 
-  test('toggling again decrements going back and clears joined', () => {
-    toggleJoin(DEMO_USER_ID, 'event-1');
-    const result = toggleJoin(DEMO_USER_ID, 'event-1');
+  test('toggling again decrements going back and clears joined', async () => {
+    await toggleJoin(ctx(), 'event-1');
+    const result = await toggleJoin(ctx(), 'event-1');
 
     expect(result).toEqual({ id: 'event-1', going: 48, joined: false });
   });
 
-  test('does not mutate the previous stored event object', () => {
+  test('does not mutate the previous stored event object', async () => {
     const before = getState().events.find((event) => event.id === 'event-1');
 
-    toggleJoin(DEMO_USER_ID, 'event-1');
+    await toggleJoin(ctx(), 'event-1');
 
     expect(before?.going).toBe(48);
     expect(before?.joinedBy).toEqual([]);
   });
 
-  test('returns null for an unknown event', () => {
-    expect(toggleJoin(DEMO_USER_ID, 'event-999')).toBeNull();
+  test('returns null for an unknown event', async () => {
+    expect(await toggleJoin(ctx(), 'event-999')).toBeNull();
   });
 });
 

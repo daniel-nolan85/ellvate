@@ -2,17 +2,20 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import { GET as getMissions } from '../../app/api/missions+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
+import { memoryContext } from '../../src/backend/http';
 import { checkIn, getMissionsView } from '../../src/backend/missions';
 import { computeProgress } from '../../src/backend/progress';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+
+const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
 });
 
 describe('getMissionsView', () => {
-  test('mission statuses and stops match the seed for demo-user', () => {
-    const { missions } = getMissionsView(DEMO_USER_ID);
+  test('mission statuses and stops match the seed for demo-user', async () => {
+    const { missions } = await getMissionsView(ctx());
 
     expect(missions.map((mission) => mission.id)).toEqual([
       'mission-1',
@@ -37,8 +40,8 @@ describe('getMissionsView', () => {
     ]);
   });
 
-  test('progress matches computeProgress for the seed demo-user', () => {
-    const { progress } = getMissionsView(DEMO_USER_ID);
+  test('progress matches computeProgress for the seed demo-user', async () => {
+    const { progress } = await getMissionsView(ctx());
     const breakdown = computeProgress(1980);
 
     expect(progress).toEqual({
@@ -55,8 +58,8 @@ describe('getMissionsView', () => {
     expect(progress.xpToNextLevel).toBe(120);
   });
 
-  test('users without a stored entry default to active with 0 stops', () => {
-    const { missions } = getMissionsView('user-mia');
+  test('users without a stored entry default to active with 0 stops', async () => {
+    const { missions } = await getMissionsView(ctx('user-mia'));
 
     expect(missions.every((mission) => mission.status === 'active')).toBe(
       true,
@@ -64,8 +67,8 @@ describe('getMissionsView', () => {
     expect(missions.every((mission) => mission.stopsDone === 0)).toBe(true);
   });
 
-  test('unknown users get zeroed progress with the default title', () => {
-    const { progress } = getMissionsView('user-nobody');
+  test('unknown users get zeroed progress with the default title', async () => {
+    const { progress } = await getMissionsView(ctx('user-nobody'));
 
     expect(progress).toEqual({
       level: 1,
@@ -81,8 +84,8 @@ describe('getMissionsView', () => {
 });
 
 describe('checkIn', () => {
-  test('advances one stop without awarding XP when the mission is not complete', () => {
-    const result = checkIn('user-mia', 'mission-2');
+  test('advances one stop without awarding XP when the mission is not complete', async () => {
+    const result = await checkIn(ctx('user-mia'), 'mission-2');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -96,8 +99,8 @@ describe('checkIn', () => {
     expect(result.body.progress.streakDays).toBe(0);
   });
 
-  test('completing the final stop marks the mission done and awards its XP', () => {
-    const result = checkIn(DEMO_USER_ID, 'mission-2');
+  test('completing the final stop marks the mission done and awards its XP', async () => {
+    const result = await checkIn(ctx(), 'mission-2');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -120,8 +123,8 @@ describe('checkIn', () => {
     expect(result.body.progress.level).toBe(8);
   });
 
-  test('single-stop mission completes and awards full XP on one check-in', () => {
-    const result = checkIn(DEMO_USER_ID, 'mission-1');
+  test('single-stop mission completes and awards full XP on one check-in', async () => {
+    const result = await checkIn(ctx(), 'mission-1');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -134,17 +137,17 @@ describe('checkIn', () => {
     expect(result.body.progress.streakDays).toBe(13);
   });
 
-  test('completion persists in the store and in the missions view', () => {
-    checkIn(DEMO_USER_ID, 'mission-1');
-    const { missions, progress } = getMissionsView(DEMO_USER_ID);
+  test('completion persists in the store and in the missions view', async () => {
+    await checkIn(ctx(), 'mission-1');
+    const { missions, progress } = await getMissionsView(ctx());
 
     expect(missions.find((m) => m.id === 'mission-1')?.status).toBe('done');
     expect(progress.xp).toBe(2030);
     expect(progress.missionsCompleted).toBe(22);
   });
 
-  test('rejects a locked mission with 409 mission_locked', () => {
-    const result = checkIn(DEMO_USER_ID, 'mission-4');
+  test('rejects a locked mission with 409 mission_locked', async () => {
+    const result = await checkIn(ctx(), 'mission-4');
 
     expect(result).toMatchObject({
       ok: false,
@@ -153,8 +156,8 @@ describe('checkIn', () => {
     });
   });
 
-  test('rejects an already completed mission with 409 mission_complete', () => {
-    const result = checkIn(DEMO_USER_ID, 'mission-3');
+  test('rejects an already completed mission with 409 mission_complete', async () => {
+    const result = await checkIn(ctx(), 'mission-3');
 
     expect(result).toMatchObject({
       ok: false,
@@ -163,27 +166,27 @@ describe('checkIn', () => {
     });
   });
 
-  test('rejects a second check-in after completing a mission', () => {
-    expect(checkIn(DEMO_USER_ID, 'mission-1').ok).toBe(true);
+  test('rejects a second check-in after completing a mission', async () => {
+    expect((await checkIn(ctx(), 'mission-1')).ok).toBe(true);
 
-    expect(checkIn(DEMO_USER_ID, 'mission-1')).toMatchObject({
+    expect(await checkIn(ctx(), 'mission-1')).toMatchObject({
       ok: false,
       status: 409,
       code: 'mission_complete',
     });
   });
 
-  test('rejects an unknown mission with 404 mission_not_found', () => {
-    expect(checkIn(DEMO_USER_ID, 'mission-999')).toMatchObject({
+  test('rejects an unknown mission with 404 mission_not_found', async () => {
+    expect(await checkIn(ctx(), 'mission-999')).toMatchObject({
       ok: false,
       status: 404,
       code: 'mission_not_found',
     });
   });
 
-  test('does not mutate the previous store state', () => {
+  test('does not mutate the previous store state', async () => {
     const before = getState();
-    checkIn(DEMO_USER_ID, 'mission-2');
+    await checkIn(ctx(), 'mission-2');
 
     const beforeMission = before.missions.find((m) => m.id === 'mission-2');
     const beforeUser = before.users.find((u) => u.id === DEMO_USER_ID);
@@ -192,8 +195,8 @@ describe('checkIn', () => {
     expect(getState()).not.toBe(before);
   });
 
-  test('does not touch other users or missions on check-in', () => {
-    checkIn(DEMO_USER_ID, 'mission-2');
+  test('does not touch other users or missions on check-in', async () => {
+    await checkIn(ctx(), 'mission-2');
     const state = getState();
 
     expect(state.users.find((u) => u.id === 'user-mia')?.xp).toBe(3820);

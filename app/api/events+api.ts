@@ -1,7 +1,7 @@
 import { getEventsView } from '@/src/backend/events';
-import { getRequestUserId, jsonOk } from '@/src/backend/http';
+import { createRequestContext, jsonOk } from '@/src/backend/http';
 
 export async function GET(request: Request): Promise<Response> {
-  const userId = await getRequestUserId(request);
-  return jsonOk(getEventsView(userId));
+  const ctx = await createRequestContext(request);
+  return jsonOk(await getEventsView(ctx));
 }
