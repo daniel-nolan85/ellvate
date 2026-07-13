@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ClerkAuthGate } from '@/src/modules/authentication';
 import { AppProviders } from '@/src/platform/providers';
+import { PushRegistration } from '@/src/platform/push';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -27,6 +28,7 @@ export default function RootLayout() {
             <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
           </Stack>
         </ClerkAuthGate>
+        <PushRegistration />
         <StatusBar style="auto" />
       </AppProviders>
     </GestureHandlerRootView>

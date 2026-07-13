@@ -48,6 +48,12 @@
         {
           "appleSignIn": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#6366F1"
+        }
       ]
     ],
     "experiments": {
