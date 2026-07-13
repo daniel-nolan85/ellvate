@@ -1,6 +1,7 @@
 import { listSubforums } from '@/src/backend/forum';
-import { jsonOk } from '@/src/backend/http';
+import { createRequestContext, jsonOk } from '@/src/backend/http';
 
-export function GET(): Response {
-  return jsonOk({ subforums: listSubforums() });
+export async function GET(request: Request): Promise<Response> {
+  const ctx = await createRequestContext(request);
+  return jsonOk({ subforums: await listSubforums(ctx) });
 }

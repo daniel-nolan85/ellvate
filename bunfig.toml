@@ -1,0 +1,4 @@
+[test]
+# Force the in-memory backend for offline, deterministic unit tests: unset the
+# Supabase/Clerk env that bun would otherwise auto-load from .env.local.
+preload = ["./tests/setup-env.ts"]

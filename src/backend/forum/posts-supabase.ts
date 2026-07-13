@@ -1,0 +1,167 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { CreatePostResult, ForumPost, LikeResult } from './types';
+import { validatePostInput } from './validation';
+
+const POST_SELECT =
+  'id,forum,author_id,title,excerpt,like_count,reply_count,pinned,created_at,author:app_users!posts_author_id_fkey(id,name)';
+
+interface PostRow {
+  readonly id: string;
+  readonly forum: string;
+  readonly author_id: string;
+  readonly title: string;
+  readonly excerpt: string;
+  readonly like_count: number;
+  readonly reply_count: number;
+  readonly pinned: boolean;
+  readonly created_at: string;
+  readonly author: { readonly id: string; readonly name: string } | null;
+}
+
+const toForumPost = (
+  row: PostRow,
+  likedIds: ReadonlySet<string>,
+): ForumPost => ({
+  author: { id: row.author_id, name: row.author?.name ?? 'Member' },
+  createdAt: row.created_at,
+  excerpt: row.excerpt,
+  forum: row.forum,
+  id: row.id,
+  liked: likedIds.has(row.id),
+  likes: row.like_count,
+  pinned: row.pinned,
+  replies: row.reply_count,
+  title: row.title,
+});
+
+const likedPostIds = async (
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ReadonlySet<string>> => {
+  const { data } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('user_id', userId);
+  return new Set((data ?? []).map((row) => row.post_id as string));
+};
+
+// A new Clerk user has no app_users row yet; create it before any owned write so
+// foreign keys resolve. RLS allows inserting only your own row.
+const ensureUser = async (
+  supabase: SupabaseClient,
+  userId: string,
+  name = 'Member',
+): Promise<void> => {
+  await supabase
+    .from('app_users')
+    .upsert({ id: userId, name }, { ignoreDuplicates: true, onConflict: 'id' });
+};
+
+const listForumNames = async (
+  supabase: SupabaseClient,
+): Promise<readonly string[]> => {
+  const { data } = await supabase
+    .from('subforums')
+    .select('name')
+    .order('position', { ascending: true });
+  return (data ?? []).map((row) => row.name as string);
+};
+
+export async function listSubforumsSupabase(
+  supabase: SupabaseClient,
+): Promise<readonly string[]> {
+  return listForumNames(supabase);
+}
+
+export async function listPostsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  forum?: string,
+): Promise<readonly ForumPost[]> {
+  let query = supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .order('pinned', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (forum && forum !== 'All') {
+    query = query.eq('forum', forum);
+  }
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+  const likedIds = await likedPostIds(supabase, userId);
+  return (data as unknown as PostRow[]).map((row) => toForumPost(row, likedIds));
+}
+
+export async function createPostSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  input: unknown,
+): Promise<CreatePostResult> {
+  const validation = validatePostInput(input, await listForumNames(supabase));
+  if (!validation.ok) {
+    return validation;
+  }
+  await ensureUser(supabase, userId);
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({
+      author_id: userId,
+      excerpt: validation.value.excerpt,
+      forum: validation.value.forum,
+      title: validation.value.title,
+    })
+    .select(POST_SELECT)
+    .single();
+  if (error || !data) {
+    return {
+      code: 'invalid_post',
+      message: 'Could not create the post.',
+      ok: false,
+    };
+  }
+  return { ok: true, post: toForumPost(data as unknown as PostRow, new Set()) };
+}
+
+export async function toggleLikeSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string,
+): Promise<LikeResult | null> {
+  const { data: post } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('id', postId)
+    .maybeSingle();
+  if (!post) {
+    return null;
+  }
+  await ensureUser(supabase, userId);
+  const { data: existing } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId);
+  } else {
+    await supabase
+      .from('post_likes')
+      .insert({ post_id: postId, user_id: userId });
+  }
+
+  const { data: updated } = await supabase
+    .from('posts')
+    .select('like_count')
+    .eq('id', postId)
+    .single();
+  return { id: postId, liked: !existing, likes: updated?.like_count ?? 0 };
+}

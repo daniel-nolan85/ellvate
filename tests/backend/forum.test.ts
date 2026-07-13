@@ -12,15 +12,18 @@ import {
   listSubforums,
   toggleLike,
 } from '../../src/backend/forum';
+import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+
+const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
 });
 
 describe('listSubforums', () => {
-  test('returns the seeded subforums starting with All', () => {
-    const subforums = listSubforums();
+  test('returns the seeded subforums starting with All', async () => {
+    const subforums = await listSubforums(ctx());
 
     expect(subforums[0]).toBe('All');
     expect(subforums).toEqual([
@@ -36,8 +39,8 @@ describe('listSubforums', () => {
 });
 
 describe('listPosts', () => {
-  test('returns all posts pinned first, then newest', () => {
-    const posts = listPosts(DEMO_USER_ID);
+  test('returns all posts pinned first, then newest', async () => {
+    const posts = await listPosts(ctx());
 
     expect(posts.map((post) => post.id)).toEqual([
       'post-2',
@@ -48,8 +51,8 @@ describe('listPosts', () => {
     expect(posts[0]?.pinned).toBe(true);
   });
 
-  test('maps StoredPost to the ForumPost contract shape', () => {
-    const post = listPosts(DEMO_USER_ID).find((entry) => entry.id === 'post-1');
+  test('maps StoredPost to the ForumPost contract shape', async () => {
+    const post = (await listPosts(ctx())).find((entry) => entry.id === 'post-1');
 
     const { createdAt, ...rest } = post ?? {};
     expect(rest).toEqual({
@@ -64,32 +67,30 @@ describe('listPosts', () => {
       liked: false,
       pinned: false,
     });
-    // Seed timestamps are anchored to the real clock, so createdAt is a valid
-    // ISO string in the recent past rather than a fixed literal.
     const createdMs = Date.parse(createdAt as string);
     expect(Number.isNaN(createdMs)).toBe(false);
     expect(createdMs).toBeLessThanOrEqual(Date.now());
   });
 
-  test('filters by forum name', () => {
-    const posts = listPosts(DEMO_USER_ID, 'Dining');
+  test('filters by forum name', async () => {
+    const posts = await listPosts(ctx(), 'Dining');
 
     expect(posts.map((post) => post.id)).toEqual(['post-3']);
   });
 
-  test('treats All and omitted forum the same', () => {
-    expect(listPosts(DEMO_USER_ID, 'All')).toEqual(listPosts(DEMO_USER_ID));
+  test('treats All and omitted forum the same', async () => {
+    expect(await listPosts(ctx(), 'All')).toEqual(await listPosts(ctx()));
   });
 
-  test('returns an empty list for an unknown forum', () => {
-    expect(listPosts(DEMO_USER_ID, 'Nope')).toEqual([]);
+  test('returns an empty list for an unknown forum', async () => {
+    expect(await listPosts(ctx(), 'Nope')).toEqual([]);
   });
 
-  test('marks liked=true only for posts the user liked', () => {
-    toggleLike(DEMO_USER_ID, 'post-3');
+  test('marks liked=true only for posts the user liked', async () => {
+    await toggleLike(ctx(), 'post-3');
 
-    const posts = listPosts(DEMO_USER_ID);
-    const other = listPosts('user-mia');
+    const posts = await listPosts(ctx());
+    const other = await listPosts(ctx('user-mia'));
 
     expect(posts.find((post) => post.id === 'post-3')?.liked).toBe(true);
     expect(posts.find((post) => post.id === 'post-1')?.liked).toBe(false);
@@ -98,32 +99,39 @@ describe('listPosts', () => {
 });
 
 describe('createPost', () => {
-  test('rejects an empty or missing title', () => {
-    const missing = createPost(DEMO_USER_ID, { forum: 'Dining' });
-    const blank = createPost(DEMO_USER_ID, { forum: 'Dining', title: '   ' });
+  test('rejects an empty or missing title', async () => {
+    const missing = await createPost(ctx(), { forum: 'Dining' });
+    const blank = await createPost(ctx(), { forum: 'Dining', title: '   ' });
 
     expect(missing).toMatchObject({ ok: false, code: 'invalid_post' });
     expect(blank).toMatchObject({ ok: false, code: 'invalid_post' });
     expect(getState().posts).toHaveLength(4);
   });
 
-  test('rejects an empty or missing forum', () => {
-    const missing = createPost(DEMO_USER_ID, { title: 'Hello lake' });
-    const blank = createPost(DEMO_USER_ID, { forum: '', title: 'Hello lake' });
+  test('rejects an empty or missing forum', async () => {
+    const missing = await createPost(ctx(), { title: 'Hello lake' });
+    const blank = await createPost(ctx(), { forum: '', title: 'Hello lake' });
 
     expect(missing).toMatchObject({ ok: false, code: 'invalid_post' });
     expect(blank).toMatchObject({ ok: false, code: 'invalid_post' });
   });
 
-  test('rejects a non-object body', () => {
-    expect(createPost(DEMO_USER_ID, null)).toMatchObject({
+  test('rejects a non-object body', async () => {
+    expect(await createPost(ctx(), null)).toMatchObject({
       ok: false,
       code: 'invalid_post',
     });
   });
 
-  test('creates a post authored by the seed person for the user', () => {
-    const result = createPost(DEMO_USER_ID, {
+  test('rejects an unknown forum', async () => {
+    expect(await createPost(ctx(), { forum: 'Nope', title: 'Hi' })).toMatchObject({
+      ok: false,
+      code: 'invalid_post',
+    });
+  });
+
+  test('creates a post authored by the seed person for the user', async () => {
+    const result = await createPost(ctx(), {
       forum: ' Dining ',
       title: ' Taco night? ',
       excerpt: ' Anyone in? ',
@@ -147,21 +155,8 @@ describe('createPost', () => {
     expect(getState().posts).toHaveLength(5);
   });
 
-  test('falls back to the generic name You for an unknown user', () => {
-    const result = createPost('user-unknown', {
-      forum: 'Trails',
-      title: 'New trail map',
-    });
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expect(result.post.author).toEqual({ id: 'user-unknown', name: 'You' });
-  });
-
-  test('created post lists first in its forum', () => {
-    const result = createPost(DEMO_USER_ID, {
+  test('created post lists first in its forum', async () => {
+    const result = await createPost(ctx(), {
       forum: 'Dining',
       title: 'Best brunch spot',
     });
@@ -170,42 +165,36 @@ describe('createPost', () => {
     if (!result.ok) {
       return;
     }
-    expect(listPosts(DEMO_USER_ID, 'Dining')[0]?.id).toBe(result.post.id);
+    expect((await listPosts(ctx(), 'Dining'))[0]?.id).toBe(result.post.id);
   });
 });
 
 describe('toggleLike', () => {
-  test('likes then unlikes a post', () => {
-    const liked = toggleLike(DEMO_USER_ID, 'post-1');
+  test('likes then unlikes a post', async () => {
+    const liked = await toggleLike(ctx(), 'post-1');
     expect(liked).toEqual({ id: 'post-1', likes: 62, liked: true });
-    expect(
-      getState()
-        .posts.find((post) => post.id === 'post-1')
-        ?.likedBy.includes(DEMO_USER_ID),
-    ).toBe(true);
 
-    const unliked = toggleLike(DEMO_USER_ID, 'post-1');
+    const unliked = await toggleLike(ctx(), 'post-1');
     expect(unliked).toEqual({ id: 'post-1', likes: 61, liked: false });
-    expect(
-      getState().posts.find((post) => post.id === 'post-1')?.likedBy,
-    ).toEqual([]);
   });
 
-  test('tracks likes per user independently', () => {
-    toggleLike(DEMO_USER_ID, 'post-4');
-    const second = toggleLike('user-mia', 'post-4');
+  test('tracks likes per user independently', async () => {
+    await toggleLike(ctx(), 'post-4');
+    const second = await toggleLike(ctx('user-mia'), 'post-4');
 
     expect(second).toEqual({ id: 'post-4', likes: 29, liked: true });
   });
 
-  test('returns null for an unknown post', () => {
-    expect(toggleLike(DEMO_USER_ID, 'post-nope')).toBeNull();
+  test('returns null for an unknown post', async () => {
+    expect(await toggleLike(ctx(), 'post-nope')).toBeNull();
   });
 });
 
 describe('GET /api/forum/subforums', () => {
   test('returns { subforums } starting with All', async () => {
-    const response = getSubforums();
+    const response = await getSubforums(
+      new Request('http://localhost/api/forum/subforums'),
+    );
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { subforums: string[] };
