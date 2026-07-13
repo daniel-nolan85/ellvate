@@ -44,21 +44,18 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
 
   const [phoneText, setPhoneText] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [codeInvalid, setCodeInvalid] = useState(false);
 
   const phoneComplete = phoneText.replace(/\D/g, '').length === 10;
-  const passwordLongEnough = password.length >= MIN_PASSWORD;
-  const passwordsMatch = password === confirm;
-  const passwordReady = passwordLongEnough && passwordsMatch;
-  const showMismatch = confirm.length > 0 && !passwordsMatch;
+  const passwordReady = password.length >= MIN_PASSWORD;
 
   const goBack = () => {
     setCode('');
     setCodeInvalid(false);
     setPassword('');
-    setConfirm('');
+    setShowPassword(false);
     flow.restart();
   };
 
@@ -91,17 +88,17 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
   const heading =
     flow.step === 'phone'
       ? {
-          sub: 'We’ll text you a 6-digit code. No passwords to remember.',
-          title: 'What’s your phone number?',
+          sub: 'We’ll text you a quick 6-digit code to make sure it’s really you.',
+          title: 'What’s your number?',
         }
       : flow.step === 'password'
         ? {
-            sub: 'Pick something only you know — at least 8 characters.',
-            title: 'Create a password',
+            sub: 'At least 8 characters — something only you would guess. Tap the eye to check it.',
+            title: 'Now pick a password',
           }
         : {
-            sub: `We sent a code to ${displayPhone(flow.phone)}.`,
-            title: 'Enter the code',
+            sub: `We just texted a 6-digit code to ${displayPhone(flow.phone)}. Pop it in below.`,
+            title: 'Check your messages',
           };
 
   return (
@@ -139,43 +136,43 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
               </Text>
             </InputSlot>
             <InputField
+              autoComplete="tel"
               autoFocus
               className="text-[17px]"
               keyboardType="phone-pad"
               onChangeText={(value) => setPhoneText(formatPhone(value))}
               onSubmitEditing={onPrimary}
               placeholder="(702) 555-0134"
+              textContentType="telephoneNumber"
               value={phoneText}
             />
           </Input>
         ) : flow.step === 'password' ? (
-          <VStack space="md">
-            <Input size="lg">
-              <InputField
-                autoFocus
-                className="text-[17px]"
-                onChangeText={setPassword}
-                placeholder="Password"
-                secureTextEntry
-                value={password}
+          <Input size="lg">
+            <InputField
+              autoCapitalize="none"
+              autoComplete="new-password"
+              autoFocus
+              className="text-[17px]"
+              onChangeText={setPassword}
+              onSubmitEditing={onPrimary}
+              placeholder="Create a password"
+              secureTextEntry={!showPassword}
+              textContentType="newPassword"
+              value={password}
+            />
+            <InputSlot
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              className="h-full justify-center pl-1"
+              onPress={() => setShowPassword((visible) => !visible)}
+            >
+              <Icon
+                color="rgb(161,161,170)"
+                name={showPassword ? 'Eye' : 'EyeOff'}
+                size={20}
               />
-            </Input>
-            <Input size="lg">
-              <InputField
-                className="text-[17px]"
-                onChangeText={setConfirm}
-                onSubmitEditing={onPrimary}
-                placeholder="Type it again"
-                secureTextEntry
-                value={confirm}
-              />
-            </Input>
-            {showMismatch ? (
-              <Text className="text-destructive" size="sm">
-                Those two don’t match yet.
-              </Text>
-            ) : null}
-          </VStack>
+            </InputSlot>
+          </Input>
         ) : (
           <VStack space="md">
             <CodeInput
@@ -189,8 +186,8 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
             />
             <Pressable onPress={() => void flow.resend()}>
               <Text className="text-center text-muted-foreground" size="sm">
-                Didn’t get it?{' '}
-                <Text className="font-inter-semibold text-indigo">Resend code</Text>
+                Didn’t come through?{' '}
+                <Text className="font-inter-semibold text-indigo">Send a new one</Text>
               </Text>
             </Pressable>
           </VStack>

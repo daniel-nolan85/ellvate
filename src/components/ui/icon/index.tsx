@@ -16,6 +16,7 @@ import {
   CircleQuestionMark,
   Clock,
   Ellipsis,
+  Eye,
   EyeOff,
   Globe,
   Heart,
@@ -71,6 +72,7 @@ export type AppIconName =
   | 'Bell'
   | 'AlertCircle'
   | 'Link'
+  | 'Eye'
   | 'EyeOff';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
@@ -105,6 +107,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Bell,
   AlertCircle: CircleAlert,
   Link: Link2,
+  Eye,
   EyeOff,
 };
 
