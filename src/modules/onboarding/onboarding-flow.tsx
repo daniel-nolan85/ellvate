@@ -39,11 +39,16 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     toggleNotification,
   } = useOnboardingState();
 
-  // The Face ID offer needs a real Clerk user, so drop it when auth is off.
+  // The Face ID offer needs a real Clerk user AND native passkey support
+  // (Associated Domains + a Clerk instance that serves a matching AASA). Until
+  // that infrastructure is in place, EXPO_PUBLIC_ENABLE_PASSKEYS gates the step
+  // off so onboarding never dead-ends on a passkey prompt that cannot succeed.
   const clerkUsable =
     session.status !== 'disabled' && session.status !== 'misconfigured';
   const isSignedIn = session.status === 'signed-in';
-  const stepCount = clerkUsable ? 9 : 8;
+  const includePasskey =
+    clerkUsable && process.env.EXPO_PUBLIC_ENABLE_PASSKEYS === 'true';
+  const stepCount = includePasskey ? 9 : 8;
 
   const goNext = useCallback(() => {
     setStep((current) => {
@@ -121,7 +126,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onToggle={toggleNotification}
       prefs={draft.notificationPrefs}
     />,
-    ...(clerkUsable ? [<PasskeyStep key="passkey" onNext={goNext} />] : []),
+    ...(includePasskey ? [<PasskeyStep key="passkey" onNext={goNext} />] : []),
     <CommitStep key="commit" onDone={handleDone} />,
   ];
 

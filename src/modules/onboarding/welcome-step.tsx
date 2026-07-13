@@ -3,12 +3,8 @@ import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
-import { Avatar } from '@/src/components/ui/avatar';
 import { Button, ButtonText } from '@/src/components/ui/button';
-import { HStack } from '@/src/components/ui/hstack';
 import { Text } from '@/src/components/ui/text';
-
-const HERO_AVATARS = ['ML', 'AK', 'JD', 'PR'] as const;
 
 interface GlowCircleProps {
   readonly id: string;
@@ -67,21 +63,9 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           Forum, events, and real-world missions — everything happening around the lake, with the
           people who live here.
         </Text>
-        <HStack className="mt-[18px] items-center" space="sm">
-          <HStack>
-            {HERO_AVATARS.map((initials, index) => (
-              <View
-                className={`rounded-full border-2 border-primary ${index > 0 ? '-ml-[9px]' : ''}`}
-                key={initials}
-              >
-                <Avatar name={initials.split('').join(' ')} size="xs" />
-              </View>
-            ))}
-          </HStack>
-          <Text className="text-[rgba(250,250,250,0.6)]" size="xs">
-            2,400+ neighbours already here
-          </Text>
-        </HStack>
+        <Text className="mt-[18px] text-[rgba(250,250,250,0.6)]" size="xs">
+          Made for the people who live around the lake.
+        </Text>
       </View>
       <View className="px-5 pb-[34px] pt-3.5">
         <Button

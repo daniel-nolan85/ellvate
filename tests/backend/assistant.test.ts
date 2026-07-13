@@ -7,7 +7,10 @@ import {
   searchMissions,
   searchPosts,
 } from '../../src/backend/assistant';
+import { memoryContext } from '../../src/backend/http';
 import { resetStore } from '../../src/backend/store';
+
+const ctx = memoryContext('demo-user');
 
 const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -39,8 +42,8 @@ const userMessage = (text: string) => ({
 });
 
 describe('local search', () => {
-  test('searchEvents matches the mixer case-insensitively', () => {
-    const results = searchEvents('MIXER');
+  test('searchEvents matches the mixer case-insensitively', async () => {
+    const results = await searchEvents(ctx, 'MIXER');
 
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
@@ -50,17 +53,17 @@ describe('local search', () => {
     });
   });
 
-  test('searchEvents matches place and tag tokens', () => {
-    expect(searchEvents('marina').map((event) => event.id)).toEqual([
-      'event-3',
-    ]);
+  test('searchEvents matches place and tag tokens', async () => {
+    expect((await searchEvents(ctx, 'marina')).map((event) => event.id)).toEqual(
+      ['event-3'],
+    );
     expect(
-      searchEvents('networking coffee').map((event) => event.id),
+      (await searchEvents(ctx, 'networking coffee')).map((event) => event.id),
     ).toEqual(['event-4', 'event-1']);
   });
 
-  test('searchEvents caps unmatched queries at the top 3 seeded events', () => {
-    const results = searchEvents('zzz-no-such-token');
+  test('searchEvents caps unmatched queries at the top 3 seeded events', async () => {
+    const results = await searchEvents(ctx, 'zzz-no-such-token');
 
     expect(results.map((event) => event.id)).toEqual([
       'event-1',
@@ -69,36 +72,36 @@ describe('local search', () => {
     ]);
   });
 
-  test('searchMissions matches titles and descriptions', () => {
-    expect(searchMissions('trail loop').map((mission) => mission.id)).toEqual([
-      'mission-2',
-    ]);
-    expect(searchMissions('sunrise').map((mission) => mission.id)).toEqual([
-      'mission-1',
-    ]);
+  test('searchMissions matches titles and descriptions', async () => {
+    expect(
+      (await searchMissions(ctx, 'trail loop')).map((mission) => mission.id),
+    ).toEqual(['mission-2']);
+    expect(
+      (await searchMissions(ctx, 'sunrise')).map((mission) => mission.id),
+    ).toEqual(['mission-1']);
   });
 
-  test('searchPosts matches excerpts and forum names', () => {
-    expect(searchPosts('kayak')[0]).toMatchObject({
+  test('searchPosts matches excerpts and forum names', async () => {
+    expect((await searchPosts(ctx, 'kayak'))[0]).toMatchObject({
       id: 'post-1',
       title: 'Best spots to kayak at sunrise?',
       forum: 'Marina & Boating',
     });
-    expect(searchPosts('dining patio').map((post) => post.id)).toEqual([
-      'post-3',
-    ]);
+    expect(
+      (await searchPosts(ctx, 'dining patio')).map((post) => post.id),
+    ).toEqual(['post-3']);
   });
 
-  test('search returns at most 3 summaries', () => {
-    expect(searchEvents('').length).toBeLessThanOrEqual(3);
-    expect(searchMissions('').length).toBeLessThanOrEqual(3);
-    expect(searchPosts('').length).toBeLessThanOrEqual(3);
+  test('search returns at most 3 summaries', async () => {
+    expect((await searchEvents(ctx, '')).length).toBeLessThanOrEqual(3);
+    expect((await searchMissions(ctx, '')).length).toBeLessThanOrEqual(3);
+    expect((await searchPosts(ctx, '')).length).toBeLessThanOrEqual(3);
   });
 });
 
 describe('respondToChat fallback mode', () => {
   const fallback = (text: string) =>
-    respondToChat('demo-user', [{ role: 'user', text }], { apiKey: null });
+    respondToChat(ctx, [{ role: 'user', text }], { apiKey: null });
 
   test('routes event keywords to search_events and cites real events', async () => {
     const reply = await fallback('What events are on this weekend?');
@@ -148,7 +151,7 @@ describe('respondToChat fallback mode', () => {
 
   test('uses the last user message when the thread ends with the assistant', async () => {
     const reply = await respondToChat(
-      'demo-user',
+      ctx,
       [
         { role: 'user', text: 'Any missions near me?' },
         { role: 'assistant', text: 'Let me check.' },
@@ -162,7 +165,7 @@ describe('respondToChat fallback mode', () => {
   });
 
   test('falls back to local search when ANTHROPIC_API_KEY is absent', async () => {
-    const reply = await respondToChat('demo-user', [
+    const reply = await respondToChat(ctx, [
       { role: 'user', text: 'What events are happening?' },
     ]);
 

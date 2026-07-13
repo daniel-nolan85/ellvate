@@ -1,4 +1,7 @@
-import { getState } from '@/src/backend/store';
+import { getEventsView } from '@/src/backend/events';
+import { listPosts } from '@/src/backend/forum';
+import type { RequestContext } from '@/src/backend/http';
+import { getMissionsView } from '@/src/backend/missions';
 
 export interface EventSummary {
   readonly id: string;
@@ -60,7 +63,8 @@ const scoreOf = (haystack: string, tokens: readonly string[]): number =>
   tokens.filter((token) => haystack.includes(token)).length;
 
 // WHY: an empty or fully-unmatched query still returns the first few items so
-// replies stay grounded in real store data instead of "no results" dead ends.
+// replies stay grounded in real data instead of "no results" dead ends. When the
+// database itself is empty (fresh shell) this naturally returns nothing.
 function rankByTokens<T>(
   items: readonly T[],
   query: string,
@@ -83,9 +87,16 @@ function rankByTokens<T>(
     .map(({ item }) => item);
 }
 
-export function searchEvents(query: string): readonly EventSummary[] {
+// The assistant reads the same live data the screens do (Supabase when
+// configured, the in-memory store otherwise), so it never cites content that is
+// not actually in the app. On an empty shell it truthfully finds nothing.
+export async function searchEvents(
+  ctx: RequestContext,
+  query: string,
+): Promise<readonly EventSummary[]> {
+  const { events } = await getEventsView(ctx);
   return rankByTokens(
-    getState().events,
+    events,
     query,
     (event) => `${event.title} ${event.place} ${event.tag}`,
   ).map((event) => ({
@@ -99,9 +110,13 @@ export function searchEvents(query: string): readonly EventSummary[] {
   }));
 }
 
-export function searchMissions(query: string): readonly MissionSummary[] {
+export async function searchMissions(
+  ctx: RequestContext,
+  query: string,
+): Promise<readonly MissionSummary[]> {
+  const { missions } = await getMissionsView(ctx);
   return rankByTokens(
-    getState().missions,
+    missions,
     query,
     (mission) => `${mission.title} ${mission.description}`,
   ).map((mission) => ({
@@ -113,9 +128,13 @@ export function searchMissions(query: string): readonly MissionSummary[] {
   }));
 }
 
-export function searchPosts(query: string): readonly PostSummary[] {
+export async function searchPosts(
+  ctx: RequestContext,
+  query: string,
+): Promise<readonly PostSummary[]> {
+  const posts = await listPosts(ctx);
   return rankByTokens(
-    getState().posts,
+    posts,
     query,
     (post) => `${post.title} ${post.excerpt} ${post.forum}`,
   ).map((post) => ({

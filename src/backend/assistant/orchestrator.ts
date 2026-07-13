@@ -1,4 +1,9 @@
-import { getRequestUserId, jsonError, jsonOk } from '@/src/backend/http';
+import {
+  createRequestContext,
+  jsonError,
+  jsonOk,
+  type RequestContext,
+} from '@/src/backend/http';
 
 import { searchEvents, searchMissions, searchPosts } from './search';
 import type {
@@ -116,16 +121,17 @@ const isAssistantTool = (name: unknown): name is AssistantTool =>
   name === 'search_events' || name === 'search_missions' || name === 'search_posts';
 
 const runSearchTool = (
+  ctx: RequestContext,
   tool: AssistantTool,
   query: string,
-): readonly (EventSummary | MissionSummary | PostSummary)[] => {
+): Promise<readonly (EventSummary | MissionSummary | PostSummary)[]> => {
   switch (tool) {
     case 'search_events':
-      return searchEvents(query);
+      return searchEvents(ctx, query);
     case 'search_missions':
-      return searchMissions(query);
+      return searchMissions(ctx, query);
     case 'search_posts':
-      return searchPosts(query);
+      return searchPosts(ctx, query);
   }
 };
 
@@ -147,6 +153,7 @@ const extractText = (blocks: readonly AnthropicContentBlock[]): string =>
 async function respondViaAnthropic(
   apiKey: string,
   messages: readonly AssistantChatMessage[],
+  ctx: RequestContext,
 ): Promise<AssistantReply> {
   let conversation: readonly AnthropicMessageParam[] = messages.map(
     (message) => ({ role: message.role, content: message.text }),
@@ -201,15 +208,17 @@ async function respondViaAnthropic(
         }),
     ];
 
-    const toolResults = toolUses.map((block) => ({
-      type: 'tool_result',
-      tool_use_id: block.id,
-      content: JSON.stringify(
-        isAssistantTool(block.name)
-          ? runSearchTool(block.name, extractQuery(block.input))
-          : [],
-      ),
-    }));
+    const toolResults = await Promise.all(
+      toolUses.map(async (block) => ({
+        type: 'tool_result',
+        tool_use_id: block.id,
+        content: JSON.stringify(
+          isAssistantTool(block.name)
+            ? await runSearchTool(ctx, block.name, extractQuery(block.input))
+            : [],
+        ),
+      })),
+    );
 
     conversation = [
       ...conversation,
@@ -252,17 +261,18 @@ const describePosts = (posts: readonly PostSummary[]): string =>
         .map((post) => `"${post.title}" in ${post.forum} (${post.replies} replies)`)
         .join('; ')}.`;
 
-const describeToolResults = (
+const describeToolResults = async (
+  ctx: RequestContext,
   tool: AssistantTool,
   query: string,
-): string => {
+): Promise<string> => {
   switch (tool) {
     case 'search_events':
-      return describeEvents(searchEvents(query));
+      return describeEvents(await searchEvents(ctx, query));
     case 'search_missions':
-      return describeMissions(searchMissions(query));
+      return describeMissions(await searchMissions(ctx, query));
     case 'search_posts':
-      return describePosts(searchPosts(query));
+      return describePosts(await searchPosts(ctx, query));
   }
 };
 
@@ -273,23 +283,27 @@ const pickFallbackTools = (text: string): readonly AssistantTool[] => {
   return picked.length > 0 ? picked : ['search_events'];
 };
 
-function respondWithLocalSearch(
+async function respondWithLocalSearch(
+  ctx: RequestContext,
   messages: readonly AssistantChatMessage[],
-): AssistantReply {
+): Promise<AssistantReply> {
   const lastUserMessage =
     [...messages].reverse().find((message) => message.role === 'user') ??
     messages[messages.length - 1];
   const text = lastUserMessage?.text ?? '';
   const tools = pickFallbackTools(text);
+  const parts = await Promise.all(
+    tools.map((tool) => describeToolResults(ctx, tool, text)),
+  );
 
   return {
-    reply: tools.map((tool) => describeToolResults(tool, text)).join(' '),
+    reply: parts.join(' '),
     toolCalls: tools.map((tool) => ({ tool, label: TOOL_LABELS[tool] })),
   };
 }
 
 export async function respondToChat(
-  userId: string,
+  ctx: RequestContext,
   messages: readonly AssistantChatMessage[],
   options?: RespondToChatOptions,
 ): Promise<AssistantReply> {
@@ -299,13 +313,13 @@ export async function respondToChat(
       : (process.env.ANTHROPIC_API_KEY ?? null);
 
   if (!apiKey) {
-    return respondWithLocalSearch(messages);
+    return respondWithLocalSearch(ctx, messages);
   }
 
   try {
-    return await respondViaAnthropic(apiKey, messages);
+    return await respondViaAnthropic(apiKey, messages, ctx);
   } catch {
-    return respondWithLocalSearch(messages);
+    return respondWithLocalSearch(ctx, messages);
   }
 }
 
@@ -321,6 +335,6 @@ export async function handleAssistantChat(request: Request): Promise<Response> {
     );
   }
 
-  const userId = await getRequestUserId(request);
-  return jsonOk(await respondToChat(userId, messages));
+  const ctx = await createRequestContext(request);
+  return jsonOk(await respondToChat(ctx, messages));
 }
