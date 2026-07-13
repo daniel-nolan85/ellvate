@@ -28,7 +28,11 @@ interface PostDraft {
   readonly excerpt: string;
 }
 
-export function ForumScreen() {
+interface ForumScreenProps {
+  readonly onOpenPost?: (postId: string) => void;
+}
+
+export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   const [activeForum, setActiveForum] = useState('All');
   const [isComposing, setIsComposing] = useState(false);
   const subforums = useSubforums();
@@ -137,6 +141,7 @@ export function ForumScreen() {
             {posts.data.posts.map((post) => (
               <PostCard
                 key={post.id}
+                onOpen={() => onOpenPost?.(post.id)}
                 onToggleLike={() =>
                   toggleLike.mutate({ forum: activeForum, postId: post.id })
                 }

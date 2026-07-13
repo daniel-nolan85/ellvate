@@ -5,16 +5,21 @@ import {
   ArrowLeft,
   ArrowUp,
   AtSign,
+  Bell,
   CalendarDays,
   Check,
+  ChevronLeft,
   ChevronsUpDown,
   Circle,
+  CircleAlert,
   CircleCheck,
   CircleQuestionMark,
   Clock,
   Ellipsis,
+  EyeOff,
   Globe,
   Heart,
+  Link2,
   Lock,
   Mail,
   MessageCircle,
@@ -61,7 +66,12 @@ export type AppIconName =
   | 'Add'
   | 'Close'
   | 'CheckCircle'
-  | 'HelpCircle';
+  | 'HelpCircle'
+  | 'ChevronLeft'
+  | 'Bell'
+  | 'AlertCircle'
+  | 'Link'
+  | 'EyeOff';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -91,6 +101,11 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Close: X,
   CheckCircle: CircleCheck,
   HelpCircle: CircleQuestionMark,
+  ChevronLeft,
+  Bell,
+  AlertCircle: CircleAlert,
+  Link: Link2,
+  EyeOff,
 };
 
 Object.values(ICON_MAP).forEach((component) => {

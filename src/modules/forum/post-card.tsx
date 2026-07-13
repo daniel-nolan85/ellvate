@@ -21,48 +21,48 @@ const COLOR_INDIGO = 'rgb(99,102,241)';
 interface PostCardProps {
   readonly post: ForumPost;
   readonly onToggleLike: () => void;
+  readonly onOpen?: () => void;
 }
 
-export function PostCard({ onToggleLike, post }: PostCardProps) {
+export function PostCard({ onToggleLike, onOpen, post }: PostCardProps) {
   const handleLike = () => {
     void Haptics.selectionAsync();
     onToggleLike();
   };
 
   return (
-    <VStack
-      className="rounded-[20px] border border-line bg-canvas p-[18px]"
-      space="md"
-    >
-      <HStack className="items-center" space="sm">
-        <Avatar name={post.author.name} size="sm" />
-        <VStack className="flex-1" space="xs">
-          <Text className="font-inter-bold" size="sm">
-            {post.author.name}
-          </Text>
-          <Text className="text-text-muted" size="xs">
-            {post.forum} · {formatRelativeTime(post.createdAt)}
+    <View className="gap-4 rounded-[20px] border border-line bg-canvas p-[18px]">
+      <Pressable className="gap-4" onPress={onOpen}>
+        <HStack className="items-center" space="sm">
+          <Avatar name={post.author.name} size="sm" />
+          <VStack className="flex-1" space="xs">
+            <Text className="font-inter-bold" size="sm">
+              {post.author.name}
+            </Text>
+            <Text className="text-text-muted" size="xs">
+              {post.forum} · {formatRelativeTime(post.createdAt)}
+            </Text>
+          </VStack>
+          {post.pinned ? (
+            <Badge
+              leftIcon={<Icon color={COLOR_INDIGO} name="Star" size={12} />}
+              variant="indigo"
+            >
+              Pinned
+            </Badge>
+          ) : (
+            <Icon color={COLOR_TEXT_SUBTLE} name="ThreeDots" size={16} />
+          )}
+        </HStack>
+        <VStack space="xs">
+          <Heading className="font-inter-bold tracking-[-0.36px]" size="md">
+            {post.title}
+          </Heading>
+          <Text className="leading-[21px] text-text-muted" size="sm">
+            {post.excerpt}
           </Text>
         </VStack>
-        {post.pinned ? (
-          <Badge
-            leftIcon={<Icon color={COLOR_INDIGO} name="Star" size={12} />}
-            variant="indigo"
-          >
-            Pinned
-          </Badge>
-        ) : (
-          <Icon color={COLOR_TEXT_SUBTLE} name="ThreeDots" size={16} />
-        )}
-      </HStack>
-      <VStack space="xs">
-        <Heading className="font-inter-bold tracking-[-0.36px]" size="md">
-          {post.title}
-        </Heading>
-        <Text className="leading-[21px] text-text-muted" size="sm">
-          {post.excerpt}
-        </Text>
-      </VStack>
+      </Pressable>
       <HStack className="items-center" space="sm">
         <Pressable
           className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
@@ -83,15 +83,19 @@ export function PostCard({ onToggleLike, post }: PostCardProps) {
             {post.likes}
           </Text>
         </Pressable>
-        <View className="flex-row items-center gap-1.5 rounded-full bg-secondary px-3 py-[7px]">
+        <Pressable
+          className="flex-row items-center gap-1.5 rounded-full bg-secondary px-3 py-[7px]"
+          onPress={onOpen}
+        >
           <Icon color={COLOR_CONTENT} name="MessageCircle" size={14} />
           <Text className="font-inter-semibold text-[12px] leading-[16px] text-content">
             {post.replies}
           </Text>
-        </View>
+        </Pressable>
         <View className="flex-1" />
         <Icon color={COLOR_TEXT_SUBTLE} name="Share" size={16} />
       </HStack>
-    </VStack>
+    </View>
   );
 }
+
