@@ -26,6 +26,7 @@ export default function RootLayout() {
             <Stack.Screen name="auth" />
             <Stack.Screen name="protected" />
             <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
           </Stack>
         </ClerkAuthGate>
         <PushRegistration />

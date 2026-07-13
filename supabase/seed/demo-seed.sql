@@ -45,11 +45,21 @@ insert into missions (id,title,description,xp,stops_total,icon,position,locked_b
   ('dmsn-5','Sunset at the Marina','Catch a sunset over the water from the MonteLago Village marina.',25,1,'Moon',4,false),
   ('dmsn-6','Catch Lakeside Music','Attend a Saturday-night live music set on the MonteLago Village waterfront.',40,1,'Moon',5,false);
 
--- A few forum posts across the real neighbourhood/topic channels.
+-- A few forum posts across the real neighbourhood/topic channels. reply_count
+-- starts at 0 and the reply-count trigger sets it from the comments seeded below.
 insert into posts (id,forum,author_id,title,excerpt,like_count,reply_count,pinned,created_at) values
-  ('dpost-1','Marina & Boating','demo-carlos','Best morning to paddle before the wind?','New to the lake — when do you launch from the marina before it gets choppy?',34,9,false, now() - interval '3 hours'),
-  ('dpost-2','Dining & Nightlife','demo-mia','Luna Rossa patio is open again','Lakeside seating is back at Luna Rossa in MonteLago Village. Go early on weekends.',52,14,false, now() - interval '8 hours'),
-  ('dpost-3','Trails & Fitness','demo-priya','River Mountains Loop — shade tips?','Which segments have the most shade for a midday ride in July?',18,6,false, now() - interval '26 hours'),
-  ('dpost-4','MonteLago Village','demo-sam','Saturday music lineup?','Anyone know who is playing on the waterfront this Saturday night?',27,11,false, now() - interval '30 hours');
+  ('dpost-1','Marina & Boating','demo-carlos','Best morning to paddle before the wind?','New to the lake — when do you launch from the marina before it gets choppy?',34,0,false, now() - interval '3 hours'),
+  ('dpost-2','Dining & Nightlife','demo-mia','Luna Rossa patio is open again','Lakeside seating is back at Luna Rossa in MonteLago Village. Go early on weekends.',52,0,false, now() - interval '8 hours'),
+  ('dpost-3','Trails & Fitness','demo-priya','River Mountains Loop — shade tips?','Which segments have the most shade for a midday ride in July?',18,0,false, now() - interval '26 hours'),
+  ('dpost-4','MonteLago Village','demo-sam','Saturday music lineup?','Anyone know who is playing on the waterfront this Saturday night?',27,0,false, now() - interval '30 hours');
+
+-- A handful of replies so posts open to real conversation, not empty threads.
+insert into comments (id,post_id,author_id,body,created_at) values
+  ('dcmt-1','dpost-1','demo-mia','Early — I''m usually on the water by 7 before it picks up.', now() - interval '2 hours'),
+  ('dcmt-2','dpost-1','demo-sam','Launch from the MonteLago marina, it stays calmest there.', now() - interval '90 minutes'),
+  ('dcmt-3','dpost-2','demo-priya','Finally! The lakeside tables are the best seats in the village.', now() - interval '7 hours'),
+  ('dcmt-4','dpost-2','demo-carlos','Went Saturday — get there before 6 or you''ll wait.', now() - interval '6 hours'),
+  ('dcmt-5','dpost-3','demo-sam','The stretch near the dam has the most shade midday.', now() - interval '24 hours'),
+  ('dcmt-6','dpost-4','demo-mia','Local band this week — starts around 7 on the waterfront.', now() - interval '28 hours');
 
 commit;

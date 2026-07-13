@@ -6,6 +6,7 @@ import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
+import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
@@ -61,6 +62,7 @@ function AddButton({ onPress }: { readonly onPress: () => void }) {
       accessibilityRole="button"
       className="h-10 w-10 items-center justify-center rounded-full bg-primary"
       onPress={onPress}
+      testID="events-add"
     >
       <Icon color="#fff" name="Add" size={20} />
     </Pressable>
@@ -78,26 +80,52 @@ export function EventsScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-canvas"
-      contentContainerClassName="pb-[130px]"
-      showsVerticalScrollIndicator={false}
-    >
-      <VStack space="md">
-        <ScreenTitle
-          eyebrow="This week at the lake"
-          right={
-            <HStack className="items-center" space="sm">
-              <AddButton onPress={() => setComposing((open) => !open)} />
-              <Box className="h-10 w-10 items-center justify-center rounded-full bg-secondary">
-                <Icon name="Search" size={18} />
-              </Box>
-            </HStack>
-          }
-          title="Events"
-        />
+    <>
+      <ScrollView
+        className="flex-1 bg-canvas"
+        contentContainerClassName="pb-[130px]"
+        showsVerticalScrollIndicator={false}
+      >
+        <VStack space="md">
+          <ScreenTitle
+            eyebrow="This week at the lake"
+            right={
+              <HStack className="items-center" space="sm">
+                <AddButton onPress={() => setComposing(true)} />
+                <Box className="h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                  <Icon name="Search" size={18} />
+                </Box>
+              </HStack>
+            }
+            title="Events"
+          />
 
-        {composing && eventsView.data ? (
+          {eventsView.isPending ? (
+            <Box className="items-center justify-center py-24">
+              <Spinner />
+            </Box>
+          ) : eventsView.isError ? (
+            <VStack className="items-center px-5 py-24" space="md">
+              <Text className="text-muted-foreground" size="sm">
+                Could not load events.
+              </Text>
+              <Button
+                action="secondary"
+                onPress={() => void eventsView.refetch()}
+                size="sm"
+                variant="outline"
+              >
+                <ButtonText>Retry</ButtonText>
+              </Button>
+            </VStack>
+          ) : (
+            <EventsBody onToggleJoin={handleToggleJoin} view={eventsView.data} />
+          )}
+        </VStack>
+      </ScrollView>
+
+      <Sheet onClose={() => setComposing(false)} visible={composing}>
+        {eventsView.data ? (
           <EventComposer
             isSubmitting={createEvent.isPending}
             onDismiss={() => setComposing(false)}
@@ -109,29 +137,7 @@ export function EventsScreen() {
             week={eventsView.data.week}
           />
         ) : null}
-
-        {eventsView.isPending ? (
-          <Box className="items-center justify-center py-24">
-            <Spinner />
-          </Box>
-        ) : eventsView.isError ? (
-          <VStack className="items-center px-5 py-24" space="md">
-            <Text className="text-muted-foreground" size="sm">
-              Could not load events.
-            </Text>
-            <Button
-              action="secondary"
-              onPress={() => void eventsView.refetch()}
-              size="sm"
-              variant="outline"
-            >
-              <ButtonText>Retry</ButtonText>
-            </Button>
-          </VStack>
-        ) : (
-          <EventsBody onToggleJoin={handleToggleJoin} view={eventsView.data} />
-        )}
-      </VStack>
-    </ScrollView>
+      </Sheet>
+    </>
   );
 }

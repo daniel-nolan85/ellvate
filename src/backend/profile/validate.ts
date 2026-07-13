@@ -23,7 +23,10 @@ const NOTIFICATION_KEYS: readonly (keyof NotificationPrefs)[] = [
   'digest',
 ];
 
+export const MAX_NAME_LENGTH = 50;
+
 export interface ProfileUpdate {
+  readonly name?: string;
   readonly role?: CommunityRole | null;
   readonly interests?: readonly string[];
   readonly aiComfort?: AiComfortLevel | null;
@@ -82,6 +85,18 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
     return failure('invalid_body', 'Request body must be a JSON object.');
   }
 
+  if (
+    'name' in input &&
+    (typeof input.name !== 'string' ||
+      input.name.trim().length === 0 ||
+      input.name.trim().length > MAX_NAME_LENGTH)
+  ) {
+    return failure(
+      'invalid_name',
+      `name must be a non-empty string of at most ${MAX_NAME_LENGTH} characters.`,
+    );
+  }
+
   if ('role' in input && input.role !== null && !isCommunityRole(input.role)) {
     return failure(
       'invalid_role',
@@ -120,6 +135,7 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
   return {
     ok: true,
     update: {
+      ...('name' in input ? { name: (input.name as string).trim() } : {}),
       ...('role' in input
         ? { role: input.role as CommunityRole | null }
         : {}),

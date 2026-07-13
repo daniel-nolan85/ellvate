@@ -4,6 +4,7 @@ import { Pressable, ScrollView } from 'react-native';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
+import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -23,6 +24,7 @@ function RanksChip({ onPress }: { readonly onPress: () => void }) {
     <Pressable
       className="flex-row items-center gap-1.5 rounded-full bg-secondary px-3.5 py-[9px]"
       onPress={onPress}
+      testID="missions-ranks"
     >
       <Icon name="ChevronsUpDown" size={14} />
       <Text className="font-inter-semibold text-[12px] leading-[16px] text-content">
@@ -39,6 +41,7 @@ function AddButton({ onPress }: { readonly onPress: () => void }) {
       accessibilityRole="button"
       className="h-10 w-10 items-center justify-center rounded-full bg-primary"
       onPress={onPress}
+      testID="missions-add"
     >
       <Icon color="#fff" name="Add" size={20} />
     </Pressable>
@@ -51,35 +54,24 @@ export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
   const [composing, setComposing] = useState(false);
 
   return (
-    <ScrollView
-      className="flex-1 bg-canvas"
-      contentContainerStyle={{ paddingBottom: 130 }}
-    >
-      <VStack className="gap-4">
-        <ScreenTitle
-          eyebrow="Explore & earn"
-          right={
-            <HStack className="items-center" space="sm">
-              <AddButton onPress={() => setComposing((open) => !open)} />
-              <RanksChip onPress={onOpenLeaderboard} />
-            </HStack>
-          }
-          title="Missions"
-        />
-
-        {composing ? (
-          <MissionComposer
-            isSubmitting={createMission.isPending}
-            onDismiss={() => setComposing(false)}
-            onSubmit={(input) =>
-              createMission.mutate(input, {
-                onSuccess: () => setComposing(false),
-              })
+    <>
+      <ScrollView
+        className="flex-1 bg-canvas"
+        contentContainerStyle={{ paddingBottom: 130 }}
+      >
+        <VStack className="gap-4">
+          <ScreenTitle
+            eyebrow="Explore & earn"
+            right={
+              <HStack className="items-center" space="sm">
+                <AddButton onPress={() => setComposing(true)} />
+                <RanksChip onPress={onOpenLeaderboard} />
+              </HStack>
             }
+            title="Missions"
           />
-        ) : null}
 
-        {missionsView.isPending ? (
+          {missionsView.isPending ? (
           <VStack className="items-center justify-center py-24">
             <Spinner size="small" />
           </VStack>
@@ -117,7 +109,20 @@ export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
             </VStack>
           </>
         )}
-      </VStack>
-    </ScrollView>
+        </VStack>
+      </ScrollView>
+
+      <Sheet onClose={() => setComposing(false)} visible={composing}>
+        <MissionComposer
+          isSubmitting={createMission.isPending}
+          onDismiss={() => setComposing(false)}
+          onSubmit={(input) =>
+            createMission.mutate(input, {
+              onSuccess: () => setComposing(false),
+            })
+          }
+        />
+      </Sheet>
+    </>
   );
 }

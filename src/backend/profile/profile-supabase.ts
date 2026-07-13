@@ -5,8 +5,9 @@ import type {
   CommunityRole,
   NotificationPrefs,
 } from '@/src/backend/store';
+import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import { ONBOARDING_MIN_INTERESTS } from './profile';
+import { ONBOARDING_MIN_INTERESTS, WELCOME_XP } from './profile';
 import type { ProfileResult, UpdateProfileResult, UserProfile } from './profile';
 import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
@@ -49,9 +50,10 @@ const ensureUser = async (
   userId: string,
   name = 'Member',
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('app_users')
     .upsert({ id: userId, name }, { ignoreDuplicates: true, onConflict: 'id' });
+  throwIfSupabaseError(error, 'ensure profile user');
 };
 
 const fetchProfileRow = async (
@@ -129,9 +131,29 @@ export async function updateProfileSupabase(
   await ensureUser(supabase, userId);
   const current = await fetchProfileRow(supabase, userId);
   const next = mergedRow(current, validation.update);
+  const justOnboarded =
+    current.onboarded_at === null && next.onboarded_at !== null;
+
+  let payload: Record<string, unknown> = {
+    ...next,
+    ...(validation.update.name ? { name: validation.update.name } : {}),
+  };
+  if (justOnboarded) {
+    const { data: xpRow, error: xpError } = await supabase
+      .from('app_users')
+      .select('xp')
+      .eq('id', userId)
+      .single();
+    throwIfSupabaseError(xpError, 'load profile welcome XP');
+    payload = {
+      ...payload,
+      xp: ((xpRow?.xp as number | undefined) ?? 0) + WELCOME_XP,
+    };
+  }
+
   const { data, error } = await supabase
     .from('app_users')
-    .update(next)
+    .update(payload)
     .eq('id', userId)
     .select(PROFILE_SELECT)
     .single();

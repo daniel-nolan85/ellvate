@@ -24,14 +24,9 @@ export type ChatEntry =
   | { readonly kind: 'user' | 'assistant'; readonly text: string }
   | { readonly kind: 'tool'; readonly tool: string; readonly label: string };
 
-const SEED_ENTRIES: readonly ChatEntry[] = [
-  { kind: 'user', text: 'Any networking events this weekend?' },
-  { kind: 'tool', label: 'Searching events…', tool: 'search_events' },
-  {
-    kind: 'assistant',
-    text: 'Two coming up: the Locals Networking Mixer (Fri 6:30 PM, MonteLago Village) and Small Business Coffee & Connect (Wed 8 AM). Want me to add the mixer to your calendar?',
-  },
-];
+// The assistant starts as a blank slate — no fabricated conversation. The screen
+// shows a greeting and suggestion chips until the user sends the first message.
+const INITIAL_ENTRIES: readonly ChatEntry[] = [];
 
 const SUGGESTIONS: readonly string[] = [
   'Events this weekend',
@@ -51,7 +46,7 @@ const toMessages = (
 
 export function useAssistantChat() {
   const session = useSession();
-  const [entries, setEntries] = useState<readonly ChatEntry[]>(SEED_ENTRIES);
+  const [entries, setEntries] = useState<readonly ChatEntry[]>(INITIAL_ENTRIES);
   // Synchronous guard: isPending is React state and lags within a single tick,
   // so two taps in the same frame could both pass the check and double-send.
   const inFlightRef = useRef(false);

@@ -13,6 +13,10 @@ import type { ProfileUpdate, ProfileValidationFailure } from './validate';
 
 export const ONBOARDING_MIN_INTERESTS = 3;
 
+// Welcome bonus granted once, the first time a user finishes onboarding, so a
+// brand-new member starts with XP on the missions and leaderboard screens.
+export const WELCOME_XP = 50;
+
 export interface UserProfile {
   readonly userId: string;
   readonly role: CommunityRole | null;
@@ -91,11 +95,20 @@ function updateProfileMemory(
     current.onboardedAt === null && isOnboardingComplete(merged)
       ? { ...merged, onboardedAt: new Date().toISOString() }
       : merged;
+  const justOnboarded =
+    current.onboardedAt === null && next.onboardedAt !== null;
 
   setState((state) => ({
     ...state,
     users: state.users.map((user) =>
-      user.id === userId ? { ...user, profile: next } : user,
+      user.id === userId
+        ? {
+            ...user,
+            name: validation.update.name ?? user.name,
+            profile: next,
+            xp: justOnboarded ? user.xp + WELCOME_XP : user.xp,
+          }
+        : user,
     ),
   }));
 

@@ -75,6 +75,23 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
         contentContainerClassName="gap-3.5 p-5"
         ref={scrollRef}
       >
+        {entries.length === 0 && !pendingReply ? (
+          <VStack className="items-center gap-2.5 px-6 pt-16">
+            <Box className="h-14 w-14 items-center justify-center rounded-2xl bg-primary">
+              <AiMark color={INDIGO} size={26} />
+            </Box>
+            <Text className="text-center font-inter-bold text-content" size="lg">
+              Ask the Lake Assistant
+            </Text>
+            <Text
+              className="max-w-[280px] text-center leading-[20px] text-text-muted"
+              size="sm"
+            >
+              Events, missions, or what neighbours are posting around Lake Las
+              Vegas — just ask.
+            </Text>
+          </VStack>
+        ) : null}
         {entries.map((entry, index) =>
           entry.kind === 'tool' ? (
             <ToolCallChip

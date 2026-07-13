@@ -1,0 +1,307 @@
+import { useState, type ReactNode } from 'react';
+import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useUser } from '@clerk/expo';
+
+import { Avatar } from '@/src/components/ui/avatar';
+import { Button, ButtonText } from '@/src/components/ui/button';
+import { Heading } from '@/src/components/ui/heading';
+import { HStack } from '@/src/components/ui/hstack';
+import { Icon, type AppIconName } from '@/src/components/ui/icon';
+import { Input, InputField } from '@/src/components/ui/input';
+import { Sheet } from '@/src/components/ui/sheet';
+import { Spinner } from '@/src/components/ui/spinner';
+import { Text } from '@/src/components/ui/text';
+import { VStack } from '@/src/components/ui/vstack';
+import { useSession } from '@/src/platform/session';
+
+import {
+  useProfile,
+  useProfileStats,
+  useUpdateProfile,
+  type NotificationPrefs,
+} from './use-profile';
+
+const ROLE_LABELS: Record<string, string> = {
+  resident: 'Resident',
+  new: 'New to the area',
+  business: 'Local business',
+  visitor: 'Visitor',
+};
+
+const NOTIFICATION_ROWS: readonly {
+  readonly key: keyof NotificationPrefs;
+  readonly label: string;
+  readonly hint: string;
+}[] = [
+  { key: 'events', label: 'Events', hint: 'New events around the lake' },
+  { key: 'replies', label: 'Replies', hint: 'When someone answers your posts' },
+  { key: 'missions', label: 'Missions', hint: 'New missions and XP' },
+  { key: 'digest', label: 'Weekly digest', hint: 'A Sunday recap of the week' },
+];
+
+function SectionTitle({ children }: { readonly children: string }) {
+  return (
+    <Text className="px-5 pb-1.5 pt-5 font-inter-bold text-[12px] uppercase tracking-[1px] text-text-muted">
+      {children}
+    </Text>
+  );
+}
+
+function Row({
+  danger,
+  icon,
+  label,
+  onPress,
+  right,
+  value,
+}: {
+  readonly icon: AppIconName;
+  readonly label: string;
+  readonly value?: string;
+  readonly right?: ReactNode;
+  readonly onPress?: () => void;
+  readonly danger?: boolean;
+}) {
+  return (
+    <Pressable
+      className="flex-row items-center gap-3 border-b border-line bg-canvas px-5 py-3.5"
+      disabled={!onPress}
+      onPress={onPress}
+    >
+      <View className="h-8 w-8 items-center justify-center rounded-full bg-secondary">
+        <Icon
+          color={danger ? 'rgb(220,38,38)' : 'rgb(99,102,241)'}
+          name={icon}
+          size={16}
+        />
+      </View>
+      <Text
+        className={`flex-1 font-inter-medium text-[15px] ${danger ? 'text-destructive' : 'text-content'}`}
+      >
+        {label}
+      </Text>
+      {value ? (
+        <Text className="text-text-muted" size="sm">
+          {value}
+        </Text>
+      ) : null}
+      {right}
+      {onPress && !right ? (
+        <Icon color="rgb(161,161,170)" name="ChevronLeft" size={16} />
+      ) : null}
+    </Pressable>
+  );
+}
+
+function StatCard({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <VStack className="flex-1 items-center rounded-2xl bg-secondary py-3.5" space="xs">
+      <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
+      <Text className="text-text-muted" size="xs">
+        {label}
+      </Text>
+    </VStack>
+  );
+}
+
+export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const session = useSession();
+  const { user } = useUser();
+  const profile = useProfile();
+  const stats = useProfileStats();
+  const updateProfile = useUpdateProfile();
+
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState('');
+
+  const displayName =
+    user?.firstName?.trim() ||
+    user?.fullName?.trim() ||
+    'Add your name';
+  const subtitle =
+    user?.primaryPhoneNumber?.phoneNumber ??
+    user?.primaryEmailAddress?.emailAddress ??
+    'Lake Las Vegas neighbour';
+  const prefs = profile.data?.profile.notificationPrefs;
+
+  const openEdit = () => {
+    setDraftName(user?.firstName?.trim() ?? '');
+    setEditing(true);
+  };
+
+  const saveName = () => {
+    const name = draftName.trim();
+    if (!name) {
+      return;
+    }
+    void user?.update({ firstName: name }).catch(() => undefined);
+    updateProfile.mutate(
+      { name },
+      { onSuccess: () => setEditing(false) },
+    );
+  };
+
+  const toggle = (key: keyof NotificationPrefs, next: boolean) => {
+    updateProfile.mutate({ notificationPrefs: { [key]: next } });
+  };
+
+  const confirmSignOut = () => {
+    Alert.alert('Sign out?', 'You can sign back in any time.', [
+      { style: 'cancel', text: 'Cancel' },
+      {
+        onPress: () => {
+          void session.signOut().finally(onClose);
+        },
+        style: 'destructive',
+        text: 'Sign out',
+      },
+    ]);
+  };
+
+  const confirmDelete = () => {
+    Alert.alert(
+      'Delete account?',
+      'This permanently removes your account and cannot be undone.',
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          onPress: () => {
+            void user?.delete().finally(onClose);
+          },
+          style: 'destructive',
+          text: 'Delete',
+        },
+      ],
+    );
+  };
+
+  return (
+    <View className="flex-1 bg-canvas">
+      <HStack
+        className="items-center justify-between px-5 pb-3"
+        style={{ paddingTop: insets.top + 12 }}
+      >
+        <Heading className="font-inter-bold" size="xl">
+          You
+        </Heading>
+        <Pressable
+          accessibilityLabel="Close"
+          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
+          onPress={onClose}
+        >
+          <Icon name="Close" size={18} />
+        </Pressable>
+      </HStack>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+        <VStack className="items-center px-5 pb-2 pt-3" space="sm">
+          <Avatar name={displayName} size="xl" />
+          <VStack className="items-center" space="xs">
+            <Heading className="font-inter-bold" size="lg">
+              {displayName}
+            </Heading>
+            <Text className="text-text-muted" size="sm">
+              {subtitle}
+            </Text>
+          </VStack>
+          <Button
+            action="secondary"
+            className="rounded-full bg-secondary px-5"
+            onPress={openEdit}
+            size="sm"
+          >
+            <ButtonText className="font-inter-semibold text-[13px] text-content">
+              Edit profile
+            </ButtonText>
+          </Button>
+        </VStack>
+
+        <HStack className="px-5 pt-3" space="sm">
+          <StatCard label="Level" value={String(stats.data?.level ?? 1)} />
+          <StatCard label="XP" value={String(stats.data?.xp ?? 0)} />
+          <StatCard
+            label="Missions"
+            value={String(stats.data?.missionsCompleted ?? 0)}
+          />
+          <StatCard label="Streak" value={String(stats.data?.streakDays ?? 0)} />
+        </HStack>
+
+        <SectionTitle>Your profile</SectionTitle>
+        <Row
+          icon="Globe"
+          label="Community role"
+          value={
+            profile.data?.profile.role
+              ? ROLE_LABELS[profile.data.profile.role]
+              : '—'
+          }
+        />
+        <Row
+          icon="Star"
+          label="Interests"
+          value={`${profile.data?.profile.interests.length ?? 0} picked`}
+        />
+
+        <SectionTitle>Notifications</SectionTitle>
+        {profile.isPending || !prefs ? (
+          <View className="items-center py-6">
+            <Spinner />
+          </View>
+        ) : (
+          NOTIFICATION_ROWS.map((row) => (
+            <Row
+              icon="Bell"
+              key={row.key}
+              label={row.label}
+              right={
+                <Switch
+                  onValueChange={(next) => toggle(row.key, next)}
+                  value={prefs[row.key]}
+                />
+              }
+              value={row.hint}
+            />
+          ))
+        )}
+
+        <SectionTitle>Account</SectionTitle>
+        <Row icon="Phone" label="Phone & password" value="Managed by Clerk" />
+        <Row icon="ArrowLeft" label="Sign out" onPress={confirmSignOut} />
+        <Row danger icon="AlertCircle" label="Delete account" onPress={confirmDelete} />
+      </ScrollView>
+
+      <Sheet onClose={() => setEditing(false)} visible={editing}>
+        <VStack className="px-5 pb-2 pt-1" space="md">
+          <Text className="font-inter-bold text-[17px] text-content">
+            Your name
+          </Text>
+          <Text className="text-text-muted" size="sm">
+            This is how neighbours see you on posts and the leaderboard.
+          </Text>
+          <Input size="lg">
+            <InputField
+              autoFocus
+              onChangeText={setDraftName}
+              onSubmitEditing={saveName}
+              placeholder="First name"
+              value={draftName}
+            />
+          </Input>
+          <Button
+            className="h-[52px] rounded-2xl bg-primary"
+            isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
+            onPress={saveName}
+            size="lg"
+          >
+            <ButtonText className="font-inter-semibold text-primary-foreground">
+              {updateProfile.isPending ? 'Saving…' : 'Save'}
+            </ButtonText>
+          </Button>
+        </VStack>
+      </Sheet>
+    </View>
+  );
+}

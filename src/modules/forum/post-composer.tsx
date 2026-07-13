@@ -30,11 +30,8 @@ export function PostComposer({
     title.trim().length > 0 && excerpt.trim().length > 0 && !isSubmitting;
 
   return (
-    <VStack
-      className="mx-5 rounded-[20px] border border-line bg-canvas p-[18px]"
-      space="sm"
-    >
-      <Text className="font-inter-semibold text-[13px] text-text-muted">
+    <VStack className="px-5 pb-2 pt-1" space="sm">
+      <Text className="font-inter-bold text-[17px] text-content">
         New post in {forum}
       </Text>
       <Input size="lg">
@@ -42,6 +39,7 @@ export function PostComposer({
           autoFocus
           onChangeText={setTitle}
           placeholder="Title"
+          testID="forum-post-title"
           value={title}
         />
       </Input>
@@ -49,6 +47,7 @@ export function PostComposer({
         <InputField
           onChangeText={setExcerpt}
           placeholder="What do you want to share?"
+          testID="forum-post-body"
           value={excerpt}
         />
       </Input>
@@ -70,6 +69,7 @@ export function PostComposer({
           onPress={() =>
             onSubmit({ excerpt: excerpt.trim(), title: title.trim() })
           }
+          testID="forum-submit-post"
           size="sm"
         >
           <ButtonText className="font-inter-semibold text-[13px] text-primary-foreground">

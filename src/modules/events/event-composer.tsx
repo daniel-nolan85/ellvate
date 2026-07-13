@@ -91,11 +91,8 @@ export function EventComposer({
     !isSubmitting;
 
   return (
-    <VStack
-      className="mx-5 rounded-[20px] border border-line bg-canvas p-[18px]"
-      space="md"
-    >
-      <Text className="font-inter-semibold text-[13px] text-text-muted">
+    <VStack className="px-5 pb-2 pt-1" space="md">
+      <Text className="font-inter-bold text-[17px] text-content">
         New event at the lake
       </Text>
 
@@ -105,6 +102,7 @@ export function EventComposer({
             autoFocus
             onChangeText={setTitle}
             placeholder="Event name"
+            testID="event-title"
             value={title}
           />
         </Input>
@@ -115,6 +113,7 @@ export function EventComposer({
           <InputField
             onChangeText={setPlace}
             placeholder="Place or venue"
+            testID="event-place"
             value={place}
           />
         </Input>
@@ -181,6 +180,7 @@ export function EventComposer({
           onPress={() =>
             onSubmit({ date, place: place.trim(), tag, time, title: title.trim() })
           }
+          testID="event-submit"
           size="sm"
         >
           <ButtonText className="font-inter-semibold text-[13px] text-primary-foreground">

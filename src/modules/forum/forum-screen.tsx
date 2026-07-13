@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
+import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -64,7 +65,8 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   };
 
   return (
-    <ScrollView
+    <>
+      <ScrollView
       className="flex-1 bg-canvas"
       contentContainerStyle={{ paddingBottom: 130 }}
     >
@@ -74,7 +76,8 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           right={
             <Button
               className="rounded-full bg-primary px-4"
-              onPress={() => setIsComposing((open) => !open)}
+              onPress={() => setIsComposing(true)}
+              testID="forum-add-post"
               size="sm"
             >
               <Icon color={COLOR_PRIMARY_FOREGROUND} name="Edit" size={14} />
@@ -90,21 +93,6 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           onSelect={setActiveForum}
           subforums={subforumNames}
         />
-        {isComposing ? (
-          <VStack space="xs">
-            <PostComposer
-              forum={composerForum}
-              isSubmitting={createPost.isPending}
-              onDismiss={() => setIsComposing(false)}
-              onSubmit={handleCreatePost}
-            />
-            {createPost.isError ? (
-              <Text className="mx-5 text-destructive" size="xs">
-                Couldn&apos;t publish your post. Please try again.
-              </Text>
-            ) : null}
-          </VStack>
-        ) : null}
         {posts.isPending ? (
           <VStack className="items-center py-16">
             <Spinner size="large" />
@@ -152,5 +140,20 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         )}
       </VStack>
     </ScrollView>
+
+      <Sheet onClose={() => setIsComposing(false)} visible={isComposing}>
+        <PostComposer
+          forum={composerForum}
+          isSubmitting={createPost.isPending}
+          onDismiss={() => setIsComposing(false)}
+          onSubmit={handleCreatePost}
+        />
+        {createPost.isError ? (
+          <Text className="px-5 pb-2 text-destructive" size="xs">
+            Couldn&apos;t publish your post. Please try again.
+          </Text>
+        ) : null}
+      </Sheet>
+    </>
   );
 }
