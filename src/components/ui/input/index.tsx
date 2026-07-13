@@ -1,77 +1,131 @@
+'use client';
 import React from 'react';
-import { TextInput, View } from 'react-native';
-import type { TextInputProps } from 'react-native';
+import { createInput } from '@gluestack-ui/core/input/creator';
+import { PrimitiveIcon, UIIcon } from '@gluestack-ui/core/icon/creator';
+import {
+  tva,
+  withStyleContext,
+  type VariantProps,
+} from '@gluestack-ui/utils/nativewind-utils';
+import { cssInterop } from 'nativewind';
+import { Pressable, TextInput, View } from 'react-native';
 
-type InputSize = 'sm' | 'md' | 'lg';
+const SCOPE = 'INPUT';
 
-const sizeClassNames: Record<InputSize, string> = {
-  sm: 'h-8',
-  md: 'h-9',
-  lg: 'h-11',
-};
+const UIInput = createInput({
+  Icon: UIIcon,
+  Input: TextInput,
+  Root: withStyleContext(View, SCOPE),
+  Slot: Pressable,
+});
 
-type InputProps = TextInputProps & {
-  size?: InputSize;
-  pill?: boolean;
-  isInvalid?: boolean;
-  isDisabled?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  className?: string;
-  inputClassName?: string;
-};
-
-const joinClassNames = (
-  ...classNames: readonly (string | false | undefined)[]
-): string => classNames.filter(Boolean).join(' ');
-
-const Input = React.forwardRef<
-  React.ComponentRef<typeof TextInput>,
-  InputProps
->(function Input(
-  {
-    size = 'md',
-    pill = false,
-    isInvalid = false,
-    isDisabled = false,
-    leftIcon,
-    rightIcon,
-    className,
-    inputClassName,
-    editable,
-    placeholderTextColor = 'rgb(161,161,170)',
-    ...props
+cssInterop(PrimitiveIcon, {
+  className: {
+    target: 'style',
+    nativeStyleToProp: {
+      color: 'classNameColor',
+      fill: true,
+      height: true,
+      stroke: true,
+      width: true,
+    },
   },
-  ref
-) {
-  return (
-    <View
-      className={joinClassNames(
-        'flex-row items-center gap-2 border bg-canvas px-3',
-        sizeClassNames[size],
-        pill ? 'rounded-full' : 'rounded-lg',
-        isInvalid ? 'border-destructive' : 'border-line',
-        isDisabled && 'opacity-50',
-        className
-      )}
-    >
-      {leftIcon}
-      <TextInput
+});
+
+const inputStyle = tva({
+  base: 'w-full flex-row items-center overflow-hidden rounded-lg border border-line bg-canvas px-3.5 gap-2 data-[focus=true]:border-content data-[invalid=true]:border-destructive data-[disabled=true]:opacity-50',
+  variants: {
+    size: {
+      sm: 'h-9',
+      md: 'h-11',
+      lg: 'h-[54px] rounded-2xl px-4',
+    },
+  },
+});
+
+const inputFieldStyle = tva({
+  base: 'h-full flex-1 py-1 font-sans text-base text-content web:outline-none ios:leading-[0px] web:cursor-text',
+});
+
+const inputSlotStyle = tva({ base: 'items-center justify-center' });
+
+const inputIconStyle = tva({
+  base: 'h-5 w-5 items-center justify-center text-text-muted',
+});
+
+type IInputProps = React.ComponentProps<typeof UIInput> &
+  VariantProps<typeof inputStyle> & { className?: string };
+
+const Input = React.forwardRef<React.ComponentRef<typeof UIInput>, IInputProps>(
+  function Input({ className, size = 'md', ...props }, ref) {
+    return (
+      <UIInput
+        className={inputStyle({ class: className, size })}
+        context={{}}
         ref={ref}
-        className={joinClassNames(
-          'flex-1 font-sans text-base font-normal text-content',
-          inputClassName
-        )}
-        placeholderTextColor={placeholderTextColor}
-        editable={isDisabled ? false : editable}
         {...props}
       />
-      {rightIcon}
-    </View>
+    );
+  },
+);
+
+type IInputFieldProps = React.ComponentProps<typeof UIInput.Input> & {
+  className?: string;
+};
+
+const InputField = React.forwardRef<
+  React.ComponentRef<typeof UIInput.Input>,
+  IInputFieldProps
+>(function InputField({ className, ...props }, ref) {
+  return (
+    <UIInput.Input
+      className={inputFieldStyle({ class: className })}
+      placeholderTextColor="rgb(161,161,170)"
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
+type IInputSlotProps = React.ComponentProps<typeof UIInput.Slot> & {
+  className?: string;
+};
+
+const InputSlot = React.forwardRef<
+  React.ComponentRef<typeof UIInput.Slot>,
+  IInputSlotProps
+>(function InputSlot({ className, ...props }, ref) {
+  return (
+    <UIInput.Slot
+      className={inputSlotStyle({ class: className })}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
+type IInputIconProps = React.ComponentProps<typeof UIInput.Icon> & {
+  className?: string;
+  height?: number;
+  width?: number;
+};
+
+const InputIcon = React.forwardRef<
+  React.ComponentRef<typeof UIInput.Icon>,
+  IInputIconProps
+>(function InputIcon({ className, ...props }, ref) {
+  return (
+    <UIInput.Icon
+      className={inputIconStyle({ class: className })}
+      ref={ref}
+      {...props}
+    />
   );
 });
 
 Input.displayName = 'Input';
+InputField.displayName = 'InputField';
+InputSlot.displayName = 'InputSlot';
+InputIcon.displayName = 'InputIcon';
 
-export { Input };
-export type { InputProps, InputSize };
+export { Input, InputField, InputIcon, InputSlot };

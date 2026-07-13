@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Heading } from '@/src/components/ui/heading';
 import { Icon } from '@/src/components/ui/icon';
-import { Input } from '@/src/components/ui/input';
+import { Input, InputField, InputSlot } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 
+import { CodeInput } from './code-input';
 import { usePhoneAuthFlow } from './use-phone-auth-flow';
 
 const formatPhone = (value: string): string => {
@@ -25,6 +26,9 @@ const formatPhone = (value: string): string => {
 const toE164 = (formatted: string): string =>
   `+1${formatted.replace(/\D/g, '').slice(0, 10)}`;
 
+const displayPhone = (e164: string): string =>
+  `+1 ${formatPhone(e164.replace(/^\+1/, ''))}`;
+
 interface SignInScreenProps {
   readonly onSignedUp: () => void;
 }
@@ -36,17 +40,27 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
   const [phoneText, setPhoneText] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [codeInvalid, setCodeInvalid] = useState(false);
 
   const phoneComplete = phoneText.replace(/\D/g, '').length === 10;
 
-  const onContinue = async () => {
+  const handleCode = async (entered: string) => {
+    const outcome = await flow.submitCode(entered);
+    if (outcome === 'error') {
+      setCode('');
+      setCodeInvalid(true);
+    } else if (outcome === 'signed-in' && flow.mode === 'signUp') {
+      onSignedUp();
+    }
+    // 'need-password' advances the step; the password screen renders next.
+  };
+
+  const onPrimary = async () => {
     if (flow.step === 'phone' && phoneComplete) {
       await flow.submitPhone(toE164(phoneText));
     } else if (flow.step === 'password' && password.length >= 8) {
-      await flow.submitPassword(password);
-    } else if (flow.step === 'code' && code.length === 6) {
-      const signedIn = await flow.submitCode(code);
-      if (signedIn && flow.mode === 'signUp') {
+      const done = await flow.submitPassword(password);
+      if (done) {
         onSignedUp();
       }
     }
@@ -54,17 +68,19 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
 
   const heading =
     flow.step === 'phone'
-      ? { sub: 'We’ll send you a text with a code to sign in.', title: 'What’s your phone number?' }
-      : flow.step === 'password'
-        ? { sub: 'Pick something only you know — at least 8 characters.', title: 'Create a password' }
-        : { sub: `We sent a 6-digit code to ${flow.phone}.`, title: 'Enter the code' };
-
-  const canContinue =
-    flow.step === 'phone'
-      ? phoneComplete
-      : flow.step === 'password'
-        ? password.length >= 8
-        : code.length === 6;
+      ? {
+          sub: 'We’ll text you a 6-digit code. No passwords to remember.',
+          title: 'What’s your phone number?',
+        }
+      : flow.step === 'code'
+        ? {
+            sub: `We sent a code to ${displayPhone(flow.phone)}.`,
+            title: 'Enter the code',
+          }
+        : {
+            sub: 'Pick something only you know — at least 8 characters.',
+            title: 'Create a password',
+          };
 
   return (
     <View
@@ -76,7 +92,11 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
           <Pressable
             accessibilityLabel="Back"
             className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-            onPress={flow.back}
+            onPress={() => {
+              setCode('');
+              setCodeInvalid(false);
+              flow.restart();
+            }}
           >
             <Icon name="ChevronLeft" size={20} />
           </Pressable>
@@ -94,40 +114,52 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
         </VStack>
 
         {flow.step === 'phone' ? (
-          <Input
-            autoFocus
-            keyboardType="phone-pad"
-            leftIcon={
-              <Text className="font-inter-semibold text-content" size="lg">
+          <Input size="lg">
+            <InputSlot>
+              <Text className="font-inter-semibold text-[17px] text-content">
                 +1
               </Text>
-            }
-            onChangeText={(value) => setPhoneText(formatPhone(value))}
-            onSubmitEditing={onContinue}
-            placeholder="(702) 555-0134"
-            size="lg"
-            value={phoneText}
-          />
-        ) : flow.step === 'password' ? (
-          <Input
-            autoFocus
-            onChangeText={setPassword}
-            onSubmitEditing={onContinue}
-            placeholder="Your password"
-            secureTextEntry
-            size="lg"
-            value={password}
-          />
+            </InputSlot>
+            <InputField
+              autoFocus
+              className="text-[17px]"
+              keyboardType="phone-pad"
+              onChangeText={(value) => setPhoneText(formatPhone(value))}
+              onSubmitEditing={onPrimary}
+              placeholder="(702) 555-0134"
+              value={phoneText}
+            />
+          </Input>
+        ) : flow.step === 'code' ? (
+          <VStack space="md">
+            <CodeInput
+              invalid={codeInvalid}
+              onChangeText={(value) => {
+                setCode(value);
+                setCodeInvalid(false);
+              }}
+              onComplete={handleCode}
+              value={code}
+            />
+            <Pressable onPress={() => flow.submitPhone(flow.phone)}>
+              <Text className="text-center text-muted-foreground" size="sm">
+                Didn’t get it?{' '}
+                <Text className="font-inter-semibold text-indigo">Resend code</Text>
+              </Text>
+            </Pressable>
+          </VStack>
         ) : (
-          <Input
-            autoFocus
-            keyboardType="number-pad"
-            onChangeText={(value) => setCode(value.replace(/\D/g, '').slice(0, 6))}
-            onSubmitEditing={onContinue}
-            placeholder="123456"
-            size="lg"
-            value={code}
-          />
+          <Input size="lg">
+            <InputField
+              autoFocus
+              className="text-[17px]"
+              onChangeText={setPassword}
+              onSubmitEditing={onPrimary}
+              placeholder="At least 8 characters"
+              secureTextEntry
+              value={password}
+            />
+          </Input>
         )}
 
         {flow.error ? (
@@ -137,16 +169,22 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
         ) : null}
       </VStack>
 
-      <Button
-        className="h-[52px] rounded-full bg-primary"
-        isDisabled={!canContinue || flow.busy || !flow.ready}
-        onPress={onContinue}
-        size="lg"
-      >
-        <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground">
-          {flow.busy ? 'Just a moment…' : 'Continue'}
-        </ButtonText>
-      </Button>
+      {flow.step !== 'code' ? (
+        <Button
+          className="h-[54px] rounded-2xl bg-primary"
+          isDisabled={
+            flow.busy ||
+            !flow.ready ||
+            (flow.step === 'phone' ? !phoneComplete : password.length < 8)
+          }
+          onPress={onPrimary}
+          size="lg"
+        >
+          <ButtonText className="font-inter-semibold text-[16px] text-primary-foreground">
+            {flow.busy ? 'Just a moment…' : 'Continue'}
+          </ButtonText>
+        </Button>
+      ) : null}
     </View>
   );
 }

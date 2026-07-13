@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
-import { Input } from '@/src/components/ui/input';
+import { Input, InputField } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 
@@ -37,19 +37,21 @@ export function PostComposer({
       <Text className="font-inter-semibold text-[13px] text-text-muted">
         New post in {forum}
       </Text>
-      <Input
-        autoFocus
-        onChangeText={setTitle}
-        placeholder="Title"
-        size="lg"
-        value={title}
-      />
-      <Input
-        onChangeText={setExcerpt}
-        placeholder="What do you want to share?"
-        size="lg"
-        value={excerpt}
-      />
+      <Input size="lg">
+        <InputField
+          autoFocus
+          onChangeText={setTitle}
+          placeholder="Title"
+          value={title}
+        />
+      </Input>
+      <Input size="lg">
+        <InputField
+          onChangeText={setExcerpt}
+          placeholder="What do you want to share?"
+          value={excerpt}
+        />
+      </Input>
       <HStack className="items-center justify-end" space="sm">
         <Button
           action="secondary"

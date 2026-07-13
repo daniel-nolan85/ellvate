@@ -2,12 +2,13 @@ import { useCallback, useState } from 'react';
 
 import { useAuth, useSignIn, useSignUp } from '@clerk/expo';
 
-// A combined sign-in-or-up flow for the app's enabled factors: phone number +
-// password, verified by an SMS code. Existing numbers sign in with a code; new
-// numbers set a password, then verify. Built on Clerk's "future" custom-flow
-// resource API (methods return { error } rather than throwing).
-export type AuthStep = 'phone' | 'password' | 'code';
+// Combined sign-in-or-up on Clerk's future custom-flow API, ordered
+// phone -> SMS code -> (new accounts) password. Existing numbers finish at the
+// code step; new numbers verify first, then set a password. Methods return
+// { error } instead of throwing.
+export type AuthStep = 'phone' | 'code' | 'password';
 export type AuthMode = 'signIn' | 'signUp';
+export type CodeOutcome = 'signed-in' | 'need-password' | 'error';
 
 const messageFor = (error: unknown, fallback: string): string => {
   const candidate = error as
@@ -37,45 +38,25 @@ export function usePhoneAuthFlow() {
       setError(null);
       setPhone(e164Phone);
       try {
-        const { error: createError } = await signIn.create({
+        const { error: signInError } = await signIn.create({
           identifier: e164Phone,
         });
-        if (createError) {
-          // No account for this number yet — create one.
-          setMode('signUp');
-          setStep('password');
+        if (!signInError) {
+          const { error: sendError } = await signIn.phoneCode.sendCode();
+          if (sendError) {
+            setError(messageFor(sendError, 'We couldn’t send a code. Try again.'));
+            return;
+          }
+          setMode('signIn');
+          setStep('code');
           return;
         }
-        const { error: sendError } = await signIn.phoneCode.sendCode();
-        if (sendError) {
-          setError(messageFor(sendError, 'We couldn’t send a code. Try again.'));
-          return;
-        }
-        setMode('signIn');
-        setStep('code');
-      } catch (caught) {
-        setError(messageFor(caught, 'That number didn’t work. Try again.'));
-      } finally {
-        setBusy(false);
-      }
-    },
-    [busy, isLoaded, signIn],
-  );
-
-  const submitPassword = useCallback(
-    async (password: string) => {
-      if (!isLoaded || busy) {
-        return;
-      }
-      setBusy(true);
-      setError(null);
-      try {
+        // No account for this number — start a sign-up (password comes later).
         const { error: createError } = await signUp.create({
-          password,
-          phoneNumber: phone,
+          phoneNumber: e164Phone,
         });
         if (createError) {
-          setError(messageFor(createError, 'That password didn’t work. Try again.'));
+          setError(messageFor(createError, 'That number didn’t work. Try again.'));
           return;
         }
         const { error: sendError } = await signUp.verifications.sendPhoneCode();
@@ -83,21 +64,21 @@ export function usePhoneAuthFlow() {
           setError(messageFor(sendError, 'We couldn’t send a code. Try again.'));
           return;
         }
+        setMode('signUp');
         setStep('code');
       } catch (caught) {
-        setError(messageFor(caught, 'Something went wrong. Try again.'));
+        setError(messageFor(caught, 'That number didn’t work. Try again.'));
       } finally {
         setBusy(false);
       }
     },
-    [busy, isLoaded, phone, signUp],
+    [busy, isLoaded, signIn, signUp],
   );
 
-  // Returns true once the session is active (caller can offer a passkey next).
   const submitCode = useCallback(
-    async (code: string): Promise<boolean> => {
+    async (code: string): Promise<CodeOutcome> => {
       if (!isLoaded || busy) {
-        return false;
+        return 'error';
       }
       setBusy(true);
       setError(null);
@@ -107,30 +88,28 @@ export function usePhoneAuthFlow() {
             code,
           });
           if (verifyError) {
-            setError(messageFor(verifyError, 'That code didn’t match. Try again.'));
-            return false;
+            setError('That code didn’t match. Check it and try again.');
+            return 'error';
           }
-          if (signIn.status === 'complete') {
-            await signIn.finalize();
-            return true;
+          const { error: finalizeError } = await signIn.finalize();
+          if (finalizeError) {
+            setError(messageFor(finalizeError, 'Couldn’t finish signing in.'));
+            return 'error';
           }
-        } else {
-          const { error: verifyError } =
-            await signUp.verifications.verifyPhoneCode({ code });
-          if (verifyError) {
-            setError(messageFor(verifyError, 'That code didn’t match. Try again.'));
-            return false;
-          }
-          if (signUp.status === 'complete') {
-            await signUp.finalize();
-            return true;
-          }
+          return 'signed-in';
         }
-        setError('That code didn’t match. Check it and try again.');
-        return false;
+        const { error: verifyError } =
+          await signUp.verifications.verifyPhoneCode({ code });
+        if (verifyError) {
+          setError('That code didn’t match. Check it and try again.');
+          return 'error';
+        }
+        // Number is verified; this instance still needs a password.
+        setStep('password');
+        return 'need-password';
       } catch (caught) {
         setError(messageFor(caught, 'That code didn’t match. Try again.'));
-        return false;
+        return 'error';
       } finally {
         setBusy(false);
       }
@@ -138,18 +117,50 @@ export function usePhoneAuthFlow() {
     [busy, isLoaded, mode, signIn, signUp],
   );
 
-  const back = useCallback(() => {
+  const submitPassword = useCallback(
+    async (password: string): Promise<boolean> => {
+      if (!isLoaded || busy) {
+        return false;
+      }
+      setBusy(true);
+      setError(null);
+      try {
+        const { error: updateError } = await signUp.password({
+          password,
+          phoneNumber: phone,
+        });
+        if (updateError) {
+          setError(messageFor(updateError, 'That password didn’t work. Try again.'));
+          return false;
+        }
+        const { error: finalizeError } = await signUp.finalize();
+        if (finalizeError) {
+          setError(messageFor(finalizeError, 'Couldn’t finish setting up your account.'));
+          return false;
+        }
+        return true;
+      } catch (caught) {
+        setError(messageFor(caught, 'That password didn’t work. Try again.'));
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, isLoaded, phone, signUp],
+  );
+
+  const restart = useCallback(() => {
     setError(null);
     setStep('phone');
   }, []);
 
   return {
-    back,
     busy,
     error,
     mode,
     phone,
     ready: isLoaded,
+    restart,
     step,
     submitCode,
     submitPassword,

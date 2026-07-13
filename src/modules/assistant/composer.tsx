@@ -3,7 +3,7 @@ import { Pressable } from 'react-native';
 
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
-import { Input } from '@/src/components/ui/input';
+import { Input, InputField } from '@/src/components/ui/input';
 
 interface ComposerProps {
   readonly isSending: boolean;
@@ -24,17 +24,16 @@ export function Composer({ isSending, onSend }: ComposerProps) {
 
   return (
     <HStack className="items-center gap-2 px-5 pb-7 pt-2.5">
-      <Input
-        className="flex-1"
-        onChangeText={setValue}
-        onSubmitEditing={submit}
-        pill
-        placeholder="Ask about events, posts, missions…"
-        returnKeyType="send"
-        size="lg"
-        submitBehavior="submit"
-        value={value}
-      />
+      <Input className="flex-1 rounded-full" size="lg">
+        <InputField
+          onChangeText={setValue}
+          onSubmitEditing={submit}
+          placeholder="Ask about events, posts, missions…"
+          returnKeyType="send"
+          submitBehavior="submit"
+          value={value}
+        />
+      </Input>
       <Pressable
         accessibilityLabel="Send"
         className={`h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary ${
