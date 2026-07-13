@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
@@ -8,7 +10,8 @@ import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
 import { MissionCard } from './mission-card';
-import { useMissionsView } from './use-missions';
+import { MissionComposer } from './mission-composer';
+import { useCreateMission, useMissionsView } from './use-missions';
 import { XpHero } from './xp-hero';
 
 interface MissionsScreenProps {
@@ -29,8 +32,23 @@ function RanksChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
+function AddButton({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel="Add mission"
+      accessibilityRole="button"
+      className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+      onPress={onPress}
+    >
+      <Icon color="#fff" name="Add" size={20} />
+    </Pressable>
+  );
+}
+
 export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
   const missionsView = useMissionsView();
+  const createMission = useCreateMission();
+  const [composing, setComposing] = useState(false);
 
   return (
     <ScrollView
@@ -40,9 +58,27 @@ export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
       <VStack className="gap-4">
         <ScreenTitle
           eyebrow="Explore & earn"
-          right={<RanksChip onPress={onOpenLeaderboard} />}
+          right={
+            <HStack className="items-center" space="sm">
+              <AddButton onPress={() => setComposing((open) => !open)} />
+              <RanksChip onPress={onOpenLeaderboard} />
+            </HStack>
+          }
           title="Missions"
         />
+
+        {composing ? (
+          <MissionComposer
+            isSubmitting={createMission.isPending}
+            onDismiss={() => setComposing(false)}
+            onSubmit={(input) =>
+              createMission.mutate(input, {
+                onSuccess: () => setComposing(false),
+              })
+            }
+          />
+        ) : null}
+
         {missionsView.isPending ? (
           <VStack className="items-center justify-center py-24">
             <Spinner size="small" />
@@ -69,9 +105,15 @@ export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
               <Text className="py-0.5 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
                 Near you
               </Text>
-              {missionsView.data.missions.map((mission) => (
-                <MissionCard key={mission.id} mission={mission} />
-              ))}
+              {missionsView.data.missions.length === 0 ? (
+                <Text className="py-2 text-muted-foreground" size="sm">
+                  No missions yet. Tap + to create the first one.
+                </Text>
+              ) : (
+                missionsView.data.missions.map((mission) => (
+                  <MissionCard key={mission.id} mission={mission} />
+                ))
+              )}
             </VStack>
           </>
         )}

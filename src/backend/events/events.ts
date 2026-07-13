@@ -2,13 +2,19 @@ import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
 
-import { getEventsViewSupabase, toggleJoinSupabase } from './events-supabase';
+import {
+  createEventSupabase,
+  getEventsViewSupabase,
+  toggleJoinSupabase,
+} from './events-supabase';
 import type {
   CommunityEvent,
+  CreateEventResult,
   EventsView,
   JoinResult,
   PersonRef,
 } from './types';
+import { validateEventInput } from './validation';
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -60,6 +66,33 @@ function getEventsViewMemory(userId: string): EventsView {
   };
 }
 
+function createEventMemory(userId: string, input: unknown): CreateEventResult {
+  const validation = validateEventInput(input);
+  if (!validation.ok) {
+    return validation;
+  }
+  const value = validation.value;
+  const stored: StoredEvent = {
+    id: `evt-${crypto.randomUUID()}`,
+    startsAt: value.startsAt,
+    timeLabel: value.timeLabel,
+    dayLabel: value.dayLabel,
+    dateLabel: value.dateLabel,
+    title: value.title,
+    place: value.place,
+    tag: value.tag,
+    featured: false,
+    going: 0,
+    joinedBy: [],
+    attendeeIds: [],
+  };
+  const next = setState((current) => ({
+    ...current,
+    events: [stored, ...current.events],
+  }));
+  return { ok: true, event: toCommunityEvent(stored, userId, next.users) };
+}
+
 function toggleJoinMemory(userId: string, eventId: string): JoinResult | null {
   const existing = getState().events.find((event) => event.id === eventId);
 
@@ -96,6 +129,15 @@ export async function getEventsView(ctx: RequestContext): Promise<EventsView> {
   return ctx.supabase
     ? getEventsViewSupabase(ctx.supabase, ctx.userId)
     : getEventsViewMemory(ctx.userId);
+}
+
+export async function createEvent(
+  ctx: RequestContext,
+  input: unknown,
+): Promise<CreateEventResult> {
+  return ctx.supabase
+    ? createEventSupabase(ctx.supabase, ctx.userId, input)
+    : createEventMemory(ctx.userId, input);
 }
 
 export async function toggleJoin(

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { GET as getEvents } from '../../app/api/events+api';
+import { GET as getEvents, POST as postEvent } from '../../app/api/events+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
-import { getEventsView, toggleJoin } from '../../src/backend/events';
+import { createEvent, getEventsView, toggleJoin } from '../../src/backend/events';
 import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -95,6 +95,91 @@ describe('toggleJoin', () => {
 
   test('returns null for an unknown event', async () => {
     expect(await toggleJoin(ctx(), 'event-999')).toBeNull();
+  });
+});
+
+describe('createEvent', () => {
+  const validInput = {
+    date: '2026-07-18',
+    place: 'Village Marina',
+    tag: 'Outdoors',
+    time: '18:00',
+    title: 'Sunset Kayak',
+  };
+
+  test('creates an event with derived labels and lists it', async () => {
+    const result = await createEvent(ctx(), validInput);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.event).toMatchObject({
+      title: 'Sunset Kayak',
+      place: 'Village Marina',
+      tag: 'Outdoors',
+      timeLabel: '6:00 PM',
+      dayLabel: 'SAT',
+      dateLabel: '18',
+      going: 0,
+      joined: false,
+      featured: false,
+    });
+
+    const listed = (await getEventsView(ctx())).events.find(
+      (event) => event.id === result.event.id,
+    );
+    expect(listed).toBeDefined();
+  });
+
+  test('rejects a missing title', async () => {
+    const result = await createEvent(ctx(), { ...validInput, title: '' });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
+
+  test('rejects a malformed day', async () => {
+    const result = await createEvent(ctx(), { ...validInput, date: 'nope' });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
+});
+
+describe('POST /api/events', () => {
+  const postEventRequest = (body: unknown) =>
+    postEvent(
+      new Request('http://localhost/api/events', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  test('creates an event and returns 201', async () => {
+    const response = await postEventRequest({
+      date: '2026-07-19',
+      place: 'The Village',
+      tag: 'Market',
+      time: '10:00',
+      title: 'Market Day',
+    });
+
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      event: { title: string; dayLabel: string; timeLabel: string };
+    };
+    expect(body.event).toMatchObject({
+      title: 'Market Day',
+      dayLabel: 'SUN',
+      timeLabel: '10:00 AM',
+    });
+  });
+
+  test('400s with the ApiError envelope on invalid input', async () => {
+    const response = await postEventRequest({ title: '' });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('invalid_event');
   });
 });
 

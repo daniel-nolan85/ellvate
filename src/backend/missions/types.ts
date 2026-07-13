@@ -27,6 +27,30 @@ export interface MissionsView {
   readonly progress: UserProgress;
 }
 
+export interface ValidatedMission {
+  readonly title: string;
+  readonly description: string;
+  readonly xp: number;
+  readonly stopsTotal: number;
+  readonly icon: MissionIcon;
+}
+
+export type MissionValidation =
+  | { readonly ok: true; readonly value: ValidatedMission }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_mission';
+      readonly message: string;
+    };
+
+export type CreateMissionResult =
+  | { readonly ok: true; readonly mission: Mission }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_mission';
+      readonly message: string;
+    };
+
 export interface CheckInResponse {
   readonly mission: Mission;
   readonly awardedXp: number;

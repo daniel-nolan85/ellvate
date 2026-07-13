@@ -1,16 +1,19 @@
-import { ScrollView } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView } from 'react-native';
 
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
+import { EventComposer } from './event-composer';
 import { EventRow } from './event-row';
 import { FeaturedEventCard } from './featured-event-card';
-import { useEventsView, useToggleJoin } from './use-events';
+import { useCreateEvent, useEventsView, useToggleJoin } from './use-events';
 import { WeekStrip } from './week-strip';
 
 import type { EventsView } from './events-types';
@@ -35,19 +38,40 @@ function EventsBody({
         <Text className="py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
           Coming up
         </Text>
-        <VStack space="sm">
-          {rest.map((event) => (
-            <EventRow event={event} key={event.id} onToggleJoin={onToggleJoin} />
-          ))}
-        </VStack>
+        {view.events.length === 0 ? (
+          <Text className="py-2 text-muted-foreground" size="sm">
+            Nothing on the calendar yet. Tap + to add the first one.
+          </Text>
+        ) : (
+          <VStack space="sm">
+            {rest.map((event) => (
+              <EventRow event={event} key={event.id} onToggleJoin={onToggleJoin} />
+            ))}
+          </VStack>
+        )}
       </VStack>
     </>
+  );
+}
+
+function AddButton({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel="Add event"
+      accessibilityRole="button"
+      className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+      onPress={onPress}
+    >
+      <Icon color="#fff" name="Add" size={20} />
+    </Pressable>
   );
 }
 
 export function EventsScreen() {
   const eventsView = useEventsView();
   const toggleJoin = useToggleJoin();
+  const createEvent = useCreateEvent();
+  const [composing, setComposing] = useState(false);
 
   const handleToggleJoin = (eventId: string) => {
     toggleJoin.mutate(eventId);
@@ -63,12 +87,29 @@ export function EventsScreen() {
         <ScreenTitle
           eyebrow="This week at the lake"
           right={
-            <Box className="h-10 w-10 items-center justify-center rounded-full bg-secondary">
-              <Icon name="Search" size={18} />
-            </Box>
+            <HStack className="items-center" space="sm">
+              <AddButton onPress={() => setComposing((open) => !open)} />
+              <Box className="h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                <Icon name="Search" size={18} />
+              </Box>
+            </HStack>
           }
           title="Events"
         />
+
+        {composing && eventsView.data ? (
+          <EventComposer
+            isSubmitting={createEvent.isPending}
+            onDismiss={() => setComposing(false)}
+            onSubmit={(input) =>
+              createEvent.mutate(input, {
+                onSuccess: () => setComposing(false),
+              })
+            }
+            week={eventsView.data.week}
+          />
+        ) : null}
+
         {eventsView.isPending ? (
           <Box className="items-center justify-center py-24">
             <Spinner />

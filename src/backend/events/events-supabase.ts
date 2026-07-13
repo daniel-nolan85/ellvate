@@ -2,11 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
   CommunityEvent,
+  CreateEventResult,
   EventsView,
   JoinResult,
   PersonRef,
   WeekDay,
 } from './types';
+import { validateEventInput } from './validation';
 
 const WEEK_SELECT = 'date,day_label,date_label,is_today';
 const EVENT_SELECT =
@@ -137,6 +139,47 @@ export async function getEventsViewSupabase(
     events: eventRows.map((row) =>
       toCommunityEvent(row, joinedByEvent(row.id), userId, nameById),
     ),
+  };
+}
+
+export async function createEventSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  input: unknown,
+): Promise<CreateEventResult> {
+  const validation = validateEventInput(input);
+  if (!validation.ok) {
+    return validation;
+  }
+  const value = validation.value;
+  await ensureUser(supabase, userId);
+  const { data, error } = await supabase
+    .from('events')
+    .insert({
+      created_by: userId,
+      starts_at: value.startsAt,
+      time_label: value.timeLabel,
+      day_label: value.dayLabel,
+      date_label: value.dateLabel,
+      title: value.title,
+      place: value.place,
+      tag: value.tag,
+      featured: false,
+      going_base: 0,
+      seed_attendee_ids: [],
+    })
+    .select(EVENT_SELECT)
+    .single();
+  if (error || !data) {
+    return {
+      code: 'invalid_event',
+      message: 'Could not create the event.',
+      ok: false,
+    };
+  }
+  return {
+    ok: true,
+    event: toCommunityEvent(data as unknown as EventRow, [], userId, new Map()),
   };
 }
 

@@ -2,8 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { MissionIcon, MissionStatus } from '@/src/backend/store';
 
-import type { CheckInResult, Mission, MissionsView } from './types';
+import type {
+  CheckInResult,
+  CreateMissionResult,
+  Mission,
+  MissionsView,
+} from './types';
 import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
+import { validateMissionInput } from './validation';
 
 const MISSION_SELECT =
   'id,title,description,xp,stops_total,icon,position,locked_by_default';
@@ -129,6 +135,51 @@ export async function getMissionsViewSupabase(
       title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
     }),
   };
+}
+
+export async function createMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  input: unknown,
+): Promise<CreateMissionResult> {
+  const validation = validateMissionInput(input);
+  if (!validation.ok) {
+    return validation;
+  }
+  const value = validation.value;
+  await ensureUser(supabase, userId);
+
+  const { data: lastRow } = await supabase
+    .from('missions')
+    .select('position')
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const position = ((lastRow as { position: number } | null)?.position ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from('missions')
+    .insert({
+      id: `msn-${crypto.randomUUID()}`,
+      created_by: userId,
+      title: value.title,
+      description: value.description,
+      xp: value.xp,
+      stops_total: value.stopsTotal,
+      icon: value.icon,
+      position,
+      locked_by_default: false,
+    })
+    .select(MISSION_SELECT)
+    .single();
+  if (error || !data) {
+    return {
+      code: 'invalid_mission',
+      message: 'Could not create the mission.',
+      ok: false,
+    };
+  }
+  return { ok: true, mission: toMissionView(data as unknown as MissionRow, undefined) };
 }
 
 export async function checkInSupabase(

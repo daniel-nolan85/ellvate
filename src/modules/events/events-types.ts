@@ -35,3 +35,11 @@ export interface ToggleJoinResult {
   readonly going: number;
   readonly joined: boolean;
 }
+
+export interface CreateEventInput {
+  readonly title: string;
+  readonly place: string;
+  readonly tag: string;
+  readonly date: string;
+  readonly time: string;
+}

@@ -6,6 +6,7 @@ import { requestJson } from '@/src/services/api';
 
 import type {
   CommunityEvent,
+  CreateEventInput,
   EventsView,
   ToggleJoinResult,
 } from './events-types';
@@ -33,6 +34,24 @@ export function useEventsView() {
       signal,
     }),
     queryKey: eventsViewKey(session.userId),
+  });
+}
+
+export function useCreateEvent() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateEventInput) =>
+      requestJson<{ readonly event: CommunityEvent }>({
+        body: input,
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: '/api/events',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
   });
 }
 

@@ -40,6 +40,14 @@ export interface CheckInResult {
   readonly progress: UserProgress;
 }
 
+export interface CreateMissionInput {
+  readonly title: string;
+  readonly description: string;
+  readonly xp: number;
+  readonly stopsTotal: number;
+  readonly icon: MissionIcon;
+}
+
 const missionsViewKey = (userId: string) =>
   ['missions', 'view', userId] as const;
 
@@ -67,6 +75,24 @@ export function useMissionsView() {
       signal,
     }),
     queryKey: missionsViewKey(userId),
+  });
+}
+
+export function useCreateMission() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateMissionInput) =>
+      requestJson<{ readonly mission: Mission }>({
+        body: input,
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: '/api/missions',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['missions'] });
+    },
   });
 }
 

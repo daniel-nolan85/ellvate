@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { GET as getMissions } from '../../app/api/missions+api';
+import {
+  GET as getMissions,
+  POST as postMission,
+} from '../../app/api/missions+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
 import { memoryContext } from '../../src/backend/http';
-import { checkIn, getMissionsView } from '../../src/backend/missions';
+import { checkIn, createMission, getMissionsView } from '../../src/backend/missions';
 import { computeProgress } from '../../src/backend/progress';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -205,6 +208,84 @@ describe('checkIn', () => {
         DEMO_USER_ID
       ],
     ).toEqual({ status: 'active', stopsDone: 0 });
+  });
+});
+
+describe('createMission', () => {
+  const validInput = {
+    description: 'Rent a kayak and get on the water.',
+    icon: 'Sun',
+    stopsTotal: 1,
+    title: 'Paddle the Lake',
+    xp: 75,
+  };
+
+  test('creates an active mission and lists it', async () => {
+    const result = await createMission(ctx(), validInput);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.mission).toMatchObject({
+      title: 'Paddle the Lake',
+      xp: 75,
+      stopsTotal: 1,
+      status: 'active',
+      stopsDone: 0,
+      icon: 'Sun',
+    });
+
+    const listed = (await getMissionsView(ctx())).missions.find(
+      (mission) => mission.id === result.mission.id,
+    );
+    expect(listed).toBeDefined();
+  });
+
+  test('rejects out-of-range xp', async () => {
+    const result = await createMission(ctx(), { ...validInput, xp: 9999 });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
+  });
+
+  test('rejects an unknown icon', async () => {
+    const result = await createMission(ctx(), { ...validInput, icon: 'Rocket' });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
+  });
+});
+
+describe('POST /api/missions', () => {
+  const postMissionRequest = (body: unknown) =>
+    postMission(
+      new Request('http://localhost/api/missions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  test('creates a mission and returns 201', async () => {
+    const response = await postMissionRequest({
+      description: 'Spend an afternoon at the Westin beach.',
+      icon: 'Star',
+      stopsTotal: 1,
+      title: 'Beach Day',
+      xp: 50,
+    });
+
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      mission: { title: string; status: string };
+    };
+    expect(body.mission).toMatchObject({ title: 'Beach Day', status: 'active' });
+  });
+
+  test('400s with the ApiError envelope on invalid input', async () => {
+    const response = await postMissionRequest({ title: '' });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe('invalid_mission');
   });
 });
 
