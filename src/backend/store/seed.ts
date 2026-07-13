@@ -312,6 +312,7 @@ export const createSeedState = (): StoreState => ({
     'Events',
   ],
   posts: seedPosts(),
+  comments: [],
   events: seedEvents(),
   missions: seedMissions(),
   users: seedUsers(),

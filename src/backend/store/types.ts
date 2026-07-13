@@ -42,6 +42,14 @@ export interface StoredPost {
   readonly pinned: boolean;
 }
 
+export interface StoredComment {
+  readonly id: string;
+  readonly postId: string;
+  readonly authorId: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
 export interface StoredEvent {
   readonly id: string;
   readonly startsAt: string;
@@ -82,6 +90,7 @@ export interface StoredWeekDay {
 export interface StoreState {
   readonly subforums: readonly string[];
   readonly posts: readonly StoredPost[];
+  readonly comments: readonly StoredComment[];
   readonly events: readonly StoredEvent[];
   readonly missions: readonly StoredMission[];
   readonly users: readonly StoredUser[];

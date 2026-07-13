@@ -5,6 +5,7 @@ export type {
   MissionStatus,
   MissionUserProgress,
   NotificationPrefs,
+  StoredComment,
   StoredEvent,
   StoredMission,
   StoredPost,
