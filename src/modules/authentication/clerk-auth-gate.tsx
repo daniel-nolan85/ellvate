@@ -1,18 +1,19 @@
-import type { PropsWithChildren } from 'react';
+import { useState, type PropsWithChildren } from 'react';
 import { View } from 'react-native';
-
-import { AuthView } from '@clerk/expo/native';
 
 import { Spinner } from '@/src/components/ui/spinner';
 import { useSession } from '@/src/platform/session';
 
-// Gates the app behind a real Clerk sign-in when Clerk mode is active. AuthView
-// is the native sign-in/up UI and adapts to the instance's enabled factors
-// (phone + password + email + passkey); it syncs the session automatically. When
-// auth is disabled/misconfigured the session status is not 'signed-out', so the
-// app renders normally.
+import { PasskeyOffer } from './sign-in/passkey-offer';
+import { SignInScreen } from './sign-in/sign-in-screen';
+
+// Gates the app behind a custom Clerk sign-in when Clerk mode is active: phone
+// number + password, verified by an SMS code, and a one-time Face ID (passkey)
+// offer right after a new account is created. When auth is disabled the session
+// status is never 'signed-out', so the app renders normally.
 export function ClerkAuthGate({ children }: PropsWithChildren) {
   const session = useSession();
+  const [offerPasskey, setOfferPasskey] = useState(false);
 
   if (session.status === 'loading') {
     return (
@@ -23,11 +24,11 @@ export function ClerkAuthGate({ children }: PropsWithChildren) {
   }
 
   if (session.status === 'signed-out') {
-    return (
-      <View className="flex-1 bg-canvas">
-        <AuthView mode="signInOrUp" />
-      </View>
-    );
+    return <SignInScreen onSignedUp={() => setOfferPasskey(true)} />;
+  }
+
+  if (session.status === 'signed-in' && offerPasskey) {
+    return <PasskeyOffer onDone={() => setOfferPasskey(false)} />;
   }
 
   return children;
