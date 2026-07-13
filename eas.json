@@ -1,0 +1,48 @@
+{
+  "cli": {
+    "version": ">= 19.1.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "bun": "1.3.13",
+      "ios": {
+        "image": "sdk-54"
+      }
+    },
+    "ios-simulator": {
+      "extends": "development",
+      "environment": "development",
+      "ios": {
+        "image": "sdk-54",
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "autoIncrement": true,
+      "bun": "1.3.13",
+      "ios": {
+        "image": "sdk-54"
+      },
+      "channel": "preview"
+    },
+    "production": {
+      "distribution": "store",
+      "environment": "production",
+      "autoIncrement": true,
+      "bun": "1.3.13",
+      "ios": {
+        "image": "sdk-54"
+      },
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
