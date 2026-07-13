@@ -54,13 +54,20 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
           return (
             <Pressable
               accessibilityRole="button"
-              className={`rounded-full px-4 py-2.5 ${
-                selected
-                  ? 'bg-primary shadow-[0px_4px_12px_rgba(23,23,23,0.18)]'
-                  : 'bg-secondary'
-              }`}
+              className={`rounded-full px-4 py-2.5 ${selected ? 'bg-primary' : 'bg-secondary'}`}
               key={interest}
               onPress={() => handleToggle(interest)}
+              style={
+                selected
+                  ? {
+                      elevation: 6,
+                      shadowColor: 'rgb(23,23,23)',
+                      shadowOffset: { height: 4, width: 0 },
+                      shadowOpacity: 0.18,
+                      shadowRadius: 12,
+                    }
+                  : undefined
+              }
             >
               <Text
                 className={`font-inter-medium text-[13px] ${
