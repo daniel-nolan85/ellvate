@@ -2,6 +2,8 @@ import React, { useCallback, useState, type ReactNode } from 'react';
 
 import { View } from 'react-native';
 
+import { useSession } from '@/src/platform/session';
+
 import { AiStep } from './ai-step';
 import { AuthStep } from './auth-step';
 import { ObHeader } from './chrome';
@@ -9,17 +11,22 @@ import { CommitStep } from './commit-step';
 import { FeatureStep } from './feature-step';
 import { InterestsStep } from './interests-step';
 import { NotificationsStep } from './notifications-step';
+import { PasskeyStep } from './passkey-step';
 import { RoleStep } from './role-step';
 import { useOnboardingState } from './use-onboarding-state';
 import { WelcomeStep } from './welcome-step';
 
-const TOTAL_STEPS = 8;
+// The auth step lives at a fixed slot right after the welcome screen. Once a
+// session is active it is skipped by navigation (not by the step itself), so
+// back and next never bounce off a self-advancing screen.
+const AUTH_INDEX = 1;
 
 interface OnboardingFlowProps {
   readonly onFinished: () => void;
 }
 
 export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
+  const session = useSession();
   const [step, setStep] = useState(0);
   const [featureIndex, setFeatureIndex] = useState(0);
   const {
@@ -32,13 +39,31 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     toggleNotification,
   } = useOnboardingState();
 
+  // The Face ID offer needs a real Clerk user, so drop it when auth is off.
+  const clerkUsable =
+    session.status !== 'disabled' && session.status !== 'misconfigured';
+  const isSignedIn = session.status === 'signed-in';
+  const stepCount = clerkUsable ? 9 : 8;
+
   const goNext = useCallback(() => {
-    setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1));
-  }, []);
+    setStep((current) => {
+      let next = Math.min(stepCount - 1, current + 1);
+      if (next === AUTH_INDEX && isSignedIn) {
+        next = Math.min(stepCount - 1, next + 1);
+      }
+      return next;
+    });
+  }, [isSignedIn, stepCount]);
 
   const goBack = useCallback(() => {
-    setStep((current) => Math.max(0, current - 1));
-  }, []);
+    setStep((current) => {
+      let prev = Math.max(0, current - 1);
+      if (prev === AUTH_INDEX && isSignedIn) {
+        prev = Math.max(0, prev - 1);
+      }
+      return prev;
+    });
+  }, [isSignedIn]);
 
   const handleDone = useCallback(() => {
     // Never strand the user on the celebration screen: navigate even if
@@ -52,7 +77,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onSkip={goNext}
       skippable={skippable}
       step={step}
-      total={TOTAL_STEPS}
+      total={stepCount}
     />
   );
 
@@ -96,6 +121,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onToggle={toggleNotification}
       prefs={draft.notificationPrefs}
     />,
+    ...(clerkUsable ? [<PasskeyStep key="passkey" onNext={goNext} />] : []),
     <CommitStep key="commit" onDone={handleDone} />,
   ];
 

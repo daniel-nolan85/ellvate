@@ -20,9 +20,15 @@ type Phase = 'offer' | 'busy' | 'success' | 'error';
 
 interface PasskeyOfferProps {
   readonly onDone: () => void;
+  // Label for the button shown after Face ID is turned on. Onboarding continues
+  // to the next step, so it reads "Continue" there rather than "Go to the forum".
+  readonly continueLabel?: string;
 }
 
-export function PasskeyOffer({ onDone }: PasskeyOfferProps) {
+export function PasskeyOffer({
+  continueLabel = 'Go to the forum',
+  onDone,
+}: PasskeyOfferProps) {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
   const [phase, setPhase] = useState<Phase>('offer');
@@ -60,7 +66,7 @@ export function PasskeyOffer({ onDone }: PasskeyOfferProps) {
             size="lg"
           >
             <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground">
-              Go to the forum
+              {continueLabel}
             </ButtonText>
           </Button>
         </Centered>

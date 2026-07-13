@@ -32,10 +32,13 @@ const displayPhone = (e164: string): string =>
 const MIN_PASSWORD = 8;
 
 interface SignInScreenProps {
-  readonly onSignedUp: () => void;
+  // Fires once the session is active, whether the number signed in or signed up.
+  readonly onAuthenticated: () => void;
+  // Pressing back on the first (phone) screen leaves auth, e.g. to the welcome step.
+  readonly onExit?: () => void;
 }
 
-export function SignInScreen({ onSignedUp }: SignInScreenProps) {
+export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
   const insets = useSafeAreaInsets();
   const flow = usePhoneAuthFlow();
 
@@ -59,14 +62,22 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
     flow.restart();
   };
 
+  const handleBack = () => {
+    if (flow.step === 'phone') {
+      onExit?.();
+      return;
+    }
+    goBack();
+  };
+
   const handleCode = async (entered: string) => {
     const signedIn = await flow.submitCode(entered);
     if (!signedIn) {
       setCode('');
       setCodeInvalid(true);
-    } else if (flow.mode === 'signUp') {
-      onSignedUp();
+      return;
     }
+    onAuthenticated();
   };
 
   const onPrimary = async () => {
@@ -99,11 +110,11 @@ export function SignInScreen({ onSignedUp }: SignInScreenProps) {
       style={{ paddingBottom: insets.bottom + 24, paddingTop: insets.top + 16 }}
     >
       <View className="h-9 justify-center">
-        {flow.step !== 'phone' ? (
+        {flow.step !== 'phone' || onExit ? (
           <Pressable
             accessibilityLabel="Back"
             className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-            onPress={goBack}
+            onPress={handleBack}
           >
             <Icon name="ChevronLeft" size={20} />
           </Pressable>
