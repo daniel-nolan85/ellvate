@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { throwIfSupabaseError } from '@/src/services/supabase';
+
 import type { MissionIcon, MissionStatus } from '@/src/backend/store';
 
 import type {
@@ -12,12 +14,13 @@ import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
 
 const MISSION_SELECT =
-  'id,title,description,xp,stops_total,icon,position,locked_by_default';
+  'id,title,description,scheduled_for,xp,stops_total,icon,position,locked_by_default';
 
 interface MissionRow {
   readonly id: string;
   readonly title: string;
   readonly description: string;
+  readonly scheduled_for: string | null;
   readonly xp: number;
   readonly stops_total: number;
   readonly icon: string;
@@ -66,6 +69,7 @@ const toMissionView = (
     id: row.id,
     title: row.title,
     description: row.description,
+    scheduledFor: row.scheduled_for,
     xp: row.xp,
     status: resolveStatus(storedStatusFor(row, entry), stopsDone, row.stops_total),
     stopsDone,
@@ -81,20 +85,22 @@ const ensureUser = async (
   userId: string,
   name = 'Member',
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('app_users')
     .upsert({ id: userId, name }, { ignoreDuplicates: true, onConflict: 'id' });
+  throwIfSupabaseError(error, 'ensure mission user');
 };
 
 const loadUserRow = async (
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserRow | null> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('app_users')
     .select('xp,streak_days,missions_completed,title')
     .eq('id', userId)
     .maybeSingle();
+  throwIfSupabaseError(error, 'load mission user');
   return (data as UserRow | null) ?? null;
 };
 
@@ -106,15 +112,14 @@ export async function getMissionsViewSupabase(
     .from('missions')
     .select(MISSION_SELECT)
     .order('position', { ascending: true });
-  if (error) {
-    throw new Error(error.message);
-  }
+  throwIfSupabaseError(error, 'load missions');
   const missionRows = (data ?? []) as unknown as MissionRow[];
 
-  const { data: progressData } = await supabase
+  const { data: progressData, error: progressError } = await supabase
     .from('mission_progress')
     .select('mission_id,stops_done,status')
     .eq('user_id', userId);
+  throwIfSupabaseError(progressError, 'load mission progress');
   const progressByMission = new Map(
     ((progressData ?? []) as unknown as ProgressRow[]).map((row) => [
       row.mission_id,
@@ -149,12 +154,13 @@ export async function createMissionSupabase(
   const value = validation.value;
   await ensureUser(supabase, userId);
 
-  const { data: lastRow } = await supabase
+  const { data: lastRow, error: lastRowError } = await supabase
     .from('missions')
     .select('position')
     .order('position', { ascending: false })
     .limit(1)
     .maybeSingle();
+  throwIfSupabaseError(lastRowError, 'load mission position');
   const position = ((lastRow as { position: number } | null)?.position ?? -1) + 1;
 
   const { data, error } = await supabase
@@ -164,6 +170,7 @@ export async function createMissionSupabase(
       created_by: userId,
       title: value.title,
       description: value.description,
+      scheduled_for: value.scheduledFor,
       xp: value.xp,
       stops_total: value.stopsTotal,
       icon: value.icon,
@@ -172,12 +179,9 @@ export async function createMissionSupabase(
     })
     .select(MISSION_SELECT)
     .single();
-  if (error || !data) {
-    return {
-      code: 'invalid_mission',
-      message: 'Could not create the mission.',
-      ok: false,
-    };
+  throwIfSupabaseError(error, 'create mission');
+  if (!data) {
+    throw new Error('create mission: database returned no mission.');
   }
   return { ok: true, mission: toMissionView(data as unknown as MissionRow, undefined) };
 }
@@ -189,11 +193,12 @@ export async function checkInSupabase(
 ): Promise<CheckInResult> {
   await ensureUser(supabase, userId);
 
-  const { data: missionData } = await supabase
+  const { data: missionData, error: missionError } = await supabase
     .from('missions')
     .select(MISSION_SELECT)
     .eq('id', missionId)
     .maybeSingle();
+  throwIfSupabaseError(missionError, 'load mission');
   const mission = missionData as MissionRow | null;
   if (!mission) {
     return {
@@ -204,12 +209,13 @@ export async function checkInSupabase(
     };
   }
 
-  const { data: entryData } = await supabase
+  const { data: entryData, error: entryError } = await supabase
     .from('mission_progress')
     .select('mission_id,stops_done,status')
     .eq('mission_id', missionId)
     .eq('user_id', userId)
     .maybeSingle();
+  throwIfSupabaseError(entryError, 'load mission check-in');
   const entry = (entryData as ProgressRow | null) ?? undefined;
 
   const currentStopsDone = entry?.stops_done ?? 0;
@@ -241,7 +247,7 @@ export async function checkInSupabase(
   const completed = stopsDone >= mission.stops_total;
   const awardedXp = completed ? mission.xp : 0;
 
-  await supabase.from('mission_progress').upsert(
+  const { error: progressWriteError } = await supabase.from('mission_progress').upsert(
     {
       mission_id: missionId,
       user_id: userId,
@@ -250,6 +256,7 @@ export async function checkInSupabase(
     },
     { onConflict: 'mission_id,user_id' },
   );
+  throwIfSupabaseError(progressWriteError, 'save mission progress');
 
   const userRow = await loadUserRow(supabase, userId);
   const baseXp = userRow?.xp ?? 0;
@@ -260,7 +267,7 @@ export async function checkInSupabase(
   // WHY: streaks are intentionally naive — +1 day per completing check-in, no
   // calendar tracking. Documented in the API contract and matches the memory path.
   if (completed) {
-    await supabase
+    const { error: userUpdateError } = await supabase
       .from('app_users')
       .update({
         xp: baseXp + mission.xp,
@@ -268,12 +275,14 @@ export async function checkInSupabase(
         streak_days: baseStreak + 1,
       })
       .eq('id', userId);
+    throwIfSupabaseError(userUpdateError, 'save mission user progress');
   }
 
   const missionView: Mission = {
     id: mission.id,
     title: mission.title,
     description: mission.description,
+    scheduledFor: mission.scheduled_for,
     xp: mission.xp,
     status: completed ? 'done' : 'active',
     stopsDone,

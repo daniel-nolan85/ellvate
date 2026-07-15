@@ -215,6 +215,7 @@ describe('createMission', () => {
   const validInput = {
     description: 'Rent a kayak and get on the water.',
     icon: 'Sun',
+    scheduledFor: '2026-07-18',
     stopsTotal: 1,
     title: 'Paddle the Lake',
     xp: 75,
@@ -229,6 +230,7 @@ describe('createMission', () => {
     }
     expect(result.mission).toMatchObject({
       title: 'Paddle the Lake',
+      scheduledFor: '2026-07-18',
       xp: 75,
       stopsTotal: 1,
       status: 'active',
@@ -253,6 +255,15 @@ describe('createMission', () => {
 
     expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
   });
+
+  test('rejects a normalized calendar date', async () => {
+    const result = await createMission(ctx(), {
+      ...validInput,
+      scheduledFor: '2026-02-31',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
+  });
 });
 
 describe('POST /api/missions', () => {
@@ -269,6 +280,7 @@ describe('POST /api/missions', () => {
     const response = await postMissionRequest({
       description: 'Spend an afternoon at the Westin beach.',
       icon: 'Star',
+      scheduledFor: '2026-07-19',
       stopsTotal: 1,
       title: 'Beach Day',
       xp: 50,
@@ -276,9 +288,13 @@ describe('POST /api/missions', () => {
 
     expect(response.status).toBe(201);
     const body = (await response.json()) as {
-      mission: { title: string; status: string };
+      mission: { title: string; status: string; scheduledFor: string | null };
     };
-    expect(body.mission).toMatchObject({ title: 'Beach Day', status: 'active' });
+    expect(body.mission).toMatchObject({
+      title: 'Beach Day',
+      status: 'active',
+      scheduledFor: '2026-07-19',
+    });
   });
 
   test('400s with the ApiError envelope on invalid input', async () => {

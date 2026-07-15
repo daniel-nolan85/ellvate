@@ -54,6 +54,7 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
               }`}
               key={role.id}
               onPress={() => onPick(role.id)}
+              testID={`onboarding-role-${role.id}`}
             >
               <View
                 className={`h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${

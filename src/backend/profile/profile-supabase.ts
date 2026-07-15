@@ -65,8 +65,9 @@ const fetchProfileRow = async (
     .select(PROFILE_SELECT)
     .eq('id', userId)
     .single();
-  if (error || !data) {
-    throw new Error(error?.message ?? 'Profile not found.');
+  throwIfSupabaseError(error, 'load profile');
+  if (!data) {
+    throw new Error('load profile: profile not found.');
   }
   return data as unknown as AppUserProfileRow;
 };
@@ -157,8 +158,9 @@ export async function updateProfileSupabase(
     .eq('id', userId)
     .select(PROFILE_SELECT)
     .single();
-  if (error || !data) {
-    throw new Error(error?.message ?? 'Could not update the profile.');
+  throwIfSupabaseError(error, 'update profile');
+  if (!data) {
+    throw new Error('update profile: database returned no profile.');
   }
   return {
     ok: true,

@@ -27,6 +27,7 @@ export function ToolCallChip({ isActive, tool }: ToolCallChipProps) {
       )}
       <Text
         className="rounded-full bg-secondary px-2.5 py-[5px] text-[11px] text-text-muted"
+        testID={`assistant-tool-${tool}`}
         style={{ fontFamily: MONO_FONT_FAMILY }}
       >
         {`${tool}()`}

@@ -1,16 +1,17 @@
-import { createRequestContext, jsonError, jsonOk } from '@/src/backend/http';
+import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
 import { checkIn } from '@/src/backend/missions';
 
 export async function POST(
   request: Request,
   { id }: { id: string },
 ): Promise<Response> {
-  const ctx = await createRequestContext(request);
-  const result = await checkIn(ctx, id);
+  return withRequestContext(request, async (ctx) => {
+    const result = await checkIn(ctx, id);
 
-  if (!result.ok) {
-    return jsonError(result.status, result.code, result.message);
-  }
+    if (!result.ok) {
+      return jsonError(result.status, result.code, result.message);
+    }
 
-  return jsonOk(result.body);
+    return jsonOk(result.body);
+  });
 }

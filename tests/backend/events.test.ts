@@ -143,6 +143,15 @@ describe('createEvent', () => {
 
     expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
   });
+
+  test('rejects a calendar date that JavaScript would normalize', async () => {
+    const result = await createEvent(ctx(), {
+      ...validInput,
+      date: '2026-02-31',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
 });
 
 describe('POST /api/events', () => {

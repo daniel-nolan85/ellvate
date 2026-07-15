@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -50,6 +50,8 @@ export async function markOnboardingComplete(): Promise<void> {
 export function useOnboardingState() {
   const session = useSession();
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+  const maestroProfileSyncFailure = useRef(false);
 
   const setRole = useCallback((role: CommunityRole) => {
     setDraft((current) => ({ ...current, role }));
@@ -86,8 +88,18 @@ export function useOnboardingState() {
   }, []);
 
   const completeOnboarding = useCallback(async () => {
-    await markOnboardingComplete();
+    setCompletionError(null);
     try {
+      if (
+        __DEV__ &&
+        process.env.EXPO_PUBLIC_MAESTRO_PROFILE_SYNC_FAIL_ONCE === 'true' &&
+        !maestroProfileSyncFailure.current
+      ) {
+        maestroProfileSyncFailure.current = true;
+        throw new Error(
+          'Profile sync is temporarily unavailable. Try again.',
+        );
+      }
       await requestJson({
         body: {
           aiComfort: draft.aiComfort,
@@ -99,13 +111,21 @@ export function useOnboardingState() {
         method: 'PUT',
         path: '/api/me/profile',
       });
-    } catch {
-      // Profile sync is best-effort: first-run completion must never dead-end on a network failure.
+      await markOnboardingComplete();
+      return true;
+    } catch (error) {
+      setCompletionError(
+        error instanceof Error
+          ? error.message
+          : 'We could not save your profile. Check your connection and try again.',
+      );
+      return false;
     }
   }, [draft, session]);
 
   return {
     completeOnboarding,
+    completionError,
     draft,
     setAiComfort,
     setRole,

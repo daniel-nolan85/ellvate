@@ -4,3 +4,5 @@
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_PUBLISHABLE_KEY;
 delete process.env.CLERK_SECRET_KEY;
+process.env.BACKEND_AUTH_MODE = 'demo';
+process.env.ASSISTANT_RATE_LIMIT_MODE = 'memory';

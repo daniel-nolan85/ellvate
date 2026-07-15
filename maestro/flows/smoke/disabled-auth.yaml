@@ -1,0 +1,12 @@
+appId: com.llvcommunity.app
+tags:
+  - smoke
+  - disabled-auth
+---
+- runFlow: ../../subflows/reset-state.yaml
+- runFlow: ../../subflows/launch.yaml
+- tapOn: "Get started"
+- assertVisible: "Authentication is disabled"
+- tapOn:
+    id: auth-demo-continue
+- assertVisible: "Who are you here as?"

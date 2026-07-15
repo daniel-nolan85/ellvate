@@ -1,4 +1,5 @@
 import type { MissionIcon } from '@/src/backend/store';
+import { isDateOnly } from '@/src/lib/date-only';
 
 import type { MissionValidation } from './types';
 
@@ -31,6 +32,7 @@ export function validateMissionInput(input: unknown): MissionValidation {
       : {};
   const title = asTrimmedString(raw.title);
   const description = asTrimmedString(raw.description);
+  const scheduledFor = asTrimmedString(raw.scheduledFor) || null;
   const xp = asInteger(raw.xp);
   const stopsTotal = asInteger(raw.stopsTotal);
   const icon = asTrimmedString(raw.icon) as MissionIcon;
@@ -40,6 +42,9 @@ export function validateMissionInput(input: unknown): MissionValidation {
   }
   if (title.length > MAX_TITLE || description.length > MAX_DESCRIPTION) {
     return invalid('A mission field exceeds its maximum length.');
+  }
+  if (scheduledFor !== null && !isDateOnly(scheduledFor)) {
+    return invalid('Pick a valid mission day.');
   }
   if (xp === null || xp < MIN_XP || xp > MAX_XP) {
     return invalid(`XP must be a whole number between ${MIN_XP} and ${MAX_XP}.`);
@@ -51,5 +56,8 @@ export function validateMissionInput(input: unknown): MissionValidation {
     return invalid('Pick a valid icon.');
   }
 
-  return { ok: true, value: { description, icon, stopsTotal, title, xp } };
+  return {
+    ok: true,
+    value: { description, icon, scheduledFor, stopsTotal, title, xp },
+  };
 }

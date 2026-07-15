@@ -1,0 +1,18 @@
+appId: com.llvcommunity.app
+tags:
+  - auth
+  - forum
+  - full
+---
+- runFlow: ../auth/phone-otp.yaml
+- runFlow: ../../subflows/complete-onboarding-after-auth.yaml
+- tapOn:
+    id: forum-post-dpost-1
+- assertVisible:
+    id: comment-item-dcmt-1
+- tapOn:
+    id: comment-input
+- inputText: "Clerk test reply"
+- tapOn:
+    id: comment-send
+- assertVisible: "Clerk test reply"

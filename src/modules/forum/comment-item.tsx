@@ -9,24 +9,22 @@ import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from './relative-time';
 import type { ForumComment } from './use-comments';
 
-const MENTION_PATTERN = /(@[A-Za-z]+(?:\s[A-Za-z]+)?)/g;
+const MENTION_PATTERN = /(@[A-Za-z][A-Za-z'-]*)/g;
 
 function CommentBody({ body }: { readonly body: string }) {
   const segments = body.split(MENTION_PATTERN);
   return (
     <RNText className="text-[14px] leading-5 text-content">
-      {segments.map((segment, index) =>
-        MENTION_PATTERN.test(segment) ? (
-          <RNText
-            className="font-inter-medium text-indigo"
-            key={`${segment}-${index}`}
-          >
-            {segment}
-          </RNText>
-        ) : (
-          segment
-        ),
-      )}
+      {segments.map((segment, index) => (
+        <RNText
+          className={
+            segment.startsWith('@') ? 'font-inter-medium text-indigo' : undefined
+          }
+          key={`${index}-${segment}`}
+        >
+          {segment}
+        </RNText>
+      ))}
     </RNText>
   );
 }
@@ -39,7 +37,7 @@ interface CommentItemProps {
 
 export function CommentItem({ comment, onReply, onActions }: CommentItemProps) {
   return (
-    <HStack className="gap-2.5">
+    <HStack className="gap-2.5" testID={`comment-item-${comment.id}`}>
       <Avatar name={comment.author.name} size="sm" />
       <VStack className="flex-1 gap-1">
         <HStack className="items-baseline gap-1.5">
@@ -60,6 +58,7 @@ export function CommentItem({ comment, onReply, onActions }: CommentItemProps) {
           <Pressable
             accessibilityLabel="Comment actions"
             onPress={() => onActions(comment)}
+            testID={`comment-actions-${comment.id}`}
           >
             <Icon color="rgb(113,113,123)" name="ThreeDots" size={16} />
           </Pressable>

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { throwIfSupabaseError } from '@/src/services/supabase';
+
 import type {
   CommunityEvent,
   CreateEventResult,
@@ -57,9 +59,10 @@ const ensureUser = async (
   userId: string,
   name = 'Member',
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('app_users')
     .upsert({ id: userId, name }, { ignoreDuplicates: true, onConflict: 'id' });
+  throwIfSupabaseError(error, 'ensure event user');
 };
 
 const uniqueIds = (ids: readonly string[]): readonly string[] => [
@@ -111,9 +114,9 @@ export async function getEventsViewSupabase(
       .order('starts_at', { ascending: true }),
     supabase.from('event_joins').select('event_id,user_id'),
   ]);
-  if (eventsRes.error) {
-    throw new Error(eventsRes.error.message);
-  }
+  throwIfSupabaseError(weekRes.error, 'load event week');
+  throwIfSupabaseError(eventsRes.error, 'load events');
+  throwIfSupabaseError(joinsRes.error, 'load event joins');
 
   const weekRows = (weekRes.data ?? []) as unknown as WeekDayRow[];
   const eventRows = (eventsRes.data ?? []) as unknown as EventRow[];
@@ -126,10 +129,11 @@ export async function getEventsViewSupabase(
     ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
     ...joinRows.map((row) => row.user_id),
   ]);
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('app_users')
     .select('id,name')
     .in('id', [...neededIds]);
+  throwIfSupabaseError(userError, 'load event attendees');
   const nameById = new Map(
     (userData ?? []).map((row) => [row.id as string, row.name as string]),
   );
@@ -170,12 +174,9 @@ export async function createEventSupabase(
     })
     .select(EVENT_SELECT)
     .single();
-  if (error || !data) {
-    return {
-      code: 'invalid_event',
-      message: 'Could not create the event.',
-      ok: false,
-    };
+  throwIfSupabaseError(error, 'create event');
+  if (!data) {
+    throw new Error('create event: database returned no event.');
   }
   return {
     ok: true,
@@ -188,10 +189,11 @@ const recomputeGoing = async (
   eventId: string,
   goingBase: number,
 ): Promise<number> => {
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from('event_joins')
     .select('*', { count: 'exact', head: true })
     .eq('event_id', eventId);
+  throwIfSupabaseError(error, 'count event joins');
   return goingBase + (count ?? 0);
 };
 
@@ -200,33 +202,38 @@ export async function toggleJoinSupabase(
   userId: string,
   eventId: string,
 ): Promise<JoinResult | null> {
-  const { data: event } = await supabase
+  const { data: event, error: eventError } = await supabase
     .from('events')
     .select('id,going_base')
     .eq('id', eventId)
     .maybeSingle();
+  throwIfSupabaseError(eventError, 'load event');
   if (!event) {
     return null;
   }
   await ensureUser(supabase, userId);
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('event_joins')
     .select('event_id')
     .eq('event_id', eventId)
     .eq('user_id', userId)
     .maybeSingle();
 
+  throwIfSupabaseError(existingError, 'load event membership');
+
   if (existing) {
-    await supabase
+    const { error } = await supabase
       .from('event_joins')
       .delete()
       .eq('event_id', eventId)
       .eq('user_id', userId);
+    throwIfSupabaseError(error, 'leave event');
   } else {
-    await supabase
+    const { error } = await supabase
       .from('event_joins')
       .insert({ event_id: eventId, user_id: userId });
+    throwIfSupabaseError(error, 'join event');
   }
 
   const going = await recomputeGoing(

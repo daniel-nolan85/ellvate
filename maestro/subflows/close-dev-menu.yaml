@@ -1,0 +1,4 @@
+appId: com.llvcommunity.app
+---
+- tapOn:
+    point: "90%, 12%"

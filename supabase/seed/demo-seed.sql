@@ -37,13 +37,13 @@ insert into events (id,starts_at,time_label,day_label,date_label,title,place,tag
   ('devt-6','2026-07-20T14:00:00Z','2:00 PM','SUN','20','Family Aqua Park Day','Lake Las Vegas Aqua Park','Family',false,52,'{demo-sam}');
 
 -- Missions tied to real Lake Las Vegas points of interest.
-insert into missions (id,title,description,xp,stops_total,icon,position,locked_by_default) values
-  ('dmsn-1','Paddle the Lake','Rent a kayak or paddleboard from Lake Las Vegas Water Sports and get on the water.',75,1,'Sun',0,false),
-  ('dmsn-2','Village Restaurant Crawl','Dine at three MonteLago Village restaurants — Luna Rossa, Sonrisa Grill and Marssa.',120,3,'Star',1,false),
-  ('dmsn-3','Ride the Loop','Walk, run or bike a stretch of the River Mountains Loop Trail from the lake.',100,1,'ArrowUp',2,false),
-  ('dmsn-4','Play Reflection Bay','Complete a round at the Jack Nicklaus Signature Reflection Bay Golf Club.',150,1,'Star',3,false),
-  ('dmsn-5','Sunset at the Marina','Catch a sunset over the water from the MonteLago Village marina.',25,1,'Moon',4,false),
-  ('dmsn-6','Catch Lakeside Music','Attend a Saturday-night live music set on the MonteLago Village waterfront.',40,1,'Moon',5,false);
+insert into missions (id,title,description,scheduled_for,xp,stops_total,icon,position,locked_by_default) values
+  ('dmsn-1','Paddle the Lake','Rent a kayak or paddleboard from Lake Las Vegas Water Sports and get on the water.','2026-07-14',75,1,'Sun',0,false),
+  ('dmsn-2','Village Restaurant Crawl','Dine at three MonteLago Village restaurants — Luna Rossa, Sonrisa Grill and Marssa.','2026-07-15',120,3,'Star',1,false),
+  ('dmsn-3','Ride the Loop','Walk, run or bike a stretch of the River Mountains Loop Trail from the lake.','2026-07-16',100,1,'ArrowUp',2,false),
+  ('dmsn-4','Play Reflection Bay','Complete a round at the Jack Nicklaus Signature Reflection Bay Golf Club.','2026-07-17',150,1,'Star',3,false),
+  ('dmsn-5','Sunset at the Marina','Catch a sunset over the water from the MonteLago Village marina.','2026-07-18',25,1,'Moon',4,false),
+  ('dmsn-6','Catch Lakeside Music','Attend a Saturday-night live music set on the MonteLago Village waterfront.','2026-07-19',40,1,'Moon',5,false);
 
 -- A few forum posts across the real neighbourhood/topic channels. reply_count
 -- starts at 0 and the reply-count trigger sets it from the comments seeded below.

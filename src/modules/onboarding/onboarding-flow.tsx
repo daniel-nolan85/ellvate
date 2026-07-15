@@ -31,6 +31,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const [featureIndex, setFeatureIndex] = useState(0);
   const {
     completeOnboarding,
+    completionError,
     draft,
     setAiComfort,
     setRole,
@@ -70,10 +71,11 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     });
   }, [isSignedIn]);
 
-  const handleDone = useCallback(() => {
-    // Never strand the user on the celebration screen: navigate even if
-    // persisting completion or submitting the profile rejects.
-    void completeOnboarding().finally(onFinished);
+  const handleDone = useCallback(async () => {
+    const completed = await completeOnboarding();
+    if (completed) {
+      onFinished();
+    }
   }, [completeOnboarding, onFinished]);
 
   const chrome = (skippable: boolean): ReactNode => (
@@ -127,7 +129,12 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       prefs={draft.notificationPrefs}
     />,
     ...(includePasskey ? [<PasskeyStep key="passkey" onNext={goNext} />] : []),
-    <CommitStep key="commit" onDone={handleDone} />,
+    <CommitStep
+      error={completionError}
+      key="commit"
+      onDone={() => void handleDone()}
+      onRetry={() => void handleDone()}
+    />,
   ];
 
   return <View className="flex-1 bg-canvas">{steps[step]}</View>;

@@ -70,6 +70,8 @@ export function AiStep({ chrome, onNext, onPick, value }: AiStepProps) {
           const selected = value === level.id;
           return (
             <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
               className={`flex-row items-center gap-3.5 rounded-[18px] px-4 py-3.5 ${
                 selected
                   ? 'border-[1.5px] border-indigo bg-indigo-subtle'
@@ -77,6 +79,7 @@ export function AiStep({ chrome, onNext, onPick, value }: AiStepProps) {
               }`}
               key={level.id}
               onPress={() => onPick(level.id)}
+              testID={`onboarding-ai-${level.id}`}
             >
               <Icon
                 color={selected ? INDIGO : TEXT_MUTED}

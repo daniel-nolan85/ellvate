@@ -1,10 +1,11 @@
+import { isDateOnly } from '@/src/lib/date-only';
+import { isTimeOnly } from '@/src/lib/time-only';
+
 import type { ComposedEvent, EventValidation } from './types';
 
 const MAX_TITLE = 100;
 const MAX_PLACE = 100;
 const MAX_TAG = 40;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 
 const asTrimmedString = (value: unknown): string =>
@@ -63,10 +64,10 @@ export function validateEventInput(input: unknown): EventValidation {
   if (title.length > MAX_TITLE || place.length > MAX_PLACE || tag.length > MAX_TAG) {
     return invalid('An event field exceeds its maximum length.');
   }
-  if (!DATE_PATTERN.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) {
+  if (!isDateOnly(date)) {
     return invalid('Pick a valid day.');
   }
-  if (!TIME_PATTERN.test(time)) {
+  if (!isTimeOnly(time)) {
     return invalid('Pick a valid time.');
   }
 

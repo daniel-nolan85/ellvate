@@ -41,6 +41,7 @@ export function LeaderboardScreen({ onBackToMissions }: LeaderboardScreenProps) 
               accessibilityRole="button"
               className="h-10 w-10 items-center justify-center rounded-full bg-secondary"
               onPress={handleBackToMissions}
+              testID="leaderboard-back"
             >
               <Icon name="ArrowLeft" size={18} />
             </Pressable>

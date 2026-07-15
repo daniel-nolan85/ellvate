@@ -11,6 +11,7 @@ interface CodeInputProps {
   readonly onComplete: (code: string) => void;
   readonly invalid?: boolean;
   readonly autoFocus?: boolean;
+  readonly testID?: string;
 }
 
 // One-time code entry: six single-digit cells backed by one hidden field. The
@@ -23,6 +24,7 @@ export function CodeInput({
   onComplete,
   invalid = false,
   autoFocus = true,
+  testID,
 }: CodeInputProps) {
   const ref = useRef<TextInput>(null);
 
@@ -35,7 +37,12 @@ export function CodeInput({
   };
 
   return (
-    <View className="relative" onTouchStart={() => ref.current?.focus()}>
+    <View
+      accessibilityLabel="Verification code"
+      className="relative"
+      onTouchStart={() => ref.current?.focus()}
+      testID={testID}
+    >
       <View className="flex-row justify-between">
         {Array.from({ length: LENGTH }).map((_, index) => {
           const char = value[index] ?? '';

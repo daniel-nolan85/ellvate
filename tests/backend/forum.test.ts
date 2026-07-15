@@ -62,7 +62,7 @@ describe('listPosts', () => {
       title: 'Best spots to kayak at sunrise?',
       excerpt:
         'New to the lake — where do you all put in before the wind picks up? Looking for calm water near the village.',
-      replies: 24,
+      replies: 2,
       likes: 61,
       liked: false,
       pinned: false,

@@ -1,0 +1,6 @@
+appId: com.llvcommunity.app
+---
+- launchApp
+- assertVisible: "Forum"
+- assertVisible: "Events"
+- assertVisible: "Missions"

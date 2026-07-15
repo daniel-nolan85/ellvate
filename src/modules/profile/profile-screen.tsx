@@ -2,8 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useUser } from '@clerk/expo';
-
 import { Avatar } from '@/src/components/ui/avatar';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Heading } from '@/src/components/ui/heading';
@@ -109,7 +107,6 @@ function StatCard({ label, value }: { readonly label: string; readonly value: st
 export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const session = useSession();
-  const { user } = useUser();
   const profile = useProfile();
   const stats = useProfileStats();
   const updateProfile = useUpdateProfile();
@@ -117,18 +114,12 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
 
-  const displayName =
-    user?.firstName?.trim() ||
-    user?.fullName?.trim() ||
-    'Add your name';
-  const subtitle =
-    user?.primaryPhoneNumber?.phoneNumber ??
-    user?.primaryEmailAddress?.emailAddress ??
-    'Lake Las Vegas neighbour';
+  const displayName = session.status === 'signed-in' ? 'You' : 'Demo member';
+  const subtitle = 'Lake Las Vegas neighbour';
   const prefs = profile.data?.profile.notificationPrefs;
 
   const openEdit = () => {
-    setDraftName(user?.firstName?.trim() ?? '');
+    setDraftName(session.status === 'signed-in' ? 'You' : '');
     setEditing(true);
   };
 
@@ -137,7 +128,6 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
     if (!name) {
       return;
     }
-    void user?.update({ firstName: name }).catch(() => undefined);
     updateProfile.mutate(
       { name },
       { onSuccess: () => setEditing(false) },
@@ -164,16 +154,9 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
   const confirmDelete = () => {
     Alert.alert(
       'Delete account?',
-      'This permanently removes your account and cannot be undone.',
+      'Account deletion is managed by Clerk and is not available from this build yet.',
       [
-        { style: 'cancel', text: 'Cancel' },
-        {
-          onPress: () => {
-            void user?.delete().finally(onClose);
-          },
-          style: 'destructive',
-          text: 'Delete',
-        },
+        { text: 'OK' },
       ],
     );
   };

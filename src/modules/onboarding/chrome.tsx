@@ -40,9 +40,11 @@ export function ObHeader({ step, total, onBack, onSkip, skippable }: ObHeaderPro
       <View className="min-h-[34px] flex-row items-center justify-between px-3.5">
         {onBack ? (
           <Pressable
+            accessibilityLabel="Onboarding back"
             accessibilityRole="button"
             className="h-[34px] w-[34px] items-center justify-center rounded-full bg-secondary"
             onPress={onBack}
+            testID="onboarding-back"
           >
             <Icon name="ArrowLeft" size={16} />
           </Pressable>
@@ -50,7 +52,13 @@ export function ObHeader({ step, total, onBack, onSkip, skippable }: ObHeaderPro
           <View className="w-[34px]" />
         )}
         {skippable ? (
-          <Pressable accessibilityRole="button" className="px-2 py-1.5" onPress={onSkip}>
+          <Pressable
+            accessibilityLabel="Skip onboarding step"
+            accessibilityRole="button"
+            className="px-2 py-1.5"
+            onPress={onSkip}
+            testID="onboarding-skip"
+          >
             <Text className="font-inter-medium text-[13px] text-text-subtle">Skip</Text>
           </Pressable>
         ) : null}
@@ -99,6 +107,7 @@ export function ObCta({ label, onPress, disabled }: ObCtaProps) {
         className="h-[52px] w-full rounded-full bg-primary data-[hover=true]:bg-primary data-[active=true]:bg-primary"
         isDisabled={disabled}
         onPress={onPress}
+        testID={`onboarding-cta-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
         size="lg"
       >
         <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground data-[hover=true]:text-primary-foreground data-[active=true]:text-primary-foreground">

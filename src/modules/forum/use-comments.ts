@@ -3,22 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
-export interface CommentAuthor {
-  readonly id: string;
-  readonly name: string;
-}
+import {
+  parseCommentsResponse,
+  type ForumComment,
+} from './comment-contract';
 
-export interface ForumComment {
-  readonly id: string;
-  readonly postId: string;
-  readonly author: CommentAuthor;
-  readonly body: string;
-  readonly createdAt: string;
-}
-
-interface CommentsResponse {
-  readonly comments: readonly ForumComment[];
-}
+export type { ForumComment } from './comment-contract';
 
 interface CreateCommentResponse {
   readonly comment: ForumComment;
@@ -34,12 +24,13 @@ export function usePostComments(postId: string) {
   return useQuery({
     meta: queryMeta,
     queryFn: ({ signal }) =>
-      requestJson<CommentsResponse>({
+      requestJson<unknown>({
         getAccessToken: session.getToken,
         path: commentsPath(postId),
         signal,
       }),
     queryKey: ['forum', 'comments', session.userId ?? 'demo-user', postId],
+    select: parseCommentsResponse,
   });
 }
 

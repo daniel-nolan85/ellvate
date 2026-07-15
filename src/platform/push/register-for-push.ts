@@ -4,6 +4,11 @@ import { requestJson } from '@/src/services/api';
 
 type GetToken = () => Promise<string | null>;
 
+export type PushRegistrationResult =
+  | { readonly status: 'registered' }
+  | { readonly status: 'skipped' }
+  | { readonly status: 'failed'; readonly message: string };
+
 const platformName = (): 'ios' | 'android' | 'web' => {
   if (Platform.OS === 'ios') {
     return 'ios';
@@ -17,14 +22,14 @@ const platformName = (): 'ios' | 'android' | 'web' => {
 // crashing. Real delivery requires a physical device.
 export async function registerForPushNotifications(
   getAccessToken: GetToken,
-): Promise<void> {
+): Promise<PushRegistrationResult> {
   try {
     const Device = await import('expo-device');
     const Notifications = await import('expo-notifications');
     const Constants = (await import('expo-constants')).default;
 
     if (!Device.isDevice) {
-      return;
+      return { status: 'skipped' };
     }
 
     Notifications.setNotificationHandler({
@@ -50,7 +55,7 @@ export async function registerForPushNotifications(
       granted = requested.granted;
     }
     if (!granted) {
-      return;
+      return { status: 'skipped' };
     }
 
     const projectId =
@@ -60,7 +65,7 @@ export async function registerForPushNotifications(
       projectId ? { projectId } : undefined,
     );
     if (!token) {
-      return;
+      return { status: 'failed', message: 'Expo did not return a push token.' };
     }
 
     await requestJson({
@@ -69,8 +74,40 @@ export async function registerForPushNotifications(
       method: 'POST',
       path: '/api/me/push-token',
     });
+    return { status: 'registered' };
+  } catch (error) {
+    // Push is best-effort and must never crash the app, but the caller needs a
+    // failure result so it can retry and expose diagnostics.
+    return {
+      status: 'failed',
+      message: error instanceof Error ? error.message : 'Push registration failed.',
+    };
+  }
+}
+
+export async function subscribeToPushTokenChanges(
+  getAccessToken: GetToken,
+): Promise<() => void> {
+  try {
+    const Device = await import('expo-device');
+    const Notifications = await import('expo-notifications');
+    if (!Device.isDevice) {
+      return () => undefined;
+    }
+
+    const subscription = Notifications.addPushTokenListener(({ data }) => {
+      if (!data) {
+        return;
+      }
+      void requestJson({
+        body: { platform: platformName(), token: data },
+        getAccessToken,
+        method: 'POST',
+        path: '/api/me/push-token',
+      });
+    });
+    return () => subscription.remove();
   } catch {
-    // Missing native module (build not yet rebuilt), denied permission, or a
-    // network failure — push is best-effort and must never crash the app.
+    return () => undefined;
   }
 }

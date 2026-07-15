@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Check,
   ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Circle,
   CircleAlert,
@@ -69,6 +70,7 @@ export type AppIconName =
   | 'CheckCircle'
   | 'HelpCircle'
   | 'ChevronLeft'
+  | 'ChevronRight'
   | 'Bell'
   | 'AlertCircle'
   | 'Link'
@@ -104,6 +106,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   CheckCircle: CircleCheck,
   HelpCircle: CircleQuestionMark,
   ChevronLeft,
+  ChevronRight,
   Bell,
   AlertCircle: CircleAlert,
   Link: Link2,

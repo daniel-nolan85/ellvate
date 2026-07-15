@@ -16,7 +16,7 @@ configure.
 - gluestack-ui v3 + NativeWind 4 + Tailwind CSS 3 (design-system tokens, Inter)
 - TanStack Query 5 for server state (optimistic mutations, persistence)
 - Clerk session boundary (auth defaults to `disabled`)
-- Backend: Expo API routes (`app/api/**`) over an in-memory store
+- Backend: Expo API routes (`app/api/**`) over an in-memory store for explicit demo mode
 - Assistant: Anthropic tool loop when configured, deterministic fallback otherwise
 
 ## Prerequisites
@@ -80,7 +80,8 @@ curl -X POST http://localhost:8081/api/missions/mission-1/check-in
 
 Endpoints: `forum` (subforums, posts, like), `events` (list, join), `missions`
 (list, check-in), `leaderboard`, `me/profile`, and `assistant/chat`. Requests are
-attributed to a `demo-user` unless a verified auth token is supplied.
+attributed to a `demo-user` only when `BACKEND_AUTH_MODE=demo`. Clerk mode rejects
+missing or invalid tokens instead of falling back to a shared identity.
 
 The store is an in-memory singleton seeded from the design data. It persists for
 the lifetime of one server process — great for development and single-process
@@ -102,8 +103,12 @@ ANTHROPIC_API_KEY=sk-ant-...
 bun run typecheck          # tsc --noEmit
 bun run lint               # expo lint
 bun run test               # bun test
+bun run test:components    # Expo jest-expo component tests
+bun run test:maestro       # Maestro native smoke flows (requires Java + dev client)
 bun run check:architecture # SAOS structure check
-bun run check              # all four of the above
+bun run check:production   # fail closed if production config is incomplete
+bun run test:supabase      # live RLS gate; requires runtime test tokens
+bun run check              # static/unit gates above
 bun run export             # production export (all platforms + API routes)
 ```
 
@@ -124,7 +129,29 @@ Route files stay thin — they orchestrate, modules implement.
 
 ## Activate Clerk (optional)
 
-Auth ships `disabled`. To enable the real phone/OTP sign-in wired into onboarding,
+Auth ships `disabled`. To enable the real email/phone OTP sign-in wired into onboarding,
 set `EXPO_PUBLIC_AUTH_MODE=clerk` and a development `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`,
 then follow [docs/clerk-activation.md](./docs/clerk-activation.md). Until then the
 onboarding auth step runs a self-contained demo flow.
+
+## Maestro QA
+
+Native journeys live under `maestro/flows`. Test identities and Clerk's `424242`
+test code are passed at runtime, never committed to YAML:
+
+```bash
+MAESTRO_TEST_EMAIL="run-123+clerk_test@example.com" \
+MAESTRO_TEST_PHONE="+17025550134" \
+MAESTRO_TEST_CODE="424242" \
+bun run test:maestro
+```
+
+Use the component and backend suites for states and contracts; use Maestro for
+real navigation, auth/session restoration, permissions, and native behavior.
+
+The live Supabase gate requires `SUPABASE_TEST_USER_A_ID`,
+`SUPABASE_TEST_USER_A_TOKEN`, `SUPABASE_TEST_USER_B_ID`, and
+`SUPABASE_TEST_USER_B_TOKEN` at runtime. These must be short-lived Clerk session
+tokens from the staging project. The gate verifies RLS identity isolation,
+cross-user comments and trigger counts, likes, profile ownership, and push-token
+ownership, then removes its generated post.

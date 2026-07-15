@@ -87,7 +87,7 @@ describe('Expo starter contract', () => {
       'utf8',
     );
 
-    expect(queryConstants).toContain("QUERY_CACHE_BUSTER = 'expo-starter-query-cache-v1'");
+    expect(queryConstants).toContain("QUERY_CACHE_BUSTER = 'expo-starter-query-cache-v2'");
     expect(queryConstants).not.toContain('Updates.updateId');
   });
 });

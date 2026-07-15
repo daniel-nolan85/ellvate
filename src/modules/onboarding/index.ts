@@ -1,4 +1,7 @@
 export { OnboardingFlow } from './onboarding-flow';
+export { AuthStep } from './auth-step';
+export { InterestsStep, INTERESTS } from './interests-step';
+export { RoleStep, ROLES } from './role-step';
 export { useOnboardingComplete } from './use-onboarding-complete';
 export {
   isOnboardingComplete,

@@ -13,9 +13,9 @@ import { ScreenTitle } from '@/src/modules/community-shell';
 
 import { EventComposer } from './event-composer';
 import { EventRow } from './event-row';
+import { EventsCalendar } from './events-calendar';
 import { FeaturedEventCard } from './featured-event-card';
 import { useCreateEvent, useEventsView, useToggleJoin } from './use-events';
-import { WeekStrip } from './week-strip';
 
 import type { EventsView } from './events-types';
 
@@ -26,12 +26,20 @@ function EventsBody({
   readonly onToggleJoin: (eventId: string) => void;
   readonly view: EventsView;
 }) {
-  const featured = view.events.find((event) => event.featured);
-  const rest = view.events.filter((event) => event !== featured);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const visibleEvents = selectedDate
+    ? view.events.filter((event) => event.startsAt.slice(0, 10) === selectedDate)
+    : view.events;
+  const featured = visibleEvents.find((event) => event.featured);
+  const rest = visibleEvents.filter((event) => event !== featured);
 
   return (
     <>
-      <WeekStrip week={view.week} />
+      <EventsCalendar
+        events={view.events}
+        onSelectedDateChange={setSelectedDate}
+        selectedDate={selectedDate}
+      />
       {featured ? (
         <FeaturedEventCard event={featured} onToggleJoin={onToggleJoin} />
       ) : null}
@@ -39,9 +47,11 @@ function EventsBody({
         <Text className="py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
           Coming up
         </Text>
-        {view.events.length === 0 ? (
+        {visibleEvents.length === 0 ? (
           <Text className="py-2 text-muted-foreground" size="sm">
-            Nothing on the calendar yet. Tap + to add the first one.
+            {selectedDate
+              ? 'Nothing scheduled for this day.'
+              : 'Nothing on the calendar yet. Tap + to add the first one.'}
           </Text>
         ) : (
           <VStack space="sm">
@@ -134,7 +144,6 @@ export function EventsScreen() {
                 onSuccess: () => setComposing(false),
               })
             }
-            week={eventsView.data.week}
           />
         ) : null}
       </Sheet>

@@ -44,6 +44,7 @@ export function CommentComposer({
           placeholder={replyTo ? 'Write a reply…' : 'Add a comment…'}
           placeholderTextColor="rgb(161,161,170)"
           returnKeyType="send"
+          testID="comment-input"
           value={value}
         />
         <Pressable
@@ -52,6 +53,7 @@ export function CommentComposer({
           disabled={!canSend}
           onPress={onSend}
           style={{ opacity: canSend ? 1 : 0.5 }}
+          testID="comment-send"
         >
           <Icon color="rgb(250,250,250)" name="ArrowUp" size={18} />
         </Pressable>

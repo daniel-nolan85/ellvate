@@ -64,6 +64,7 @@ function TabItem({ tab, isActive, onPress }: TabItemProps) {
       accessibilityState={{ selected: isActive }}
       className="flex-1 flex-col items-center gap-[3px] py-2"
       onPress={onPress}
+      testID={`tab-${tab.label.toLowerCase()}`}
     >
       <Icon color={color} name={tab.icon} size={21} />
       <Text
@@ -94,6 +95,7 @@ function AssistantButton({ onPress }: AssistantButtonProps) {
       accessibilityRole="button"
       className="mx-1.5"
       onPress={handlePress}
+      testID="open-assistant"
     >
       {({ pressed }) => (
         <View

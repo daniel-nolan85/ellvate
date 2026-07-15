@@ -1,0 +1,11 @@
+appId: com.llvcommunity.app
+tags:
+  - smoke
+---
+- runFlow: ../../subflows/reset-state.yaml
+- runFlow: ../../subflows/launch.yaml
+- tapOn: "Get started"
+- assertVisible:
+    id: auth-identifier-input
+- assertVisible:
+    id: auth-kind-email

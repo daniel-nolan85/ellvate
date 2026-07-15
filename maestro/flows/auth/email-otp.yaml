@@ -1,0 +1,20 @@
+appId: com.llvcommunity.app
+tags:
+  - auth
+  - full
+---
+- runFlow: ../../subflows/reset-state.yaml
+- runFlow: ../../subflows/launch.yaml
+- tapOn: "Get started"
+- tapOn:
+    id: auth-kind-email
+- tapOn:
+    id: auth-identifier-input
+- inputText: ${MAESTRO_TEST_EMAIL}
+- pressKey: BACK
+- tapOn: "Continue"
+- assertVisible: "Check your messages"
+- tapOn:
+    id: auth-code-input
+- inputText: ${MAESTRO_TEST_CODE}
+- assertVisible: "Who are you here as?"

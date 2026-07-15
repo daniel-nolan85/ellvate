@@ -80,6 +80,7 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
     id: mission.id,
     title: mission.title,
     description: mission.description,
+    scheduledFor: mission.scheduledFor,
     xp: mission.xp,
     status: completed ? 'done' : 'active',
     stopsDone,

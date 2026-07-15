@@ -11,6 +11,7 @@ export interface Mission {
   readonly id: string;
   readonly title: string;
   readonly description: string;
+  readonly scheduledFor: string | null;
   readonly xp: number;
   readonly status: MissionStatus;
   readonly stopsDone: number;
@@ -43,6 +44,7 @@ export interface CheckInResult {
 export interface CreateMissionInput {
   readonly title: string;
   readonly description: string;
+  readonly scheduledFor: string;
   readonly xp: number;
   readonly stopsTotal: number;
   readonly icon: MissionIcon;

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { throwIfSupabaseError } from '@/src/services/supabase';
+
 import type { LeaderboardEntry, LeaderboardResult } from './types';
 
 const LEADERBOARD_SELECT = 'id,name,xp,missions_completed,previous_rank';
@@ -35,9 +37,7 @@ export async function getLeaderboardSupabase(
     .eq('on_leaderboard', true)
     .order('missions_completed', { ascending: false })
     .order('xp', { ascending: false });
-  if (error) {
-    throw new Error(error.message);
-  }
+  throwIfSupabaseError(error, 'load leaderboard');
   const rows = (data ?? []) as unknown as LeaderRow[];
   return {
     leaders: rows.map((row, index) => toEntry(row, index + 1, userId)),

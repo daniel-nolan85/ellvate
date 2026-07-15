@@ -1,0 +1,6 @@
+appId: com.llvcommunity.app
+---
+- clearState
+# Clerk's native session cache also lives in the keychain. The launch subflow
+# handles the development-client server picker after this reset.
+- clearKeychain

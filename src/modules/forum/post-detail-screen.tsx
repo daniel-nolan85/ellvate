@@ -176,6 +176,22 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             <View className="items-center py-6">
               <Spinner />
             </View>
+          ) : comments.isError ? (
+            <VStack className="items-start gap-2 py-2" testID="comments-error">
+              <Text className="text-text-muted" size="sm">
+                Couldn&apos;t load comments.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                className="rounded-full border border-line px-3 py-2"
+                onPress={() => void comments.refetch()}
+                testID="comments-retry"
+              >
+                <Text className="font-inter-semibold text-content" size="xs">
+                  Retry
+                </Text>
+              </Pressable>
+            </VStack>
           ) : commentList.length === 0 ? (
             <Text className="py-2 text-text-muted" size="sm">
               No comments yet — start the conversation.

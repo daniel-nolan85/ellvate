@@ -22,17 +22,34 @@ afterEach(() => {
 });
 
 describe('listComments', () => {
+  test('keeps seeded reply counts aligned with renderable comments', () => {
+    const state = getState();
+
+    for (const post of state.posts) {
+      expect(post.replies).toBe(
+        state.comments.filter((comment) => comment.postId === post.id).length,
+      );
+    }
+  });
+
   test('returns an empty list for a post with no comments', async () => {
-    expect(await listComments(ctx(), 'post-1')).toEqual([]);
+    expect(await listComments(ctx(), 'post-without-comments')).toEqual([]);
   });
 
   test('returns comments oldest-first', async () => {
+    const seeded = await listComments(ctx(), 'post-1');
     await createComment(ctx(), 'post-1', { body: 'first' });
     await createComment(ctx('user-mia'), 'post-1', { body: 'second' });
 
     const comments = await listComments(ctx(), 'post-1');
-    expect(comments.map((comment) => comment.body)).toEqual(['first', 'second']);
-    expect(comments[1]?.author).toEqual({ id: 'user-mia', name: 'Mia Lake' });
+    expect(comments.slice(seeded.length).map((comment) => comment.body)).toEqual([
+      'first',
+      'second',
+    ]);
+    expect(comments[comments.length - 1]?.author).toEqual({
+      id: 'user-mia',
+      name: 'Mia Lake',
+    });
   });
 });
 
@@ -76,6 +93,7 @@ describe('createComment', () => {
 
 describe('deleteComment', () => {
   test('deletes only the author own comment and decrements the count', async () => {
+    const before = await listComments(ctx(), 'post-1');
     const created = await createComment(ctx(), 'post-1', { body: 'mine' });
     if (!created.ok) {
       throw new Error('setup failed');
@@ -85,7 +103,7 @@ describe('deleteComment', () => {
     expect(await deleteComment(ctx('user-mia'), created.comment.id)).toBe(false);
     expect(await deleteComment(ctx(), created.comment.id)).toBe(true);
     expect(replyCount('post-1')).toBe(after - 1);
-    expect(await listComments(ctx(), 'post-1')).toEqual([]);
+    expect(await listComments(ctx(), 'post-1')).toEqual(before);
   });
 
   test('returns false for an unknown comment', async () => {
@@ -113,7 +131,7 @@ describe('comment routes', () => {
     const { comments } = (await listed.json()) as {
       comments: readonly { id: string }[];
     };
-    expect(comments.map((entry) => entry.id)).toEqual([comment.id]);
+    expect(comments[comments.length - 1]?.id).toBe(comment.id);
 
     const removed = await deleteRoute(
       new Request(`http://localhost/api/comments/${comment.id}`, {

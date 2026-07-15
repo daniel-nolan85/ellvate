@@ -1,5 +1,6 @@
 import type {
   NotificationPrefs,
+  StoredComment,
   StoredEvent,
   StoredMission,
   StoredPost,
@@ -130,7 +131,59 @@ const seedUsers = (): readonly StoredUser[] => [
   }),
 ];
 
-const seedPosts = (): readonly StoredPost[] => [
+const seedComments = (): readonly StoredComment[] => [
+  {
+    authorId: 'user-mia',
+    body: '@Jordan I launch before 7 AM and the water is usually glassy.',
+    createdAt: isoHoursBeforeSeedNow(1.5),
+    id: 'comment-1',
+    postId: 'post-1',
+  },
+  {
+    authorId: 'user-sam',
+    body: 'The MonteLago marina has been the calmest launch for me.',
+    createdAt: isoHoursBeforeSeedNow(1),
+    id: 'comment-2',
+    postId: 'post-1',
+  },
+  {
+    authorId: 'user-riley',
+    body: 'We will be there Friday. Thanks for the heads-up!',
+    createdAt: isoHoursBeforeSeedNow(4),
+    id: 'comment-3',
+    postId: 'post-2',
+  },
+  {
+    authorId: 'user-priya',
+    body: 'The patio is especially nice right before sunset.',
+    createdAt: isoHoursBeforeSeedNow(20),
+    id: 'comment-4',
+    postId: 'post-3',
+  },
+  {
+    authorId: 'user-jordan',
+    body: '@Mia Do they take reservations for the lakeside tables?',
+    createdAt: isoHoursBeforeSeedNow(18),
+    id: 'comment-5',
+    postId: 'post-3',
+  },
+  {
+    authorId: 'user-priya',
+    body: 'The marked detour adds about ten minutes by bike.',
+    createdAt: isoHoursBeforeSeedNow(22),
+    id: 'comment-6',
+    postId: 'post-4',
+  },
+];
+
+const replyCount = (
+  comments: readonly StoredComment[],
+  postId: string,
+): number => comments.filter((comment) => comment.postId === postId).length;
+
+const seedPosts = (
+  comments: readonly StoredComment[],
+): readonly StoredPost[] => [
   {
     id: 'post-1',
     forum: 'Marina & Boating',
@@ -139,7 +192,7 @@ const seedPosts = (): readonly StoredPost[] => [
     title: 'Best spots to kayak at sunrise?',
     excerpt:
       'New to the lake — where do you all put in before the wind picks up? Looking for calm water near the village.',
-    replies: 24,
+    replies: replyCount(comments, 'post-1'),
     likes: 61,
     likedBy: [],
     pinned: false,
@@ -152,7 +205,7 @@ const seedPosts = (): readonly StoredPost[] => [
     title: 'Fountain show returns Friday nights',
     excerpt:
       'Starting this week the Village fountains run 7–10pm. Bring the family down to the promenade.',
-    replies: 12,
+    replies: replyCount(comments, 'post-2'),
     likes: 138,
     likedBy: [],
     pinned: true,
@@ -165,7 +218,7 @@ const seedPosts = (): readonly StoredPost[] => [
     title: 'New patio at the waterfront bistro',
     excerpt:
       'They finally opened lakeside seating. Go early — it filled up fast on Saturday.',
-    replies: 33,
+    replies: replyCount(comments, 'post-3'),
     likes: 92,
     likedBy: [],
     pinned: false,
@@ -178,7 +231,7 @@ const seedPosts = (): readonly StoredPost[] => [
     title: 'Loop trail partially closed for repaving',
     excerpt:
       'North segment is down until next Tuesday. Detour is signed near the boat club.',
-    replies: 8,
+    replies: replyCount(comments, 'post-4'),
     likes: 27,
     likedBy: [],
     pinned: false,
@@ -249,6 +302,7 @@ const seedMissions = (): readonly StoredMission[] => [
     id: 'mission-1',
     title: 'Sunrise at the Marina',
     description: 'Check in at Village Marina before 8 AM.',
+    scheduledFor: '2026-07-14',
     xp: 50,
     stopsTotal: 1,
     icon: 'Sun',
@@ -260,6 +314,7 @@ const seedMissions = (): readonly StoredMission[] => [
     id: 'mission-2',
     title: 'Trail Trekker',
     description: 'Complete the 3-mile lakeside loop.',
+    scheduledFor: '2026-07-15',
     xp: 120,
     stopsTotal: 3,
     icon: 'ArrowUp',
@@ -271,6 +326,7 @@ const seedMissions = (): readonly StoredMission[] => [
     id: 'mission-3',
     title: 'Taste of the Village',
     description: 'Visit 3 different lakeside eateries.',
+    scheduledFor: '2026-07-16',
     xp: 90,
     stopsTotal: 3,
     icon: 'Star',
@@ -282,6 +338,7 @@ const seedMissions = (): readonly StoredMission[] => [
     id: 'mission-4',
     title: 'Fountain Night Owl',
     description: 'Attend a Friday fountain show.',
+    scheduledFor: '2026-07-18',
     xp: 40,
     stopsTotal: 1,
     icon: 'Moon',
@@ -301,20 +358,24 @@ const seedWeek = (): readonly StoredWeekDay[] => [
   { dayLabel: 'SUN', dateLabel: '20', date: '2026-07-20', isToday: false },
 ];
 
-export const createSeedState = (): StoreState => ({
-  subforums: [
-    'All',
-    'Announcements',
-    'Marina & Boating',
-    'Dining',
-    'Trails',
-    'Buy & Sell',
-    'Events',
-  ],
-  posts: seedPosts(),
-  comments: [],
-  events: seedEvents(),
-  missions: seedMissions(),
-  users: seedUsers(),
-  week: seedWeek(),
-});
+export const createSeedState = (): StoreState => {
+  const comments = seedComments();
+
+  return {
+    subforums: [
+      'All',
+      'Announcements',
+      'Marina & Boating',
+      'Dining',
+      'Trails',
+      'Buy & Sell',
+      'Events',
+    ],
+    posts: seedPosts(comments),
+    comments,
+    events: seedEvents(),
+    missions: seedMissions(),
+    users: seedUsers(),
+    week: seedWeek(),
+  };
+};

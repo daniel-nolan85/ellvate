@@ -30,7 +30,9 @@ const normalizeUrl = (value: string | null | undefined): string | null => {
   }
 };
 
-const rawAuthMode = process.env.EXPO_PUBLIC_AUTH_MODE?.trim();
+const rawAuthMode =
+  process.env.EXPO_PUBLIC_MAESTRO_AUTH_MODE?.trim() ||
+  process.env.EXPO_PUBLIC_AUTH_MODE?.trim();
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const rawClerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
 

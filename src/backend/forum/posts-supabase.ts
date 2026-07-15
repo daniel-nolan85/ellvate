@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { throwIfSupabaseError } from '@/src/services/supabase';
+
 import type { CreatePostResult, ForumPost, LikeResult } from './types';
 import { validatePostInput } from './validation';
 
@@ -39,10 +41,11 @@ const likedPostIds = async (
   supabase: SupabaseClient,
   userId: string,
 ): Promise<ReadonlySet<string>> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('post_likes')
     .select('post_id')
     .eq('user_id', userId);
+  throwIfSupabaseError(error, 'load post likes');
   return new Set((data ?? []).map((row) => row.post_id as string));
 };
 
@@ -53,18 +56,20 @@ const ensureUser = async (
   userId: string,
   name = 'Member',
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('app_users')
     .upsert({ id: userId, name }, { ignoreDuplicates: true, onConflict: 'id' });
+  throwIfSupabaseError(error, 'ensure forum user');
 };
 
 const listForumNames = async (
   supabase: SupabaseClient,
 ): Promise<readonly string[]> => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('subforums')
     .select('name')
     .order('position', { ascending: true });
+  throwIfSupabaseError(error, 'load subforums');
   return (data ?? []).map((row) => row.name as string);
 };
 
@@ -88,9 +93,7 @@ export async function listPostsSupabase(
     query = query.eq('forum', forum);
   }
   const { data, error } = await query;
-  if (error) {
-    throw new Error(error.message);
-  }
+  throwIfSupabaseError(error, 'load posts');
   const likedIds = await likedPostIds(supabase, userId);
   return (data as unknown as PostRow[]).map((row) => toForumPost(row, likedIds));
 }
@@ -115,12 +118,9 @@ export async function createPostSupabase(
     })
     .select(POST_SELECT)
     .single();
-  if (error || !data) {
-    return {
-      code: 'invalid_post',
-      message: 'Could not create the post.',
-      ok: false,
-    };
+  throwIfSupabaseError(error, 'create post');
+  if (!data) {
+    throw new Error('create post: database returned no post.');
   }
   return { ok: true, post: toForumPost(data as unknown as PostRow, new Set()) };
 }
@@ -130,38 +130,44 @@ export async function toggleLikeSupabase(
   userId: string,
   postId: string,
 ): Promise<LikeResult | null> {
-  const { data: post } = await supabase
+  const { data: post, error: postError } = await supabase
     .from('posts')
     .select('id')
     .eq('id', postId)
     .maybeSingle();
+  throwIfSupabaseError(postError, 'load post');
   if (!post) {
     return null;
   }
   await ensureUser(supabase, userId);
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('post_likes')
     .select('post_id')
     .eq('post_id', postId)
     .eq('user_id', userId)
     .maybeSingle();
 
+  throwIfSupabaseError(existingError, 'load post membership');
+
   if (existing) {
-    await supabase
+    const { error } = await supabase
       .from('post_likes')
       .delete()
       .eq('post_id', postId)
       .eq('user_id', userId);
+    throwIfSupabaseError(error, 'unlike post');
   } else {
-    await supabase
+    const { error } = await supabase
       .from('post_likes')
       .insert({ post_id: postId, user_id: userId });
+    throwIfSupabaseError(error, 'like post');
   }
 
-  const { data: updated } = await supabase
+  const { data: updated, error: updatedError } = await supabase
     .from('posts')
     .select('like_count')
     .eq('id', postId)
     .single();
+  throwIfSupabaseError(updatedError, 'load post like count');
   return { id: postId, liked: !existing, likes: updated?.like_count ?? 0 };
 }

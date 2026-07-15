@@ -4,6 +4,11 @@ export { AuthenticationStateScreen } from './authentication-state-screen';
 export { SignInScreen } from './sign-in/sign-in-screen';
 export { PasskeyOffer } from './sign-in/passkey-offer';
 export {
+  isMissingIdentifierError,
+  messageForAuthError,
+} from './sign-in/auth-errors';
+export {
+  canAccessCommunityRoutes,
   getAuthenticationGateDecision,
   RequireAuthentication,
   type AuthenticationGateDecision,

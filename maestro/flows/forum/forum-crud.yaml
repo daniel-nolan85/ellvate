@@ -1,0 +1,15 @@
+appId: com.llvcommunity.app
+tags:
+  - forum
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn:
+    id: tab-forum
+- assertVisible: "Forum"
+- tapOn:
+    id: forum-add-post
+- assertVisible: "New post"
+- tapOn:
+    id: forum-submit-post
+- assertVisible: "Title"

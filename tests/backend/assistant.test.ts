@@ -2,10 +2,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 
 import { POST as postAssistantChat } from '../../app/api/assistant/chat+api';
 import {
+  MAX_TOTAL_MESSAGE_TEXT_LENGTH,
   respondToChat,
+  resetAssistantRateLimit,
   searchEvents,
   searchMissions,
   searchPosts,
+  validateChatMessages,
 } from '../../src/backend/assistant';
 import { memoryContext } from '../../src/backend/http';
 import { resetStore } from '../../src/backend/store';
@@ -28,6 +31,7 @@ afterAll(() => {
 
 afterEach(() => {
   resetStore();
+  resetAssistantRateLimit();
 });
 
 const chatRequest = (body: unknown): Request =>
@@ -235,10 +239,32 @@ describe('POST /api/assistant/chat', () => {
     expect(response.status).toBe(200);
   });
 
+  test('rejects a conversation whose total text exceeds the request budget', () => {
+    expect(
+      validateChatMessages({
+        messages: [
+          { role: 'user', text: 'x'.repeat(MAX_TOTAL_MESSAGE_TEXT_LENGTH + 1) },
+        ],
+      }),
+    ).toBeNull();
+  });
+
   test('400s on a malformed JSON body', async () => {
     const response = await postAssistantChat(chatRequest('{not json'));
 
     expect(response.status).toBe(400);
     expect((await response.json()).code).toBe('invalid_request');
+  });
+
+  test('429s after the per-user memory limit is exhausted', async () => {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      expect(
+        (await postAssistantChat(chatRequest(userMessage('events')))).status,
+      ).toBe(200);
+    }
+
+    const response = await postAssistantChat(chatRequest(userMessage('events')));
+    expect(response.status).toBe(429);
+    expect((await response.json()).code).toBe('assistant_rate_limited');
   });
 });

@@ -74,6 +74,7 @@ export interface StoredMission {
   readonly id: string;
   readonly title: string;
   readonly description: string;
+  readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stopsTotal: number;
   readonly icon: MissionIcon;

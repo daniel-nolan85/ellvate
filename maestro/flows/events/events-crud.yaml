@@ -1,0 +1,56 @@
+appId: com.llvcommunity.app
+tags:
+  - events
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn:
+    id: tab-events
+- assertVisible: "Events"
+- assertVisible:
+    id: events-calendar
+- tapOn:
+    id: events-add
+- assertVisible: "New event at the lake"
+- tapOn:
+    id: event-title
+- inputText: "Maestro calendar event"
+- tapOn:
+    id: event-place
+- inputText: "Community marina"
+- pressKey: BACK
+- tapOn:
+    id: event-category-community
+- scrollUntilVisible:
+    element:
+      id: event-date-calendar
+    direction: DOWN
+- tapOn:
+    id: event-date-calendar-next-month
+- tapOn:
+    id: event-date-calendar-previous-month
+- scrollUntilVisible:
+    element:
+      id: event-time-picker
+    direction: DOWN
+- assertVisible:
+    id: event-time-picker
+- tapOn:
+    id: event-time-picker
+- waitForAnimationToEnd
+- pressKey: BACK
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      id: event-submit
+    direction: DOWN
+- tapOn:
+    id: event-submit
+- extendedWaitUntil:
+    visible: "Events"
+    timeout: 10000
+- assertNotVisible: "New event at the lake"
+- scrollUntilVisible:
+    element:
+      text: "Maestro calendar event"
+    direction: DOWN

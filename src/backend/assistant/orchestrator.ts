@@ -1,7 +1,8 @@
 import {
-  createRequestContext,
+  getBackendAuthMode,
   jsonError,
   jsonOk,
+  withRequestContext,
   type RequestContext,
 } from '@/src/backend/http';
 
@@ -18,6 +19,8 @@ import type {
   AssistantToolCall,
 } from './types';
 import { validateChatMessages } from './validation';
+import { allowAssistantRequest, assistantRateLimit } from './rate-limit';
+import { checkDistributedRateLimit } from '@/src/services/rate-limit';
 
 export interface RespondToChatOptions {
   readonly apiKey?: string | null;
@@ -28,6 +31,8 @@ const ANTHROPIC_VERSION = '2023-06-01';
 const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
 const MAX_OUTPUT_TOKENS = 512;
 const MAX_TOOL_ITERATIONS = 3;
+const UPSTREAM_TIMEOUT_MS = 10_000;
+const TOTAL_UPSTREAM_BUDGET_MS = 15_000;
 
 const SYSTEM_PROMPT =
   'You are the Lake Las Vegas community concierge for the LLV community app. ' +
@@ -155,27 +160,43 @@ async function respondViaAnthropic(
   messages: readonly AssistantChatMessage[],
   ctx: RequestContext,
 ): Promise<AssistantReply> {
+  const deadline = Date.now() + TOTAL_UPSTREAM_BUDGET_MS;
   let conversation: readonly AnthropicMessageParam[] = messages.map(
     (message) => ({ role: message.role, content: message.text }),
   );
   let toolCalls: readonly AssistantToolCall[] = [];
 
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': ANTHROPIC_VERSION,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        system: SYSTEM_PROMPT,
-        tools: API_TOOLS,
-        messages: conversation,
-      }),
-    });
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      throw new Error('assistant upstream request budget exhausted');
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      Math.min(UPSTREAM_TIMEOUT_MS, remaining),
+    );
+    let response: Response;
+    try {
+      response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': ANTHROPIC_VERSION,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: ANTHROPIC_MODEL,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          system: SYSTEM_PROMPT,
+          tools: API_TOOLS,
+          messages: conversation,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       throw new Error(`assistant upstream returned ${response.status}`);
@@ -324,17 +345,50 @@ export async function respondToChat(
 }
 
 export async function handleAssistantChat(request: Request): Promise<Response> {
-  const body: unknown = await request.json().catch(() => null);
-  const messages = validateChatMessages(body);
+  const contextResponse = await withRequestContext(request, async (ctx) => {
+    const body: unknown = await request.json().catch(() => null);
+    const messages = validateChatMessages(body);
 
-  if (!messages) {
-    return jsonError(
-      400,
-      'invalid_request',
-      'messages must be a non-empty array of { role: "user" | "assistant", text } entries with text up to 2000 characters.',
-    );
-  }
+    if (!messages) {
+      return jsonError(
+        400,
+        'invalid_request',
+        'messages must be a non-empty array of { role: "user" | "assistant", text } entries with text up to 2000 characters.',
+      );
+    }
 
-  const ctx = await createRequestContext(request);
-  return jsonOk(await respondToChat(ctx, messages));
+    const rateLimitDecision =
+      process.env.ASSISTANT_RATE_LIMIT_MODE === 'memory' ||
+      getBackendAuthMode() === 'demo'
+        ? {
+            status: allowAssistantRequest(ctx.userId) ? 'allowed' : 'limited',
+          }
+        : await checkDistributedRateLimit(
+            ctx.userId,
+            {
+              keyPrefix: 'llv:assistant',
+              maxRequests: assistantRateLimit.maxRequests,
+              windowMs: assistantRateLimit.windowMs,
+            },
+          );
+
+    if (rateLimitDecision.status === 'unavailable') {
+      return jsonError(
+        503,
+        'assistant_rate_limit_unavailable',
+        'The assistant is temporarily unavailable. Try again shortly.',
+      );
+    }
+
+    if (rateLimitDecision.status === 'limited') {
+      return jsonError(
+        429,
+        'assistant_rate_limited',
+        'Too many assistant requests. Try again shortly.',
+      );
+    }
+    return jsonOk(await respondToChat(ctx, messages));
+  });
+
+  return contextResponse;
 }

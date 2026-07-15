@@ -4,16 +4,17 @@ The provider, token cache, session contract, and route gate are already part of
 the starter. The sign-in experience is intentionally not selected for copied
 apps.
 
-## Choose one flow
+## LLV custom OTP flow
 
 | Flow | Best when | Native requirements |
 | --- | --- | --- |
 | Prebuilt `AuthView` / `UserButton` | Fastest path and Clerk-owned auth UI | `@clerk/expo` config plugin and a development build; not Expo Go |
 | Custom hooks + gluestack UI | The app needs exact branded copy, steps, and validation | Inspect enabled factors first; browser SSO needs scheme/redirect configuration; native Apple/Google needs a development build |
 
-Do not blend both flows for the same auth step without a specific app
-decision. For a custom flow use current `useSignIn`, `useSignUp`, and `useSSO`
-APIs; do not use deprecated `useOAuth`.
+LLV uses one branded custom flow with a phone/email selector and passwordless
+verification codes. It uses the current `useSignIn` and `useSignUp` APIs; do not
+use deprecated `useOAuth` APIs. The Clerk development instance must enable both
+email-code and phone-code factors.
 
 ## Activation checklist
 
@@ -32,7 +33,8 @@ APIs; do not use deprecated `useOAuth`.
    verification, and session restoration states.
 8. Verify an authenticated API call and confirm identity change/sign-out clears
    in-memory and persisted TanStack data.
-9. Run the flow on each supported native platform; native Clerk views are not
+9. Run the email and phone flows with Clerk test identities and code `424242`.
+10. Run the flow on each supported native platform; native Clerk views are not
    proven by Jest or Expo Go.
 
 The default disabled mode is a configuration state, not a fake signed-in user.

@@ -1,0 +1,69 @@
+appId: com.llvcommunity.app
+tags:
+  - missions
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn:
+    id: tab-missions
+- assertVisible: "Missions"
+- tapOn:
+    id: missions-add
+- assertVisible: "New mission around the lake"
+- tapOn:
+    id: mission-title
+- inputText: "Maestro calendar mission"
+- tapOn:
+    id: mission-description
+- inputText: "Complete a calendar-tested community challenge"
+- pressKey: BACK
+- scrollUntilVisible:
+    element:
+      id: mission-date-calendar
+    direction: DOWN
+- runFlow:
+    when:
+      visible: "Enable Dictation?"
+    commands:
+      - tapOn: "Not Now"
+- tapOn:
+    id: mission-date-calendar-next-month
+- tapOn:
+    id: mission-date-calendar-previous-month
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      id: mission-xp-50
+    direction: DOWN
+- tapOn:
+    id: mission-xp-50
+    retryTapIfNoChange: true
+- assertVisible:
+    id: mission-xp-50
+    selected: true
+- tapOn:
+    id: mission-stops-2
+    retryTapIfNoChange: true
+- assertVisible:
+    id: mission-stops-2
+    selected: true
+- tapOn:
+    id: mission-icon-star
+    retryTapIfNoChange: true
+- assertVisible:
+    id: mission-icon-star
+    selected: true
+- scrollUntilVisible:
+    centerElement: true
+    element:
+      id: mission-submit
+    direction: DOWN
+- tapOn:
+    id: mission-submit
+- extendedWaitUntil:
+    visible: "Missions"
+    timeout: 10000
+- assertNotVisible: "New mission around the lake"
+- tapOn:
+    id: missions-ranks
+- assertVisible: "Leaderboard"

@@ -1,0 +1,19 @@
+appId: com.llvcommunity.app
+tags:
+  - forum
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn:
+    id: tab-forum
+- tapOn:
+    id: forum-post-post-1
+- assertVisible: "Post"
+- assertVisible:
+    id: comment-item-comment-1
+- tapOn:
+    id: comment-input
+- inputText: "Maestro reply"
+- tapOn:
+    id: comment-send
+- assertVisible: "Maestro reply"

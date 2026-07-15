@@ -69,10 +69,12 @@ function Celebration() {
 }
 
 interface CommitStepProps {
+  readonly error?: string | null;
   readonly onDone: () => void;
+  readonly onRetry?: () => void;
 }
 
-export function CommitStep({ onDone }: CommitStepProps) {
+export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
   const holdProgress = useSharedValue(0);
   const [ringProgress, setRingProgress] = useState(0);
   const [complete, setComplete] = useState(false);
@@ -126,7 +128,24 @@ export function CommitStep({ onDone }: CommitStepProps) {
       <StatusBar style="light" />
       <GlowBackdrop />
       <View className="flex-1 items-center justify-center gap-7 px-[30px]">
-        {complete ? (
+        {error ? (
+          <View className="items-center gap-5">
+            <Text className="text-center font-inter-bold text-[28px] text-primary-foreground">
+              Could not finish setup
+            </Text>
+            <Text className="text-center text-[rgba(250,250,250,0.7)]" size="md">
+              {error}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              className="rounded-full bg-primary-foreground px-6 py-3"
+              onPress={onRetry}
+              testID="onboarding-completion-retry"
+            >
+              <Text className="font-inter-semibold text-primary">Try again</Text>
+            </Pressable>
+          </View>
+        ) : complete ? (
           <Celebration />
         ) : (
           <>
@@ -144,7 +163,11 @@ export function CommitStep({ onDone }: CommitStepProps) {
                 Attend one event this month. Hold the circle to commit.
               </Text>
             </View>
-            <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+            <Pressable
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              testID="onboarding-commit-hold"
+            >
               <View className="absolute inset-[4px] rounded-full bg-[rgba(250,250,250,0.06)]" />
               <ProgressRing
                 color={INDIGO}

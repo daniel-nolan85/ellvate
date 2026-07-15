@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Expo Starter",
-    "slug": "expo-starter",
+    "name": "LLV Community",
+    "slug": "llv-community-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "expo-starter",
+    "icon": "./assets/images/llv-logo.png",
+    "scheme": "llv",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "runtimeVersion": {
@@ -16,10 +16,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#171717",
+        "foregroundImage": "./assets/images/llv-logo.png",
+        "monochromeImage": "./assets/images/llv-logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -33,16 +32,17 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/llv-splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#171717",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#171717"
           }
         }
       ],
       "expo-secure-store",
+      "@react-native-community/datetimepicker",
       [
         "@clerk/expo",
         {
@@ -65,6 +65,13 @@
       "checkAutomatically": "ON_LOAD",
       "enabled": false,
       "fallbackToCacheTimeout": 3000
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "15fc95df-574a-49ef-ab09-25c40e287987"
+      }
+    },
+    "owner": "6missedcalls"
   }
 }

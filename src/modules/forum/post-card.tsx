@@ -32,7 +32,13 @@ export function PostCard({ onToggleLike, onOpen, post }: PostCardProps) {
 
   return (
     <View className="gap-4 rounded-[20px] border border-line bg-canvas p-[18px]">
-      <Pressable className="gap-4" onPress={onOpen}>
+      <Pressable
+        accessibilityLabel={`Open post: ${post.title}`}
+        accessibilityRole="button"
+        className="gap-4"
+        onPress={onOpen}
+        testID={`forum-post-${post.id}`}
+      >
         <HStack className="items-center" space="sm">
           <Avatar name={post.author.name} size="sm" />
           <VStack className="flex-1" space="xs">
@@ -98,4 +104,3 @@ export function PostCard({ onToggleLike, onOpen, post }: PostCardProps) {
     </View>
   );
 }
-

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -10,7 +10,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 
 import { CodeInput } from './code-input';
-import { usePhoneAuthFlow } from './use-phone-auth-flow';
+import { useIdentifierAuthFlow } from './use-identifier-auth-flow';
 
 const formatPhone = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 10);
@@ -26,41 +26,36 @@ const formatPhone = (value: string): string => {
 const toE164 = (formatted: string): string =>
   `+1${formatted.replace(/\D/g, '').slice(0, 10)}`;
 
-const displayPhone = (e164: string): string =>
-  `+1 ${formatPhone(e164.replace(/^\+1/, ''))}`;
-
-const MIN_PASSWORD = 8;
-
 interface SignInScreenProps {
-  // Fires once the session is active, whether the number signed in or signed up.
+  // Fires once the session is active, whether the identifier signed in or signed up.
   readonly onAuthenticated: () => void;
-  // Pressing back on the first (phone) screen leaves auth, e.g. to the welcome step.
+  // Pressing back on the first identifier screen leaves auth, e.g. to welcome.
   readonly onExit?: () => void;
 }
 
 export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
   const insets = useSafeAreaInsets();
-  const flow = usePhoneAuthFlow();
+  const flow = useIdentifierAuthFlow();
 
   const [phoneText, setPhoneText] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [emailText, setEmailText] = useState('');
   const [code, setCode] = useState('');
   const [codeInvalid, setCodeInvalid] = useState(false);
 
-  const phoneComplete = phoneText.replace(/\D/g, '').length === 10;
-  const passwordReady = password.length >= MIN_PASSWORD;
+  const identifierText = flow.kind === 'phone' ? phoneText : emailText;
+  const identifierComplete =
+    flow.kind === 'phone'
+      ? phoneText.replace(/\D/g, '').length === 10
+      : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailText.trim());
 
   const goBack = () => {
     setCode('');
     setCodeInvalid(false);
-    setPassword('');
-    setShowPassword(false);
     flow.restart();
   };
 
   const handleBack = () => {
-    if (flow.step === 'phone') {
+    if (flow.step === 'identifier') {
       onExit?.();
       return;
     }
@@ -78,36 +73,37 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
   };
 
   const onPrimary = async () => {
-    if (flow.step === 'phone' && phoneComplete) {
-      await flow.submitPhone(toE164(phoneText));
-    } else if (flow.step === 'password' && passwordReady) {
-      await flow.submitPassword(password);
+    if (flow.step === 'identifier' && identifierComplete) {
+      await flow.submitIdentifier(
+        flow.kind === 'phone' ? toE164(phoneText) : emailText.trim(),
+      );
     }
   };
 
   const heading =
-    flow.step === 'phone'
-      ? {
-          sub: 'We’ll text you a quick 6-digit code to make sure it’s really you.',
-          title: 'What’s your number?',
-        }
-      : flow.step === 'password'
+    flow.step === 'identifier'
+      ? flow.kind === 'phone'
         ? {
-            sub: 'At least 8 characters — something only you would guess. Tap the eye to check it.',
-            title: 'Now pick a password',
+            sub: 'We’ll text you a quick 6-digit code to make sure it’s really you.',
+            title: 'What’s your number?',
           }
         : {
-            sub: `We just texted a 6-digit code to ${displayPhone(flow.phone)}. Pop it in below.`,
-            title: 'Check your messages',
-          };
+            sub: 'We’ll email you a quick 6-digit code to make sure it’s really you.',
+            title: 'What’s your email?',
+          }
+      : {
+          sub: `We just sent a 6-digit code to ${identifierText}. Pop it in below.`,
+          title: 'Check your messages',
+        };
 
   return (
-    <View
+    <KeyboardAvoidingView
+      behavior="padding"
       className="flex-1 bg-canvas px-6"
       style={{ paddingBottom: insets.bottom + 24, paddingTop: insets.top + 16 }}
     >
       <View className="h-9 justify-center">
-        {flow.step !== 'phone' || onExit ? (
+        {flow.step !== 'identifier' || onExit ? (
           <Pressable
             accessibilityLabel="Back"
             className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
@@ -128,51 +124,50 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           </Text>
         </VStack>
 
-        {flow.step === 'phone' ? (
-          <Input size="lg">
-            <InputSlot>
-              <Text className="font-inter-semibold text-[17px] text-content">
-                +1
-              </Text>
-            </InputSlot>
-            <InputField
-              autoComplete="tel"
-              autoFocus
-              className="text-[17px]"
-              keyboardType="phone-pad"
-              onChangeText={(value) => setPhoneText(formatPhone(value))}
-              onSubmitEditing={onPrimary}
-              placeholder="(702) 555-0134"
-              textContentType="telephoneNumber"
-              value={phoneText}
-            />
-          </Input>
-        ) : flow.step === 'password' ? (
-          <Input size="lg">
-            <InputField
-              autoCapitalize="none"
-              autoComplete="new-password"
-              autoFocus
-              className="text-[17px]"
-              onChangeText={setPassword}
-              onSubmitEditing={onPrimary}
-              placeholder="Create a password"
-              secureTextEntry={!showPassword}
-              textContentType="newPassword"
-              value={password}
-            />
-            <InputSlot
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-              className="h-full justify-center pl-1"
-              onPress={() => setShowPassword((visible) => !visible)}
-            >
-              <Icon
-                color="rgb(161,161,170)"
-                name={showPassword ? 'Eye' : 'EyeOff'}
-                size={20}
+        {flow.step === 'identifier' ? (
+          <VStack space="md">
+            <View className="flex-row gap-2">
+              {(['phone', 'email'] as const).map((option) => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: flow.kind === option }}
+                  className={`rounded-full px-4 py-2 ${flow.kind === option ? 'bg-primary' : 'bg-secondary'}`}
+                  key={option}
+                  onPress={() => flow.chooseKind(option)}
+                  testID={`auth-kind-${option}`}
+                >
+                  <Text className={flow.kind === option ? 'text-primary-foreground' : 'text-content'}>
+                    {option === 'phone' ? 'Phone' : 'Email'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Input size="lg">
+              {flow.kind === 'phone' ? (
+                <InputSlot>
+                  <Text className="font-inter-semibold text-[17px] text-content">+1</Text>
+                </InputSlot>
+              ) : null}
+              <InputField
+                autoCapitalize="none"
+                autoComplete={flow.kind === 'phone' ? 'tel' : 'email'}
+                autoFocus
+                className="text-[17px]"
+                key={flow.kind}
+                keyboardType={flow.kind === 'phone' ? 'phone-pad' : 'email-address'}
+                onChangeText={(value) =>
+                  flow.kind === 'phone'
+                    ? setPhoneText(formatPhone(value))
+                    : setEmailText(value)
+                }
+                onSubmitEditing={onPrimary}
+                placeholder={flow.kind === 'phone' ? '(702) 555-0134' : 'you@example.com'}
+                testID="auth-identifier-input"
+                textContentType={flow.kind === 'phone' ? 'telephoneNumber' : 'emailAddress'}
+                value={identifierText}
               />
-            </InputSlot>
-          </Input>
+            </Input>
+          </VStack>
         ) : (
           <VStack space="md">
             <CodeInput
@@ -182,6 +177,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
                 setCodeInvalid(false);
               }}
               onComplete={handleCode}
+              testID="auth-code-input"
               value={code}
             />
             <Pressable onPress={() => void flow.resend()}>
@@ -206,7 +202,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           isDisabled={
             flow.busy ||
             !flow.ready ||
-            (flow.step === 'phone' ? !phoneComplete : !passwordReady)
+            !identifierComplete
           }
           onPress={onPrimary}
           size="lg"
@@ -216,6 +212,6 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           </ButtonText>
         </Button>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

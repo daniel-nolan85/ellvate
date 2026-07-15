@@ -26,6 +26,12 @@ export const getAuthenticationGateDecision = (
   }
 };
 
+// Disabled auth is an explicit local-demo mode, so it may use the in-memory
+// community backend. Every Clerk-backed state must have a real signed-in
+// session before data routes are mounted.
+export const canAccessCommunityRoutes = (status: SessionStatus): boolean =>
+  status === 'signed-in' || status === 'disabled';
+
 interface RequireAuthenticationProps extends PropsWithChildren {
   readonly fallback?: ReactNode;
   readonly loadingFallback?: ReactNode;

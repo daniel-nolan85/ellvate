@@ -1,0 +1,27 @@
+appId: com.llvcommunity.app
+---
+- tapOn:
+    id: onboarding-role-resident
+- tapOn:
+    id: onboarding-cta-continue
+- tapOn:
+    id: onboarding-interest-boating-marina
+- tapOn:
+    id: onboarding-interest-trails-fitness
+- tapOn:
+    id: onboarding-interest-dining-out
+- tapOn:
+    id: onboarding-cta-continue
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn: "Continue"
+- tapOn:
+    id: onboarding-ai-casual
+- tapOn:
+    id: onboarding-cta-continue
+- tapOn: "Continue"
+- longPressOn:
+    id: onboarding-commit-hold
+- extendedWaitUntil:
+    visible: "Forum"
+    timeout: 15000

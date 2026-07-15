@@ -1,0 +1,12 @@
+appId: com.llvcommunity.app
+tags:
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn:
+    id: open-assistant
+- assertVisible: "Lake Assistant"
+- tapOn:
+    id: assistant-suggestion-events-this-weekend
+- assertVisible:
+    id: assistant-tool-search_events

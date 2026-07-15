@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { throwIfSupabaseError } from '@/src/services/supabase';
+
 import type { RequestContext } from '@/src/backend/http';
 
 import { validatePushToken, type ValidatedPushToken } from './validation';
@@ -18,12 +20,13 @@ const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('app_users')
     .upsert(
       { id: userId, name: 'Member' },
       { ignoreDuplicates: true, onConflict: 'id' },
     );
+  throwIfSupabaseError(error, 'ensure push user');
 };
 
 async function storePushTokenSupabase(
@@ -41,13 +44,7 @@ async function storePushTokenSupabase(
     },
     { onConflict: 'token' },
   );
-  if (error) {
-    return {
-      code: 'invalid_token',
-      message: 'Could not store the push token.',
-      ok: false,
-    };
-  }
+  throwIfSupabaseError(error, 'store push token');
   return { ok: true };
 }
 

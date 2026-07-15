@@ -1,0 +1,8 @@
+appId: com.llvcommunity.app
+tags:
+  - push
+  - smoke
+---
+- launchApp
+- assertVisible: "Get started"
+# Simulator registration must no-op without crashing; delivery is covered on a physical device.

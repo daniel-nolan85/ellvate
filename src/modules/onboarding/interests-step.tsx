@@ -57,6 +57,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
               className={`rounded-full px-4 py-2.5 ${selected ? 'bg-primary' : 'bg-secondary'}`}
               key={interest}
               onPress={() => handleToggle(interest)}
+              testID={`onboarding-interest-${interest.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
               style={
                 selected
                   ? {

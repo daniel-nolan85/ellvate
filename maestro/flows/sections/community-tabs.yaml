@@ -1,0 +1,13 @@
+appId: com.llvcommunity.app
+tags:
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn: "Events"
+- assertVisible: "Events"
+- tapOn: "Missions"
+- assertVisible: "Missions"
+- tapOn: "Ranks"
+- assertVisible: "Leaderboard"
+- tapOn: "Forum"
+- assertVisible: "Forum"

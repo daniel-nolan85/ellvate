@@ -1,0 +1,14 @@
+appId: com.llvcommunity.app
+tags:
+  - leaderboard
+  - full
+---
+- runFlow: ../../subflows/launch-demo-authenticated.yaml
+- tapOn:
+    id: tab-missions
+- tapOn:
+    id: missions-ranks
+- assertVisible: "Leaderboard"
+- tapOn:
+    id: leaderboard-back
+- assertVisible: "Missions"

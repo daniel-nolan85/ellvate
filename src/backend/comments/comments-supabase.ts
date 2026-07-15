@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { throwIfSupabaseError } from '@/src/services/supabase';
+
 import type { Comment, CreateCommentResult } from './types';
 import { validateCommentBody } from './validation';
 
@@ -27,12 +29,13 @@ const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
 ): Promise<void> => {
-  await supabase
+  const { error } = await supabase
     .from('app_users')
     .upsert(
       { id: userId, name: 'Member' },
       { ignoreDuplicates: true, onConflict: 'id' },
     );
+  throwIfSupabaseError(error, 'ensure comment user');
 };
 
 export async function listCommentsSupabase(
@@ -44,9 +47,7 @@ export async function listCommentsSupabase(
     .select(COMMENT_SELECT)
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
-  if (error) {
-    throw new Error(error.message);
-  }
+  throwIfSupabaseError(error, 'load comments');
   return (data as unknown as CommentRow[]).map(toComment);
 }
 
@@ -60,11 +61,12 @@ export async function createCommentSupabase(
   if (!validation.ok) {
     return { code: 'invalid_comment', message: validation.message, ok: false };
   }
-  const { data: post } = await supabase
+  const { data: post, error: postError } = await supabase
     .from('posts')
     .select('id')
     .eq('id', postId)
     .maybeSingle();
+  throwIfSupabaseError(postError, 'load comment post');
   if (!post) {
     return { code: 'post_not_found', message: 'Post not found.', ok: false };
   }
@@ -74,12 +76,9 @@ export async function createCommentSupabase(
     .insert({ author_id: userId, body: validation.body, post_id: postId })
     .select(COMMENT_SELECT)
     .single();
-  if (error || !data) {
-    return {
-      code: 'invalid_comment',
-      message: 'Could not create the comment.',
-      ok: false,
-    };
+  throwIfSupabaseError(error, 'create comment');
+  if (!data) {
+    throw new Error('create comment: database returned no comment.');
   }
   return { comment: toComment(data as unknown as CommentRow), ok: true };
 }
@@ -95,5 +94,6 @@ export async function deleteCommentSupabase(
     .eq('id', commentId)
     .eq('author_id', userId)
     .select('id');
-  return !error && Array.isArray(data) && data.length > 0;
+  throwIfSupabaseError(error, 'delete comment');
+  return Array.isArray(data) && data.length > 0;
 }

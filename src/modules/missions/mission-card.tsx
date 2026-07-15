@@ -9,6 +9,7 @@ import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { formatDateOnly } from '@/src/lib/date-only';
 
 import { useCheckIn, type Mission, type MissionStatus } from './use-missions';
 
@@ -72,6 +73,14 @@ export function MissionCard({ mission }: MissionCardProps) {
           <Text className="text-muted-foreground" size="xs">
             {mission.description}
           </Text>
+          {mission.scheduledFor ? (
+            <HStack className="items-center gap-1">
+              <Icon color="rgb(113,113,123)" name="CalendarDays" size={12} />
+              <Text className="text-muted-foreground" size="xs">
+                {formatDateOnly(mission.scheduledFor)}
+              </Text>
+            </HStack>
+          ) : null}
         </VStack>
         <Badge variant={badge.variant}>{badge.label}</Badge>
       </HStack>
