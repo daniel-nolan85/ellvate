@@ -24,6 +24,14 @@ export type CreatePostResult =
       readonly message: string;
     };
 
+export type UpdatePostResult =
+  | { readonly ok: true; readonly post: ForumPost }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_post' | 'post_not_found' | 'forbidden';
+      readonly message: string;
+    };
+
 export interface LikeResult {
   readonly id: string;
   readonly likes: number;

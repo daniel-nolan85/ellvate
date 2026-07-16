@@ -27,6 +27,12 @@ export interface CreatePostInput {
   readonly excerpt: string;
 }
 
+export interface UpdatePostInput {
+  readonly postId: string;
+  readonly title: string;
+  readonly excerpt: string;
+}
+
 export interface ToggleLikeInput {
   readonly forum: string;
   readonly postId: string;
@@ -145,6 +151,47 @@ export function useCreatePost() {
         getAccessToken: session.getToken,
         method: 'POST',
         path: '/api/forum/posts',
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'posts', userId],
+      });
+    },
+  });
+}
+
+export function useUpdatePost() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: ({ excerpt, postId, title }: UpdatePostInput) =>
+      requestJson<CreatePostResponse>({
+        body: { excerpt, title },
+        getAccessToken: session.getToken,
+        method: 'PATCH',
+        path: `/api/forum/posts/${postId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'posts', userId],
+      });
+    },
+  });
+}
+
+export function useDeletePost() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: (postId: string) =>
+      requestJson<{ id: string; deleted: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'DELETE',
+        path: `/api/forum/posts/${postId}`,
       }),
     onSettled: () => {
       void queryClient.invalidateQueries({

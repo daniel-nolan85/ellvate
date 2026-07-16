@@ -2,7 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { CreatePostResult, ForumPost, LikeResult } from './types';
+import type {
+  CreatePostResult,
+  ForumPost,
+  LikeResult,
+  UpdatePostResult,
+} from './types';
 import { validatePostInput } from './validation';
 
 const POST_SELECT =
@@ -95,7 +100,9 @@ export async function listPostsSupabase(
   const { data, error } = await query;
   throwIfSupabaseError(error, 'load posts');
   const likedIds = await likedPostIds(supabase, userId);
-  return (data as unknown as PostRow[]).map((row) => toForumPost(row, likedIds));
+  return (data as unknown as PostRow[]).map((row) =>
+    toForumPost(row, likedIds),
+  );
 }
 
 export async function createPostSupabase(
@@ -170,4 +177,73 @@ export async function toggleLikeSupabase(
     .single();
   throwIfSupabaseError(updatedError, 'load post like count');
   return { id: postId, liked: !existing, likes: updated?.like_count ?? 0 };
+}
+
+export async function deletePostSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string,
+): Promise<boolean> {
+  const { data: existing, error: existingError } = await supabase
+    .from('posts')
+    .select('id, author_id')
+    .eq('id', postId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load post');
+  if (!existing || existing.author_id !== userId) {
+    return false;
+  }
+  const { error } = await supabase.from('posts').delete().eq('id', postId);
+  throwIfSupabaseError(error, 'delete post');
+  return true;
+}
+
+export async function updatePostSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string,
+  input: unknown,
+): Promise<UpdatePostResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('posts')
+    .select('id, author_id, forum')
+    .eq('id', postId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load post');
+  if (!existing) {
+    return { code: 'post_not_found', message: 'Post not found.', ok: false };
+  }
+  if (existing.author_id !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own posts.',
+      ok: false,
+    };
+  }
+  const raw =
+    typeof input === 'object' && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
+  const validation = validatePostInput(
+    { excerpt: raw.excerpt, forum: existing.forum, title: raw.title },
+    await listForumNames(supabase),
+  );
+  if (!validation.ok) {
+    return validation;
+  }
+  const { data, error } = await supabase
+    .from('posts')
+    .update({
+      excerpt: validation.value.excerpt,
+      title: validation.value.title,
+    })
+    .eq('id', postId)
+    .select(POST_SELECT)
+    .single();
+  throwIfSupabaseError(error, 'update post');
+  if (!data) {
+    throw new Error('update post: database returned no post.');
+  }
+  const likedIds = await likedPostIds(supabase, userId);
+  return { ok: true, post: toForumPost(data as unknown as PostRow, likedIds) };
 }

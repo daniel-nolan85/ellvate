@@ -9,10 +9,18 @@ import {
 
 import {
   createPostSupabase,
+  deletePostSupabase,
   listPostsSupabase,
   toggleLikeSupabase,
+  updatePostSupabase,
 } from './posts-supabase';
-import type { CreatePostResult, ForumPost, LikeResult, PersonRef } from './types';
+import type {
+  CreatePostResult,
+  ForumPost,
+  LikeResult,
+  PersonRef,
+  UpdatePostResult,
+} from './types';
 import { validatePostInput } from './validation';
 
 // ---------------------------------------------------------------------------
@@ -24,7 +32,9 @@ const toAuthorRef = (
   authorId: string,
 ): PersonRef => {
   const user = users.find((candidate) => candidate.id === authorId);
-  return user ? { id: user.id, name: user.name } : { id: authorId, name: 'You' };
+  return user
+    ? { id: user.id, name: user.name }
+    : { id: authorId, name: 'You' };
 };
 
 const toForumPost = (
@@ -111,6 +121,66 @@ function toggleLikeMemory(userId: string, postId: string): LikeResult | null {
   return { id: postId, liked: !wasLiked, likes };
 }
 
+function deletePostMemory(userId: string, postId: string): boolean {
+  const existing = getState().posts.find(
+    (post) => post.id === postId && post.authorId === userId,
+  );
+  if (!existing) {
+    return false;
+  }
+  setState((current) => ({
+    ...current,
+    posts: current.posts.filter((post) => post.id !== postId),
+  }));
+  return true;
+}
+
+function updatePostMemory(
+  userId: string,
+  postId: string,
+  input: unknown,
+): UpdatePostResult {
+  const existing = getState().posts.find((post) => post.id === postId);
+  if (!existing) {
+    return { code: 'post_not_found', message: 'Post not found.', ok: false };
+  }
+  if (existing.authorId !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own posts.',
+      ok: false,
+    };
+  }
+  const raw =
+    typeof input === 'object' && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
+  const validation = validatePostInput(
+    { excerpt: raw.excerpt, forum: existing.forum, title: raw.title },
+    getState().subforums,
+  );
+  if (!validation.ok) {
+    return validation;
+  }
+  const next = setState((current) => ({
+    ...current,
+    posts: current.posts.map((post) =>
+      post.id === postId
+        ? {
+            ...post,
+            excerpt: validation.value.excerpt,
+            title: validation.value.title,
+          }
+        : post,
+    ),
+  }));
+  const updated = next.posts.find((post) => post.id === postId);
+  if (!updated) {
+    return { code: 'post_not_found', message: 'Post not found.', ok: false };
+  }
+  return { ok: true, post: toForumPost(updated, next.users, userId) };
+}
+
 // ---------------------------------------------------------------------------
 // Backend dispatch
 // ---------------------------------------------------------------------------
@@ -140,4 +210,23 @@ export async function toggleLike(
   return ctx.supabase
     ? toggleLikeSupabase(ctx.supabase, ctx.userId, postId)
     : toggleLikeMemory(ctx.userId, postId);
+}
+
+export async function deletePost(
+  ctx: RequestContext,
+  postId: string,
+): Promise<boolean> {
+  return ctx.supabase
+    ? deletePostSupabase(ctx.supabase, ctx.userId, postId)
+    : deletePostMemory(ctx.userId, postId);
+}
+
+export async function updatePost(
+  ctx: RequestContext,
+  postId: string,
+  input: unknown,
+): Promise<UpdatePostResult> {
+  return ctx.supabase
+    ? updatePostSupabase(ctx.supabase, ctx.userId, postId, input)
+    : updatePostMemory(ctx.userId, postId, input);
 }

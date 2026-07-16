@@ -25,6 +25,16 @@ interface ProfileResponse {
   readonly profile: UserProfile;
 }
 
+interface MemberProfileResponse {
+  readonly profile: Pick<UserProfile, 'userId' | 'role' | 'interests'>;
+  readonly stats: {
+    readonly level: number;
+    readonly xp: number;
+    readonly streakDays: number;
+    readonly missionsCompleted: number;
+  };
+}
+
 export interface ProfileStats {
   readonly level: number;
   readonly xp: number;
@@ -62,6 +72,24 @@ export function useProfile() {
   });
 }
 
+// A different user's public profile — role, interests, and public stats only,
+// never notification prefs or AI comfort, which stay private to the owner.
+export function useMemberProfile(userId: string) {
+  const session = useSession();
+
+  return useQuery({
+    enabled: Boolean(userId),
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<MemberProfileResponse>({
+        getAccessToken: session.getToken,
+        path: `/api/users/${userId}/profile`,
+        signal,
+      }),
+    queryKey: ['profile', 'member', userId],
+  });
+}
+
 // Shares the missions query cache so stats stay in sync with the Missions tab.
 export function useProfileStats() {
   const session = useSession();
@@ -94,7 +122,6 @@ export function useUpdateProfile() {
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
-      // A changed display name shows up on posts and the leaderboard.
       void queryClient.invalidateQueries({ queryKey: ['forum'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
     },

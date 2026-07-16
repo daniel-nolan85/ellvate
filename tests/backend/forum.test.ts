@@ -1,16 +1,22 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { POST as postLike } from '../../app/api/forum/posts/[id]/like+api';
 import {
   GET as getPosts,
   POST as postCreate,
 } from '../../app/api/forum/posts+api';
+import {
+  DELETE as deletePostRoute,
+  PATCH as patchPost,
+} from '../../app/api/forum/posts/[id]/index+api';
+import { POST as postLike } from '../../app/api/forum/posts/[id]/like+api';
 import { GET as getSubforums } from '../../app/api/forum/subforums+api';
 import {
   createPost,
+  deletePost,
   listPosts,
   listSubforums,
   toggleLike,
+  updatePost,
 } from '../../src/backend/forum';
 import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
@@ -52,7 +58,9 @@ describe('listPosts', () => {
   });
 
   test('maps StoredPost to the ForumPost contract shape', async () => {
-    const post = (await listPosts(ctx())).find((entry) => entry.id === 'post-1');
+    const post = (await listPosts(ctx())).find(
+      (entry) => entry.id === 'post-1',
+    );
 
     const { createdAt, ...rest } = post ?? {};
     expect(rest).toEqual({
@@ -124,7 +132,9 @@ describe('createPost', () => {
   });
 
   test('rejects an unknown forum', async () => {
-    expect(await createPost(ctx(), { forum: 'Nope', title: 'Hi' })).toMatchObject({
+    expect(
+      await createPost(ctx(), { forum: 'Nope', title: 'Hi' }),
+    ).toMatchObject({
       ok: false,
       code: 'invalid_post',
     });
@@ -187,6 +197,101 @@ describe('toggleLike', () => {
 
   test('returns null for an unknown post', async () => {
     expect(await toggleLike(ctx(), 'post-nope')).toBeNull();
+  });
+});
+
+describe('deletePost', () => {
+  test('deletes only the author’s own post', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Delete me',
+      excerpt: 'Temporary',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    expect(await deletePost(ctx('user-mia'), created.post.id)).toBe(false);
+    expect(await deletePost(ctx(), created.post.id)).toBe(true);
+    expect(getState().posts.some((post) => post.id === created.post.id)).toBe(
+      false,
+    );
+  });
+
+  test('returns false for an unknown post', async () => {
+    expect(await deletePost(ctx(), 'post-nope')).toBe(false);
+  });
+
+  test('returns false when the post belongs to someone else', async () => {
+    expect(await deletePost(ctx(), 'post-1')).toBe(false);
+    expect(getState().posts.some((post) => post.id === 'post-1')).toBe(true);
+  });
+});
+
+describe('updatePost', () => {
+  test('updates title and excerpt for the post author', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Original title',
+      excerpt: 'Original excerpt',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updatePost(ctx(), created.post.id, {
+      title: ' Updated title ',
+      excerpt: ' Updated excerpt ',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.post).toMatchObject({
+      id: created.post.id,
+      title: 'Updated title',
+      excerpt: 'Updated excerpt',
+      forum: 'Dining',
+    });
+  });
+
+  test('rejects a missing title', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Keep me',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updatePost(ctx(), created.post.id, {
+      excerpt: 'x',
+      title: '',
+    });
+    expect(result).toMatchObject({ ok: false, code: 'invalid_post' });
+  });
+
+  test('returns post_not_found for an unknown post', async () => {
+    const result = await updatePost(ctx(), 'post-nope', {
+      excerpt: 'x',
+      title: 'Hi',
+    });
+    expect(result).toMatchObject({ ok: false, code: 'post_not_found' });
+  });
+
+  test('returns forbidden when editing someone else’s post', async () => {
+    const result = await updatePost(ctx(), 'post-1', {
+      excerpt: 'x',
+      title: 'Hijack',
+    });
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('does not mutate the post on a forbidden update', async () => {
+    await updatePost(ctx(), 'post-1', { excerpt: 'x', title: 'Hijack' });
+    const post = getState().posts.find((entry) => entry.id === 'post-1');
+    expect(post?.title).toBe('Best spots to kayak at sunrise?');
   });
 });
 
@@ -314,6 +419,105 @@ describe('POST /api/forum/posts/:id/like', () => {
     const response = await postLike(
       new Request('http://localhost/api/forum/posts/post-nope/like', {
         method: 'POST',
+      }),
+      { id: 'post-nope' },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      code: 'post_not_found',
+      message: 'Post not found.',
+    });
+  });
+});
+
+describe('PATCH /api/forum/posts/:id', () => {
+  test('updates a post and returns 200 with { post }', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Original',
+      excerpt: 'Body',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await patchPost(
+      new Request(`http://localhost/api/forum/posts/${created.post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated', excerpt: 'New body' }),
+      }),
+      { id: created.post.id },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      post: { title: string; excerpt: string };
+    };
+    expect(body.post).toMatchObject({ title: 'Updated', excerpt: 'New body' });
+  });
+
+  test('returns 403 when editing someone else’s post', async () => {
+    const response = await patchPost(
+      new Request('http://localhost/api/forum/posts/post-1', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Hijack', excerpt: 'x' }),
+      }),
+      { id: 'post-1' },
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      code: 'forbidden',
+      message: 'You can only edit your own posts.',
+    });
+  });
+
+  test('returns 404 for an unknown post', async () => {
+    const response = await patchPost(
+      new Request('http://localhost/api/forum/posts/post-nope', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Hi', excerpt: 'x' }),
+      }),
+      { id: 'post-nope' },
+    );
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/forum/posts/:id', () => {
+  test('deletes the post and returns { deleted: true, id }', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Bye',
+      excerpt: 'x',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await deletePostRoute(
+      new Request(`http://localhost/api/forum/posts/${created.post.id}`, {
+        method: 'DELETE',
+      }),
+      { id: created.post.id },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      deleted: true,
+      id: created.post.id,
+    });
+  });
+
+  test('returns a 404 ApiError envelope for an unknown post', async () => {
+    const response = await deletePostRoute(
+      new Request('http://localhost/api/forum/posts/post-nope', {
+        method: 'DELETE',
       }),
       { id: 'post-nope' },
     );

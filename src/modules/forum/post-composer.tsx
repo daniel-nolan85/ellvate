@@ -16,64 +16,70 @@ interface PostComposerProps {
   readonly isSubmitting: boolean;
   readonly onDismiss: () => void;
   readonly onSubmit: (draft: PostComposerDraft) => void;
+  readonly initialTitle?: string;
+  readonly initialExcerpt?: string;
+  readonly submitLabel?: string;
 }
 
 export function PostComposer({
   forum,
+  initialExcerpt = '',
+  initialTitle = '',
   isSubmitting,
   onDismiss,
   onSubmit,
+  submitLabel = 'Post',
 }: PostComposerProps) {
-  const [title, setTitle] = useState('');
-  const [excerpt, setExcerpt] = useState('');
+  const [title, setTitle] = useState(initialTitle);
+  const [excerpt, setExcerpt] = useState(initialExcerpt);
   const canSubmit =
     title.trim().length > 0 && excerpt.trim().length > 0 && !isSubmitting;
 
   return (
-    <VStack className="px-5 pb-2 pt-1" space="sm">
-      <Text className="font-inter-bold text-[17px] text-content">
-        New post in {forum}
+    <VStack className='px-5 pb-2 pt-1' space='sm'>
+      <Text className='font-inter-bold text-[17px] text-content'>
+        {submitLabel === 'Post' ? `New post in ${forum}` : 'Edit post'}
       </Text>
-      <Input size="lg">
+      <Input size='lg'>
         <InputField
           autoFocus
           onChangeText={setTitle}
-          placeholder="Title"
-          testID="forum-post-title"
+          placeholder='Title'
+          testID='forum-post-title'
           value={title}
         />
       </Input>
-      <Input size="lg">
+      <Input size='lg'>
         <InputField
           onChangeText={setExcerpt}
-          placeholder="What do you want to share?"
-          testID="forum-post-body"
+          placeholder='What do you want to share?'
+          testID='forum-post-body'
           value={excerpt}
         />
       </Input>
-      <HStack className="items-center justify-end" space="sm">
+      <HStack className='items-center justify-end' space='sm'>
         <Button
-          action="secondary"
+          action='secondary'
           isDisabled={isSubmitting}
           onPress={onDismiss}
-          size="sm"
-          variant="link"
+          size='sm'
+          variant='link'
         >
-          <ButtonText className="font-inter-semibold text-[13px] text-text-muted">
+          <ButtonText className='font-inter-semibold text-[13px] text-text-muted'>
             Cancel
           </ButtonText>
         </Button>
         <Button
-          className="rounded-full bg-primary px-4"
+          className='rounded-full bg-primary px-4'
           isDisabled={!canSubmit}
           onPress={() =>
             onSubmit({ excerpt: excerpt.trim(), title: title.trim() })
           }
-          testID="forum-submit-post"
-          size="sm"
+          testID='forum-submit-post'
+          size='sm'
         >
-          <ButtonText className="font-inter-semibold text-[13px] text-primary-foreground">
-            Post
+          <ButtonText className='font-inter-semibold text-[13px] text-primary-foreground'>
+            {submitLabel}
           </ButtonText>
         </Button>
       </HStack>
