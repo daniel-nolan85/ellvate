@@ -1,1 +1,1 @@
-export { NativeTimePicker } from './time-text-input';
+export { WheelTimePicker as NativeTimePicker } from './wheel-time-picker';

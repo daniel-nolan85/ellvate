@@ -10,7 +10,7 @@ export default function MemberProfileRoute() {
 
   return (
     <MemberProfileScreen
-      name={name ?? 'Neighbour'}
+      loadingName={name}
       onClose={() => router.back()}
       userId={userId}
     />

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
+import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -14,11 +15,17 @@ import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { formatRelativeTime } from '@/src/lib/relative-time';
 import { useSession } from '@/src/platform/session';
 
 import { PostComposer } from './post-composer';
-import { formatRelativeTime } from './relative-time';
-import { useDeletePost, useUpdatePost, type ForumPost } from './use-forum';
+import {
+  useDeletePost,
+  useMuteUser,
+  useReportPost,
+  useUpdatePost,
+  type ForumPost,
+} from './use-forum';
 
 const COLOR_CONTENT = 'rgb(10,10,10)';
 const COLOR_PRIMARY_FOREGROUND = 'rgb(250,250,250)';
@@ -69,6 +76,8 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
 
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
+  const muteUser = useMuteUser();
+  const reportPost = useReportPost();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -123,6 +132,23 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
     });
   };
 
+  const handleMute = () => {
+    setMenuOpen(false);
+    muteUser.mutate(post.author.id, {
+      onSuccess: () => showToast(`Muted ${post.author.name}`),
+      onError: () => showToast('Couldn’t mute this neighbour. Try again.'),
+    });
+  };
+
+  const handleReport = () => {
+    setMenuOpen(false);
+    reportPost.mutate(post.id, {
+      onSuccess: () =>
+        showToast('Thanks — our moderators will take a look.'),
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+    });
+  };
+
   return (
     <View className='gap-4 rounded-[20px] border border-line bg-canvas p-[18px]'>
       <Pressable
@@ -147,7 +173,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               openAuthorProfile();
             }}
           >
-            <Avatar name={post.author.name} size='sm' />
+            <Avatar name={post.author.name} size='sm' src={post.author.avatarUrl ?? undefined} />
             <VStack className='flex-1' space='xs'>
               <Text className='font-inter-bold' size='sm'>
                 {post.author.name}
@@ -157,14 +183,15 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               </Text>
             </VStack>
           </Pressable>
-          {post.pinned ? (
-            <Badge
-              leftIcon={<Icon color={COLOR_INDIGO} name='Star' size={12} />}
-              variant='indigo'
-            >
-              Pinned
-            </Badge>
-          ) : (
+          <HStack className='items-center' space='sm'>
+            {post.pinned ? (
+              <Badge
+                leftIcon={<Icon color={COLOR_INDIGO} name='Star' size={12} />}
+                variant='indigo'
+              >
+                Pinned
+              </Badge>
+            ) : null}
             <Pressable
               accessibilityLabel='More options'
               accessibilityRole='button'
@@ -176,8 +203,13 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
             >
               <Icon color={COLOR_TEXT_SUBTLE} name='ThreeDots' size={16} />
             </Pressable>
-          )}
+          </HStack>
         </HStack>
+
+        {post.media && post.media.length > 0 && (
+          <MediaGallery media={post.media} />
+        )}
+
         <VStack space='xs'>
           <Heading className='font-inter-bold tracking-[-0.36px]' size='md'>
             {post.title}
@@ -226,21 +258,8 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
         </Pressable>
       </HStack>
 
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setMenuOpen(false)}
-        transparent
-        visible={menuOpen}
-      >
-        <Pressable
-          className='flex-1 bg-[rgba(0,0,0,0.4)]'
-          onPress={() => setMenuOpen(false)}
-        />
-        <View
-          className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-canvas px-[18px] pt-2.5'
-          style={{ paddingBottom: insets.bottom + 24 }}
-        >
-          <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />
+      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
+        <View className='gap-1 px-[18px] pb-2'>
           {isOwnPost ? (
             <>
               <PostMenuRow icon='Edit' label='Edit post' onPress={handleEdit} />
@@ -257,25 +276,19 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               <PostMenuRow
                 icon='EyeOff'
                 label='Mute this neighbour'
-                onPress={() => {
-                  setMenuOpen(false);
-                  showToast('Muted');
-                }}
+                onPress={handleMute}
               />
               <Divider />
               <PostMenuRow
                 destructive
                 icon='AlertCircle'
                 label='Report post'
-                onPress={() => {
-                  setMenuOpen(false);
-                  showToast('Thanks — our moderators will take a look.');
-                }}
+                onPress={handleReport}
               />
             </>
           )}
         </View>
-      </Modal>
+      </Sheet>
 
       <Modal
         animationType='fade'
@@ -320,12 +333,19 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
         <PostComposer
           forum={post.forum}
           initialExcerpt={post.excerpt}
+          initialMedia={post.media}
           initialTitle={post.title}
           isSubmitting={updatePost.isPending}
           onDismiss={() => setIsEditing(false)}
           onSubmit={(draft) =>
             updatePost.mutate(
-              { excerpt: draft.excerpt, postId: post.id, title: draft.title },
+              {
+                excerpt: draft.excerpt,
+                existingMedia: draft.existingMedia,
+                newMedia: draft.newMedia,
+                postId: post.id,
+                title: draft.title,
+              },
               {
                 onSuccess: () => {
                   setIsEditing(false);
@@ -334,7 +354,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
                   );
                 },
                 onError: () =>
-                  showToast('Couldn’t save your changes. Try again.'),
+                  showToast("Couldn't save your changes. Try again."),
               },
             )
           }

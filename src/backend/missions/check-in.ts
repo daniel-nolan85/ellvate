@@ -1,7 +1,7 @@
 import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, getState, setState } from '@/src/backend/store';
 
-import { getUserMissionEntry, resolveMissionStatus } from './mission-view';
+import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
 import { checkInSupabase } from './missions-supabase';
 import type { CheckInResult, Mission } from './types';
 import { buildUserProgress } from './user-progress';
@@ -78,6 +78,7 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
 
   const missionView: Mission = {
     id: mission.id,
+    author: toAuthorRef(next.users, mission.authorId),
     title: mission.title,
     description: mission.description,
     scheduledFor: mission.scheduledFor,
@@ -86,6 +87,7 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
     stopsDone,
     stopsTotal: mission.stopsTotal,
     icon: mission.icon,
+    media: mission.media,
   };
 
   return {

@@ -6,6 +6,7 @@ import { requestJson } from '@/src/services/api';
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
 }
 
 export interface ForumPost {
@@ -15,22 +16,39 @@ export interface ForumPost {
   readonly createdAt: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly media?: readonly {
+    readonly url: string;
+    readonly filename: string;
+  }[];
   readonly replies: number;
   readonly likes: number;
   readonly liked: boolean;
   readonly pinned: boolean;
 }
 
+export interface NewMediaInput {
+  readonly filename: string;
+  readonly dataUrl: string;
+}
+
+export interface ExistingMediaInput {
+  readonly filename: string;
+  readonly url: string;
+}
+
 export interface CreatePostInput {
   readonly forum: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly newMedia?: readonly NewMediaInput[];
 }
 
 export interface UpdatePostInput {
   readonly postId: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly existingMedia?: readonly ExistingMediaInput[];
+  readonly newMedia?: readonly NewMediaInput[];
 }
 
 export interface ToggleLikeInput {
@@ -166,9 +184,15 @@ export function useUpdatePost() {
   const userId = session.userId ?? 'demo-user';
 
   return useMutation({
-    mutationFn: ({ excerpt, postId, title }: UpdatePostInput) =>
+    mutationFn: ({
+      excerpt,
+      existingMedia,
+      newMedia,
+      postId,
+      title,
+    }: UpdatePostInput) =>
       requestJson<CreatePostResponse>({
-        body: { excerpt, title },
+        body: { excerpt, existingMedia, newMedia, title },
         getAccessToken: session.getToken,
         method: 'PATCH',
         path: `/api/forum/posts/${postId}`,
@@ -192,6 +216,39 @@ export function useDeletePost() {
         getAccessToken: session.getToken,
         method: 'DELETE',
         path: `/api/forum/posts/${postId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'posts', userId],
+      });
+    },
+  });
+}
+
+export function useReportPost() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (postId: string) =>
+      requestJson<{ reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/forum/posts/${postId}/report`,
+      }),
+  });
+}
+
+export function useMuteUser() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: (mutedUserId: string) =>
+      requestJson<{ muted: boolean; mutedUserId: string }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/users/${mutedUserId}/mute`,
       }),
     onSettled: () => {
       void queryClient.invalidateQueries({

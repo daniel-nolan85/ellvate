@@ -6,6 +6,7 @@ import { requestJson } from '@/src/services/api';
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
 }
 
 export interface LeaderboardEntry {

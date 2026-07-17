@@ -25,11 +25,11 @@ function PodiumAvatar({ entry }: { readonly entry: LeaderboardEntry }) {
       {first ? (
         <View className="rounded-full bg-indigo p-[3px]">
           <View className="rounded-full bg-canvas p-[3px]">
-            <Avatar name={entry.user.name} size="xl" />
+            <Avatar name={entry.user.name} size="xl" src={entry.user.avatarUrl ?? undefined} />
           </View>
         </View>
       ) : (
-        <Avatar name={entry.user.name} size="lg" />
+        <Avatar name={entry.user.name} size="lg" src={entry.user.avatarUrl ?? undefined} />
       )}
       <View className="absolute -bottom-2 left-0 right-0 items-center">
         <View className="rounded-full bg-canvas p-[2px]">

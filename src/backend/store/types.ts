@@ -21,12 +21,19 @@ export interface StoredProfile {
 export interface StoredUser {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
   readonly xp: number;
   readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly previousRank: number | null;
   readonly title: string;
   readonly profile: StoredProfile;
+  readonly mutedUserIds: readonly string[];
+}
+
+export interface StoredMedia {
+  readonly url: string;
+  readonly filename: string;
 }
 
 export interface StoredPost {
@@ -36,6 +43,7 @@ export interface StoredPost {
   readonly createdAt: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly media?: readonly StoredMedia[];
   readonly replies: number;
   readonly likes: number;
   readonly likedBy: readonly string[];
@@ -50,8 +58,24 @@ export interface StoredComment {
   readonly createdAt: string;
 }
 
+export interface StoredPostReport {
+  readonly id: string;
+  readonly postId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
+export interface StoredEventComment {
+  readonly id: string;
+  readonly eventId: string;
+  readonly authorId: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
 export interface StoredEvent {
   readonly id: string;
+  readonly authorId: string;
   readonly startsAt: string;
   readonly timeLabel: string;
   readonly dayLabel: string;
@@ -59,6 +83,7 @@ export interface StoredEvent {
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly media?: readonly StoredMedia[];
   readonly featured: boolean;
   readonly going: number;
   readonly joinedBy: readonly string[];
@@ -72,12 +97,14 @@ export interface MissionUserProgress {
 
 export interface StoredMission {
   readonly id: string;
+  readonly authorId: string;
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stopsTotal: number;
   readonly icon: MissionIcon;
+  readonly media?: readonly StoredMedia[];
   readonly progressByUser: Readonly<Record<string, MissionUserProgress>>;
 }
 
@@ -92,7 +119,9 @@ export interface StoreState {
   readonly subforums: readonly string[];
   readonly posts: readonly StoredPost[];
   readonly comments: readonly StoredComment[];
+  readonly postReports: readonly StoredPostReport[];
   readonly events: readonly StoredEvent[];
+  readonly eventComments: readonly StoredEventComment[];
   readonly missions: readonly StoredMission[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];

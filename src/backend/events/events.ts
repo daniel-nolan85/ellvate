@@ -1,11 +1,14 @@
+import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
 
 import {
   createEventSupabase,
+  deleteEventSupabase,
   getEventsViewSupabase,
   toggleJoinSupabase,
+  updateEventSupabase,
 } from './events-supabase';
 import type {
   CommunityEvent,
@@ -13,6 +16,7 @@ import type {
   EventsView,
   JoinResult,
   PersonRef,
+  UpdateEventResult,
 } from './types';
 import { validateEventInput } from './validation';
 
@@ -33,8 +37,20 @@ const toPersonRefs = (
 ): readonly PersonRef[] =>
   attendeeIds.flatMap((id) => {
     const user = users.find((candidate) => candidate.id === id);
-    return user ? [{ id: user.id, name: user.name }] : [];
+    return user
+      ? [{ avatarUrl: user.avatarUrl, id: user.id, name: user.name }]
+      : [];
   });
+
+const toAuthorRef = (
+  users: readonly StoredUser[],
+  authorId: string,
+): PersonRef => {
+  const user = users.find((candidate) => candidate.id === authorId);
+  return user
+    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
+    : { avatarUrl: null, id: authorId, name: 'You' };
+};
 
 const toCommunityEvent = (
   event: StoredEvent,
@@ -42,6 +58,7 @@ const toCommunityEvent = (
   users: readonly StoredUser[],
 ): CommunityEvent => ({
   id: event.id,
+  author: toAuthorRef(users, event.authorId),
   startsAt: event.startsAt,
   timeLabel: event.timeLabel,
   dayLabel: event.dayLabel,
@@ -49,6 +66,7 @@ const toCommunityEvent = (
   title: event.title,
   place: event.place,
   tag: event.tag,
+  media: event.media,
   featured: event.featured,
   going: event.going,
   joined: event.joinedBy.includes(userId),
@@ -72,8 +90,10 @@ function createEventMemory(userId: string, input: unknown): CreateEventResult {
     return validation;
   }
   const value = validation.value;
+  const mediaUploads = extractMediaUploads(input);
   const stored: StoredEvent = {
     id: `evt-${crypto.randomUUID()}`,
+    authorId: userId,
     startsAt: value.startsAt,
     timeLabel: value.timeLabel,
     dayLabel: value.dayLabel,
@@ -81,6 +101,12 @@ function createEventMemory(userId: string, input: unknown): CreateEventResult {
     title: value.title,
     place: value.place,
     tag: value.tag,
+    media: mediaUploads.length
+      ? mediaUploads.map((upload) => ({
+          filename: upload.filename,
+          url: upload.dataUrl,
+        }))
+      : undefined,
     featured: false,
     going: 0,
     joinedBy: [],
@@ -91,6 +117,75 @@ function createEventMemory(userId: string, input: unknown): CreateEventResult {
     events: [stored, ...current.events],
   }));
   return { ok: true, event: toCommunityEvent(stored, userId, next.users) };
+}
+
+function updateEventMemory(
+  userId: string,
+  eventId: string,
+  input: unknown,
+): UpdateEventResult {
+  const existing = getState().events.find((event) => event.id === eventId);
+  if (!existing) {
+    return { code: 'event_not_found', message: 'Event not found.', ok: false };
+  }
+  if (existing.authorId !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own events.',
+      ok: false,
+    };
+  }
+  const validation = validateEventInput(input);
+  if (!validation.ok) {
+    return validation;
+  }
+  const value = validation.value;
+  const keptMedia = extractExistingMedia(input);
+  const newMedia = extractMediaUploads(input);
+  const media = [
+    ...keptMedia,
+    ...newMedia.map((upload) => ({
+      filename: upload.filename,
+      url: upload.dataUrl,
+    })),
+  ];
+  const next = setState((current) => ({
+    ...current,
+    events: current.events.map((event) =>
+      event.id === eventId
+        ? {
+            ...event,
+            startsAt: value.startsAt,
+            timeLabel: value.timeLabel,
+            dayLabel: value.dayLabel,
+            dateLabel: value.dateLabel,
+            title: value.title,
+            place: value.place,
+            tag: value.tag,
+            media: media.length ? media : undefined,
+          }
+        : event,
+    ),
+  }));
+  const updated = next.events.find((event) => event.id === eventId);
+  if (!updated) {
+    return { code: 'event_not_found', message: 'Event not found.', ok: false };
+  }
+  return { ok: true, event: toCommunityEvent(updated, userId, next.users) };
+}
+
+function deleteEventMemory(userId: string, eventId: string): boolean {
+  const existing = getState().events.find(
+    (event) => event.id === eventId && event.authorId === userId,
+  );
+  if (!existing) {
+    return false;
+  }
+  setState((current) => ({
+    ...current,
+    events: current.events.filter((event) => event.id !== eventId),
+  }));
+  return true;
 }
 
 function toggleJoinMemory(userId: string, eventId: string): JoinResult | null {
@@ -147,4 +242,23 @@ export async function toggleJoin(
   return ctx.supabase
     ? toggleJoinSupabase(ctx.supabase, ctx.userId, eventId)
     : toggleJoinMemory(ctx.userId, eventId);
+}
+
+export async function updateEvent(
+  ctx: RequestContext,
+  eventId: string,
+  input: unknown,
+): Promise<UpdateEventResult> {
+  return ctx.supabase
+    ? updateEventSupabase(ctx.supabase, ctx.userId, eventId, input)
+    : updateEventMemory(ctx.userId, eventId, input);
+}
+
+export async function deleteEvent(
+  ctx: RequestContext,
+  eventId: string,
+): Promise<boolean> {
+  return ctx.supabase
+    ? deleteEventSupabase(ctx.supabase, ctx.userId, eventId)
+    : deleteEventMemory(ctx.userId, eventId);
 }

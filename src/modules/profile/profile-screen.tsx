@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -123,6 +124,27 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
     setEditing(true);
   };
 
+  const pickAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      base64: true,
+      quality: 0.8,
+    });
+
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset?.base64) {
+      return;
+    }
+    updateProfile.mutate({
+      avatar: {
+        dataUrl: `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}`,
+        filename: asset.fileName ?? `avatar-${Date.now()}.jpg`,
+      },
+    });
+  };
+
   const saveName = () => {
     const name = draftName.trim();
     if (!name) {
@@ -181,7 +203,26 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <VStack className="items-center px-5 pb-2 pt-3" space="sm">
-          <Avatar name={displayName} size="xl" />
+          <Pressable
+            accessibilityLabel="Change your photo"
+            accessibilityRole="button"
+            className="relative"
+            disabled={updateProfile.isPending}
+            onPress={pickAvatar}
+          >
+            <Avatar
+              name={displayName}
+              size="2xl"
+              src={profile.data?.profile.avatarUrl ?? undefined}
+            />
+            <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-canvas bg-primary">
+              {updateProfile.isPending ? (
+                <Spinner size="small" />
+              ) : (
+                <Icon color="#fff" name="Edit" size={14} />
+              )}
+            </View>
+          </Pressable>
           <VStack className="items-center" space="xs">
             <Heading className="font-inter-bold" size="lg">
               {displayName}

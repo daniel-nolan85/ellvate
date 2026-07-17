@@ -1,10 +1,17 @@
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
+export interface EventMedia {
+  readonly url: string;
+  readonly filename: string;
 }
 
 export interface CommunityEvent {
   readonly id: string;
+  readonly author: PersonRef;
   readonly startsAt: string;
   readonly timeLabel: string;
   readonly dayLabel: string;
@@ -12,6 +19,7 @@ export interface CommunityEvent {
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly media?: readonly EventMedia[];
   readonly featured: boolean;
   readonly going: number;
   readonly joined: boolean;
@@ -36,10 +44,32 @@ export interface ToggleJoinResult {
   readonly joined: boolean;
 }
 
+export interface NewEventMediaInput {
+  readonly filename: string;
+  readonly dataUrl: string;
+}
+
 export interface CreateEventInput {
   readonly title: string;
   readonly place: string;
   readonly tag: string;
   readonly date: string;
   readonly time: string;
+  readonly newMedia?: readonly NewEventMediaInput[];
+}
+
+export interface ExistingEventMediaInput {
+  readonly filename: string;
+  readonly url: string;
+}
+
+export interface UpdateEventInput {
+  readonly eventId: string;
+  readonly title: string;
+  readonly place: string;
+  readonly tag: string;
+  readonly date: string;
+  readonly time: string;
+  readonly existingMedia?: readonly ExistingEventMediaInput[];
+  readonly newMedia?: readonly NewEventMediaInput[];
 }

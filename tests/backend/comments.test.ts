@@ -47,6 +47,7 @@ describe('listComments', () => {
       'second',
     ]);
     expect(comments[comments.length - 1]?.author).toEqual({
+      avatarUrl: null,
       id: 'user-mia',
       name: 'Mia Lake',
     });

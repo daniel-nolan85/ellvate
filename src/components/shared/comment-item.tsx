@@ -5,9 +5,7 @@ import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-
-import { formatRelativeTime } from './relative-time';
-import type { ForumComment } from './use-comments';
+import { formatRelativeTime } from '@/src/lib/relative-time';
 
 const MENTION_PATTERN = /(@[A-Za-z][A-Za-z'-]*)/g;
 
@@ -29,16 +27,27 @@ function CommentBody({ body }: { readonly body: string }) {
   );
 }
 
-interface CommentItemProps {
-  readonly comment: ForumComment;
-  readonly onReply: (name: string) => void;
-  readonly onActions: (comment: ForumComment) => void;
+export interface DisplayComment {
+  readonly id: string;
+  readonly author: { readonly name: string; readonly avatarUrl?: string | null };
+  readonly body: string;
+  readonly createdAt: string;
 }
 
-export function CommentItem({ comment, onReply, onActions }: CommentItemProps) {
+interface CommentItemProps<TComment extends DisplayComment> {
+  readonly comment: TComment;
+  readonly onReply: (name: string) => void;
+  readonly onActions: (comment: TComment) => void;
+}
+
+export function CommentItem<TComment extends DisplayComment>({
+  comment,
+  onActions,
+  onReply,
+}: CommentItemProps<TComment>) {
   return (
     <HStack className="gap-2.5" testID={`comment-item-${comment.id}`}>
-      <Avatar name={comment.author.name} size="sm" />
+      <Avatar name={comment.author.name} size="sm" src={comment.author.avatarUrl ?? undefined} />
       <VStack className="flex-1 gap-1">
         <HStack className="items-baseline gap-1.5">
           <Text className="font-inter-medium text-[14px] text-content">

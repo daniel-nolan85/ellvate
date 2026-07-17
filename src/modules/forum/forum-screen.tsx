@@ -12,7 +12,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
 import { PostCard } from './post-card';
-import { PostComposer } from './post-composer';
+import { PostComposer, type PostComposerDraft } from './post-composer';
 import { SubforumChips } from './subforum-chips';
 import {
   useCreatePost,
@@ -23,11 +23,6 @@ import {
 
 const COLOR_PRIMARY_FOREGROUND = 'rgb(250,250,250)';
 const FALLBACK_SUBFORUMS: readonly string[] = ['All'];
-
-interface PostDraft {
-  readonly title: string;
-  readonly excerpt: string;
-}
 
 interface ForumScreenProps {
   readonly onOpenPost?: (postId: string) => void;
@@ -47,9 +42,14 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       ? (subforumNames.find((name) => name !== 'All') ?? 'Announcements')
       : activeForum;
 
-  const handleCreatePost = (draft: PostDraft) => {
+  const handleCreatePost = (draft: PostComposerDraft) => {
     createPost.mutate(
-      { excerpt: draft.excerpt, forum: composerForum, title: draft.title },
+      {
+        excerpt: draft.excerpt,
+        forum: draft.forum ?? composerForum,
+        newMedia: draft.newMedia,
+        title: draft.title,
+      },
       {
         onSuccess: () => {
           setIsComposing(false);

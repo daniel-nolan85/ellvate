@@ -136,17 +136,34 @@ export function Sheet({ children, onClose, visible }: SheetProps) {
           onPress={requestClose}
         >
           <Animated.View
-            className="absolute inset-0 bg-black"
-            style={backdropStyle}
+            style={[
+              {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'black',
+              },
+              backdropStyle,
+            ]}
           />
         </Pressable>
         <GestureDetector gesture={pan}>
           <Animated.View
-            className="rounded-t-[24px] bg-canvas"
             onLayout={(event) => {
               height.value = event.nativeEvent.layout.height;
             }}
-            style={[panelStyle, { maxHeight: '92%', paddingBottom: insets.bottom + 12 }]}
+            style={[
+              panelStyle,
+              {
+                backgroundColor: 'rgb(255,255,255)',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                maxHeight: '92%',
+                paddingBottom: insets.bottom + 12,
+              },
+            ]}
           >
             <View className="items-center pb-1 pt-2.5">
               <View className="h-1 w-10 rounded-full bg-line" />

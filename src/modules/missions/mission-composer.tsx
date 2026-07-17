@@ -1,5 +1,6 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { DateCalendar } from '@/src/components/shared/date-calendar';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -8,9 +9,36 @@ import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { dateOnlyFromDate } from '@/src/lib/date-only';
+import { dateOnlyFromDate, dateOnlyToDate } from '@/src/lib/date-only';
 
-import type { CreateMissionInput, MissionIcon } from './use-missions';
+import type { MissionIcon } from './use-missions';
+
+export interface MissionComposerDraft {
+  readonly title: string;
+  readonly description: string;
+  readonly scheduledFor: string;
+  readonly xp: number;
+  readonly stopsTotal: number;
+  readonly icon: MissionIcon;
+  readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
+  readonly newMedia?: readonly { readonly filename: string; readonly dataUrl: string }[];
+}
+
+interface ExistingMissionMediaItem {
+  readonly kind: 'existing';
+  readonly filename: string;
+  readonly url: string;
+}
+
+interface NewMissionMediaItem {
+  readonly kind: 'new';
+  readonly uri: string;
+  readonly base64: string;
+  readonly filename: string;
+  readonly mimeType: string;
+}
+
+type MissionMediaItem = ExistingMissionMediaItem | NewMissionMediaItem;
 
 const XP_OPTIONS = [25, 50, 75, 100, 150] as const;
 const STOP_OPTIONS = [1, 2, 3, 4, 5] as const;
@@ -60,7 +88,15 @@ function Field({ children, label }: { readonly children: ReactNode; readonly lab
 interface MissionComposerProps {
   readonly isSubmitting: boolean;
   readonly onDismiss: () => void;
-  readonly onSubmit: (input: CreateMissionInput) => void;
+  readonly onSubmit: (draft: MissionComposerDraft) => void;
+  readonly initialTitle?: string;
+  readonly initialDescription?: string;
+  readonly initialScheduledFor?: string;
+  readonly initialXp?: number | null;
+  readonly initialStopsTotal?: number | null;
+  readonly initialIcon?: MissionIcon | null;
+  readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
+  readonly submitLabel?: string;
 }
 
 const startOfToday = (): Date => {
@@ -76,18 +112,38 @@ const oneYearAfter = (date: Date): Date => {
 };
 
 export function MissionComposer({
+  initialDescription = '',
+  initialIcon = null,
+  initialMedia,
+  initialScheduledFor,
+  initialStopsTotal = null,
+  initialTitle = '',
+  initialXp = null,
   isSubmitting,
   onDismiss,
   onSubmit,
+  submitLabel = 'Add mission',
 }: MissionComposerProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [xp, setXp] = useState<number | null>(null);
-  const [stopsTotal, setStopsTotal] = useState<number | null>(null);
-  const [icon, setIcon] = useState<MissionIcon | null>(null);
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [xp, setXp] = useState<number | null>(initialXp);
+  const [stopsTotal, setStopsTotal] = useState<number | null>(initialStopsTotal);
+  const [icon, setIcon] = useState<MissionIcon | null>(initialIcon);
   const [today] = useState(startOfToday);
   const [maxDate] = useState(() => oneYearAfter(today));
-  const [scheduledFor, setScheduledFor] = useState(today);
+  const [scheduledFor, setScheduledFor] = useState(
+    () => (initialScheduledFor && dateOnlyToDate(initialScheduledFor)) || today,
+  );
+  const [media, setMedia] = useState<readonly MissionMediaItem[]>(
+    () =>
+      initialMedia?.map((item) => ({
+        filename: item.filename,
+        kind: 'existing' as const,
+        url: item.url,
+      })) ?? [],
+  );
+  const [alertTitle, setAlertTitle] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const canSubmit =
     title.trim().length > 0 &&
@@ -97,6 +153,47 @@ export function MissionComposer({
     icon !== null &&
     !isSubmitting;
 
+  const showAlert = (nextTitle: string, message: string) => {
+    setAlertTitle(nextTitle);
+    setAlertMessage(message);
+  };
+
+  const pickImage = async () => {
+    const remaining = 10 - media.length;
+    if (remaining <= 0) {
+      showAlert('Limit reached', 'You can upload up to 10 files per mission');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      allowsMultipleSelection: true,
+      base64: true,
+      quality: 0.7,
+      selectionLimit: remaining,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+    const picked: readonly MissionMediaItem[] = result.assets
+      .filter((asset) => asset.base64)
+      .slice(0, remaining)
+      .map((asset) => ({
+        base64: asset.base64!,
+        filename: asset.fileName ?? `image-${Date.now()}.jpg`,
+        kind: 'new' as const,
+        mimeType: asset.mimeType ?? 'image/jpeg',
+        uri: asset.uri,
+      }));
+    setMedia([...media, ...picked]);
+  };
+
+  const removeMedia = (index: number) => {
+    setMedia(media.filter((_, i) => i !== index));
+  };
+
   return (
     <ScrollView
       keyboardDismissMode="on-drag"
@@ -105,7 +202,7 @@ export function MissionComposer({
     >
       <VStack className="px-5 pb-2 pt-1" space="md">
         <Text className="font-inter-bold text-[17px] text-content">
-          New mission around the lake
+          {submitLabel === 'Add mission' ? 'New mission around the lake' : 'Edit mission'}
         </Text>
 
         <Field label="Name it">
@@ -193,6 +290,51 @@ export function MissionComposer({
           </HStack>
         </Field>
 
+        <Field label="Photos">
+          {media.length > 0 ? (
+            <VStack space="xs">
+              <Text className="text-xs text-text-muted">
+                {media.length}/10 files
+              </Text>
+              <HStack className="flex-wrap gap-2">
+                {media.map((item, index) => (
+                  <View
+                    key={item.kind === 'existing' ? item.url : item.uri}
+                    className="relative h-20 w-20 overflow-hidden rounded-lg bg-secondary"
+                  >
+                    <Image
+                      source={{ uri: item.kind === 'existing' ? item.url : item.uri }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                    />
+                    <Pressable
+                      className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500"
+                      onPress={() => removeMedia(index)}
+                    >
+                      <Icon color="white" name="Close" size={14} />
+                    </Pressable>
+                  </View>
+                ))}
+                {media.length < 10 && (
+                  <Pressable
+                    className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-line bg-secondary"
+                    onPress={pickImage}
+                  >
+                    <Icon color="rgb(161,161,170)" name="Add" size={20} />
+                  </Pressable>
+                )}
+              </HStack>
+            </VStack>
+          ) : (
+            <Pressable
+              className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3"
+              onPress={pickImage}
+            >
+              <Icon color="rgb(161,161,170)" name="Image" size={20} />
+            </Pressable>
+          )}
+        </Field>
+
         <HStack className="items-center justify-end" space="sm">
           <Button
             action="secondary"
@@ -215,7 +357,16 @@ export function MissionComposer({
               }
               onSubmit({
                 description: description.trim(),
+                existingMedia: media
+                  .filter((item): item is ExistingMissionMediaItem => item.kind === 'existing')
+                  .map((item) => ({ filename: item.filename, url: item.url })),
                 icon,
+                newMedia: media
+                  .filter((item): item is NewMissionMediaItem => item.kind === 'new')
+                  .map((item) => ({
+                    dataUrl: `data:${item.mimeType};base64,${item.base64}`,
+                    filename: item.filename,
+                  })),
                 scheduledFor: dateOnlyFromDate(scheduledFor),
                 stopsTotal,
                 title: title.trim(),
@@ -226,11 +377,42 @@ export function MissionComposer({
             size="sm"
           >
             <ButtonText className="font-inter-semibold text-[13px] text-primary-foreground">
-              {isSubmitting ? 'Adding…' : 'Add mission'}
+              {isSubmitting ? 'Saving…' : submitLabel}
             </ButtonText>
           </Button>
         </HStack>
       </VStack>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setAlertTitle(null)}
+        transparent
+        visible={!!alertTitle}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8"
+          onPress={() => setAlertTitle(null)}
+        >
+          <Pressable
+            className="w-full gap-3 rounded-[20px] bg-canvas p-5"
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text className="font-inter-bold text-[17px] text-content">
+              {alertTitle}
+            </Text>
+            <Text className="text-text-muted" size="sm">
+              {alertMessage}
+            </Text>
+            <HStack className="justify-end">
+              <Pressable onPress={() => setAlertTitle(null)}>
+                <Text className="font-inter-semibold text-[15px] text-primary">
+                  OK
+                </Text>
+              </Pressable>
+            </HStack>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }

@@ -21,7 +21,10 @@ const ROLE_LABELS: Record<string, string> = {
 
 interface MemberProfileScreenProps {
   readonly userId: string;
-  readonly name: string;
+  // Non-authoritative: only used as loading-state placeholder text before the
+  // real profile loads. The authoritative name always comes from the API
+  // response (member.data.profile.name), never from this caller-supplied value.
+  readonly loadingName?: string;
   readonly onClose: () => void;
 }
 
@@ -46,12 +49,13 @@ function StatCard({
 }
 
 export function MemberProfileScreen({
-  name,
+  loadingName,
   onClose,
   userId,
 }: MemberProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const member = useMemberProfile(userId);
+  const displayName = member.data?.profile.name ?? loadingName ?? 'Neighbour';
 
   return (
     <View className='flex-1 bg-canvas'>
@@ -73,9 +77,13 @@ export function MemberProfileScreen({
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <VStack className='items-center px-5 pb-2 pt-3' space='sm'>
-          <Avatar name={name} size='xl' />
+          <Avatar
+            name={displayName}
+            size='2xl'
+            src={member.data?.profile.avatarUrl ?? undefined}
+          />
           <Heading className='font-inter-bold' size='lg'>
-            {name}
+            {displayName}
           </Heading>
         </VStack>
 

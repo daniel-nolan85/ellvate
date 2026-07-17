@@ -10,7 +10,9 @@ function getMissionsViewMemory(userId: string): MissionsView {
   const state = getState();
 
   return {
-    missions: state.missions.map((mission) => toMissionView(mission, userId)),
+    missions: state.missions.map((mission) =>
+      toMissionView(mission, userId, state.users),
+    ),
     progress: buildUserProgress(state.users.find((user) => user.id === userId)),
   };
 }

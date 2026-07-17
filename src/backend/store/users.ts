@@ -30,12 +30,14 @@ export function ensureUser(userId: string): StoredUser {
   const created: StoredUser = {
     id: userId,
     name: 'You',
+    avatarUrl: null,
     xp: 0,
     streakDays: 0,
     missionsCompleted: 0,
     previousRank: null,
     title: DEFAULT_PROGRESS_TITLE,
     profile: defaultProfile(),
+    mutedUserIds: [],
   };
 
   setState((current) => ({

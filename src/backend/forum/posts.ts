@@ -21,7 +21,11 @@ import type {
   PersonRef,
   UpdatePostResult,
 } from './types';
-import { validatePostInput } from './validation';
+import {
+  extractExistingMedia,
+  extractMediaUploads,
+  validatePostInput,
+} from './validation';
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -33,8 +37,8 @@ const toAuthorRef = (
 ): PersonRef => {
   const user = users.find((candidate) => candidate.id === authorId);
   return user
-    ? { id: user.id, name: user.name }
-    : { id: authorId, name: 'You' };
+    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
+    : { avatarUrl: null, id: authorId, name: 'You' };
 };
 
 const toForumPost = (
@@ -49,6 +53,7 @@ const toForumPost = (
   id: post.id,
   liked: post.likedBy.includes(userId),
   likes: post.likes,
+  media: post.media,
   pinned: post.pinned,
   replies: post.replies,
   title: post.title,
@@ -63,10 +68,12 @@ const byPinnedThenNewest = (a: StoredPost, b: StoredPost): number => {
 
 function listPostsMemory(userId: string, forum?: string): readonly ForumPost[] {
   const state = getState();
-  const filtered =
-    !forum || forum === 'All'
-      ? state.posts
-      : state.posts.filter((post) => post.forum === forum);
+  const mutedUserIds = new Set(
+    state.users.find((user) => user.id === userId)?.mutedUserIds ?? [],
+  );
+  const filtered = state.posts
+    .filter((post) => !forum || forum === 'All' || post.forum === forum)
+    .filter((post) => !mutedUserIds.has(post.authorId));
   return [...filtered]
     .sort(byPinnedThenNewest)
     .map((post) => toForumPost(post, state.users, userId));
@@ -82,6 +89,7 @@ function createPostMemory(userId: string, input: unknown): CreatePostResult {
   if (!validation.ok) {
     return validation;
   }
+  const mediaUploads = extractMediaUploads(input);
 
   const stored: StoredPost = {
     authorId: userId,
@@ -91,6 +99,12 @@ function createPostMemory(userId: string, input: unknown): CreatePostResult {
     id: `post-${crypto.randomUUID()}`,
     likedBy: [],
     likes: 0,
+    media: mediaUploads.length
+      ? mediaUploads.map((upload) => ({
+          filename: upload.filename,
+          url: upload.dataUrl,
+        }))
+      : undefined,
     pinned: false,
     replies: 0,
     title: validation.value.title,
@@ -130,6 +144,7 @@ function deletePostMemory(userId: string, postId: string): boolean {
   }
   setState((current) => ({
     ...current,
+    comments: current.comments.filter((comment) => comment.postId !== postId),
     posts: current.posts.filter((post) => post.id !== postId),
   }));
   return true;
@@ -162,6 +177,15 @@ function updatePostMemory(
   if (!validation.ok) {
     return validation;
   }
+  const keptMedia = extractExistingMedia(input);
+  const newMedia = extractMediaUploads(input);
+  const media = [
+    ...keptMedia,
+    ...newMedia.map((upload) => ({
+      filename: upload.filename,
+      url: upload.dataUrl,
+    })),
+  ];
   const next = setState((current) => ({
     ...current,
     posts: current.posts.map((post) =>
@@ -169,6 +193,7 @@ function updatePostMemory(
         ? {
             ...post,
             excerpt: validation.value.excerpt,
+            media: media.length ? media : undefined,
             title: validation.value.title,
           }
         : post,

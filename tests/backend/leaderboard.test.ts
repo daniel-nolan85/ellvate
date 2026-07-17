@@ -112,7 +112,7 @@ describe('GET /api/leaderboard', () => {
     expect(body.leaders).toHaveLength(6);
     expect(body.leaders[0]).toEqual({
       rank: 1,
-      user: { id: 'user-mia', name: 'Mia Lake' },
+      user: { avatarUrl: null, id: 'user-mia', name: 'Mia Lake' },
       isMe: false,
       missionsCompleted: 41,
       xp: 3820,
@@ -120,7 +120,7 @@ describe('GET /api/leaderboard', () => {
     });
     expect(body.leaders[5]).toEqual({
       rank: 6,
-      user: { id: DEMO_USER_ID, name: 'You' },
+      user: { avatarUrl: null, id: DEMO_USER_ID, name: 'You' },
       isMe: true,
       missionsCompleted: 21,
       xp: 1980,

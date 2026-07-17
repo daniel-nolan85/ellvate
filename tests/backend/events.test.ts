@@ -1,8 +1,18 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { GET as getEvents, POST as postEvent } from '../../app/api/events+api';
+import {
+  DELETE as deleteEventRoute,
+  PATCH as patchEventRoute,
+} from '../../app/api/events/[id]/index+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
-import { createEvent, getEventsView, toggleJoin } from '../../src/backend/events';
+import {
+  createEvent,
+  deleteEvent,
+  getEventsView,
+  toggleJoin,
+  updateEvent,
+} from '../../src/backend/events';
 import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -44,10 +54,10 @@ describe('getEventsView', () => {
     const featured = events[0];
 
     expect(featured?.attendees).toEqual([
-      { id: 'user-riley', name: 'Riley Kim' },
-      { id: 'user-mia', name: 'Mia Lake' },
-      { id: 'user-jordan', name: 'Jordan Diaz' },
-      { id: 'user-andre', name: 'Andre King' },
+      { avatarUrl: null, id: 'user-riley', name: 'Riley Kim' },
+      { avatarUrl: null, id: 'user-mia', name: 'Mia Lake' },
+      { avatarUrl: null, id: 'user-jordan', name: 'Jordan Diaz' },
+      { avatarUrl: null, id: 'user-andre', name: 'Andre King' },
     ]);
   });
 
@@ -152,6 +162,31 @@ describe('createEvent', () => {
 
     expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
   });
+
+  test('stores uploaded images as event media', async () => {
+    const result = await createEvent(ctx(), {
+      ...validInput,
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'kayak-1.jpg' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event.media).toEqual([
+        { filename: 'kayak-1.jpg', url: 'data:image/jpeg;base64,b25l' },
+      ]);
+    }
+  });
+
+  test('an event with no images has undefined media', async () => {
+    const result = await createEvent(ctx(), validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event.media).toBeUndefined();
+    }
+  });
 });
 
 describe('POST /api/events', () => {
@@ -204,6 +239,243 @@ describe('GET /api/events', () => {
     expect(body.week).toHaveLength(7);
     expect(body.events).toHaveLength(4);
     expect(body.events[0]).toMatchObject({ id: 'event-1', featured: true });
+  });
+});
+
+describe('updateEvent', () => {
+  const editInput = {
+    date: '2026-07-25',
+    place: 'New Marina Deck',
+    tag: 'Community',
+    time: '19:00',
+    title: 'Updated Mixer',
+  };
+
+  test('the author can edit their own event', async () => {
+    const result = await updateEvent(ctx('user-hoa'), 'event-1', editInput);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.event).toMatchObject({
+      title: 'Updated Mixer',
+      place: 'New Marina Deck',
+      tag: 'Community',
+      timeLabel: '7:00 PM',
+    });
+  });
+
+  test('rejects edits from a user who does not own the event', async () => {
+    const result = await updateEvent(ctx(DEMO_USER_ID), 'event-1', editInput);
+
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('returns not_found for an unknown event', async () => {
+    const result = await updateEvent(ctx('user-hoa'), 'event-999', editInput);
+
+    expect(result).toMatchObject({ ok: false, code: 'event_not_found' });
+  });
+
+  test('rejects invalid input', async () => {
+    const result = await updateEvent(ctx('user-hoa'), 'event-1', {
+      ...editInput,
+      title: '',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
+
+  test('keeps existing media while adding new uploads', async () => {
+    const created = await createEvent(ctx(), {
+      date: '2026-07-18',
+      place: 'Village Marina',
+      tag: 'Outdoors',
+      time: '18:00',
+      title: 'Sunset Kayak',
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
+      ],
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updateEvent(ctx(), created.event.id, {
+      ...editInput,
+      existingMedia: [
+        { filename: 'one.jpg', url: 'data:image/jpeg;base64,b25l' },
+      ],
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,dHdv', filename: 'two.jpg' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event.media).toEqual([
+        { filename: 'one.jpg', url: 'data:image/jpeg;base64,b25l' },
+        { filename: 'two.jpg', url: 'data:image/jpeg;base64,dHdv' },
+      ]);
+    }
+  });
+
+  test('removes all media when the client omits existingMedia and newMedia', async () => {
+    const created = await createEvent(ctx(), {
+      date: '2026-07-18',
+      place: 'Village Marina',
+      tag: 'Outdoors',
+      time: '18:00',
+      title: 'Sunset Kayak',
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
+      ],
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updateEvent(ctx(), created.event.id, editInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event.media).toBeUndefined();
+    }
+  });
+});
+
+describe('deleteEvent', () => {
+  test('the author can cancel their own event', async () => {
+    expect(await deleteEvent(ctx('user-hoa'), 'event-1')).toBe(true);
+    expect(
+      (await getEventsView(ctx())).events.some((event) => event.id === 'event-1'),
+    ).toBe(false);
+  });
+
+  test('returns false for a user who does not own the event', async () => {
+    expect(await deleteEvent(ctx(DEMO_USER_ID), 'event-1')).toBe(false);
+    expect(
+      (await getEventsView(ctx())).events.some((event) => event.id === 'event-1'),
+    ).toBe(true);
+  });
+
+  test('returns false for an unknown event', async () => {
+    expect(await deleteEvent(ctx('user-hoa'), 'event-999')).toBe(false);
+  });
+});
+
+describe('PATCH /api/events/:id', () => {
+  const patchEventRequest = (id: string, body: unknown) =>
+    patchEventRoute(
+      new Request(`http://localhost/api/events/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+      { id },
+    );
+
+  test('updates an event owned by the demo user and returns 200', async () => {
+    const created = await createEvent(ctx(), {
+      date: '2026-07-19',
+      place: 'The Village',
+      tag: 'Market',
+      time: '10:00',
+      title: 'Market Day',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await patchEventRequest(created.event.id, {
+      date: '2026-07-25',
+      place: 'New Marina Deck',
+      tag: 'Community',
+      time: '19:00',
+      title: 'Updated Mixer',
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      event: { title: string; place: string };
+    };
+    expect(body.event).toMatchObject({
+      title: 'Updated Mixer',
+      place: 'New Marina Deck',
+    });
+  });
+
+  test('returns 403 when editing someone else’s event', async () => {
+    const response = await patchEventRequest('event-1', {
+      date: '2026-07-25',
+      place: 'New Marina Deck',
+      tag: 'Community',
+      time: '19:00',
+      title: 'Hijack',
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      code: 'forbidden',
+      message: 'You can only edit your own events.',
+    });
+  });
+
+  test('returns 404 for an unknown event', async () => {
+    const response = await patchEventRequest('event-999', {
+      date: '2026-07-25',
+      place: 'New Marina Deck',
+      tag: 'Community',
+      time: '19:00',
+      title: 'Updated Mixer',
+    });
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/events/:id', () => {
+  test('cancels an event owned by the demo user and returns 200', async () => {
+    const created = await createEvent(ctx(), {
+      date: '2026-07-19',
+      place: 'The Village',
+      tag: 'Market',
+      time: '10:00',
+      title: 'Market Day',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await deleteEventRoute(
+      new Request(`http://localhost/api/events/${created.event.id}`, {
+        method: 'DELETE',
+      }),
+      { id: created.event.id },
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  test('returns 404 when deleting someone else’s event', async () => {
+    const response = await deleteEventRoute(
+      new Request('http://localhost/api/events/event-1', { method: 'DELETE' }),
+      { id: 'event-1' },
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  test('404s for an unknown event', async () => {
+    const response = await deleteEventRoute(
+      new Request('http://localhost/api/events/event-999', {
+        method: 'DELETE',
+      }),
+      { id: 'event-999' },
+    );
+
+    expect(response.status).toBe(404);
   });
 });
 

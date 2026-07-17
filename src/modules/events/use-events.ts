@@ -9,6 +9,7 @@ import type {
   CreateEventInput,
   EventsView,
   ToggleJoinResult,
+  UpdateEventInput,
 } from './events-types';
 
 const eventsViewKey = (userId: string | null) =>
@@ -50,6 +51,41 @@ export function useCreateEvent() {
         path: '/api/events',
       }),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+}
+
+export function useUpdateEvent() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ eventId, ...body }: UpdateEventInput) =>
+      requestJson<{ readonly event: CommunityEvent }>({
+        body,
+        getAccessToken: session.getToken,
+        method: 'PATCH',
+        path: `/api/events/${eventId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+}
+
+export function useDeleteEvent() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      requestJson<{ id: string; deleted: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'DELETE',
+        path: `/api/events/${eventId}`,
+      }),
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });

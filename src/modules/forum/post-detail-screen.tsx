@@ -13,6 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
+import { CommentComposer } from '@/src/components/shared/comment-composer';
+import { CommentItem } from '@/src/components/shared/comment-item';
+import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
@@ -21,11 +24,9 @@ import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { formatRelativeTime } from '@/src/lib/relative-time';
 import { useSession } from '@/src/platform/session';
 
-import { CommentComposer } from './comment-composer';
-import { CommentItem } from './comment-item';
-import { formatRelativeTime } from './relative-time';
 import {
   useCreateComment,
   useDeleteComment,
@@ -146,7 +147,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                 className='flex-row items-center gap-2'
                 onPress={openAuthorProfile}
               >
-                <Avatar name={post.author.name} size='sm' />
+                <Avatar name={post.author.name} size='sm' src={post.author.avatarUrl ?? undefined} />
                 <VStack className='flex-1 gap-0.5'>
                   <Text className='font-inter-medium text-[14px] text-content'>
                     {post.author.name}
@@ -156,6 +157,11 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                   </Text>
                 </VStack>
               </Pressable>
+
+              {post.media && post.media.length > 0 && (
+                <MediaGallery media={post.media} />
+              )}
+
               <Heading className='font-inter-bold text-[19px]' size='md'>
                 {post.title}
               </Heading>

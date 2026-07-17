@@ -17,6 +17,7 @@ import { XpHero } from './xp-hero';
 
 interface MissionsScreenProps {
   readonly onOpenLeaderboard: () => void;
+  readonly onOpenMission?: (missionId: string) => void;
 }
 
 function RanksChip({ onPress }: { readonly onPress: () => void }) {
@@ -48,7 +49,10 @@ function AddButton({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
+export function MissionsScreen({
+  onOpenLeaderboard,
+  onOpenMission,
+}: MissionsScreenProps) {
   const missionsView = useMissionsView();
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
@@ -103,7 +107,11 @@ export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
                 </Text>
               ) : (
                 missionsView.data.missions.map((mission) => (
-                  <MissionCard key={mission.id} mission={mission} />
+                  <MissionCard
+                    key={mission.id}
+                    mission={mission}
+                    onOpen={onOpenMission}
+                  />
                 ))
               )}
             </VStack>
@@ -116,10 +124,19 @@ export function MissionsScreen({ onOpenLeaderboard }: MissionsScreenProps) {
         <MissionComposer
           isSubmitting={createMission.isPending}
           onDismiss={() => setComposing(false)}
-          onSubmit={(input) =>
-            createMission.mutate(input, {
-              onSuccess: () => setComposing(false),
-            })
+          onSubmit={(draft) =>
+            createMission.mutate(
+              {
+                description: draft.description,
+                icon: draft.icon,
+                newMedia: draft.newMedia,
+                scheduledFor: draft.scheduledFor,
+                stopsTotal: draft.stopsTotal,
+                title: draft.title,
+                xp: draft.xp,
+              },
+              { onSuccess: () => setComposing(false) },
+            )
           }
         />
       </Sheet>

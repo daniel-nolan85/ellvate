@@ -10,6 +10,7 @@ export type {
   CreatePostResult,
   ForumPost,
   LikeResult,
+  Media,
   PersonRef,
   UpdatePostResult,
 } from './types';

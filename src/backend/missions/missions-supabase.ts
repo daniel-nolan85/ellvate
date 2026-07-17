@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import { throwIfSupabaseError } from '@/src/services/supabase';
+import { uploadDataUrl } from '@/src/services/storage/storage-client';
 
 import type { MissionIcon, MissionStatus } from '@/src/backend/store';
 
@@ -8,22 +10,26 @@ import type {
   CheckInResult,
   CreateMissionResult,
   Mission,
+  MissionMedia,
   MissionsView,
+  UpdateMissionResult,
 } from './types';
 import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
 
 const MISSION_SELECT =
-  'id,title,description,scheduled_for,xp,stops_total,icon,position,locked_by_default';
+  'id,created_by,title,description,scheduled_for,xp,stops_total,icon,media,position,locked_by_default';
 
 interface MissionRow {
   readonly id: string;
+  readonly created_by: string;
   readonly title: string;
   readonly description: string;
   readonly scheduled_for: string | null;
   readonly xp: number;
   readonly stops_total: number;
   readonly icon: string;
+  readonly media: readonly MissionMedia[] | null;
   readonly position: number;
   readonly locked_by_default: boolean;
 }
@@ -60,13 +66,25 @@ const storedStatusFor = (
 ): MissionStatus =>
   entry ? entry.status : row.locked_by_default ? 'locked' : 'active';
 
+interface PersonLookup {
+  readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
 const toMissionView = (
   row: MissionRow,
   entry: ProgressRow | undefined,
+  nameById: ReadonlyMap<string, PersonLookup>,
 ): Mission => {
   const stopsDone = entry?.stops_done ?? 0;
+  const author = nameById.get(row.created_by);
   return {
     id: row.id,
+    author: {
+      avatarUrl: author?.avatarUrl ?? null,
+      id: row.created_by,
+      name: author?.name ?? 'Member',
+    },
     title: row.title,
     description: row.description,
     scheduledFor: row.scheduled_for,
@@ -75,7 +93,57 @@ const toMissionView = (
     stopsDone,
     stopsTotal: row.stops_total,
     icon: row.icon as MissionIcon,
+    media: row.media ?? undefined,
   };
+};
+
+// Looks up a single user's display name for use in toMissionView's nameById
+// map, used after create/update where only the acting user's name is needed.
+const nameMapFor = async (
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ReadonlyMap<string, PersonLookup>> => {
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .eq('id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(error, 'load mission author');
+  return new Map(
+    data
+      ? [
+          [
+            data.id as string,
+            {
+              avatarUrl: (data.avatar_url as string | null) ?? null,
+              name: data.name as string,
+            },
+          ],
+        ]
+      : [],
+  );
+};
+
+// Uploads each picked image to Supabase Storage under the mission's own id
+// and returns the subset that succeeded; a failed upload is dropped rather
+// than failing the whole mission so one bad image can't block publishing.
+const uploadMissionMedia = async (
+  missionId: string,
+  input: unknown,
+): Promise<readonly MissionMedia[]> => {
+  const uploads = extractMediaUploads(input);
+  const results = await Promise.all(
+    uploads.map(async (upload) => {
+      const url = await uploadDataUrl(
+        upload.dataUrl,
+        upload.filename,
+        'missions',
+        missionId,
+      );
+      return url ? { filename: upload.filename, url } : null;
+    }),
+  );
+  return results.filter((media): media is MissionMedia => media !== null);
 };
 
 // A real Clerk user has no app_users row yet; create it before any owned write
@@ -129,9 +197,25 @@ export async function getMissionsViewSupabase(
 
   const userRow = await loadUserRow(supabase, userId);
 
+  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
+  const { data: authorRows, error: authorError } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .in('id', authorIds);
+  throwIfSupabaseError(authorError, 'load mission authors');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (authorRows ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
   return {
     missions: missionRows.map((row) =>
-      toMissionView(row, progressByMission.get(row.id)),
+      toMissionView(row, progressByMission.get(row.id), nameById),
     ),
     progress: buildProgress({
       xp: userRow?.xp ?? 0,
@@ -163,10 +247,11 @@ export async function createMissionSupabase(
   throwIfSupabaseError(lastRowError, 'load mission position');
   const position = ((lastRow as { position: number } | null)?.position ?? -1) + 1;
 
-  const { data, error } = await supabase
+  const missionId = `msn-${crypto.randomUUID()}`;
+  const { data: inserted, error: insertError } = await supabase
     .from('missions')
     .insert({
-      id: `msn-${crypto.randomUUID()}`,
+      id: missionId,
       created_by: userId,
       title: value.title,
       description: value.description,
@@ -179,11 +264,122 @@ export async function createMissionSupabase(
     })
     .select(MISSION_SELECT)
     .single();
-  throwIfSupabaseError(error, 'create mission');
-  if (!data) {
+  throwIfSupabaseError(insertError, 'create mission');
+  if (!inserted) {
     throw new Error('create mission: database returned no mission.');
   }
-  return { ok: true, mission: toMissionView(data as unknown as MissionRow, undefined) };
+  const insertedRow = inserted as unknown as MissionRow;
+  const nameById = await nameMapFor(supabase, userId);
+
+  const media = await uploadMissionMedia(missionId, input);
+  if (media.length === 0) {
+    return { ok: true, mission: toMissionView(insertedRow, undefined, nameById) };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('missions')
+    .update({ media })
+    .eq('id', missionId)
+    .select(MISSION_SELECT)
+    .single();
+  throwIfSupabaseError(updateError, 'attach mission media');
+  return {
+    ok: true,
+    mission: toMissionView(
+      (updated as unknown as MissionRow) ?? insertedRow,
+      undefined,
+      nameById,
+    ),
+  };
+}
+
+export async function updateMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+  input: unknown,
+): Promise<UpdateMissionResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('missions')
+    .select('id,created_by')
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load mission');
+  if (!existing) {
+    return {
+      code: 'mission_not_found',
+      message: 'Mission not found.',
+      ok: false,
+    };
+  }
+  if (existing.created_by !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own missions.',
+      ok: false,
+    };
+  }
+  const validation = validateMissionInput(input);
+  if (!validation.ok) {
+    return validation;
+  }
+  const value = validation.value;
+  const keptMedia = extractExistingMedia(input);
+  const uploadedMedia = await uploadMissionMedia(missionId, input);
+  const media = [...keptMedia, ...uploadedMedia];
+
+  const { data, error } = await supabase
+    .from('missions')
+    .update({
+      title: value.title,
+      description: value.description,
+      scheduled_for: value.scheduledFor,
+      xp: value.xp,
+      stops_total: value.stopsTotal,
+      icon: value.icon,
+      media: media.length ? media : null,
+    })
+    .eq('id', missionId)
+    .select(MISSION_SELECT)
+    .single();
+  throwIfSupabaseError(error, 'update mission');
+  if (!data) {
+    throw new Error('update mission: database returned no mission.');
+  }
+
+  const row = data as unknown as MissionRow;
+  const { data: entryData, error: entryError } = await supabase
+    .from('mission_progress')
+    .select('mission_id,stops_done,status')
+    .eq('mission_id', missionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(entryError, 'load mission progress');
+  const entry = (entryData as ProgressRow | null) ?? undefined;
+  const nameById = await nameMapFor(supabase, userId);
+  return {
+    ok: true,
+    mission: toMissionView(row, entry, nameById),
+  };
+}
+
+export async function deleteMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+): Promise<boolean> {
+  const { data: existing, error: existingError } = await supabase
+    .from('missions')
+    .select('id,created_by')
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load mission');
+  if (!existing || existing.created_by !== userId) {
+    return false;
+  }
+  const { error } = await supabase.from('missions').delete().eq('id', missionId);
+  throwIfSupabaseError(error, 'delete mission');
+  return true;
 }
 
 export async function checkInSupabase(
@@ -278,8 +474,15 @@ export async function checkInSupabase(
     throwIfSupabaseError(userUpdateError, 'save mission user progress');
   }
 
+  const authorNameById = await nameMapFor(supabase, mission.created_by);
+  const author = authorNameById.get(mission.created_by);
   const missionView: Mission = {
     id: mission.id,
+    author: {
+      avatarUrl: author?.avatarUrl ?? null,
+      id: mission.created_by,
+      name: author?.name ?? 'Member',
+    },
     title: mission.title,
     description: mission.description,
     scheduledFor: mission.scheduled_for,
@@ -288,6 +491,7 @@ export async function checkInSupabase(
     stopsDone,
     stopsTotal: mission.stops_total,
     icon: mission.icon as MissionIcon,
+    media: mission.media ?? undefined,
   };
 
   return {

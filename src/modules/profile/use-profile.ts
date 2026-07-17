@@ -14,6 +14,7 @@ export interface NotificationPrefs {
 
 export interface UserProfile {
   readonly userId: string;
+  readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly aiComfort: 'new' | 'casual' | 'power' | null;
@@ -26,7 +27,9 @@ interface ProfileResponse {
 }
 
 interface MemberProfileResponse {
-  readonly profile: Pick<UserProfile, 'userId' | 'role' | 'interests'>;
+  readonly profile: Pick<UserProfile, 'userId' | 'role' | 'interests' | 'avatarUrl'> & {
+    readonly name: string;
+  };
   readonly stats: {
     readonly level: number;
     readonly xp: number;
@@ -47,11 +50,17 @@ interface MissionsResponse {
   readonly progress: ProfileStats;
 }
 
+export interface AvatarUploadInput {
+  readonly filename: string;
+  readonly dataUrl: string;
+}
+
 export interface ProfileUpdateInput {
   readonly name?: string;
   readonly role?: CommunityRole | null;
   readonly interests?: readonly string[];
   readonly notificationPrefs?: Partial<NotificationPrefs>;
+  readonly avatar?: AvatarUploadInput;
 }
 
 const profileKey = (userId: string | null) =>

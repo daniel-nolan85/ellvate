@@ -7,6 +7,7 @@ export type {
 } from './profile';
 export { getPublicProfile } from './public-profile';
 export type {
+  PublicMemberRow,
   PublicMemberStats,
   PublicMemberSummary,
   PublicProfile,

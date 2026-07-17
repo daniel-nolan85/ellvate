@@ -1,17 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { throwIfSupabaseError } from '@/src/services/supabase';
+import { uploadDataUrl } from '@/src/services/storage/storage-client';
 
 import type {
   CreatePostResult,
   ForumPost,
   LikeResult,
+  Media,
   UpdatePostResult,
 } from './types';
-import { validatePostInput } from './validation';
+import {
+  extractExistingMedia,
+  extractMediaUploads,
+  validatePostInput,
+} from './validation';
 
 const POST_SELECT =
-  'id,forum,author_id,title,excerpt,like_count,reply_count,pinned,created_at,author:app_users!posts_author_id_fkey(id,name)';
+  'id,forum,author_id,title,excerpt,media,like_count,reply_count,pinned,created_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
 
 interface PostRow {
   readonly id: string;
@@ -19,28 +26,60 @@ interface PostRow {
   readonly author_id: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly media: readonly Media[] | null;
   readonly like_count: number;
   readonly reply_count: number;
   readonly pinned: boolean;
   readonly created_at: string;
-  readonly author: { readonly id: string; readonly name: string } | null;
+  readonly author: {
+    readonly id: string;
+    readonly name: string;
+    readonly avatar_url: string | null;
+  } | null;
 }
 
 const toForumPost = (
   row: PostRow,
   likedIds: ReadonlySet<string>,
 ): ForumPost => ({
-  author: { id: row.author_id, name: row.author?.name ?? 'Member' },
+  author: {
+    avatarUrl: row.author?.avatar_url ?? null,
+    id: row.author_id,
+    name: row.author?.name ?? 'Member',
+  },
   createdAt: row.created_at,
   excerpt: row.excerpt,
   forum: row.forum,
   id: row.id,
   liked: likedIds.has(row.id),
   likes: row.like_count,
+  media: row.media ?? undefined,
   pinned: row.pinned,
   replies: row.reply_count,
   title: row.title,
 });
+
+// Uploads each picked image to Supabase Storage under the post's own id and
+// returns the subset that succeeded; a failed upload is dropped rather than
+// failing the whole post so one bad image can't block publishing.
+const uploadPostMedia = async (
+  postId: string,
+  input: unknown,
+): Promise<readonly Media[]> => {
+  const uploads = extractMediaUploads(input);
+  const results = await Promise.all(
+    uploads.map(async (upload) => {
+      const url = await uploadDataUrl(
+        upload.dataUrl,
+        upload.filename,
+        'posts',
+        postId,
+      );
+      return url ? { filename: upload.filename, url } : null;
+    }),
+  );
+  return results.filter((media): media is Media => media !== null);
+};
 
 const likedPostIds = async (
   supabase: SupabaseClient,
@@ -99,10 +138,14 @@ export async function listPostsSupabase(
   }
   const { data, error } = await query;
   throwIfSupabaseError(error, 'load posts');
-  const likedIds = await likedPostIds(supabase, userId);
-  return (data as unknown as PostRow[]).map((row) =>
-    toForumPost(row, likedIds),
-  );
+  const [likedIds, mutedUserIds] = await Promise.all([
+    likedPostIds(supabase, userId),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
+  const mutedSet = new Set(mutedUserIds);
+  return (data as unknown as PostRow[])
+    .filter((row) => !mutedSet.has(row.author_id))
+    .map((row) => toForumPost(row, likedIds));
 }
 
 export async function createPostSupabase(
@@ -115,7 +158,7 @@ export async function createPostSupabase(
     return validation;
   }
   await ensureUser(supabase, userId);
-  const { data, error } = await supabase
+  const { data: inserted, error: insertError } = await supabase
     .from('posts')
     .insert({
       author_id: userId,
@@ -125,11 +168,28 @@ export async function createPostSupabase(
     })
     .select(POST_SELECT)
     .single();
-  throwIfSupabaseError(error, 'create post');
-  if (!data) {
+  throwIfSupabaseError(insertError, 'create post');
+  if (!inserted) {
     throw new Error('create post: database returned no post.');
   }
-  return { ok: true, post: toForumPost(data as unknown as PostRow, new Set()) };
+  const insertedRow = inserted as unknown as PostRow;
+
+  const media = await uploadPostMedia(insertedRow.id, input);
+  if (media.length === 0) {
+    return { ok: true, post: toForumPost(insertedRow, new Set()) };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('posts')
+    .update({ media })
+    .eq('id', insertedRow.id)
+    .select(POST_SELECT)
+    .single();
+  throwIfSupabaseError(updateError, 'attach post media');
+  return {
+    ok: true,
+    post: toForumPost((updated as unknown as PostRow) ?? insertedRow, new Set()),
+  };
 }
 
 export async function toggleLikeSupabase(
@@ -231,10 +291,15 @@ export async function updatePostSupabase(
   if (!validation.ok) {
     return validation;
   }
+  const keptMedia = extractExistingMedia(input);
+  const uploadedMedia = await uploadPostMedia(postId, input);
+  const media = [...keptMedia, ...uploadedMedia];
+
   const { data, error } = await supabase
     .from('posts')
     .update({
       excerpt: validation.value.excerpt,
+      media: media.length ? media : null,
       title: validation.value.title,
     })
     .eq('id', postId)

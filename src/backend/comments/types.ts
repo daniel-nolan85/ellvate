@@ -1,6 +1,7 @@
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
 }
 
 export interface Comment {

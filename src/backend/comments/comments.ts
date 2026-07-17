@@ -20,7 +20,9 @@ import { validateCommentBody } from './validation';
 
 const authorRef = (users: readonly StoredUser[], id: string): PersonRef => {
   const user = users.find((candidate) => candidate.id === id);
-  return user ? { id: user.id, name: user.name } : { id, name: 'Member' };
+  return user
+    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
+    : { avatarUrl: null, id, name: 'Member' };
 };
 
 const toComment = (

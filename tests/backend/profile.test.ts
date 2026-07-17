@@ -4,7 +4,12 @@ import {
   GET as getProfileRoute,
   PUT as putProfileRoute,
 } from '../../app/api/me/profile+api';
-import { getProfile, updateProfile } from '../../src/backend/profile';
+import { GET as getMemberProfileRoute } from '../../app/api/users/[userId]/profile+api';
+import {
+  getProfile,
+  getPublicProfile,
+  updateProfile,
+} from '../../src/backend/profile';
 import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -37,6 +42,7 @@ describe('getProfile', () => {
     expect(await getProfile(ctx())).toEqual({
       profile: {
         userId: DEMO_USER_ID,
+        avatarUrl: null,
         role: null,
         interests: [],
         aiComfort: null,
@@ -55,6 +61,7 @@ describe('getProfile', () => {
 
     expect(profile).toEqual({
       userId: 'user-ghost',
+      avatarUrl: null,
       role: null,
       interests: [],
       aiComfort: null,
@@ -75,6 +82,74 @@ describe('getProfile', () => {
       streakDays: 0,
       missionsCompleted: 0,
       previousRank: null,
+    });
+  });
+});
+
+describe('getPublicProfile (requester differs from member)', () => {
+  test('returns the member’s own profile and stats without creating a requester-owned row', async () => {
+    const summary = await getPublicProfile(ctx(), 'user-mia');
+
+    expect(summary).not.toBeNull();
+    expect(summary?.profile).toEqual({
+      userId: 'user-mia',
+      name: 'Mia Lake',
+      avatarUrl: null,
+      role: null,
+      interests: [],
+    });
+    expect(summary?.stats).toMatchObject({
+      xp: 3820,
+      streakDays: 0,
+      missionsCompleted: 41,
+    });
+
+    // The requester's own row must be untouched — no ghost row created for
+    // the member (the member already exists), and no side effect on the
+    // requester's own record either.
+    expect(
+      getState().users.filter((user) => user.id === 'user-mia'),
+    ).toHaveLength(1);
+  });
+
+  test('returns null for an unknown member and creates no ghost user', async () => {
+    expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
+      false,
+    );
+
+    const summary = await getPublicProfile(ctx(), 'user-ghost');
+
+    expect(summary).toBeNull();
+    expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
+      false,
+    );
+  });
+});
+
+describe('GET /api/users/:userId/profile', () => {
+  test('returns the member profile envelope', async () => {
+    const response = await getMemberProfileRoute(
+      new Request('http://localhost/api/users/user-mia/profile'),
+      { userId: 'user-mia' },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      profile: { name: string; userId: string };
+    };
+    expect(body.profile).toMatchObject({ name: 'Mia Lake', userId: 'user-mia' });
+  });
+
+  test('returns 404 for an unknown member', async () => {
+    const response = await getMemberProfileRoute(
+      new Request('http://localhost/api/users/user-ghost/profile'),
+      { userId: 'user-ghost' },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      code: 'member_not_found',
+      message: 'Member not found.',
     });
   });
 });
@@ -252,6 +327,58 @@ describe('updateProfile', () => {
   });
 });
 
+describe('avatar upload', () => {
+  const AVATAR_DATA_URL = 'data:image/jpeg;base64,ZmFrZS1hdmF0YXItYnl0ZXM=';
+
+  test('sets avatarUrl from an uploaded data URL', async () => {
+    const result = await updateProfile(ctx(), {
+      avatar: { dataUrl: AVATAR_DATA_URL, filename: 'me.jpg' },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.avatarUrl).toBe(AVATAR_DATA_URL);
+    }
+    expect(
+      getState().users.find((user) => user.id === DEMO_USER_ID)?.avatarUrl,
+    ).toBe(AVATAR_DATA_URL);
+  });
+
+  test('leaves avatarUrl untouched when no avatar is included in the update', async () => {
+    await updateProfile(ctx(), {
+      avatar: { dataUrl: AVATAR_DATA_URL, filename: 'me.jpg' },
+    });
+
+    const result = await updateProfile(ctx(), { role: 'resident' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.avatarUrl).toBe(AVATAR_DATA_URL);
+    }
+  });
+
+  test('ignores a malformed avatar payload without a data URL', async () => {
+    const result = await updateProfile(ctx(), {
+      avatar: { dataUrl: 'not-a-data-url', filename: 'me.jpg' },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.avatarUrl).toBeNull();
+    }
+  });
+
+  test('propagates the new avatar to the public member profile', async () => {
+    await updateProfile(ctx('user-mia'), {
+      avatar: { dataUrl: AVATAR_DATA_URL, filename: 'me.jpg' },
+    });
+
+    const summary = await getPublicProfile(ctx(), 'user-mia');
+
+    expect(summary?.profile.avatarUrl).toBe(AVATAR_DATA_URL);
+  });
+});
+
 describe('GET /api/me/profile', () => {
   test('returns the profile envelope for demo-user', async () => {
     const response = await getProfileRoute(
@@ -262,6 +389,7 @@ describe('GET /api/me/profile', () => {
     expect(await response.json()).toEqual({
       profile: {
         userId: DEMO_USER_ID,
+        avatarUrl: null,
         role: null,
         interests: [],
         aiComfort: null,

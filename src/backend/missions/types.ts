@@ -1,7 +1,19 @@
 import type { MissionIcon, MissionStatus } from '@/src/backend/store';
 
+export interface MissionMedia {
+  readonly url: string;
+  readonly filename: string;
+}
+
+export interface PersonRef {
+  readonly id: string;
+  readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
 export interface Mission {
   readonly id: string;
+  readonly author: PersonRef;
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
@@ -10,6 +22,7 @@ export interface Mission {
   readonly stopsDone: number;
   readonly stopsTotal: number;
   readonly icon: MissionIcon;
+  readonly media?: readonly MissionMedia[];
 }
 
 export interface UserProgress {
@@ -50,6 +63,14 @@ export type CreateMissionResult =
   | {
       readonly ok: false;
       readonly code: 'invalid_mission';
+      readonly message: string;
+    };
+
+export type UpdateMissionResult =
+  | { readonly ok: true; readonly mission: Mission }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_mission' | 'mission_not_found' | 'forbidden';
       readonly message: string;
     };
 

@@ -4,6 +4,13 @@ export interface ValidatedPost {
   readonly excerpt: string;
 }
 
+export {
+  extractExistingMedia,
+  extractMediaUploads,
+  type RawExistingMedia,
+  type RawMediaUpload,
+} from '@/src/backend/media';
+
 export type PostValidation =
   | { readonly ok: true; readonly value: ValidatedPost }
   | { readonly ok: false; readonly code: 'invalid_post'; readonly message: string };

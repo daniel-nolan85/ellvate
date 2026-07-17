@@ -1,6 +1,12 @@
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
+export interface Media {
+  readonly url: string;
+  readonly filename: string;
 }
 
 export interface ForumPost {
@@ -10,6 +16,7 @@ export interface ForumPost {
   readonly createdAt: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly media?: readonly Media[];
   readonly replies: number;
   readonly likes: number;
   readonly liked: boolean;

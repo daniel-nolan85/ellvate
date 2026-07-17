@@ -25,7 +25,7 @@ export function LeaderRow({ entry }: LeaderRowProps) {
       >
         {entry.rank}
       </Text>
-      <Avatar name={entry.user.name} size="sm" />
+      <Avatar name={entry.user.name} size="sm" src={entry.user.avatarUrl ?? undefined} />
       <VStack className="flex-1" space="xs">
         <Text
           className={`font-inter-semibold text-[14px] leading-[18px] ${me ? 'text-primary-foreground' : 'text-content'}`}
