@@ -181,10 +181,23 @@ function deleteEventMemory(userId: string, eventId: string): boolean {
   if (!existing) {
     return false;
   }
-  setState((current) => ({
-    ...current,
-    events: current.events.filter((event) => event.id !== eventId),
-  }));
+  setState((current) => {
+    const removedCommentIds = new Set(
+      current.eventComments
+        .filter((comment) => comment.eventId === eventId)
+        .map((comment) => comment.id),
+    );
+    return {
+      ...current,
+      eventCommentReports: current.eventCommentReports.filter(
+        (report) => !removedCommentIds.has(report.eventCommentId),
+      ),
+      eventComments: current.eventComments.filter(
+        (comment) => comment.eventId !== eventId,
+      ),
+      events: current.events.filter((event) => event.id !== eventId),
+    };
+  });
   return true;
 }
 

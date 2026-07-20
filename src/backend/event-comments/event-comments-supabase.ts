@@ -3,7 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { validateCommentBody } from '@/src/backend/comments';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { CreateEventCommentResult, EventComment } from './types';
+import type {
+  CreateEventCommentResult,
+  EventComment,
+  ReportEventCommentResult,
+} from './types';
 
 const EVENT_COMMENT_SELECT =
   'id,event_id,author_id,body,created_at,author:app_users!event_comments_author_id_fkey(id,name,avatar_url)';
@@ -104,4 +108,37 @@ export async function deleteEventCommentSupabase(
     .select('id');
   throwIfSupabaseError(error, 'delete event comment');
   return Array.isArray(data) && data.length > 0;
+}
+
+export async function reportEventCommentSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  commentId: string,
+): Promise<ReportEventCommentResult> {
+  const { data: comment, error: commentError } = await supabase
+    .from('event_comments')
+    .select('id')
+    .eq('id', commentId)
+    .maybeSingle();
+  throwIfSupabaseError(commentError, 'load reported event comment');
+  if (!comment) {
+    return {
+      code: 'event_comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+
+  await ensureUser(supabase, userId);
+  // Idempotent: a unique (event_comment_id, reporter_id) constraint on
+  // event_comment_reports means a repeat report from the same user is a
+  // silent no-op, not an error.
+  const { error } = await supabase
+    .from('event_comment_reports')
+    .upsert(
+      { event_comment_id: commentId, reporter_id: userId },
+      { ignoreDuplicates: true, onConflict: 'event_comment_id,reporter_id' },
+    );
+  throwIfSupabaseError(error, 'report event comment');
+  return { ok: true, reported: true };
 }

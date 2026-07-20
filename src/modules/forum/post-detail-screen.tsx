@@ -31,6 +31,7 @@ import {
   useCreateComment,
   useDeleteComment,
   usePostComments,
+  useReportComment,
   type ForumComment,
 } from './use-comments';
 import { useForumPosts, useToggleLike } from './use-forum';
@@ -53,6 +54,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const comments = usePostComments(postId);
   const createComment = useCreateComment(postId);
   const deleteComment = useDeleteComment(postId);
+  const reportComment = useReportComment();
   const toggleLike = useToggleLike();
 
   const [draft, setDraft] = useState('');
@@ -318,8 +320,15 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
               icon='AlertCircle'
               label='Report comment'
               onPress={() => {
+                const target = actionsFor;
                 setActionsFor(null);
-                showToast('Thanks — our moderators will take a look.');
+                if (!target) return;
+                reportComment.mutate(target.id, {
+                  onError: () =>
+                    showToast('Couldn’t report this comment. Try again.'),
+                  onSuccess: () =>
+                    showToast('Thanks — our moderators will take a look.'),
+                });
               }}
             />
           )}

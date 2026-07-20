@@ -1,4 +1,3 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -8,6 +7,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { pickGalleryImages } from '@/src/platform/media-picker';
 
 export interface PostComposerDraft {
   readonly title: string;
@@ -93,29 +93,12 @@ export function PostComposer({
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      allowsMultipleSelection: true,
-      base64: true,
-      quality: 0.7,
-      selectionLimit: remaining,
-    });
-
-    if (result.canceled) {
-      return;
-    }
-    const picked: readonly MediaItem[] = result.assets
-      .filter((asset) => asset.base64)
-      .slice(0, remaining)
-      .map((asset) => ({
-        base64: asset.base64!,
-        filename: asset.fileName ?? `image-${Date.now()}.jpg`,
-        kind: 'new' as const,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        uri: asset.uri,
-      }));
-    setMedia([...media, ...picked]);
+    const picked = await pickGalleryImages({ selectionLimit: remaining });
+    const newMedia: readonly MediaItem[] = picked.map((asset) => ({
+      ...asset,
+      kind: 'new' as const,
+    }));
+    setMedia([...media, ...newMedia]);
   };
 
   const removeMedia = (index: number) => {

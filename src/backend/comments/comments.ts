@@ -10,8 +10,14 @@ import {
   createCommentSupabase,
   deleteCommentSupabase,
   listCommentsSupabase,
+  reportCommentSupabase,
 } from './comments-supabase';
-import type { Comment, CreateCommentResult, PersonRef } from './types';
+import type {
+  Comment,
+  CreateCommentResult,
+  PersonRef,
+  ReportCommentResult,
+} from './types';
 import { validateCommentBody } from './validation';
 
 // ---------------------------------------------------------------------------
@@ -83,6 +89,9 @@ function deleteCommentMemory(userId: string, commentId: string): boolean {
   }
   setState((current) => ({
     ...current,
+    commentReports: current.commentReports.filter(
+      (report) => report.commentId !== commentId,
+    ),
     comments: current.comments.filter((comment) => comment.id !== commentId),
     posts: current.posts.map((post) =>
       post.id === existing.postId
@@ -91,6 +100,35 @@ function deleteCommentMemory(userId: string, commentId: string): boolean {
     ),
   }));
   return true;
+}
+
+function reportCommentMemory(
+  userId: string,
+  commentId: string,
+): ReportCommentResult {
+  if (!getState().comments.some((comment) => comment.id === commentId)) {
+    return { code: 'comment_not_found', message: 'Comment not found.', ok: false };
+  }
+
+  const alreadyReported = getState().commentReports.some(
+    (report) => report.commentId === commentId && report.reporterId === userId,
+  );
+  if (!alreadyReported) {
+    setState((current) => ({
+      ...current,
+      commentReports: [
+        ...current.commentReports,
+        {
+          commentId,
+          createdAt: new Date().toISOString(),
+          id: `comment-report-${crypto.randomUUID()}`,
+          reporterId: userId,
+        },
+      ],
+    }));
+  }
+
+  return { ok: true, reported: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -123,4 +161,13 @@ export async function deleteComment(
   return ctx.supabase
     ? deleteCommentSupabase(ctx.supabase, ctx.userId, commentId)
     : deleteCommentMemory(ctx.userId, commentId);
+}
+
+export async function reportComment(
+  ctx: RequestContext,
+  commentId: string,
+): Promise<ReportCommentResult> {
+  return ctx.supabase
+    ? reportCommentSupabase(ctx.supabase, ctx.userId, commentId)
+    : reportCommentMemory(ctx.userId, commentId);
 }

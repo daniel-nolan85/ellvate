@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { Comment, CreateCommentResult } from './types';
+import type { Comment, CreateCommentResult, ReportCommentResult } from './types';
 import { validateCommentBody } from './validation';
 
 const COMMENT_SELECT =
@@ -104,4 +104,33 @@ export async function deleteCommentSupabase(
     .select('id');
   throwIfSupabaseError(error, 'delete comment');
   return Array.isArray(data) && data.length > 0;
+}
+
+export async function reportCommentSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  commentId: string,
+): Promise<ReportCommentResult> {
+  const { data: comment, error: commentError } = await supabase
+    .from('comments')
+    .select('id')
+    .eq('id', commentId)
+    .maybeSingle();
+  throwIfSupabaseError(commentError, 'load reported comment');
+  if (!comment) {
+    return { code: 'comment_not_found', message: 'Comment not found.', ok: false };
+  }
+
+  await ensureUser(supabase, userId);
+  // Idempotent: a unique (comment_id, reporter_id) constraint on
+  // comment_reports means a repeat report from the same user is a silent
+  // no-op, not an error.
+  const { error } = await supabase
+    .from('comment_reports')
+    .upsert(
+      { comment_id: commentId, reporter_id: userId },
+      { ignoreDuplicates: true, onConflict: 'comment_id,reporter_id' },
+    );
+  throwIfSupabaseError(error, 'report comment');
+  return { ok: true, reported: true };
 }

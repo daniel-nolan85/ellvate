@@ -6,6 +6,7 @@ import {
   PATCH as patchEventRoute,
 } from '../../app/api/events/[id]/index+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
+import { createEventComment, listEventComments } from '../../src/backend/event-comments';
 import {
   createEvent,
   deleteEvent,
@@ -362,6 +363,19 @@ describe('deleteEvent', () => {
 
   test('returns false for an unknown event', async () => {
     expect(await deleteEvent(ctx('user-hoa'), 'event-999')).toBe(false);
+  });
+
+  test('removes the event\'s comments so they are no longer listable', async () => {
+    const created = await createEventComment(ctx('user-riley'), 'event-1', {
+      body: 'Cannot wait!',
+    });
+    expect(created.ok).toBe(true);
+
+    expect(await deleteEvent(ctx('user-hoa'), 'event-1')).toBe(true);
+    expect(await listEventComments(ctx(), 'event-1')).toEqual([]);
+    expect(
+      getState().eventComments.some((comment) => comment.eventId === 'event-1'),
+    ).toBe(false);
   });
 });
 

@@ -11,8 +11,14 @@ import {
   createEventCommentSupabase,
   deleteEventCommentSupabase,
   listEventCommentsSupabase,
+  reportEventCommentSupabase,
 } from './event-comments-supabase';
-import type { CreateEventCommentResult, EventComment, PersonRef } from './types';
+import type {
+  CreateEventCommentResult,
+  EventComment,
+  PersonRef,
+  ReportEventCommentResult,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -80,11 +86,48 @@ function deleteEventCommentMemory(userId: string, commentId: string): boolean {
   }
   setState((current) => ({
     ...current,
+    eventCommentReports: current.eventCommentReports.filter(
+      (report) => report.eventCommentId !== commentId,
+    ),
     eventComments: current.eventComments.filter(
       (comment) => comment.id !== commentId,
     ),
   }));
   return true;
+}
+
+function reportEventCommentMemory(
+  userId: string,
+  commentId: string,
+): ReportEventCommentResult {
+  if (!getState().eventComments.some((comment) => comment.id === commentId)) {
+    return {
+      code: 'event_comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+
+  const alreadyReported = getState().eventCommentReports.some(
+    (report) =>
+      report.eventCommentId === commentId && report.reporterId === userId,
+  );
+  if (!alreadyReported) {
+    setState((current) => ({
+      ...current,
+      eventCommentReports: [
+        ...current.eventCommentReports,
+        {
+          createdAt: new Date().toISOString(),
+          eventCommentId: commentId,
+          id: `event-comment-report-${crypto.randomUUID()}`,
+          reporterId: userId,
+        },
+      ],
+    }));
+  }
+
+  return { ok: true, reported: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -117,4 +160,13 @@ export async function deleteEventComment(
   return ctx.supabase
     ? deleteEventCommentSupabase(ctx.supabase, ctx.userId, commentId)
     : deleteEventCommentMemory(ctx.userId, commentId);
+}
+
+export async function reportEventComment(
+  ctx: RequestContext,
+  commentId: string,
+): Promise<ReportEventCommentResult> {
+  return ctx.supabase
+    ? reportEventCommentSupabase(ctx.supabase, ctx.userId, commentId)
+    : reportEventCommentMemory(ctx.userId, commentId);
 }

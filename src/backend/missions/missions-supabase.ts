@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import { throwIfSupabaseError } from '@/src/services/supabase';
-import { uploadDataUrl } from '@/src/services/storage/storage-client';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import type { MissionIcon, MissionStatus } from '@/src/backend/store';
 
@@ -46,6 +46,10 @@ interface UserRow {
   readonly missions_completed: number;
   readonly title: string;
 }
+
+type UploadMissionMediaResult =
+  | { readonly ok: true; readonly media: readonly MissionMedia[] }
+  | { readonly ok: false; readonly uploaded: readonly MissionMedia[] };
 
 // Mirrors the in-memory resolver: a locked entry stays locked, otherwise the
 // status is derived from stop progress so completion is never ambiguous.
@@ -124,17 +128,23 @@ const nameMapFor = async (
   );
 };
 
-// Uploads each picked image to Supabase Storage under the mission's own id
-// and returns the subset that succeeded; a failed upload is dropped rather
-// than failing the whole mission so one bad image can't block publishing.
+// Uploads each picked image to Supabase Storage under the mission's own id.
+// WHY: a failed upload is surfaced as `ok: false` (with whatever succeeded so
+// far in `uploaded`) rather than silently dropped — publishing a mission
+// that's missing images the user picked would misrepresent what got saved.
 const uploadMissionMedia = async (
+  supabase: SupabaseClient,
   missionId: string,
   input: unknown,
-): Promise<readonly MissionMedia[]> => {
+): Promise<UploadMissionMediaResult> => {
   const uploads = extractMediaUploads(input);
+  if (uploads.length === 0) {
+    return { media: [], ok: true };
+  }
   const results = await Promise.all(
     uploads.map(async (upload) => {
       const url = await uploadDataUrl(
+        supabase,
         upload.dataUrl,
         upload.filename,
         'missions',
@@ -143,8 +153,17 @@ const uploadMissionMedia = async (
       return url ? { filename: upload.filename, url } : null;
     }),
   );
-  return results.filter((media): media is MissionMedia => media !== null);
+  const succeeded = results.filter(
+    (media): media is MissionMedia => media !== null,
+  );
+  if (succeeded.length !== results.length) {
+    return { ok: false, uploaded: succeeded };
+  }
+  return { media: succeeded, ok: true };
 };
+
+const MEDIA_UPLOAD_FAILED_MESSAGE =
+  'One or more images failed to upload. Please try again.';
 
 // A real Clerk user has no app_users row yet; create it before any owned write
 // so foreign keys resolve. RLS allows inserting only your own row.
@@ -271,14 +290,26 @@ export async function createMissionSupabase(
   const insertedRow = inserted as unknown as MissionRow;
   const nameById = await nameMapFor(supabase, userId);
 
-  const media = await uploadMissionMedia(missionId, input);
-  if (media.length === 0) {
+  const mediaResult = await uploadMissionMedia(supabase, missionId, input);
+  if (!mediaResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      mediaResult.uploaded.map((media) => media.url),
+    );
+    await supabase.from('missions').delete().eq('id', missionId);
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  if (mediaResult.media.length === 0) {
     return { ok: true, mission: toMissionView(insertedRow, undefined, nameById) };
   }
 
   const { data: updated, error: updateError } = await supabase
     .from('missions')
-    .update({ media })
+    .update({ media: mediaResult.media })
     .eq('id', missionId)
     .select(MISSION_SELECT)
     .single();
@@ -301,7 +332,7 @@ export async function updateMissionSupabase(
 ): Promise<UpdateMissionResult> {
   const { data: existing, error: existingError } = await supabase
     .from('missions')
-    .select('id,created_by')
+    .select('id,created_by,media')
     .eq('id', missionId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load mission');
@@ -325,8 +356,19 @@ export async function updateMissionSupabase(
   }
   const value = validation.value;
   const keptMedia = extractExistingMedia(input);
-  const uploadedMedia = await uploadMissionMedia(missionId, input);
-  const media = [...keptMedia, ...uploadedMedia];
+  const uploadResult = await uploadMissionMedia(supabase, missionId, input);
+  if (!uploadResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      uploadResult.uploaded.map((media) => media.url),
+    );
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  const media = [...keptMedia, ...uploadResult.media];
 
   const { data, error } = await supabase
     .from('missions')
@@ -346,6 +388,15 @@ export async function updateMissionSupabase(
   if (!data) {
     throw new Error('update mission: database returned no mission.');
   }
+
+  const previousMedia =
+    (existing.media as readonly MissionMedia[] | null) ?? [];
+  const keptUrls = new Set(keptMedia.map((item) => item.url));
+  const removedMedia = previousMedia.filter((item) => !keptUrls.has(item.url));
+  await removeStorageObjects(
+    supabase,
+    removedMedia.map((item) => item.url),
+  );
 
   const row = data as unknown as MissionRow;
   const { data: entryData, error: entryError } = await supabase
@@ -370,7 +421,7 @@ export async function deleteMissionSupabase(
 ): Promise<boolean> {
   const { data: existing, error: existingError } = await supabase
     .from('missions')
-    .select('id,created_by')
+    .select('id,created_by,media')
     .eq('id', missionId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load mission');
@@ -379,6 +430,11 @@ export async function deleteMissionSupabase(
   }
   const { error } = await supabase.from('missions').delete().eq('id', missionId);
   throwIfSupabaseError(error, 'delete mission');
+  const media = (existing.media as readonly MissionMedia[] | null) ?? [];
+  await removeStorageObjects(
+    supabase,
+    media.map((item) => item.url),
+  );
   return true;
 }
 

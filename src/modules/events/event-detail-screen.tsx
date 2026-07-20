@@ -32,6 +32,7 @@ import {
   useCreateEventComment,
   useDeleteEventComment,
   useEventComments,
+  useReportEventComment,
   type EventComment,
 } from './use-event-comments';
 import { useDeleteEvent, useEventsView, useToggleJoin, useUpdateEvent } from './use-events';
@@ -92,6 +93,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const comments = useEventComments(eventId);
   const createComment = useCreateEventComment(eventId);
   const deleteComment = useDeleteEventComment(eventId);
+  const reportComment = useReportEventComment();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -441,8 +443,15 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               icon='AlertCircle'
               label='Report comment'
               onPress={() => {
+                const target = actionsFor;
                 setActionsFor(null);
-                showToast('Thanks — our moderators will take a look.');
+                if (!target) return;
+                reportComment.mutate(target.id, {
+                  onError: () =>
+                    showToast('Couldn’t report this comment. Try again.'),
+                  onSuccess: () =>
+                    showToast('Thanks — our moderators will take a look.'),
+                });
               }}
             />
           )}

@@ -27,7 +27,7 @@ export type CreatePostResult =
   | { readonly ok: true; readonly post: ForumPost }
   | {
       readonly ok: false;
-      readonly code: 'invalid_post';
+      readonly code: 'invalid_post' | 'media_upload_failed';
       readonly message: string;
     };
 
@@ -35,7 +35,11 @@ export type UpdatePostResult =
   | { readonly ok: true; readonly post: ForumPost }
   | {
       readonly ok: false;
-      readonly code: 'invalid_post' | 'post_not_found' | 'forbidden';
+      readonly code:
+        | 'invalid_post'
+        | 'post_not_found'
+        | 'forbidden'
+        | 'media_upload_failed';
       readonly message: string;
     };
 

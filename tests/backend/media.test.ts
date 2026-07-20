@@ -4,6 +4,7 @@ import {
   extractAvatarUpload,
   extractExistingMedia,
   extractMediaUploads,
+  MediaValidationError,
 } from '../../src/backend/media';
 
 const DATA_URL = 'data:image/jpeg;base64,ZmFrZS1ieXRlcw==';
@@ -53,13 +54,56 @@ describe('extractMediaUploads', () => {
     expect(result).toEqual([{ dataUrl: DATA_URL, filename: 'ok.jpg' }]);
   });
 
-  test('caps the result at 10 items', () => {
+  test('rejects a request with more than 10 items', () => {
     const newMedia = Array.from({ length: 15 }, (_, index) => ({
       dataUrl: DATA_URL,
       filename: `image-${index}.jpg`,
     }));
 
-    expect(extractMediaUploads({ newMedia })).toHaveLength(10);
+    expect(() => extractMediaUploads({ newMedia })).toThrow(MediaValidationError);
+  });
+
+  test('rejects an unsupported MIME type', () => {
+    const newMedia = [
+      { dataUrl: 'data:application/pdf;base64,ZmFrZQ==', filename: 'doc.pdf' },
+    ];
+
+    expect(() => extractMediaUploads({ newMedia })).toThrow(MediaValidationError);
+  });
+
+  test('rejects a data URL with invalid base64 characters', () => {
+    const newMedia = [
+      { dataUrl: 'data:image/jpeg;base64,not!valid$base64', filename: 'bad.jpg' },
+    ];
+
+    expect(() => extractMediaUploads({ newMedia })).toThrow(MediaValidationError);
+  });
+
+  test('rejects an oversized image', () => {
+    const oversizedBase64 = 'A'.repeat(12 * 1024 * 1024);
+    const newMedia = [
+      { dataUrl: `data:image/jpeg;base64,${oversizedBase64}`, filename: 'huge.jpg' },
+    ];
+
+    expect(() => extractMediaUploads({ newMedia })).toThrow(MediaValidationError);
+  });
+
+  test('rejects an aggregate request over the total size cap', () => {
+    // ~7MB decoded per item (under the 8MB per-file cap), 6 items ≈ 42MB
+    // decoded total (over the 40MB aggregate cap).
+    const largeBase64 = 'A'.repeat(9_800_000);
+    const newMedia = Array.from({ length: 6 }, (_, index) => ({
+      dataUrl: `data:image/jpeg;base64,${largeBase64}`,
+      filename: `image-${index}.jpg`,
+    }));
+
+    expect(() => extractMediaUploads({ newMedia })).toThrow(MediaValidationError);
+  });
+
+  test('rejects an unsafe filename', () => {
+    const newMedia = [{ dataUrl: DATA_URL, filename: '../../etc/passwd' }];
+
+    expect(() => extractMediaUploads({ newMedia })).toThrow(MediaValidationError);
   });
 });
 
@@ -94,13 +138,25 @@ describe('extractExistingMedia', () => {
     ]);
   });
 
-  test('caps the result at 10 items', () => {
+  test('rejects a request with more than 10 items', () => {
     const existingMedia = Array.from({ length: 15 }, (_, index) => ({
       filename: `image-${index}.jpg`,
       url: `https://cdn.example.com/image-${index}.jpg`,
     }));
 
-    expect(extractExistingMedia({ existingMedia })).toHaveLength(10);
+    expect(() => extractExistingMedia({ existingMedia })).toThrow(
+      MediaValidationError,
+    );
+  });
+
+  test('rejects an unsafe filename', () => {
+    const existingMedia = [
+      { filename: '../../etc/passwd', url: 'https://cdn.example.com/x.jpg' },
+    ];
+
+    expect(() => extractExistingMedia({ existingMedia })).toThrow(
+      MediaValidationError,
+    );
   });
 });
 
@@ -130,5 +186,22 @@ describe('extractAvatarUpload', () => {
     const result = extractAvatarUpload({ avatar: { dataUrl: DATA_URL } });
 
     expect(result).toEqual({ dataUrl: DATA_URL, filename: 'avatar' });
+  });
+
+  test('rejects an unsupported MIME type', () => {
+    expect(() =>
+      extractAvatarUpload({
+        avatar: { dataUrl: 'data:application/pdf;base64,ZmFrZQ==', filename: 'me.pdf' },
+      }),
+    ).toThrow(MediaValidationError);
+  });
+
+  test('rejects an oversized avatar', () => {
+    const oversizedBase64 = 'A'.repeat(12 * 1024 * 1024);
+    expect(() =>
+      extractAvatarUpload({
+        avatar: { dataUrl: `data:image/jpeg;base64,${oversizedBase64}`, filename: 'me.jpg' },
+      }),
+    ).toThrow(MediaValidationError);
   });
 });

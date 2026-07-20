@@ -66,7 +66,7 @@ export type CreateEventResult =
   | { readonly ok: true; readonly event: CommunityEvent }
   | {
       readonly ok: false;
-      readonly code: 'invalid_event';
+      readonly code: 'invalid_event' | 'media_upload_failed';
       readonly message: string;
     };
 
@@ -74,6 +74,10 @@ export type UpdateEventResult =
   | { readonly ok: true; readonly event: CommunityEvent }
   | {
       readonly ok: false;
-      readonly code: 'invalid_event' | 'event_not_found' | 'forbidden';
+      readonly code:
+        | 'invalid_event'
+        | 'event_not_found'
+        | 'forbidden'
+        | 'media_upload_failed';
       readonly message: string;
     };

@@ -76,3 +76,16 @@ export function useDeleteComment(postId: string) {
     },
   });
 }
+
+export function useReportComment() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (commentId: string) =>
+      requestJson<{ reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/comments/${commentId}/report`,
+      }),
+  });
+}

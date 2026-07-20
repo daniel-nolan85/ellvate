@@ -1,3 +1,13 @@
-export { createComment, deleteComment, listComments } from './comments';
-export type { Comment, CreateCommentResult, PersonRef } from './types';
+export {
+  createComment,
+  deleteComment,
+  listComments,
+  reportComment,
+} from './comments';
+export type {
+  Comment,
+  CreateCommentResult,
+  PersonRef,
+  ReportCommentResult,
+} from './types';
 export { validateCommentBody } from './validation';

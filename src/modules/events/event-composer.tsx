@@ -1,4 +1,3 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useState, type ReactNode } from 'react';
 import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -12,6 +11,7 @@ import { NativeTimePicker } from '@/src/components/ui/time-picker';
 import { VStack } from '@/src/components/ui/vstack';
 import { dateOnlyFromDate } from '@/src/lib/date-only';
 import { timeOnlyFromDate } from '@/src/lib/time-only';
+import { pickGalleryImages } from '@/src/platform/media-picker';
 
 export interface EventComposerDraft {
   readonly title: string;
@@ -171,29 +171,12 @@ export function EventComposer({
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      allowsMultipleSelection: true,
-      base64: true,
-      quality: 0.7,
-      selectionLimit: remaining,
-    });
-
-    if (result.canceled) {
-      return;
-    }
-    const picked: readonly EventMediaItem[] = result.assets
-      .filter((asset) => asset.base64)
-      .slice(0, remaining)
-      .map((asset) => ({
-        base64: asset.base64!,
-        filename: asset.fileName ?? `image-${Date.now()}.jpg`,
-        kind: 'new' as const,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        uri: asset.uri,
-      }));
-    setMedia([...media, ...picked]);
+    const picked = await pickGalleryImages({ selectionLimit: remaining });
+    const newMedia: readonly EventMediaItem[] = picked.map((asset) => ({
+      ...asset,
+      kind: 'new' as const,
+    }));
+    setMedia([...media, ...newMedia]);
   };
 
   const removeMedia = (index: number) => {

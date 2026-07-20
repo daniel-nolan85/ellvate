@@ -19,3 +19,11 @@ export type CreateEventCommentResult =
       readonly code: 'invalid_comment' | 'event_not_found';
       readonly message: string;
     };
+
+export type ReportEventCommentResult =
+  | { readonly ok: true; readonly reported: true }
+  | {
+      readonly ok: false;
+      readonly code: 'event_comment_not_found';
+      readonly message: string;
+    };

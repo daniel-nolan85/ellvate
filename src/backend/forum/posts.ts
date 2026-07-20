@@ -142,11 +142,24 @@ function deletePostMemory(userId: string, postId: string): boolean {
   if (!existing) {
     return false;
   }
-  setState((current) => ({
-    ...current,
-    comments: current.comments.filter((comment) => comment.postId !== postId),
-    posts: current.posts.filter((post) => post.id !== postId),
-  }));
+  setState((current) => {
+    const removedCommentIds = new Set(
+      current.comments
+        .filter((comment) => comment.postId === postId)
+        .map((comment) => comment.id),
+    );
+    return {
+      ...current,
+      commentReports: current.commentReports.filter(
+        (report) => !removedCommentIds.has(report.commentId),
+      ),
+      comments: current.comments.filter((comment) => comment.postId !== postId),
+      postReports: current.postReports.filter(
+        (report) => report.postId !== postId,
+      ),
+      posts: current.posts.filter((post) => post.id !== postId),
+    };
+  });
   return true;
 }
 

@@ -62,7 +62,7 @@ export type CreateMissionResult =
   | { readonly ok: true; readonly mission: Mission }
   | {
       readonly ok: false;
-      readonly code: 'invalid_mission';
+      readonly code: 'invalid_mission' | 'media_upload_failed';
       readonly message: string;
     };
 
@@ -70,7 +70,11 @@ export type UpdateMissionResult =
   | { readonly ok: true; readonly mission: Mission }
   | {
       readonly ok: false;
-      readonly code: 'invalid_mission' | 'mission_not_found' | 'forbidden';
+      readonly code:
+        | 'invalid_mission'
+        | 'mission_not_found'
+        | 'forbidden'
+        | 'media_upload_failed';
       readonly message: string;
     };
 

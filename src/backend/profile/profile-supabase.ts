@@ -7,7 +7,7 @@ import type {
   NotificationPrefs,
 } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
-import { uploadDataUrl } from '@/src/services/storage/storage-client';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import { ONBOARDING_MIN_INTERESTS, WELCOME_XP } from './profile';
 import type { ProfileResult, UpdateProfileResult, UserProfile } from './profile';
@@ -146,8 +146,10 @@ export async function updateProfileSupabase(
   };
 
   const avatarUpload = extractAvatarUpload(input);
+  let replacedAvatarUrl: string | null = null;
   if (avatarUpload) {
     const avatarUrl = await uploadDataUrl(
+      supabase,
       avatarUpload.dataUrl,
       avatarUpload.filename,
       'avatars',
@@ -155,6 +157,7 @@ export async function updateProfileSupabase(
     );
     if (avatarUrl) {
       payload = { ...payload, avatar_url: avatarUrl };
+      replacedAvatarUrl = current.avatar_url;
     }
   }
 
@@ -180,6 +183,9 @@ export async function updateProfileSupabase(
   throwIfSupabaseError(error, 'update profile');
   if (!data) {
     throw new Error('update profile: database returned no profile.');
+  }
+  if (replacedAvatarUrl) {
+    await removeStorageObjects(supabase, [replacedAvatarUrl]);
   }
   return {
     ok: true,

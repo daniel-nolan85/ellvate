@@ -1,4 +1,3 @@
-import * as ImagePicker from 'expo-image-picker';
 import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +12,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import {
@@ -125,22 +125,14 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
   };
 
   const pickAvatar = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      base64: true,
-      quality: 0.8,
-    });
-
-    const asset = result.canceled ? null : result.assets[0];
-    if (!asset?.base64) {
+    const asset = await pickAvatarImage();
+    if (!asset) {
       return;
     }
     updateProfile.mutate({
       avatar: {
-        dataUrl: `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}`,
-        filename: asset.fileName ?? `avatar-${Date.now()}.jpg`,
+        dataUrl: `data:${asset.mimeType};base64,${asset.base64}`,
+        filename: asset.filename,
       },
     });
   };

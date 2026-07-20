@@ -19,3 +19,11 @@ export type CreateCommentResult =
       readonly code: 'invalid_comment' | 'post_not_found';
       readonly message: string;
     };
+
+export type ReportCommentResult =
+  | { readonly ok: true; readonly reported: true }
+  | {
+      readonly ok: false;
+      readonly code: 'comment_not_found';
+      readonly message: string;
+    };

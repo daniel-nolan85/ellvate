@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import { throwIfSupabaseError } from '@/src/services/supabase';
-import { uploadDataUrl } from '@/src/services/storage/storage-client';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import type {
   CommunityEvent,
@@ -50,6 +50,10 @@ interface JoinRow {
   readonly event_id: string;
   readonly user_id: string;
 }
+
+type UploadEventMediaResult =
+  | { readonly ok: true; readonly media: readonly EventMedia[] }
+  | { readonly ok: false; readonly uploaded: readonly EventMedia[] };
 
 const toWeekDay = (row: WeekDayRow): WeekDay => ({
   dayLabel: row.day_label,
@@ -147,17 +151,23 @@ const nameMapFor = async (
   );
 };
 
-// Uploads each picked image to Supabase Storage under the event's own id and
-// returns the subset that succeeded; a failed upload is dropped rather than
-// failing the whole event so one bad image can't block publishing.
+// Uploads each picked image to Supabase Storage under the event's own id.
+// WHY: a failed upload is surfaced as `ok: false` (with whatever succeeded so
+// far in `uploaded`) rather than silently dropped — publishing an event
+// that's missing images the user picked would misrepresent what got saved.
 const uploadEventMedia = async (
+  supabase: SupabaseClient,
   eventId: string,
   input: unknown,
-): Promise<readonly EventMedia[]> => {
+): Promise<UploadEventMediaResult> => {
   const uploads = extractMediaUploads(input);
+  if (uploads.length === 0) {
+    return { media: [], ok: true };
+  }
   const results = await Promise.all(
     uploads.map(async (upload) => {
       const url = await uploadDataUrl(
+        supabase,
         upload.dataUrl,
         upload.filename,
         'events',
@@ -166,8 +176,17 @@ const uploadEventMedia = async (
       return url ? { filename: upload.filename, url } : null;
     }),
   );
-  return results.filter((media): media is EventMedia => media !== null);
+  const succeeded = results.filter(
+    (media): media is EventMedia => media !== null,
+  );
+  if (succeeded.length !== results.length) {
+    return { ok: false, uploaded: succeeded };
+  }
+  return { media: succeeded, ok: true };
 };
+
+const MEDIA_UPLOAD_FAILED_MESSAGE =
+  'One or more images failed to upload. Please try again.';
 
 export async function getEventsViewSupabase(
   supabase: SupabaseClient,
@@ -258,8 +277,20 @@ export async function createEventSupabase(
   const insertedRow = inserted as unknown as EventRow;
   const nameById = await nameMapFor(supabase, userId);
 
-  const media = await uploadEventMedia(insertedRow.id, input);
-  if (media.length === 0) {
+  const mediaResult = await uploadEventMedia(supabase, insertedRow.id, input);
+  if (!mediaResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      mediaResult.uploaded.map((media) => media.url),
+    );
+    await supabase.from('events').delete().eq('id', insertedRow.id);
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  if (mediaResult.media.length === 0) {
     return {
       ok: true,
       event: toCommunityEvent(insertedRow, [], userId, nameById),
@@ -268,7 +299,7 @@ export async function createEventSupabase(
 
   const { data: updated, error: updateError } = await supabase
     .from('events')
-    .update({ media })
+    .update({ media: mediaResult.media })
     .eq('id', insertedRow.id)
     .select(EVENT_SELECT)
     .single();
@@ -292,7 +323,7 @@ export async function updateEventSupabase(
 ): Promise<UpdateEventResult> {
   const { data: existing, error: existingError } = await supabase
     .from('events')
-    .select('id,created_by')
+    .select('id,created_by,media')
     .eq('id', eventId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load event');
@@ -312,8 +343,19 @@ export async function updateEventSupabase(
   }
   const value = validation.value;
   const keptMedia = extractExistingMedia(input);
-  const uploadedMedia = await uploadEventMedia(eventId, input);
-  const media = [...keptMedia, ...uploadedMedia];
+  const uploadResult = await uploadEventMedia(supabase, eventId, input);
+  if (!uploadResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      uploadResult.uploaded.map((media) => media.url),
+    );
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  const media = [...keptMedia, ...uploadResult.media];
 
   const { data, error } = await supabase
     .from('events')
@@ -335,6 +377,14 @@ export async function updateEventSupabase(
     throw new Error('update event: database returned no event.');
   }
 
+  const previousMedia = (existing.media as readonly EventMedia[] | null) ?? [];
+  const keptUrls = new Set(keptMedia.map((item) => item.url));
+  const removedMedia = previousMedia.filter((item) => !keptUrls.has(item.url));
+  await removeStorageObjects(
+    supabase,
+    removedMedia.map((item) => item.url),
+  );
+
   const row = data as unknown as EventRow;
   const { data: joinRows, error: joinError } = await supabase
     .from('event_joins')
@@ -355,7 +405,7 @@ export async function deleteEventSupabase(
 ): Promise<boolean> {
   const { data: existing, error: existingError } = await supabase
     .from('events')
-    .select('id,created_by')
+    .select('id,created_by,media')
     .eq('id', eventId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load event');
@@ -364,6 +414,11 @@ export async function deleteEventSupabase(
   }
   const { error } = await supabase.from('events').delete().eq('id', eventId);
   throwIfSupabaseError(error, 'delete event');
+  const media = (existing.media as readonly EventMedia[] | null) ?? [];
+  await removeStorageObjects(
+    supabase,
+    media.map((item) => item.url),
+  );
   return true;
 }
 

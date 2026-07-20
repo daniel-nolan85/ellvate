@@ -65,11 +65,25 @@ export interface StoredPostReport {
   readonly createdAt: string;
 }
 
+export interface StoredCommentReport {
+  readonly id: string;
+  readonly commentId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
 export interface StoredEventComment {
   readonly id: string;
   readonly eventId: string;
   readonly authorId: string;
   readonly body: string;
+  readonly createdAt: string;
+}
+
+export interface StoredEventCommentReport {
+  readonly id: string;
+  readonly eventCommentId: string;
+  readonly reporterId: string;
   readonly createdAt: string;
 }
 
@@ -120,8 +134,10 @@ export interface StoreState {
   readonly posts: readonly StoredPost[];
   readonly comments: readonly StoredComment[];
   readonly postReports: readonly StoredPostReport[];
+  readonly commentReports: readonly StoredCommentReport[];
   readonly events: readonly StoredEvent[];
   readonly eventComments: readonly StoredEventComment[];
+  readonly eventCommentReports: readonly StoredEventCommentReport[];
   readonly missions: readonly StoredMission[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];

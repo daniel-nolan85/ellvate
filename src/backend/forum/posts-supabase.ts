@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { throwIfSupabaseError } from '@/src/services/supabase';
-import { uploadDataUrl } from '@/src/services/storage/storage-client';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import type {
   CreatePostResult,
@@ -38,6 +38,10 @@ interface PostRow {
   } | null;
 }
 
+type UploadPostMediaResult =
+  | { readonly ok: true; readonly media: readonly Media[] }
+  | { readonly ok: false; readonly uploaded: readonly Media[] };
+
 const toForumPost = (
   row: PostRow,
   likedIds: ReadonlySet<string>,
@@ -59,17 +63,23 @@ const toForumPost = (
   title: row.title,
 });
 
-// Uploads each picked image to Supabase Storage under the post's own id and
-// returns the subset that succeeded; a failed upload is dropped rather than
-// failing the whole post so one bad image can't block publishing.
+// Uploads each picked image to Supabase Storage under the post's own id.
+// WHY: a failed upload is surfaced as `ok: false` (with whatever succeeded so
+// far in `uploaded`) rather than silently dropped — publishing a post that's
+// missing images the user picked would misrepresent what actually got saved.
 const uploadPostMedia = async (
+  supabase: SupabaseClient,
   postId: string,
   input: unknown,
-): Promise<readonly Media[]> => {
+): Promise<UploadPostMediaResult> => {
   const uploads = extractMediaUploads(input);
+  if (uploads.length === 0) {
+    return { media: [], ok: true };
+  }
   const results = await Promise.all(
     uploads.map(async (upload) => {
       const url = await uploadDataUrl(
+        supabase,
         upload.dataUrl,
         upload.filename,
         'posts',
@@ -78,8 +88,15 @@ const uploadPostMedia = async (
       return url ? { filename: upload.filename, url } : null;
     }),
   );
-  return results.filter((media): media is Media => media !== null);
+  const succeeded = results.filter((media): media is Media => media !== null);
+  if (succeeded.length !== results.length) {
+    return { ok: false, uploaded: succeeded };
+  }
+  return { media: succeeded, ok: true };
 };
+
+const MEDIA_UPLOAD_FAILED_MESSAGE =
+  'One or more images failed to upload. Please try again.';
 
 const likedPostIds = async (
   supabase: SupabaseClient,
@@ -174,14 +191,26 @@ export async function createPostSupabase(
   }
   const insertedRow = inserted as unknown as PostRow;
 
-  const media = await uploadPostMedia(insertedRow.id, input);
-  if (media.length === 0) {
+  const mediaResult = await uploadPostMedia(supabase, insertedRow.id, input);
+  if (!mediaResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      mediaResult.uploaded.map((media) => media.url),
+    );
+    await supabase.from('posts').delete().eq('id', insertedRow.id);
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  if (mediaResult.media.length === 0) {
     return { ok: true, post: toForumPost(insertedRow, new Set()) };
   }
 
   const { data: updated, error: updateError } = await supabase
     .from('posts')
-    .update({ media })
+    .update({ media: mediaResult.media })
     .eq('id', insertedRow.id)
     .select(POST_SELECT)
     .single();
@@ -246,7 +275,7 @@ export async function deletePostSupabase(
 ): Promise<boolean> {
   const { data: existing, error: existingError } = await supabase
     .from('posts')
-    .select('id, author_id')
+    .select('id, author_id, media')
     .eq('id', postId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load post');
@@ -255,6 +284,11 @@ export async function deletePostSupabase(
   }
   const { error } = await supabase.from('posts').delete().eq('id', postId);
   throwIfSupabaseError(error, 'delete post');
+  const media = (existing.media as readonly Media[] | null) ?? [];
+  await removeStorageObjects(
+    supabase,
+    media.map((item) => item.url),
+  );
   return true;
 }
 
@@ -266,7 +300,7 @@ export async function updatePostSupabase(
 ): Promise<UpdatePostResult> {
   const { data: existing, error: existingError } = await supabase
     .from('posts')
-    .select('id, author_id, forum')
+    .select('id, author_id, forum, media')
     .eq('id', postId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load post');
@@ -292,8 +326,19 @@ export async function updatePostSupabase(
     return validation;
   }
   const keptMedia = extractExistingMedia(input);
-  const uploadedMedia = await uploadPostMedia(postId, input);
-  const media = [...keptMedia, ...uploadedMedia];
+  const uploadResult = await uploadPostMedia(supabase, postId, input);
+  if (!uploadResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      uploadResult.uploaded.map((media) => media.url),
+    );
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  const media = [...keptMedia, ...uploadResult.media];
 
   const { data, error } = await supabase
     .from('posts')
@@ -309,6 +354,15 @@ export async function updatePostSupabase(
   if (!data) {
     throw new Error('update post: database returned no post.');
   }
+
+  const previousMedia = (existing.media as readonly Media[] | null) ?? [];
+  const keptUrls = new Set(keptMedia.map((item) => item.url));
+  const removedMedia = previousMedia.filter((item) => !keptUrls.has(item.url));
+  await removeStorageObjects(
+    supabase,
+    removedMedia.map((item) => item.url),
+  );
+
   const likedIds = await likedPostIds(supabase, userId);
   return { ok: true, post: toForumPost(data as unknown as PostRow, likedIds) };
 }
