@@ -34,6 +34,11 @@ function AppNavigator() {
           <Stack.Screen name="protected" />
           <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
           <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+          <Stack.Screen
+            name="notifications"
+            options={{ presentation: 'modal' }}
+          />
+          <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
     </ClerkAuthGate>

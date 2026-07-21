@@ -129,6 +129,17 @@ export interface StoredWeekDay {
   readonly isToday: boolean;
 }
 
+export interface StoredNotification {
+  readonly id: string;
+  readonly userId: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly body: string;
+  readonly data: Readonly<Record<string, unknown>>;
+  readonly readAt: string | null;
+  readonly createdAt: string;
+}
+
 export interface StoreState {
   readonly subforums: readonly string[];
   readonly posts: readonly StoredPost[];
@@ -139,6 +150,7 @@ export interface StoreState {
   readonly eventComments: readonly StoredEventComment[];
   readonly eventCommentReports: readonly StoredEventCommentReport[];
   readonly missions: readonly StoredMission[];
+  readonly notifications: readonly StoredNotification[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];
 }

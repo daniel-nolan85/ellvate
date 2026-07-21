@@ -12,6 +12,14 @@ export interface Comment {
   readonly createdAt: string;
 }
 
+export interface MyComment {
+  readonly id: string;
+  readonly postId: string;
+  readonly postTitle: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
 export type CreateCommentResult =
   | { readonly ok: true; readonly comment: Comment }
   | {

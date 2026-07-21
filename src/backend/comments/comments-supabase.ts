@@ -2,11 +2,27 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { Comment, CreateCommentResult, ReportCommentResult } from './types';
+import type {
+  Comment,
+  CreateCommentResult,
+  MyComment,
+  ReportCommentResult,
+} from './types';
 import { validateCommentBody } from './validation';
 
 const COMMENT_SELECT =
   'id,post_id,author_id,body,created_at,author:app_users!comments_author_id_fkey(id,name,avatar_url)';
+
+const MY_COMMENT_SELECT =
+  'id,post_id,body,created_at,post:posts!comments_post_id_fkey(title)';
+
+interface MyCommentRow {
+  readonly id: string;
+  readonly post_id: string;
+  readonly body: string;
+  readonly created_at: string;
+  readonly post: { readonly title: string } | null;
+}
 
 interface CommentRow {
   readonly id: string;
@@ -57,6 +73,25 @@ export async function listCommentsSupabase(
     .order('created_at', { ascending: true });
   throwIfSupabaseError(error, 'load comments');
   return (data as unknown as CommentRow[]).map(toComment);
+}
+
+export async function listMyCommentsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<readonly MyComment[]> {
+  const { data, error } = await supabase
+    .from('comments')
+    .select(MY_COMMENT_SELECT)
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false });
+  throwIfSupabaseError(error, 'load my comments');
+  return (data as unknown as MyCommentRow[]).map((row) => ({
+    body: row.body,
+    createdAt: row.created_at,
+    id: row.id,
+    postId: row.post_id,
+    postTitle: row.post?.title ?? 'a post',
+  }));
 }
 
 export async function createCommentSupabase(

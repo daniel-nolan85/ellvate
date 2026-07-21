@@ -1,4 +1,5 @@
 import type { RequestContext } from '@/src/backend/http';
+import { createNotificationMemory } from '@/src/backend/notifications';
 import {
   getState,
   SEED_NOW_ISO,
@@ -126,12 +127,24 @@ function toggleLikeMemory(userId: string, postId: string): LikeResult | null {
   const likedBy = wasLiked
     ? existing.likedBy.filter((id) => id !== userId)
     : [...existing.likedBy, userId];
-  setState((current) => ({
+  const next = setState((current) => ({
     ...current,
     posts: current.posts.map((post) =>
       post.id === postId ? { ...post, likedBy, likes } : post,
     ),
   }));
+  // WHY: mirrors the Supabase `notify_post_liker` trigger — only notify on a
+  // new like (not on unlike), and never notify yourself.
+  if (!wasLiked && existing.authorId !== userId) {
+    const liker = next.users.find((candidate) => candidate.id === userId);
+    createNotificationMemory(
+      existing.authorId,
+      'like',
+      'New like on your post',
+      `${liker?.name ?? 'Someone'} liked "${existing.title}"`,
+      { postId },
+    );
+  }
   return { id: postId, liked: !wasLiked, likes };
 }
 

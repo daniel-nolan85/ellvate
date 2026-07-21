@@ -1,4 +1,5 @@
 import type { RequestContext } from '@/src/backend/http';
+import { createNotificationMemory } from '@/src/backend/notifications';
 import {
   getState,
   setState,
@@ -10,11 +11,13 @@ import {
   createCommentSupabase,
   deleteCommentSupabase,
   listCommentsSupabase,
+  listMyCommentsSupabase,
   reportCommentSupabase,
 } from './comments-supabase';
 import type {
   Comment,
   CreateCommentResult,
+  MyComment,
   PersonRef,
   ReportCommentResult,
 } from './types';
@@ -51,6 +54,24 @@ function listCommentsMemory(postId: string): readonly Comment[] {
     .map((comment) => toComment(comment, state.users));
 }
 
+function listMyCommentsMemory(userId: string): readonly MyComment[] {
+  const state = getState();
+  return state.comments
+    .filter((comment) => comment.authorId === userId)
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .map((comment) => {
+      const post = state.posts.find((candidate) => candidate.id === comment.postId);
+      return {
+        body: comment.body,
+        createdAt: comment.createdAt,
+        id: comment.id,
+        postId: comment.postId,
+        postTitle: post?.title ?? 'a post',
+      };
+    });
+}
+
 function createCommentMemory(
   userId: string,
   postId: string,
@@ -60,7 +81,8 @@ function createCommentMemory(
   if (!validation.ok) {
     return { code: 'invalid_comment', message: validation.message, ok: false };
   }
-  if (!getState().posts.some((post) => post.id === postId)) {
+  const post = getState().posts.find((candidate) => candidate.id === postId);
+  if (!post) {
     return { code: 'post_not_found', message: 'Post not found.', ok: false };
   }
   const stored: StoredComment = {
@@ -73,10 +95,24 @@ function createCommentMemory(
   const next = setState((current) => ({
     ...current,
     comments: [...current.comments, stored],
-    posts: current.posts.map((post) =>
-      post.id === postId ? { ...post, replies: post.replies + 1 } : post,
+    posts: current.posts.map((candidate) =>
+      candidate.id === postId
+        ? { ...candidate, replies: candidate.replies + 1 }
+        : candidate,
     ),
   }));
+  // WHY: mirrors the Supabase `notify_post_author` trigger — skip notifying
+  // yourself when you comment on your own post.
+  if (post.authorId !== userId) {
+    const commenter = next.users.find((candidate) => candidate.id === userId);
+    createNotificationMemory(
+      post.authorId,
+      'comment',
+      'New reply to your post',
+      `${commenter?.name ?? 'Someone'} commented on "${post.title}"`,
+      { commentId: stored.id, postId },
+    );
+  }
   return { comment: toComment(stored, next.users), ok: true };
 }
 
@@ -142,6 +178,14 @@ export async function listComments(
   return ctx.supabase
     ? listCommentsSupabase(ctx.supabase, postId)
     : listCommentsMemory(postId);
+}
+
+export async function listMyComments(
+  ctx: RequestContext,
+): Promise<readonly MyComment[]> {
+  return ctx.supabase
+    ? listMyCommentsSupabase(ctx.supabase, ctx.userId)
+    : listMyCommentsMemory(ctx.userId);
 }
 
 export async function createComment(

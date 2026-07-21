@@ -12,6 +12,7 @@ export type {
   StoredEventCommentReport,
   StoredMedia,
   StoredMission,
+  StoredNotification,
   StoredPost,
   StoredPostReport,
   StoredProfile,

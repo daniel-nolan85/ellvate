@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { router } from 'expo-router';
+
 import { Avatar } from '@/src/components/ui/avatar';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Heading } from '@/src/components/ui/heading';
@@ -33,11 +35,32 @@ const NOTIFICATION_ROWS: readonly {
   readonly key: keyof NotificationPrefs;
   readonly label: string;
   readonly hint: string;
+  readonly icon: AppIconName;
 }[] = [
-  { key: 'events', label: 'Events', hint: 'New events around the lake' },
-  { key: 'replies', label: 'Replies', hint: 'When someone answers your posts' },
-  { key: 'missions', label: 'Missions', hint: 'New missions and XP' },
-  { key: 'digest', label: 'Weekly digest', hint: 'A Sunday recap of the week' },
+  {
+    key: 'events',
+    label: 'Events',
+    hint: 'New events around the lake',
+    icon: 'CalendarDays',
+  },
+  {
+    key: 'replies',
+    label: 'Replies',
+    hint: 'When someone answers your posts',
+    icon: 'MessageCircle',
+  },
+  {
+    key: 'missions',
+    label: 'Missions',
+    hint: 'New missions and XP',
+    icon: 'Star',
+  },
+  {
+    key: 'digest',
+    label: 'Weekly digest',
+    hint: 'A Sunday recap of the week',
+    icon: 'Mail',
+  },
 ];
 
 function SectionTitle({ children }: { readonly children: string }) {
@@ -260,6 +283,11 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
           label="Interests"
           value={`${profile.data?.profile.interests.length ?? 0} picked`}
         />
+        <Row
+          icon="Edit"
+          label="My Activity"
+          onPress={() => router.push('/activity')}
+        />
 
         <SectionTitle>Notifications</SectionTitle>
         {profile.isPending || !prefs ? (
@@ -269,7 +297,7 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
         ) : (
           NOTIFICATION_ROWS.map((row) => (
             <Row
-              icon="Bell"
+              icon={row.icon}
               key={row.key}
               label={row.label}
               right={

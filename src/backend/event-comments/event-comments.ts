@@ -1,5 +1,6 @@
 import { validateCommentBody } from '@/src/backend/comments';
 import type { RequestContext } from '@/src/backend/http';
+import { createNotificationMemory } from '@/src/backend/notifications';
 import {
   getState,
   setState,
@@ -60,7 +61,8 @@ function createEventCommentMemory(
   if (!validation.ok) {
     return { code: 'invalid_comment', message: validation.message, ok: false };
   }
-  if (!getState().events.some((event) => event.id === eventId)) {
+  const event = getState().events.find((candidate) => candidate.id === eventId);
+  if (!event) {
     return { code: 'event_not_found', message: 'Event not found.', ok: false };
   }
   const stored: StoredEventComment = {
@@ -74,6 +76,19 @@ function createEventCommentMemory(
     ...current,
     eventComments: [...current.eventComments, stored],
   }));
+  // WHY: mirrors the Supabase `notify_event_author` trigger — skip notifying
+  // yourself when you comment on your own event. Uses kind 'event' so it maps
+  // to the same `notif_events` preference the push-delivery trigger checks.
+  if (event.authorId !== userId) {
+    const commenter = next.users.find((candidate) => candidate.id === userId);
+    createNotificationMemory(
+      event.authorId,
+      'event',
+      'New comment on your event',
+      `${commenter?.name ?? 'Someone'} commented on "${event.title}"`,
+      { commentId: stored.id, eventId },
+    );
+  }
   return { comment: toEventComment(stored, next.users), ok: true };
 }
 
