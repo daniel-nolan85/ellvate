@@ -2,6 +2,11 @@ import { strict as assert } from 'node:assert';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { getMyEventsViewSupabase } from '../src/backend/events/events-supabase';
+import { getMyPostsSupabase } from '../src/backend/forum/posts-supabase';
+import { getMyMissionsViewSupabase } from '../src/backend/missions/missions-supabase';
+import { listNotificationsSupabase } from '../src/backend/notifications/notifications-supabase';
+
 const required = [
   'SUPABASE_URL',
   'SUPABASE_PUBLISHABLE_KEY',
@@ -53,6 +58,7 @@ let eventId: string | null = null;
 let missionId: string | null = null;
 let reminderEventId: string | null = null;
 let reminderMissionId: string | null = null;
+let secondPostId: string | null = null;
 
 try {
   await unwrap(
@@ -114,6 +120,49 @@ try {
   );
   assert(likeCount);
   assert.equal(likeCount.like_count, 1);
+
+  // getMyPostsSupabase: scoped to the caller's own posts (not the whole
+  // forum feed) and paginated via a real keyset query, not just RLS.
+  const secondPost = await unwrap(
+    'create second post as user A',
+    a
+      .from('posts')
+      .insert({
+        author_id: idA,
+        excerpt: 'second',
+        forum: 'Dining',
+        title: `${title}-2`,
+      })
+      .select('id')
+      .single(),
+  );
+  assert(secondPost);
+  secondPostId = secondPost.id as string;
+
+  const myPostsFirstPage = await getMyPostsSupabase(a, idA, 1, null);
+  assert.equal(myPostsFirstPage.posts.length, 1);
+  assert(myPostsFirstPage.nextCursor, 'expected a second page to exist');
+
+  const myPostsSecondPage = await getMyPostsSupabase(
+    a,
+    idA,
+    1,
+    myPostsFirstPage.nextCursor,
+  );
+  assert.equal(myPostsSecondPage.posts.length, 1);
+  const myPostIds = new Set(
+    [...myPostsFirstPage.posts, ...myPostsSecondPage.posts].map((post) => post.id),
+  );
+  assert.equal(myPostIds.size, 2);
+  assert(myPostIds.has(postId));
+  assert(myPostIds.has(secondPostId));
+
+  const bPostsPage = await getMyPostsSupabase(b, idB, 20, null);
+  assert.equal(
+    bPostsPage.posts.some((post) => post.id === postId),
+    false,
+    "user B's scoped posts must not include user A's post",
+  );
 
   const forbiddenProfileUpdate = await b
     .from('app_users')
@@ -189,6 +238,21 @@ try {
   assert.equal(unauthorizedEventDelete.error, null);
   assert.deepEqual(unauthorizedEventDelete.data, []);
 
+  // getMyEventsViewSupabase: this merges a "created by me" query with a
+  // "joined by me" query (no single keyset query can express that OR), so
+  // it needs its own coverage beyond the raw RLS checks above.
+  await unwrap(
+    'user B joins event as part of getMyEventsView coverage',
+    b.from('event_joins').insert({ event_id: eventId, user_id: idB }),
+  );
+  const myEventsForA = await getMyEventsViewSupabase(a, idA, 20, null);
+  assert(myEventsForA.events.some((event) => event.id === eventId));
+
+  const myEventsForB = await getMyEventsViewSupabase(b, idB, 20, null);
+  const joinedEvent = myEventsForB.events.find((event) => event.id === eventId);
+  assert(joinedEvent, "user B's joined event should appear via getMyEventsView");
+  assert.equal(joinedEvent?.joined, true);
+
   const missionSeedId = `msn-integration-${suffix}`;
   const mission = await unwrap(
     'create mission as user A',
@@ -237,6 +301,27 @@ try {
     .select('id');
   assert.equal(unauthorizedMissionDelete.error, null);
   assert.deepEqual(unauthorizedMissionDelete.data, []);
+
+  // getMyMissionsViewSupabase: merges "created by me" with "completed by
+  // me" (again, no single keyset query can express that OR).
+  await unwrap(
+    'user B completes the mission as part of getMyMissionsView coverage',
+    b
+      .from('mission_progress')
+      .upsert({ mission_id: missionId, status: 'done', stops_done: 1, user_id: idB }),
+  );
+  const myMissionsForA = await getMyMissionsViewSupabase(a, idA, 20, null);
+  assert(myMissionsForA.missions.some((mission) => mission.id === missionId));
+
+  const myMissionsForB = await getMyMissionsViewSupabase(b, idB, 20, null);
+  const completedMission = myMissionsForB.missions.find(
+    (mission) => mission.id === missionId,
+  );
+  assert(
+    completedMission,
+    "user B's completed mission should appear via getMyMissionsView",
+  );
+  assert.equal(completedMission?.status, 'done');
 
   // Storage RLS: object keys encode the owning post's id (posts/{postId}/...),
   // not the acting user's id, so ownership must be checked via a table lookup
@@ -456,6 +541,28 @@ try {
   );
   assert.equal(await countMissionReminderNotifications(), 2);
 
+  // listNotificationsSupabase: cursor pagination against a real keyset query
+  // (the reminder calls above guarantee idA has at least two rows by now).
+  const notificationsFirstPage = await listNotificationsSupabase(a, idA, 1, null);
+  assert.equal(notificationsFirstPage.notifications.length, 1);
+  assert(
+    notificationsFirstPage.nextCursor,
+    'expected more than one notification to paginate through',
+  );
+
+  const notificationsSecondPage = await listNotificationsSupabase(
+    a,
+    idA,
+    1,
+    notificationsFirstPage.nextCursor,
+  );
+  assert.equal(notificationsSecondPage.notifications.length, 1);
+  assert.notEqual(
+    notificationsFirstPage.notifications[0]?.id,
+    notificationsSecondPage.notifications[0]?.id,
+    'each page should return a distinct notification',
+  );
+
   console.log(
     'Supabase integration passed: RLS identity isolation, writes, triggers, ' +
       'push-token ownership, events/missions owner-write grants, Storage owner ' +
@@ -464,6 +571,13 @@ try {
 } finally {
   if (postId) {
     const cleanup = await a.from('posts').delete().eq('id', postId);
+    if (cleanup.error) {
+      console.error(`Supabase integration cleanup failed: ${cleanup.error.message}`);
+      process.exitCode = 1;
+    }
+  }
+  if (secondPostId) {
+    const cleanup = await a.from('posts').delete().eq('id', secondPostId);
     if (cleanup.error) {
       console.error(`Supabase integration cleanup failed: ${cleanup.error.message}`);
       process.exitCode = 1;
