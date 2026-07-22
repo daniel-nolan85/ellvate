@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { MediaValidationError } from '@/src/backend/media';
 import {
   createRequestClientFor,
   getRequestClerkToken,
@@ -58,6 +59,9 @@ export async function withRequestContext(
       return jsonError(error.status, error.code, error.message);
     }
     if (error instanceof RequestDataError) {
+      return jsonError(error.status, error.code, error.message);
+    }
+    if (error instanceof MediaValidationError) {
       return jsonError(error.status, error.code, error.message);
     }
     if (error instanceof SupabaseRequestError) {

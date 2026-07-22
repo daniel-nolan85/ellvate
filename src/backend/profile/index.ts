@@ -1,14 +1,17 @@
-export {
-  getProfile,
-  ONBOARDING_MIN_INTERESTS,
-  updateProfile,
-} from './profile';
+export { getProfile, ONBOARDING_MIN_INTERESTS, updateProfile } from './profile';
 export type {
   ProfileResult,
   UpdateProfileResult,
   UpdateProfileSuccess,
   UserProfile,
 } from './profile';
+export { getPublicProfile } from './public-profile';
+export type {
+  PublicMemberRow,
+  PublicMemberStats,
+  PublicMemberSummary,
+  PublicProfile,
+} from './public-profile';
 export {
   MAX_INTEREST_LENGTH,
   MAX_INTERESTS,

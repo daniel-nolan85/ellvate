@@ -1,3 +1,4 @@
+import { extractAvatarUpload } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, setState } from '@/src/backend/store';
 import type {
@@ -19,6 +20,7 @@ export const WELCOME_XP = 50;
 
 export interface UserProfile {
   readonly userId: string;
+  readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly aiComfort: AiComfortLevel | null;
@@ -37,8 +39,13 @@ export interface UpdateProfileSuccess {
 
 export type UpdateProfileResult = ProfileValidationFailure | UpdateProfileSuccess;
 
-const toUserProfile = (userId: string, profile: StoredProfile): UserProfile => ({
+const toUserProfile = (
+  userId: string,
+  profile: StoredProfile,
+  avatarUrl: string | null,
+): UserProfile => ({
   userId,
+  avatarUrl,
   role: profile.role,
   interests: profile.interests,
   aiComfort: profile.aiComfort,
@@ -77,7 +84,7 @@ const isOnboardingComplete = (profile: StoredProfile): boolean =>
 
 function getProfileMemory(userId: string): ProfileResult {
   const user = ensureUser(userId);
-  return { profile: toUserProfile(userId, user.profile) };
+  return { profile: toUserProfile(userId, user.profile, user.avatarUrl) };
 }
 
 function updateProfileMemory(
@@ -97,13 +104,15 @@ function updateProfileMemory(
       : merged;
   const justOnboarded =
     current.onboardedAt === null && next.onboardedAt !== null;
+  const avatarUpload = extractAvatarUpload(input);
 
-  setState((state) => ({
+  const updated = setState((state) => ({
     ...state,
     users: state.users.map((user) =>
       user.id === userId
         ? {
             ...user,
+            avatarUrl: avatarUpload ? avatarUpload.dataUrl : user.avatarUrl,
             name: validation.update.name ?? user.name,
             profile: next,
             xp: justOnboarded ? user.xp + WELCOME_XP : user.xp,
@@ -111,8 +120,10 @@ function updateProfileMemory(
         : user,
     ),
   }));
+  const avatarUrl =
+    updated.users.find((user) => user.id === userId)?.avatarUrl ?? null;
 
-  return { ok: true, profile: toUserProfile(userId, next) };
+  return { ok: true, profile: toUserProfile(userId, next, avatarUrl) };
 }
 
 export async function getProfile(

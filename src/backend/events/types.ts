@@ -1,10 +1,17 @@
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
+export interface EventMedia {
+  readonly url: string;
+  readonly filename: string;
 }
 
 export interface CommunityEvent {
   readonly id: string;
+  readonly author: PersonRef;
   readonly startsAt: string;
   readonly timeLabel: string;
   readonly dayLabel: string;
@@ -12,6 +19,7 @@ export interface CommunityEvent {
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly media?: readonly EventMedia[];
   readonly featured: boolean;
   readonly going: number;
   readonly joined: boolean;
@@ -28,6 +36,16 @@ export interface WeekDay {
 export interface EventsView {
   readonly week: readonly WeekDay[];
   readonly events: readonly CommunityEvent[];
+}
+
+export interface MyEventsPage {
+  readonly events: readonly CommunityEvent[];
+  readonly nextCursor: string | null;
+}
+
+export interface MyEventsOptions {
+  readonly limit?: number;
+  readonly cursor?: string | null;
 }
 
 export interface JoinResult {
@@ -58,6 +76,18 @@ export type CreateEventResult =
   | { readonly ok: true; readonly event: CommunityEvent }
   | {
       readonly ok: false;
-      readonly code: 'invalid_event';
+      readonly code: 'invalid_event' | 'media_upload_failed';
+      readonly message: string;
+    };
+
+export type UpdateEventResult =
+  | { readonly ok: true; readonly event: CommunityEvent }
+  | {
+      readonly ok: false;
+      readonly code:
+        | 'invalid_event'
+        | 'event_not_found'
+        | 'forbidden'
+        | 'media_upload_failed';
       readonly message: string;
     };

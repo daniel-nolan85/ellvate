@@ -51,6 +51,9 @@ export function useCreateComment(postId: string) {
       void queryClient.invalidateQueries({
         queryKey: ['forum', 'comments', userId, postId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'comments', 'mine', userId],
+      });
       void queryClient.invalidateQueries({ queryKey: ['forum', 'posts', userId] });
     },
   });
@@ -72,7 +75,52 @@ export function useDeleteComment(postId: string) {
       void queryClient.invalidateQueries({
         queryKey: ['forum', 'comments', userId, postId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'comments', 'mine', userId],
+      });
       void queryClient.invalidateQueries({ queryKey: ['forum', 'posts', userId] });
     },
+  });
+}
+
+export interface MyComment {
+  readonly id: string;
+  readonly postId: string;
+  readonly postTitle: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
+interface MyCommentsResponse {
+  readonly comments: readonly MyComment[];
+}
+
+export function useMyComments() {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useQuery({
+    meta: queryMeta,
+    queryFn: ({ signal }) =>
+      requestJson<MyCommentsResponse>({
+        getAccessToken: session.getToken,
+        path: '/api/comments/mine',
+        signal,
+      }),
+    queryKey: ['forum', 'comments', 'mine', userId],
+    select: (data) => data.comments,
+  });
+}
+
+export function useReportComment() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (commentId: string) =>
+      requestJson<{ reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/comments/${commentId}/report`,
+      }),
   });
 }

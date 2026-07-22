@@ -18,9 +18,9 @@ describe('Expo starter contract', () => {
 
     expect(packageJson.name?.trim().length ?? 0).toBeGreaterThan(0);
     expect(packageJson.packageManager).toBe('bun@1.3.13');
-    expect(packageJson.dependencies.expo).toBe('~54.0.35');
+    expect(packageJson.dependencies.expo).toBe('~54.0.36');
     expect(packageJson.dependencies['expo-router']).toBe('~6.0.24');
-    expect(packageJson.dependencies['expo-updates']).toBe('~29.0.18');
+    expect(packageJson.dependencies['expo-updates']).toBe('~29.0.19');
     expect(packageJson.dependencies['@clerk/expo']).toBe('3.2.15');
     expect(packageJson.dependencies['@tanstack/react-query']).toBe('5.101.0');
     expect(packageJson.dependencies.nativewind).toMatch(/^\^4\./);

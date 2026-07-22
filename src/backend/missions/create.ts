@@ -1,3 +1,4 @@
+import { extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { setState, type StoredMission } from '@/src/backend/store';
 
@@ -12,21 +13,29 @@ function createMissionMemory(userId: string, input: unknown): CreateMissionResul
     return validation;
   }
   const value = validation.value;
+  const mediaUploads = extractMediaUploads(input);
   const stored: StoredMission = {
     id: `msn-${crypto.randomUUID()}`,
+    authorId: userId,
     title: value.title,
     description: value.description,
     scheduledFor: value.scheduledFor,
     xp: value.xp,
     stopsTotal: value.stopsTotal,
     icon: value.icon,
+    media: mediaUploads.length
+      ? mediaUploads.map((upload) => ({
+          filename: upload.filename,
+          url: upload.dataUrl,
+        }))
+      : undefined,
     progressByUser: {},
   };
-  setState((current) => ({
+  const next = setState((current) => ({
     ...current,
     missions: [...current.missions, stored],
   }));
-  return { ok: true, mission: toMissionView(stored, userId) };
+  return { ok: true, mission: toMissionView(stored, userId, next.users) };
 }
 
 export async function createMission(

@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useSession } from '@/src/platform/session';
@@ -7,8 +12,20 @@ import { requestJson } from '@/src/services/api';
 export type MissionStatus = 'active' | 'done' | 'locked';
 export type MissionIcon = 'Sun' | 'ArrowUp' | 'Star' | 'Moon';
 
+export interface MissionMedia {
+  readonly url: string;
+  readonly filename: string;
+}
+
+export interface PersonRef {
+  readonly id: string;
+  readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
 export interface Mission {
   readonly id: string;
+  readonly author: PersonRef;
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
@@ -17,6 +34,7 @@ export interface Mission {
   readonly stopsDone: number;
   readonly stopsTotal: number;
   readonly icon: MissionIcon;
+  readonly media?: readonly MissionMedia[];
 }
 
 export interface UserProgress {
@@ -35,10 +53,20 @@ export interface MissionsView {
   readonly progress: UserProgress;
 }
 
+export interface MyMissionsPage {
+  readonly missions: readonly Mission[];
+  readonly nextCursor: string | null;
+}
+
 export interface CheckInResult {
   readonly mission: Mission;
   readonly awardedXp: number;
   readonly progress: UserProgress;
+}
+
+export interface NewMissionMediaInput {
+  readonly filename: string;
+  readonly dataUrl: string;
 }
 
 export interface CreateMissionInput {
@@ -48,6 +76,24 @@ export interface CreateMissionInput {
   readonly xp: number;
   readonly stopsTotal: number;
   readonly icon: MissionIcon;
+  readonly newMedia?: readonly NewMissionMediaInput[];
+}
+
+export interface ExistingMissionMediaInput {
+  readonly filename: string;
+  readonly url: string;
+}
+
+export interface UpdateMissionInput {
+  readonly missionId: string;
+  readonly title: string;
+  readonly description: string;
+  readonly scheduledFor: string;
+  readonly xp: number;
+  readonly stopsTotal: number;
+  readonly icon: MissionIcon;
+  readonly existingMedia?: readonly ExistingMissionMediaInput[];
+  readonly newMedia?: readonly NewMissionMediaInput[];
 }
 
 const missionsViewKey = (userId: string) =>
@@ -80,6 +126,30 @@ export function useMissionsView() {
   });
 }
 
+const MY_MISSIONS_PAGE_SIZE = 20;
+
+// The activity hub — missions the caller created or completed, server-scoped
+// and paginated rather than filtered client-side from the full community list.
+export function useMyMissionsView() {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MyMissionsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<MyMissionsPage>({
+        getAccessToken: session.getToken,
+        path: `/api/missions/mine?limit=${MY_MISSIONS_PAGE_SIZE}${
+          pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''
+        }`,
+        signal,
+      }),
+    queryKey: ['missions', 'mine', userId],
+  });
+}
+
 export function useCreateMission() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -93,6 +163,41 @@ export function useCreateMission() {
         path: '/api/missions',
       }),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['missions'] });
+    },
+  });
+}
+
+export function useUpdateMission() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ missionId, ...body }: UpdateMissionInput) =>
+      requestJson<{ readonly mission: Mission }>({
+        body,
+        getAccessToken: session.getToken,
+        method: 'PATCH',
+        path: `/api/missions/${missionId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['missions'] });
+    },
+  });
+}
+
+export function useDeleteMission() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (missionId: string) =>
+      requestJson<{ id: string; deleted: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'DELETE',
+        path: `/api/missions/${missionId}`,
+      }),
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
     },
   });

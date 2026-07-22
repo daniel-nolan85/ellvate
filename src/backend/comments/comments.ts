@@ -1,4 +1,5 @@
 import type { RequestContext } from '@/src/backend/http';
+import { createNotificationMemory } from '@/src/backend/notifications';
 import {
   getState,
   setState,
@@ -10,8 +11,16 @@ import {
   createCommentSupabase,
   deleteCommentSupabase,
   listCommentsSupabase,
+  listMyCommentsSupabase,
+  reportCommentSupabase,
 } from './comments-supabase';
-import type { Comment, CreateCommentResult, PersonRef } from './types';
+import type {
+  Comment,
+  CreateCommentResult,
+  MyComment,
+  PersonRef,
+  ReportCommentResult,
+} from './types';
 import { validateCommentBody } from './validation';
 
 // ---------------------------------------------------------------------------
@@ -20,7 +29,9 @@ import { validateCommentBody } from './validation';
 
 const authorRef = (users: readonly StoredUser[], id: string): PersonRef => {
   const user = users.find((candidate) => candidate.id === id);
-  return user ? { id: user.id, name: user.name } : { id, name: 'Member' };
+  return user
+    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
+    : { avatarUrl: null, id, name: 'Member' };
 };
 
 const toComment = (
@@ -43,6 +54,24 @@ function listCommentsMemory(postId: string): readonly Comment[] {
     .map((comment) => toComment(comment, state.users));
 }
 
+function listMyCommentsMemory(userId: string): readonly MyComment[] {
+  const state = getState();
+  return state.comments
+    .filter((comment) => comment.authorId === userId)
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .map((comment) => {
+      const post = state.posts.find((candidate) => candidate.id === comment.postId);
+      return {
+        body: comment.body,
+        createdAt: comment.createdAt,
+        id: comment.id,
+        postId: comment.postId,
+        postTitle: post?.title ?? 'a post',
+      };
+    });
+}
+
 function createCommentMemory(
   userId: string,
   postId: string,
@@ -52,7 +81,8 @@ function createCommentMemory(
   if (!validation.ok) {
     return { code: 'invalid_comment', message: validation.message, ok: false };
   }
-  if (!getState().posts.some((post) => post.id === postId)) {
+  const post = getState().posts.find((candidate) => candidate.id === postId);
+  if (!post) {
     return { code: 'post_not_found', message: 'Post not found.', ok: false };
   }
   const stored: StoredComment = {
@@ -65,10 +95,24 @@ function createCommentMemory(
   const next = setState((current) => ({
     ...current,
     comments: [...current.comments, stored],
-    posts: current.posts.map((post) =>
-      post.id === postId ? { ...post, replies: post.replies + 1 } : post,
+    posts: current.posts.map((candidate) =>
+      candidate.id === postId
+        ? { ...candidate, replies: candidate.replies + 1 }
+        : candidate,
     ),
   }));
+  // WHY: mirrors the Supabase `notify_post_author` trigger — skip notifying
+  // yourself when you comment on your own post.
+  if (post.authorId !== userId) {
+    const commenter = next.users.find((candidate) => candidate.id === userId);
+    createNotificationMemory(
+      post.authorId,
+      'comment',
+      'New reply to your post',
+      `${commenter?.name ?? 'Someone'} commented on "${post.title}"`,
+      { commentId: stored.id, postId },
+    );
+  }
   return { comment: toComment(stored, next.users), ok: true };
 }
 
@@ -81,6 +125,9 @@ function deleteCommentMemory(userId: string, commentId: string): boolean {
   }
   setState((current) => ({
     ...current,
+    commentReports: current.commentReports.filter(
+      (report) => report.commentId !== commentId,
+    ),
     comments: current.comments.filter((comment) => comment.id !== commentId),
     posts: current.posts.map((post) =>
       post.id === existing.postId
@@ -89,6 +136,35 @@ function deleteCommentMemory(userId: string, commentId: string): boolean {
     ),
   }));
   return true;
+}
+
+function reportCommentMemory(
+  userId: string,
+  commentId: string,
+): ReportCommentResult {
+  if (!getState().comments.some((comment) => comment.id === commentId)) {
+    return { code: 'comment_not_found', message: 'Comment not found.', ok: false };
+  }
+
+  const alreadyReported = getState().commentReports.some(
+    (report) => report.commentId === commentId && report.reporterId === userId,
+  );
+  if (!alreadyReported) {
+    setState((current) => ({
+      ...current,
+      commentReports: [
+        ...current.commentReports,
+        {
+          commentId,
+          createdAt: new Date().toISOString(),
+          id: `comment-report-${crypto.randomUUID()}`,
+          reporterId: userId,
+        },
+      ],
+    }));
+  }
+
+  return { ok: true, reported: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +178,14 @@ export async function listComments(
   return ctx.supabase
     ? listCommentsSupabase(ctx.supabase, postId)
     : listCommentsMemory(postId);
+}
+
+export async function listMyComments(
+  ctx: RequestContext,
+): Promise<readonly MyComment[]> {
+  return ctx.supabase
+    ? listMyCommentsSupabase(ctx.supabase, ctx.userId)
+    : listMyCommentsMemory(ctx.userId);
 }
 
 export async function createComment(
@@ -121,4 +205,13 @@ export async function deleteComment(
   return ctx.supabase
     ? deleteCommentSupabase(ctx.supabase, ctx.userId, commentId)
     : deleteCommentMemory(ctx.userId, commentId);
+}
+
+export async function reportComment(
+  ctx: RequestContext,
+  commentId: string,
+): Promise<ReportCommentResult> {
+  return ctx.supabase
+    ? reportCommentSupabase(ctx.supabase, ctx.userId, commentId)
+    : reportCommentMemory(ctx.userId, commentId);
 }

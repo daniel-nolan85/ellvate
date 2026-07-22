@@ -4,9 +4,19 @@ import {
   GET as getMissions,
   POST as postMission,
 } from '../../app/api/missions+api';
+import {
+  DELETE as deleteMissionRoute,
+  PATCH as patchMissionRoute,
+} from '../../app/api/missions/[id]/index+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
 import { memoryContext } from '../../src/backend/http';
-import { checkIn, createMission, getMissionsView } from '../../src/backend/missions';
+import {
+  checkIn,
+  createMission,
+  deleteMission,
+  getMissionsView,
+  updateMission,
+} from '../../src/backend/missions';
 import { computeProgress } from '../../src/backend/progress';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -263,6 +273,304 @@ describe('createMission', () => {
     });
 
     expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
+  });
+
+  test('stores uploaded images as mission media', async () => {
+    const result = await createMission(ctx(), {
+      ...validInput,
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'kayak.jpg' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.mission.media).toEqual([
+        { filename: 'kayak.jpg', url: 'data:image/jpeg;base64,b25l' },
+      ]);
+    }
+  });
+
+  test('a mission with no images has undefined media', async () => {
+    const result = await createMission(ctx(), validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.mission.media).toBeUndefined();
+    }
+  });
+});
+
+describe('updateMission', () => {
+  const editInput = {
+    description: 'Updated description.',
+    icon: 'Star',
+    scheduledFor: '2026-07-25',
+    stopsTotal: 2,
+    title: 'Updated Mission',
+    xp: 100,
+  };
+
+  test('the author can edit their own mission', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updateMission(ctx(), created.mission.id, editInput);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.mission).toMatchObject({
+      title: 'Updated Mission',
+      description: 'Updated description.',
+      xp: 100,
+      stopsTotal: 2,
+      icon: 'Star',
+    });
+  });
+
+  test('rejects edits from a user who does not own the mission', async () => {
+    const result = await updateMission(ctx(), 'mission-1', editInput);
+
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('returns not_found for an unknown mission', async () => {
+    const result = await updateMission(ctx('user-hoa'), 'mission-999', editInput);
+
+    expect(result).toMatchObject({ ok: false, code: 'mission_not_found' });
+  });
+
+  test('rejects invalid input', async () => {
+    const result = await updateMission(ctx('user-hoa'), 'mission-1', {
+      ...editInput,
+      title: '',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
+  });
+
+  test('keeps existing media while adding new uploads', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
+      ],
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updateMission(ctx(), created.mission.id, {
+      ...editInput,
+      existingMedia: [
+        { filename: 'one.jpg', url: 'data:image/jpeg;base64,b25l' },
+      ],
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,dHdv', filename: 'two.jpg' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.mission.media).toEqual([
+        { filename: 'one.jpg', url: 'data:image/jpeg;base64,b25l' },
+        { filename: 'two.jpg', url: 'data:image/jpeg;base64,dHdv' },
+      ]);
+    }
+  });
+
+  test('removes all media when the client omits existingMedia and newMedia', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
+      ],
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await updateMission(ctx(), created.mission.id, editInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.mission.media).toBeUndefined();
+    }
+  });
+});
+
+describe('deleteMission', () => {
+  test('the author can delete their own mission', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    expect(await deleteMission(ctx(), created.mission.id)).toBe(true);
+    expect(
+      (await getMissionsView(ctx())).missions.some(
+        (mission) => mission.id === created.mission.id,
+      ),
+    ).toBe(false);
+  });
+
+  test('returns false for a user who does not own the mission', async () => {
+    expect(await deleteMission(ctx(), 'mission-1')).toBe(false);
+    expect(
+      (await getMissionsView(ctx())).missions.some(
+        (mission) => mission.id === 'mission-1',
+      ),
+    ).toBe(true);
+  });
+
+  test('returns false for an unknown mission', async () => {
+    expect(await deleteMission(ctx('user-hoa'), 'mission-999')).toBe(false);
+  });
+});
+
+describe('PATCH /api/missions/:id', () => {
+  const patchMissionRequest = (id: string, body: unknown) =>
+    patchMissionRoute(
+      new Request(`http://localhost/api/missions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+      { id },
+    );
+
+  test('updates a mission owned by the demo user and returns 200', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await patchMissionRequest(created.mission.id, {
+      description: 'Updated description.',
+      icon: 'Star',
+      scheduledFor: '2026-07-25',
+      stopsTotal: 2,
+      title: 'Updated Mission',
+      xp: 100,
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      mission: { title: string; xp: number };
+    };
+    expect(body.mission).toMatchObject({ title: 'Updated Mission', xp: 100 });
+  });
+
+  test('returns 403 when editing someone else’s mission', async () => {
+    const response = await patchMissionRequest('mission-1', {
+      description: 'Updated description.',
+      icon: 'Star',
+      scheduledFor: '2026-07-25',
+      stopsTotal: 2,
+      title: 'Hijack',
+      xp: 100,
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      code: 'forbidden',
+      message: 'You can only edit your own missions.',
+    });
+  });
+
+  test('returns 404 for an unknown mission', async () => {
+    const response = await patchMissionRequest('mission-999', {
+      description: 'Updated description.',
+      icon: 'Star',
+      scheduledFor: '2026-07-25',
+      stopsTotal: 2,
+      title: 'Updated Mission',
+      xp: 100,
+    });
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/missions/:id', () => {
+  test('deletes a mission owned by the demo user and returns 200', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await deleteMissionRoute(
+      new Request(`http://localhost/api/missions/${created.mission.id}`, {
+        method: 'DELETE',
+      }),
+      { id: created.mission.id },
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  test('returns 404 when deleting someone else’s mission', async () => {
+    const response = await deleteMissionRoute(
+      new Request('http://localhost/api/missions/mission-1', {
+        method: 'DELETE',
+      }),
+      { id: 'mission-1' },
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  test('404s for an unknown mission', async () => {
+    const response = await deleteMissionRoute(
+      new Request('http://localhost/api/missions/mission-999', {
+        method: 'DELETE',
+      }),
+      { id: 'mission-999' },
+    );
+
+    expect(response.status).toBe(404);
   });
 });
 

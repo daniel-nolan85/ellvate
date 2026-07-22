@@ -14,6 +14,7 @@ export interface NotificationPrefs {
 
 export interface UserProfile {
   readonly userId: string;
+  readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly aiComfort: 'new' | 'casual' | 'power' | null;
@@ -23,6 +24,18 @@ export interface UserProfile {
 
 interface ProfileResponse {
   readonly profile: UserProfile;
+}
+
+interface MemberProfileResponse {
+  readonly profile: Pick<UserProfile, 'userId' | 'role' | 'interests' | 'avatarUrl'> & {
+    readonly name: string;
+  };
+  readonly stats: {
+    readonly level: number;
+    readonly xp: number;
+    readonly streakDays: number;
+    readonly missionsCompleted: number;
+  };
 }
 
 export interface ProfileStats {
@@ -37,11 +50,17 @@ interface MissionsResponse {
   readonly progress: ProfileStats;
 }
 
+export interface AvatarUploadInput {
+  readonly filename: string;
+  readonly dataUrl: string;
+}
+
 export interface ProfileUpdateInput {
   readonly name?: string;
   readonly role?: CommunityRole | null;
   readonly interests?: readonly string[];
   readonly notificationPrefs?: Partial<NotificationPrefs>;
+  readonly avatar?: AvatarUploadInput;
 }
 
 const profileKey = (userId: string | null) =>
@@ -59,6 +78,24 @@ export function useProfile() {
         signal,
       }),
     queryKey: profileKey(session.userId),
+  });
+}
+
+// A different user's public profile — role, interests, and public stats only,
+// never notification prefs or AI comfort, which stay private to the owner.
+export function useMemberProfile(userId: string) {
+  const session = useSession();
+
+  return useQuery({
+    enabled: Boolean(userId),
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<MemberProfileResponse>({
+        getAccessToken: session.getToken,
+        path: `/api/users/${userId}/profile`,
+        signal,
+      }),
+    queryKey: ['profile', 'member', userId],
   });
 }
 
@@ -94,7 +131,6 @@ export function useUpdateProfile() {
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
-      // A changed display name shows up on posts and the leaderboard.
       void queryClient.invalidateQueries({ queryKey: ['forum'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
     },

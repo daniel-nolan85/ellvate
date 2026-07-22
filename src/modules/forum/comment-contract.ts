@@ -1,6 +1,7 @@
 export interface CommentAuthor {
   readonly id: string;
   readonly name: string;
+  readonly avatarUrl: string | null;
 }
 
 export interface ForumComment {
@@ -49,6 +50,8 @@ const parseComment = (value: unknown, index: number): ForumComment => {
 
   return {
     author: {
+      avatarUrl:
+        typeof author.avatarUrl === 'string' ? author.avatarUrl : null,
       id: requiredString(author, 'id', `comments[${index}].author`),
       name: requiredString(author, 'name', `comments[${index}].author`),
     },

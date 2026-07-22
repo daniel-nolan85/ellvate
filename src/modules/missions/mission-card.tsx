@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import * as Haptics from 'expo-haptics';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -27,9 +27,10 @@ const STATUS_BADGE: Readonly<Record<
 
 interface MissionCardProps {
   readonly mission: Mission;
+  readonly onOpen?: (missionId: string) => void;
 }
 
-export function MissionCard({ mission }: MissionCardProps) {
+export function MissionCard({ mission, onOpen }: MissionCardProps) {
   const checkIn = useCheckIn();
   const [awardedXp, setAwardedXp] = useState<number | null>(null);
 
@@ -37,7 +38,8 @@ export function MissionCard({ mission }: MissionCardProps) {
   const locked = mission.status === 'locked';
   const badge = STATUS_BADGE[mission.status];
 
-  const handleCheckIn = () => {
+  const handleCheckIn = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
     void Haptics.selectionAsync().catch(() => undefined);
     checkIn.mutate(mission.id, {
       onSuccess: (result) => {
@@ -49,10 +51,13 @@ export function MissionCard({ mission }: MissionCardProps) {
   };
 
   return (
-    <View
+    <Pressable
+      accessibilityLabel={`Open mission: ${mission.title}`}
+      accessibilityRole="button"
       className={`gap-3 rounded-[20px] border border-line bg-canvas p-4 ${
         locked ? 'opacity-[0.55]' : ''
       }`}
+      onPress={() => onOpen?.(mission.id)}
     >
       <HStack className="items-center gap-3">
         <View
@@ -122,6 +127,6 @@ export function MissionCard({ mission }: MissionCardProps) {
           Nice — +{awardedXp} XP
         </Text>
       ) : null}
-    </View>
+    </Pressable>
   );
 }

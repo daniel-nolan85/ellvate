@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import type { MissionIcon, MissionStatus } from '@/src/backend/store';
 
@@ -8,22 +11,27 @@ import type {
   CheckInResult,
   CreateMissionResult,
   Mission,
+  MissionMedia,
   MissionsView,
+  MyMissionsPage,
+  UpdateMissionResult,
 } from './types';
 import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
 
 const MISSION_SELECT =
-  'id,title,description,scheduled_for,xp,stops_total,icon,position,locked_by_default';
+  'id,created_by,title,description,scheduled_for,xp,stops_total,icon,media,position,locked_by_default';
 
 interface MissionRow {
   readonly id: string;
+  readonly created_by: string;
   readonly title: string;
   readonly description: string;
   readonly scheduled_for: string | null;
   readonly xp: number;
   readonly stops_total: number;
   readonly icon: string;
+  readonly media: readonly MissionMedia[] | null;
   readonly position: number;
   readonly locked_by_default: boolean;
 }
@@ -40,6 +48,10 @@ interface UserRow {
   readonly missions_completed: number;
   readonly title: string;
 }
+
+type UploadMissionMediaResult =
+  | { readonly ok: true; readonly media: readonly MissionMedia[] }
+  | { readonly ok: false; readonly uploaded: readonly MissionMedia[] };
 
 // Mirrors the in-memory resolver: a locked entry stays locked, otherwise the
 // status is derived from stop progress so completion is never ambiguous.
@@ -60,13 +72,25 @@ const storedStatusFor = (
 ): MissionStatus =>
   entry ? entry.status : row.locked_by_default ? 'locked' : 'active';
 
+interface PersonLookup {
+  readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
 const toMissionView = (
   row: MissionRow,
   entry: ProgressRow | undefined,
+  nameById: ReadonlyMap<string, PersonLookup>,
 ): Mission => {
   const stopsDone = entry?.stops_done ?? 0;
+  const author = nameById.get(row.created_by);
   return {
     id: row.id,
+    author: {
+      avatarUrl: author?.avatarUrl ?? null,
+      id: row.created_by,
+      name: author?.name ?? 'Member',
+    },
     title: row.title,
     description: row.description,
     scheduledFor: row.scheduled_for,
@@ -75,8 +99,73 @@ const toMissionView = (
     stopsDone,
     stopsTotal: row.stops_total,
     icon: row.icon as MissionIcon,
+    media: row.media ?? undefined,
   };
 };
+
+// Looks up a single user's display name for use in toMissionView's nameById
+// map, used after create/update where only the acting user's name is needed.
+const nameMapFor = async (
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ReadonlyMap<string, PersonLookup>> => {
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .eq('id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(error, 'load mission author');
+  return new Map(
+    data
+      ? [
+          [
+            data.id as string,
+            {
+              avatarUrl: (data.avatar_url as string | null) ?? null,
+              name: data.name as string,
+            },
+          ],
+        ]
+      : [],
+  );
+};
+
+// Uploads each picked image to Supabase Storage under the mission's own id.
+// WHY: a failed upload is surfaced as `ok: false` (with whatever succeeded so
+// far in `uploaded`) rather than silently dropped — publishing a mission
+// that's missing images the user picked would misrepresent what got saved.
+const uploadMissionMedia = async (
+  supabase: SupabaseClient,
+  missionId: string,
+  input: unknown,
+): Promise<UploadMissionMediaResult> => {
+  const uploads = extractMediaUploads(input);
+  if (uploads.length === 0) {
+    return { media: [], ok: true };
+  }
+  const results = await Promise.all(
+    uploads.map(async (upload) => {
+      const url = await uploadDataUrl(
+        supabase,
+        upload.dataUrl,
+        upload.filename,
+        'missions',
+        missionId,
+      );
+      return url ? { filename: upload.filename, url } : null;
+    }),
+  );
+  const succeeded = results.filter(
+    (media): media is MissionMedia => media !== null,
+  );
+  if (succeeded.length !== results.length) {
+    return { ok: false, uploaded: succeeded };
+  }
+  return { media: succeeded, ok: true };
+};
+
+const MEDIA_UPLOAD_FAILED_MESSAGE =
+  'One or more images failed to upload. Please try again.';
 
 // A real Clerk user has no app_users row yet; create it before any owned write
 // so foreign keys resolve. RLS allows inserting only your own row.
@@ -129,9 +218,25 @@ export async function getMissionsViewSupabase(
 
   const userRow = await loadUserRow(supabase, userId);
 
+  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
+  const { data: authorRows, error: authorError } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .in('id', authorIds);
+  throwIfSupabaseError(authorError, 'load mission authors');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (authorRows ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
   return {
     missions: missionRows.map((row) =>
-      toMissionView(row, progressByMission.get(row.id)),
+      toMissionView(row, progressByMission.get(row.id), nameById),
     ),
     progress: buildProgress({
       xp: userRow?.xp ?? 0,
@@ -139,6 +244,81 @@ export async function getMissionsViewSupabase(
       missionsCompleted: userRow?.missions_completed ?? 0,
       title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
     }),
+  };
+}
+
+// Scoped to missions the caller created or completed — bounded by one user's
+// own activity rather than the whole community's mission list (unlike
+// getMissionsViewSupabase, which every screen but the activity hub needs).
+// "created by me" OR "completed by me" can't be expressed as a single
+// keyset-limited query, so this fetches both (each bounded by the caller's
+// own row count, not the community's) and paginates the merged result.
+export async function getMyMissionsViewSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MyMissionsPage> {
+  const [createdRes, myProgressRes] = await Promise.all([
+    supabase.from('missions').select(MISSION_SELECT).eq('created_by', userId),
+    supabase
+      .from('mission_progress')
+      .select('mission_id,stops_done,status')
+      .eq('user_id', userId),
+  ]);
+  throwIfSupabaseError(createdRes.error, 'load my missions');
+  throwIfSupabaseError(myProgressRes.error, 'load my mission progress');
+
+  const createdRows = (createdRes.data ?? []) as unknown as MissionRow[];
+  const myProgress = (myProgressRes.data ?? []) as unknown as ProgressRow[];
+  const completedIds = new Set(
+    myProgress
+      .filter((row) => row.status === 'done')
+      .map((row) => row.mission_id),
+  );
+  const createdIds = new Set(createdRows.map((row) => row.id));
+  const idsToFetch = [...completedIds].filter((id) => !createdIds.has(id));
+
+  let completedRows: readonly MissionRow[] = [];
+  if (idsToFetch.length > 0) {
+    const { data, error } = await supabase
+      .from('missions')
+      .select(MISSION_SELECT)
+      .in('id', idsToFetch);
+    throwIfSupabaseError(error, 'load completed missions');
+    completedRows = (data ?? []) as unknown as MissionRow[];
+  }
+
+  const missionRows = [...createdRows, ...completedRows];
+  const progressByMission = new Map(myProgress.map((row) => [row.mission_id, row]));
+
+  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
+  const { data: authorRows, error: authorError } = authorIds.length
+    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    : { data: [], error: null };
+  throwIfSupabaseError(authorError, 'load my mission authors');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (authorRows ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  const wrapped = missionRows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: String(row.position).padStart(10, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    missions: page.items.map((item) =>
+      toMissionView(item.row, progressByMission.get(item.row.id), nameById),
+    ),
+    nextCursor: page.nextCursor,
   };
 }
 
@@ -163,10 +343,11 @@ export async function createMissionSupabase(
   throwIfSupabaseError(lastRowError, 'load mission position');
   const position = ((lastRow as { position: number } | null)?.position ?? -1) + 1;
 
-  const { data, error } = await supabase
+  const missionId = `msn-${crypto.randomUUID()}`;
+  const { data: inserted, error: insertError } = await supabase
     .from('missions')
     .insert({
-      id: `msn-${crypto.randomUUID()}`,
+      id: missionId,
       created_by: userId,
       title: value.title,
       description: value.description,
@@ -179,11 +360,162 @@ export async function createMissionSupabase(
     })
     .select(MISSION_SELECT)
     .single();
-  throwIfSupabaseError(error, 'create mission');
-  if (!data) {
+  throwIfSupabaseError(insertError, 'create mission');
+  if (!inserted) {
     throw new Error('create mission: database returned no mission.');
   }
-  return { ok: true, mission: toMissionView(data as unknown as MissionRow, undefined) };
+  const insertedRow = inserted as unknown as MissionRow;
+  const nameById = await nameMapFor(supabase, userId);
+
+  const mediaResult = await uploadMissionMedia(supabase, missionId, input);
+  if (!mediaResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      mediaResult.uploaded.map((media) => media.url),
+    );
+    await supabase.from('missions').delete().eq('id', missionId);
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  if (mediaResult.media.length === 0) {
+    return { ok: true, mission: toMissionView(insertedRow, undefined, nameById) };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('missions')
+    .update({ media: mediaResult.media })
+    .eq('id', missionId)
+    .select(MISSION_SELECT)
+    .single();
+  throwIfSupabaseError(updateError, 'attach mission media');
+  return {
+    ok: true,
+    mission: toMissionView(
+      (updated as unknown as MissionRow) ?? insertedRow,
+      undefined,
+      nameById,
+    ),
+  };
+}
+
+export async function updateMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+  input: unknown,
+): Promise<UpdateMissionResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('missions')
+    .select('id,created_by,media')
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load mission');
+  if (!existing) {
+    return {
+      code: 'mission_not_found',
+      message: 'Mission not found.',
+      ok: false,
+    };
+  }
+  if (existing.created_by !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own missions.',
+      ok: false,
+    };
+  }
+  const validation = validateMissionInput(input);
+  if (!validation.ok) {
+    return validation;
+  }
+  const value = validation.value;
+  const keptMedia = extractExistingMedia(input);
+  const uploadResult = await uploadMissionMedia(supabase, missionId, input);
+  if (!uploadResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      uploadResult.uploaded.map((media) => media.url),
+    );
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  const media = [...keptMedia, ...uploadResult.media];
+
+  const { data, error } = await supabase
+    .from('missions')
+    .update({
+      title: value.title,
+      description: value.description,
+      scheduled_for: value.scheduledFor,
+      xp: value.xp,
+      stops_total: value.stopsTotal,
+      icon: value.icon,
+      media: media.length ? media : null,
+    })
+    .eq('id', missionId)
+    .select(MISSION_SELECT)
+    .single();
+  throwIfSupabaseError(error, 'update mission');
+  if (!data) {
+    throw new Error('update mission: database returned no mission.');
+  }
+
+  const previousMedia =
+    (existing.media as readonly MissionMedia[] | null) ?? [];
+  const keptUrls = new Set(keptMedia.map((item) => item.url));
+  const removedMedia = previousMedia.filter((item) => !keptUrls.has(item.url));
+  await removeStorageObjects(
+    supabase,
+    removedMedia.map((item) => item.url),
+  );
+
+  const row = data as unknown as MissionRow;
+  const { data: entryData, error: entryError } = await supabase
+    .from('mission_progress')
+    .select('mission_id,stops_done,status')
+    .eq('mission_id', missionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(entryError, 'load mission progress');
+  const entry = (entryData as ProgressRow | null) ?? undefined;
+  const nameById = await nameMapFor(supabase, userId);
+  return {
+    ok: true,
+    mission: toMissionView(row, entry, nameById),
+  };
+}
+
+export async function deleteMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+): Promise<boolean> {
+  const { data: existing, error: existingError } = await supabase
+    .from('missions')
+    .select('id,created_by,media')
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load mission');
+  if (!existing || existing.created_by !== userId) {
+    return false;
+  }
+  // WHY: clean up Storage before deleting the row — owner-scoped Storage RLS
+  // (see 0007) verifies ownership by looking the mission back up, so the row
+  // must still exist when the cleanup call runs.
+  const media = (existing.media as readonly MissionMedia[] | null) ?? [];
+  await removeStorageObjects(
+    supabase,
+    media.map((item) => item.url),
+  );
+  const { error } = await supabase.from('missions').delete().eq('id', missionId);
+  throwIfSupabaseError(error, 'delete mission');
+  return true;
 }
 
 export async function checkInSupabase(
@@ -278,8 +610,15 @@ export async function checkInSupabase(
     throwIfSupabaseError(userUpdateError, 'save mission user progress');
   }
 
+  const authorNameById = await nameMapFor(supabase, mission.created_by);
+  const author = authorNameById.get(mission.created_by);
   const missionView: Mission = {
     id: mission.id,
+    author: {
+      avatarUrl: author?.avatarUrl ?? null,
+      id: mission.created_by,
+      name: author?.name ?? 'Member',
+    },
     title: mission.title,
     description: mission.description,
     scheduledFor: mission.scheduled_for,
@@ -288,6 +627,7 @@ export async function checkInSupabase(
     stopsDone,
     stopsTotal: mission.stops_total,
     icon: mission.icon as MissionIcon,
+    media: mission.media ?? undefined,
   };
 
   return {

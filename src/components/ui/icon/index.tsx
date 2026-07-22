@@ -21,6 +21,7 @@ import {
   EyeOff,
   Globe,
   Heart,
+  Image,
   Link2,
   Lock,
   Mail,
@@ -75,7 +76,8 @@ export type AppIconName =
   | 'AlertCircle'
   | 'Link'
   | 'Eye'
-  | 'EyeOff';
+  | 'EyeOff'
+  | 'Image';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -112,6 +114,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Link: Link2,
   Eye,
   EyeOff,
+  Image,
 };
 
 Object.values(ICON_MAP).forEach((component) => {

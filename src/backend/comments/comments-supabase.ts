@@ -2,11 +2,27 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { Comment, CreateCommentResult } from './types';
+import type {
+  Comment,
+  CreateCommentResult,
+  MyComment,
+  ReportCommentResult,
+} from './types';
 import { validateCommentBody } from './validation';
 
 const COMMENT_SELECT =
-  'id,post_id,author_id,body,created_at,author:app_users!comments_author_id_fkey(id,name)';
+  'id,post_id,author_id,body,created_at,author:app_users!comments_author_id_fkey(id,name,avatar_url)';
+
+const MY_COMMENT_SELECT =
+  'id,post_id,body,created_at,post:posts!comments_post_id_fkey(title)';
+
+interface MyCommentRow {
+  readonly id: string;
+  readonly post_id: string;
+  readonly body: string;
+  readonly created_at: string;
+  readonly post: { readonly title: string } | null;
+}
 
 interface CommentRow {
   readonly id: string;
@@ -14,11 +30,19 @@ interface CommentRow {
   readonly author_id: string;
   readonly body: string;
   readonly created_at: string;
-  readonly author: { readonly id: string; readonly name: string } | null;
+  readonly author: {
+    readonly id: string;
+    readonly name: string;
+    readonly avatar_url: string | null;
+  } | null;
 }
 
 const toComment = (row: CommentRow): Comment => ({
-  author: { id: row.author_id, name: row.author?.name ?? 'Member' },
+  author: {
+    avatarUrl: row.author?.avatar_url ?? null,
+    id: row.author_id,
+    name: row.author?.name ?? 'Member',
+  },
   body: row.body,
   createdAt: row.created_at,
   id: row.id,
@@ -49,6 +73,25 @@ export async function listCommentsSupabase(
     .order('created_at', { ascending: true });
   throwIfSupabaseError(error, 'load comments');
   return (data as unknown as CommentRow[]).map(toComment);
+}
+
+export async function listMyCommentsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<readonly MyComment[]> {
+  const { data, error } = await supabase
+    .from('comments')
+    .select(MY_COMMENT_SELECT)
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false });
+  throwIfSupabaseError(error, 'load my comments');
+  return (data as unknown as MyCommentRow[]).map((row) => ({
+    body: row.body,
+    createdAt: row.created_at,
+    id: row.id,
+    postId: row.post_id,
+    postTitle: row.post?.title ?? 'a post',
+  }));
 }
 
 export async function createCommentSupabase(
@@ -96,4 +139,33 @@ export async function deleteCommentSupabase(
     .select('id');
   throwIfSupabaseError(error, 'delete comment');
   return Array.isArray(data) && data.length > 0;
+}
+
+export async function reportCommentSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  commentId: string,
+): Promise<ReportCommentResult> {
+  const { data: comment, error: commentError } = await supabase
+    .from('comments')
+    .select('id')
+    .eq('id', commentId)
+    .maybeSingle();
+  throwIfSupabaseError(commentError, 'load reported comment');
+  if (!comment) {
+    return { code: 'comment_not_found', message: 'Comment not found.', ok: false };
+  }
+
+  await ensureUser(supabase, userId);
+  // Idempotent: a unique (comment_id, reporter_id) constraint on
+  // comment_reports means a repeat report from the same user is a silent
+  // no-op, not an error.
+  const { error } = await supabase
+    .from('comment_reports')
+    .upsert(
+      { comment_id: commentId, reporter_id: userId },
+      { ignoreDuplicates: true, onConflict: 'comment_id,reporter_id' },
+    );
+  throwIfSupabaseError(error, 'report comment');
+  return { ok: true, reported: true };
 }

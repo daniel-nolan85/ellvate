@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { router } from 'expo-router';
+
 import { Avatar } from '@/src/components/ui/avatar';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Heading } from '@/src/components/ui/heading';
@@ -12,6 +14,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import {
@@ -32,11 +35,32 @@ const NOTIFICATION_ROWS: readonly {
   readonly key: keyof NotificationPrefs;
   readonly label: string;
   readonly hint: string;
+  readonly icon: AppIconName;
 }[] = [
-  { key: 'events', label: 'Events', hint: 'New events around the lake' },
-  { key: 'replies', label: 'Replies', hint: 'When someone answers your posts' },
-  { key: 'missions', label: 'Missions', hint: 'New missions and XP' },
-  { key: 'digest', label: 'Weekly digest', hint: 'A Sunday recap of the week' },
+  {
+    key: 'events',
+    label: 'Events',
+    hint: 'New events around the lake',
+    icon: 'CalendarDays',
+  },
+  {
+    key: 'replies',
+    label: 'Replies',
+    hint: 'When someone answers your posts',
+    icon: 'MessageCircle',
+  },
+  {
+    key: 'missions',
+    label: 'Missions',
+    hint: 'New missions and XP',
+    icon: 'Star',
+  },
+  {
+    key: 'digest',
+    label: 'Weekly digest',
+    hint: 'A Sunday recap of the week',
+    icon: 'Mail',
+  },
 ];
 
 function SectionTitle({ children }: { readonly children: string }) {
@@ -123,6 +147,19 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
     setEditing(true);
   };
 
+  const pickAvatar = async () => {
+    const asset = await pickAvatarImage();
+    if (!asset) {
+      return;
+    }
+    updateProfile.mutate({
+      avatar: {
+        dataUrl: `data:${asset.mimeType};base64,${asset.base64}`,
+        filename: asset.filename,
+      },
+    });
+  };
+
   const saveName = () => {
     const name = draftName.trim();
     if (!name) {
@@ -181,7 +218,26 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <VStack className="items-center px-5 pb-2 pt-3" space="sm">
-          <Avatar name={displayName} size="xl" />
+          <Pressable
+            accessibilityLabel="Change your photo"
+            accessibilityRole="button"
+            className="relative"
+            disabled={updateProfile.isPending}
+            onPress={pickAvatar}
+          >
+            <Avatar
+              name={displayName}
+              size="2xl"
+              src={profile.data?.profile.avatarUrl ?? undefined}
+            />
+            <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-canvas bg-primary">
+              {updateProfile.isPending ? (
+                <Spinner size="small" />
+              ) : (
+                <Icon color="#fff" name="Edit" size={14} />
+              )}
+            </View>
+          </Pressable>
           <VStack className="items-center" space="xs">
             <Heading className="font-inter-bold" size="lg">
               {displayName}
@@ -227,6 +283,11 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
           label="Interests"
           value={`${profile.data?.profile.interests.length ?? 0} picked`}
         />
+        <Row
+          icon="Edit"
+          label="My Activity"
+          onPress={() => router.push('/activity')}
+        />
 
         <SectionTitle>Notifications</SectionTitle>
         {profile.isPending || !prefs ? (
@@ -236,7 +297,7 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
         ) : (
           NOTIFICATION_ROWS.map((row) => (
             <Row
-              icon="Bell"
+              icon={row.icon}
               key={row.key}
               label={row.label}
               right={

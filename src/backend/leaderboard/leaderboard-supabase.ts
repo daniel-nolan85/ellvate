@@ -4,11 +4,13 @@ import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type { LeaderboardEntry, LeaderboardResult } from './types';
 
-const LEADERBOARD_SELECT = 'id,name,xp,missions_completed,previous_rank';
+const LEADERBOARD_SELECT =
+  'id,name,avatar_url,xp,missions_completed,previous_rank';
 
 interface LeaderRow {
   readonly id: string;
   readonly name: string;
+  readonly avatar_url: string | null;
   readonly xp: number;
   readonly missions_completed: number;
   readonly previous_rank: number | null;
@@ -20,7 +22,7 @@ const toEntry = (
   requestingUserId: string,
 ): LeaderboardEntry => ({
   rank,
-  user: { id: row.id, name: row.name },
+  user: { avatarUrl: row.avatar_url, id: row.id, name: row.name },
   isMe: row.id === requestingUserId,
   missionsCompleted: row.missions_completed,
   xp: row.xp,

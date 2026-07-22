@@ -18,7 +18,7 @@ const toEntry = (
   requestingUserId: string,
 ): LeaderboardEntry => ({
   rank,
-  user: { id: user.id, name: user.name },
+  user: { avatarUrl: user.avatarUrl, id: user.id, name: user.name },
   isMe: user.id === requestingUserId,
   missionsCompleted: user.missionsCompleted,
   xp: user.xp,

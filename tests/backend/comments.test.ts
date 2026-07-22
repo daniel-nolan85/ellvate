@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { DELETE as deleteRoute } from '../../app/api/comments/[id]+api';
+import { DELETE as deleteRoute } from '../../app/api/comments/[id]/index+api';
+import { POST as reportRoute } from '../../app/api/comments/[id]/report+api';
 import {
   GET as getComments,
   POST as postComment,
@@ -9,6 +10,7 @@ import {
   createComment,
   deleteComment,
   listComments,
+  reportComment,
 } from '../../src/backend/comments';
 import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
@@ -47,6 +49,7 @@ describe('listComments', () => {
       'second',
     ]);
     expect(comments[comments.length - 1]?.author).toEqual({
+      avatarUrl: null,
       id: 'user-mia',
       name: 'Mia Lake',
     });
@@ -111,6 +114,50 @@ describe('deleteComment', () => {
   });
 });
 
+describe('reportComment', () => {
+  test('reports an existing comment', async () => {
+    const created = await createComment(ctx(), 'post-1', { body: 'mine' });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const result = await reportComment(ctx('user-mia'), created.comment.id);
+
+    expect(result).toEqual({ ok: true, reported: true });
+    expect(
+      getState().commentReports.some(
+        (report) =>
+          report.commentId === created.comment.id &&
+          report.reporterId === 'user-mia',
+      ),
+    ).toBe(true);
+  });
+
+  test('is idempotent — reporting the same comment twice records one report', async () => {
+    const created = await createComment(ctx(), 'post-1', { body: 'mine' });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    await reportComment(ctx('user-mia'), created.comment.id);
+    await reportComment(ctx('user-mia'), created.comment.id);
+
+    expect(
+      getState().commentReports.filter(
+        (report) =>
+          report.commentId === created.comment.id &&
+          report.reporterId === 'user-mia',
+      ),
+    ).toHaveLength(1);
+  });
+
+  test('rejects reporting an unknown comment', async () => {
+    const result = await reportComment(ctx(), 'comment-nope');
+
+    expect(result).toMatchObject({ ok: false, code: 'comment_not_found' });
+  });
+});
+
 describe('comment routes', () => {
   test('GET returns { comments }; POST creates 201; DELETE removes', async () => {
     const created = await postComment(
@@ -132,6 +179,14 @@ describe('comment routes', () => {
       comments: readonly { id: string }[];
     };
     expect(comments[comments.length - 1]?.id).toBe(comment.id);
+
+    const reported = await reportRoute(
+      new Request(`http://localhost/api/comments/${comment.id}/report`, {
+        method: 'POST',
+      }),
+      { id: comment.id },
+    );
+    expect(reported.status).toBe(200);
 
     const removed = await deleteRoute(
       new Request(`http://localhost/api/comments/${comment.id}`, {

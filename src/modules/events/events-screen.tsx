@@ -20,9 +20,11 @@ import { useCreateEvent, useEventsView, useToggleJoin } from './use-events';
 import type { EventsView } from './events-types';
 
 function EventsBody({
+  onOpenEvent,
   onToggleJoin,
   view,
 }: {
+  readonly onOpenEvent?: (eventId: string) => void;
   readonly onToggleJoin: (eventId: string) => void;
   readonly view: EventsView;
 }) {
@@ -41,7 +43,11 @@ function EventsBody({
         selectedDate={selectedDate}
       />
       {featured ? (
-        <FeaturedEventCard event={featured} onToggleJoin={onToggleJoin} />
+        <FeaturedEventCard
+          event={featured}
+          onOpen={onOpenEvent}
+          onToggleJoin={onToggleJoin}
+        />
       ) : null}
       <VStack className="px-5 pt-1" space="xs">
         <Text className="py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
@@ -56,7 +62,12 @@ function EventsBody({
         ) : (
           <VStack space="sm">
             {rest.map((event) => (
-              <EventRow event={event} key={event.id} onToggleJoin={onToggleJoin} />
+              <EventRow
+                event={event}
+                key={event.id}
+                onOpen={onOpenEvent}
+                onToggleJoin={onToggleJoin}
+              />
             ))}
           </VStack>
         )}
@@ -79,7 +90,11 @@ function AddButton({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-export function EventsScreen() {
+interface EventsScreenProps {
+  readonly onOpenEvent?: (eventId: string) => void;
+}
+
+export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   const eventsView = useEventsView();
   const toggleJoin = useToggleJoin();
   const createEvent = useCreateEvent();
@@ -129,7 +144,11 @@ export function EventsScreen() {
               </Button>
             </VStack>
           ) : (
-            <EventsBody onToggleJoin={handleToggleJoin} view={eventsView.data} />
+            <EventsBody
+              onOpenEvent={onOpenEvent}
+              onToggleJoin={handleToggleJoin}
+              view={eventsView.data}
+            />
           )}
         </VStack>
       </ScrollView>
@@ -139,10 +158,18 @@ export function EventsScreen() {
           <EventComposer
             isSubmitting={createEvent.isPending}
             onDismiss={() => setComposing(false)}
-            onSubmit={(input) =>
-              createEvent.mutate(input, {
-                onSuccess: () => setComposing(false),
-              })
+            onSubmit={(draft) =>
+              createEvent.mutate(
+                {
+                  date: draft.date,
+                  newMedia: draft.newMedia,
+                  place: draft.place,
+                  tag: draft.tag,
+                  time: draft.time,
+                  title: draft.title,
+                },
+                { onSuccess: () => setComposing(false) },
+              )
             }
           />
         ) : null}

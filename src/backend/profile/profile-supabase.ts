@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { extractAvatarUpload } from '@/src/backend/media';
 import type {
   AiComfortLevel,
   CommunityRole,
   NotificationPrefs,
 } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import { ONBOARDING_MIN_INTERESTS, WELCOME_XP } from './profile';
 import type { ProfileResult, UpdateProfileResult, UserProfile } from './profile';
@@ -13,9 +15,10 @@ import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
 
 const PROFILE_SELECT =
-  'role,interests,ai_comfort,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at';
+  'avatar_url,role,interests,ai_comfort,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at';
 
 interface AppUserProfileRow {
+  readonly avatar_url: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly ai_comfort: AiComfortLevel | null;
@@ -31,6 +34,7 @@ const toUserProfile = (
   row: AppUserProfileRow,
 ): UserProfile => ({
   userId,
+  avatarUrl: row.avatar_url,
   role: row.role,
   interests: row.interests,
   aiComfort: row.ai_comfort,
@@ -100,6 +104,7 @@ const mergedRow = (
       ? new Date().toISOString()
       : current.onboarded_at;
   return {
+    avatar_url: current.avatar_url,
     role,
     interests,
     ai_comfort: aiComfort,
@@ -139,6 +144,23 @@ export async function updateProfileSupabase(
     ...next,
     ...(validation.update.name ? { name: validation.update.name } : {}),
   };
+
+  const avatarUpload = extractAvatarUpload(input);
+  let replacedAvatarUrl: string | null = null;
+  if (avatarUpload) {
+    const avatarUrl = await uploadDataUrl(
+      supabase,
+      avatarUpload.dataUrl,
+      avatarUpload.filename,
+      'avatars',
+      userId,
+    );
+    if (avatarUrl) {
+      payload = { ...payload, avatar_url: avatarUrl };
+      replacedAvatarUrl = current.avatar_url;
+    }
+  }
+
   if (justOnboarded) {
     const { data: xpRow, error: xpError } = await supabase
       .from('app_users')
@@ -161,6 +183,9 @@ export async function updateProfileSupabase(
   throwIfSupabaseError(error, 'update profile');
   if (!data) {
     throw new Error('update profile: database returned no profile.');
+  }
+  if (replacedAvatarUrl) {
+    await removeStorageObjects(supabase, [replacedAvatarUrl]);
   }
   return {
     ok: true,

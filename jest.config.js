@@ -11,5 +11,6 @@ module.exports = {
   testMatch: [
     '<rootDir>/tests/components/**/*.test.tsx',
     '<rootDir>/src/modules/**/*.test.tsx',
+    '<rootDir>/src/components/**/*.test.tsx',
   ],
 };

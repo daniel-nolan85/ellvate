@@ -1,0 +1,30 @@
+import { createEventComment, listEventComments } from '@/src/backend/event-comments';
+import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
+
+export async function GET(
+  request: Request,
+  { id }: { id: string },
+): Promise<Response> {
+  return withRequestContext(request, async (ctx) =>
+    jsonOk({ comments: await listEventComments(ctx, id) }),
+  );
+}
+
+export async function POST(
+  request: Request,
+  { id }: { id: string },
+): Promise<Response> {
+  return withRequestContext(request, async (ctx) => {
+    const body: unknown = await request.json().catch(() => null);
+    const result = await createEventComment(ctx, id, body);
+
+    if (!result.ok) {
+      return jsonError(
+        result.code === 'event_not_found' ? 404 : 400,
+        result.code,
+        result.message,
+      );
+    }
+    return jsonOk({ comment: result.comment }, { status: 201 });
+  });
+}

@@ -15,6 +15,7 @@ import type { CommunityEvent } from './events-types';
 interface FeaturedEventCardProps {
   readonly event: CommunityEvent;
   readonly onToggleJoin: (eventId: string) => void;
+  readonly onOpen?: (eventId: string) => void;
 }
 
 const formatDayLabel = (dayLabel: string) =>
@@ -42,10 +43,16 @@ function IndigoGlow() {
 
 export function FeaturedEventCard({
   event,
+  onOpen,
   onToggleJoin,
 }: FeaturedEventCardProps) {
   return (
-    <Box className="mx-5 mt-1 overflow-hidden rounded-[24px] bg-primary p-[22px]">
+    <Pressable
+      accessibilityLabel={`Open event: ${event.title}`}
+      accessibilityRole="button"
+      className="mx-5 mt-1 overflow-hidden rounded-[24px] bg-primary p-[22px]"
+      onPress={() => onOpen?.(event.id)}
+    >
       <IndigoGlow />
       <VStack space="md">
         <HStack className="items-center" space="xs">
@@ -86,7 +93,7 @@ export function FeaturedEventCard({
                 }`}
                 key={attendee.id}
               >
-                <Avatar name={attendee.name} size="xs" />
+                <Avatar name={attendee.name} size="xs" src={attendee.avatarUrl ?? undefined} />
               </Box>
             ))}
           </HStack>
@@ -100,7 +107,10 @@ export function FeaturedEventCard({
                 ? 'bg-[rgba(250,250,250,0.14)]'
                 : 'bg-primary-foreground'
             }`}
-            onPress={() => onToggleJoin(event.id)}
+            onPress={(pressEvent) => {
+              pressEvent.stopPropagation();
+              onToggleJoin(event.id);
+            }}
           >
             <Text
               className={`font-inter-semibold text-[13px] leading-[16px] ${
@@ -112,6 +122,6 @@ export function FeaturedEventCard({
           </Pressable>
         </HStack>
       </VStack>
-    </Box>
+    </Pressable>
   );
 }

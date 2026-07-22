@@ -62,6 +62,8 @@ const seedUser = ({
   previousRank,
   title: 'LAKE EXPLORER',
   profile: emptyProfile(),
+  mutedUserIds: [],
+  avatarUrl: null,
 });
 
 const seedUsers = (): readonly StoredUser[] => [
@@ -241,6 +243,7 @@ const seedPosts = (
 const seedEvents = (): readonly StoredEvent[] => [
   {
     id: 'event-1',
+    authorId: 'user-hoa',
     startsAt: '2026-07-18T18:30:00.000Z',
     timeLabel: '6:30 PM',
     dayLabel: 'FRI',
@@ -255,6 +258,7 @@ const seedEvents = (): readonly StoredEvent[] => [
   },
   {
     id: 'event-2',
+    authorId: 'user-mia',
     startsAt: '2026-07-19T09:00:00.000Z',
     timeLabel: '9:00 AM',
     dayLabel: 'SAT',
@@ -269,6 +273,7 @@ const seedEvents = (): readonly StoredEvent[] => [
   },
   {
     id: 'event-3',
+    authorId: 'user-andre',
     startsAt: '2026-07-20T17:45:00.000Z',
     timeLabel: '5:45 PM',
     dayLabel: 'SUN',
@@ -283,6 +288,7 @@ const seedEvents = (): readonly StoredEvent[] => [
   },
   {
     id: 'event-4',
+    authorId: 'user-jordan',
     startsAt: '2026-07-23T08:00:00.000Z',
     timeLabel: '8:00 AM',
     dayLabel: 'WED',
@@ -300,6 +306,7 @@ const seedEvents = (): readonly StoredEvent[] => [
 const seedMissions = (): readonly StoredMission[] => [
   {
     id: 'mission-1',
+    authorId: 'user-hoa',
     title: 'Sunrise at the Marina',
     description: 'Check in at Village Marina before 8 AM.',
     scheduledFor: '2026-07-14',
@@ -312,6 +319,7 @@ const seedMissions = (): readonly StoredMission[] => [
   },
   {
     id: 'mission-2',
+    authorId: 'user-hoa',
     title: 'Trail Trekker',
     description: 'Complete the 3-mile lakeside loop.',
     scheduledFor: '2026-07-15',
@@ -324,6 +332,7 @@ const seedMissions = (): readonly StoredMission[] => [
   },
   {
     id: 'mission-3',
+    authorId: 'user-hoa',
     title: 'Taste of the Village',
     description: 'Visit 3 different lakeside eateries.',
     scheduledFor: '2026-07-16',
@@ -336,6 +345,7 @@ const seedMissions = (): readonly StoredMission[] => [
   },
   {
     id: 'mission-4',
+    authorId: 'user-hoa',
     title: 'Fountain Night Owl',
     description: 'Attend a Friday fountain show.',
     scheduledFor: '2026-07-18',
@@ -373,8 +383,13 @@ export const createSeedState = (): StoreState => {
     ],
     posts: seedPosts(comments),
     comments,
+    postReports: [],
+    commentReports: [],
     events: seedEvents(),
+    eventComments: [],
+    eventCommentReports: [],
     missions: seedMissions(),
+    notifications: [],
     users: seedUsers(),
     week: seedWeek(),
   };
