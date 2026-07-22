@@ -2,11 +2,13 @@ import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
   createEventSupabase,
   deleteEventSupabase,
   getEventsViewSupabase,
+  getMyEventsViewSupabase,
   toggleJoinSupabase,
   updateEventSupabase,
 } from './events-supabase';
@@ -15,10 +17,15 @@ import type {
   CreateEventResult,
   EventsView,
   JoinResult,
+  MyEventsOptions,
+  MyEventsPage,
   PersonRef,
   UpdateEventResult,
 } from './types';
 import { validateEventInput } from './validation';
+
+export const DEFAULT_MY_EVENTS_PAGE_SIZE = 20;
+export const MAX_MY_EVENTS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -81,6 +88,28 @@ function getEventsViewMemory(userId: string): EventsView {
     events: [...events]
       .sort(byFeaturedThenStartsAt)
       .map((event) => toCommunityEvent(event, userId, users)),
+  };
+}
+
+// Scoped to events the caller created or joined — bounded by one user's own
+// activity rather than the whole community's event list (unlike
+// getEventsViewMemory, which every screen but the activity hub needs).
+function getMyEventsViewMemory(
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): MyEventsPage {
+  const { events, users } = getState();
+  const mine = events
+    .filter(
+      (event) => event.authorId === userId || event.joinedBy.includes(userId),
+    )
+    .map((event) => ({ event, id: event.id, sortKey: event.startsAt }));
+  const page = paginateInMemory(mine, limit, cursor);
+
+  return {
+    events: page.items.map((item) => toCommunityEvent(item.event, userId, users)),
+    nextCursor: page.nextCursor,
   };
 }
 
@@ -237,6 +266,20 @@ export async function getEventsView(ctx: RequestContext): Promise<EventsView> {
   return ctx.supabase
     ? getEventsViewSupabase(ctx.supabase, ctx.userId)
     : getEventsViewMemory(ctx.userId);
+}
+
+export async function getMyEventsView(
+  ctx: RequestContext,
+  options?: MyEventsOptions,
+): Promise<MyEventsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_MY_EVENTS_PAGE_SIZE),
+    MAX_MY_EVENTS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? getMyEventsViewSupabase(ctx.supabase, ctx.userId, limit, cursor)
+    : getMyEventsViewMemory(ctx.userId, limit, cursor);
 }
 
 export async function createEvent(

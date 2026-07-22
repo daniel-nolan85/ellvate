@@ -1,7 +1,7 @@
 export { checkIn } from './check-in';
 export { createMission } from './create';
 export { deleteMission } from './delete';
-export { getMissionsView } from './missions-view';
+export { getMissionsView, getMyMissionsView } from './missions-view';
 export { updateMission } from './update';
 export { buildUserProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 export type {
@@ -14,6 +14,8 @@ export type {
   Mission,
   MissionMedia,
   MissionsView,
+  MyMissionsOptions,
+  MyMissionsPage,
   UpdateMissionResult,
   UserProgress,
 } from './types';

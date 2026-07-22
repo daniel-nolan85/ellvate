@@ -7,10 +7,12 @@ import {
   type StoredPost,
   type StoredUser,
 } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
   createPostSupabase,
   deletePostSupabase,
+  getMyPostsSupabase,
   listPostsSupabase,
   toggleLikeSupabase,
   updatePostSupabase,
@@ -19,14 +21,20 @@ import type {
   CreatePostResult,
   ForumPost,
   LikeResult,
+  MyPostsOptions,
+  MyPostsPage,
   PersonRef,
   UpdatePostResult,
 } from './types';
+
 import {
   extractExistingMedia,
   extractMediaUploads,
   validatePostInput,
 } from './validation';
+
+export const DEFAULT_MY_POSTS_PAGE_SIZE = 20;
+export const MAX_MY_POSTS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -78,6 +86,26 @@ function listPostsMemory(userId: string, forum?: string): readonly ForumPost[] {
   return [...filtered]
     .sort(byPinnedThenNewest)
     .map((post) => toForumPost(post, state.users, userId));
+}
+
+// Scoped to posts the caller authored — bounded by one user's own activity
+// rather than the whole forum feed (unlike listPostsMemory, which every
+// screen but the activity hub needs).
+function getMyPostsMemory(
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): MyPostsPage {
+  const state = getState();
+  const mine = state.posts
+    .filter((post) => post.authorId === userId)
+    .map((post) => ({ id: post.id, post, sortKey: post.createdAt }));
+  const page = paginateInMemory(mine, limit, cursor);
+
+  return {
+    nextCursor: page.nextCursor,
+    posts: page.items.map((item) => toForumPost(item.post, state.users, userId)),
+  };
 }
 
 // WHY: seed timestamps are anchored at SEED_NOW_ISO, which may be ahead of
@@ -243,6 +271,20 @@ export async function listPosts(
   return ctx.supabase
     ? listPostsSupabase(ctx.supabase, ctx.userId, forum)
     : listPostsMemory(ctx.userId, forum);
+}
+
+export async function getMyPosts(
+  ctx: RequestContext,
+  options?: MyPostsOptions,
+): Promise<MyPostsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_MY_POSTS_PAGE_SIZE),
+    MAX_MY_POSTS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? getMyPostsSupabase(ctx.supabase, ctx.userId, limit, cursor)
+    : getMyPostsMemory(ctx.userId, limit, cursor);
 }
 
 export async function createPost(

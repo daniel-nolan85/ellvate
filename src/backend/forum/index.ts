@@ -1,6 +1,7 @@
 export {
   createPost,
   deletePost,
+  getMyPosts,
   listPosts,
   toggleLike,
   updatePost,
@@ -11,6 +12,8 @@ export type {
   ForumPost,
   LikeResult,
   Media,
+  MyPostsOptions,
+  MyPostsPage,
   PersonRef,
   UpdatePostResult,
 } from './types';

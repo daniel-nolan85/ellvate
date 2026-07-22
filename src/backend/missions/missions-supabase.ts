@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
@@ -12,6 +13,7 @@ import type {
   Mission,
   MissionMedia,
   MissionsView,
+  MyMissionsPage,
   UpdateMissionResult,
 } from './types';
 import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
@@ -245,6 +247,81 @@ export async function getMissionsViewSupabase(
   };
 }
 
+// Scoped to missions the caller created or completed — bounded by one user's
+// own activity rather than the whole community's mission list (unlike
+// getMissionsViewSupabase, which every screen but the activity hub needs).
+// "created by me" OR "completed by me" can't be expressed as a single
+// keyset-limited query, so this fetches both (each bounded by the caller's
+// own row count, not the community's) and paginates the merged result.
+export async function getMyMissionsViewSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MyMissionsPage> {
+  const [createdRes, myProgressRes] = await Promise.all([
+    supabase.from('missions').select(MISSION_SELECT).eq('created_by', userId),
+    supabase
+      .from('mission_progress')
+      .select('mission_id,stops_done,status')
+      .eq('user_id', userId),
+  ]);
+  throwIfSupabaseError(createdRes.error, 'load my missions');
+  throwIfSupabaseError(myProgressRes.error, 'load my mission progress');
+
+  const createdRows = (createdRes.data ?? []) as unknown as MissionRow[];
+  const myProgress = (myProgressRes.data ?? []) as unknown as ProgressRow[];
+  const completedIds = new Set(
+    myProgress
+      .filter((row) => row.status === 'done')
+      .map((row) => row.mission_id),
+  );
+  const createdIds = new Set(createdRows.map((row) => row.id));
+  const idsToFetch = [...completedIds].filter((id) => !createdIds.has(id));
+
+  let completedRows: readonly MissionRow[] = [];
+  if (idsToFetch.length > 0) {
+    const { data, error } = await supabase
+      .from('missions')
+      .select(MISSION_SELECT)
+      .in('id', idsToFetch);
+    throwIfSupabaseError(error, 'load completed missions');
+    completedRows = (data ?? []) as unknown as MissionRow[];
+  }
+
+  const missionRows = [...createdRows, ...completedRows];
+  const progressByMission = new Map(myProgress.map((row) => [row.mission_id, row]));
+
+  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
+  const { data: authorRows, error: authorError } = authorIds.length
+    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    : { data: [], error: null };
+  throwIfSupabaseError(authorError, 'load my mission authors');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (authorRows ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  const wrapped = missionRows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: String(row.position).padStart(10, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    missions: page.items.map((item) =>
+      toMissionView(item.row, progressByMission.get(item.row.id), nameById),
+    ),
+    nextCursor: page.nextCursor,
+  };
+}
+
 export async function createMissionSupabase(
   supabase: SupabaseClient,
   userId: string,
@@ -428,13 +505,16 @@ export async function deleteMissionSupabase(
   if (!existing || existing.created_by !== userId) {
     return false;
   }
-  const { error } = await supabase.from('missions').delete().eq('id', missionId);
-  throwIfSupabaseError(error, 'delete mission');
+  // WHY: clean up Storage before deleting the row — owner-scoped Storage RLS
+  // (see 0007) verifies ownership by looking the mission back up, so the row
+  // must still exist when the cleanup call runs.
   const media = (existing.media as readonly MissionMedia[] | null) ?? [];
   await removeStorageObjects(
     supabase,
     media.map((item) => item.url),
   );
+  const { error } = await supabase.from('missions').delete().eq('id', missionId);
+  throwIfSupabaseError(error, 'delete mission');
   return true;
 }
 

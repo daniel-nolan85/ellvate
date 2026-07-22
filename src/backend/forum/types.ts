@@ -48,3 +48,13 @@ export interface LikeResult {
   readonly likes: number;
   readonly liked: boolean;
 }
+
+export interface MyPostsPage {
+  readonly posts: readonly ForumPost[];
+  readonly nextCursor: string | null;
+}
+
+export interface MyPostsOptions {
+  readonly limit?: number;
+  readonly cursor?: string | null;
+}

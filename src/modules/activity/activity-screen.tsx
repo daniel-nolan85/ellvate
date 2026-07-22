@@ -16,14 +16,14 @@ import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import {
   PostCard,
-  useForumPosts,
   useMyComments,
+  useMyPosts,
   useToggleLike,
   type ForumPost,
   type MyComment,
 } from '@/src/modules/forum';
-import { useEventsView, type CommunityEvent } from '@/src/modules/events';
-import { MissionCard, useMissionsView, type Mission } from '@/src/modules/missions';
+import { useMyEventsView, type CommunityEvent } from '@/src/modules/events';
+import { MissionCard, useMyMissionsView, type Mission } from '@/src/modules/missions';
 import { useSession } from '@/src/platform/session';
 
 interface ActivityScreenProps {
@@ -131,6 +131,31 @@ function EmptyHint({ label }: { readonly label: string }) {
   return <Text className="px-5 pb-2 text-[13px] text-text-muted">{label}</Text>;
 }
 
+function LoadMoreRow({
+  isLoading,
+  onPress,
+}: {
+  readonly isLoading: boolean;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      className="items-center py-3"
+      disabled={isLoading}
+      onPress={onPress}
+    >
+      {isLoading ? (
+        <Spinner size="small" />
+      ) : (
+        <Text className="font-inter-semibold text-[13px] text-indigo">
+          Load more
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
 function ActivityRow({
   kind,
   label,
@@ -230,10 +255,13 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
 
-  const posts = useForumPosts('All');
+  // Each of these is already scoped server-side to the caller's own posts /
+  // events / missions (created or joined/completed) and paginated — not the
+  // whole community's feed filtered client-side.
+  const posts = useMyPosts();
   const comments = useMyComments();
-  const events = useEventsView();
-  const missions = useMissionsView();
+  const events = useMyEventsView();
+  const missions = useMyMissionsView();
   const toggleLike = useToggleLike();
 
   const [filter, setFilter] = useState<ActivityFilter>('all');
@@ -243,13 +271,24 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
 
   const myPosts = useMemo(
     (): readonly ForumPost[] =>
-      posts.data?.posts.filter((post) => post.author.id === userId) ?? [],
-    [posts.data, userId],
+      posts.data?.pages.flatMap((page) => page.posts) ?? [],
+    [posts.data],
   );
   const myComments = useMemo(
     (): readonly MyComment[] => comments.data ?? [],
     [comments.data],
   );
+  const myEvents = useMemo(
+    (): readonly CommunityEvent[] =>
+      events.data?.pages.flatMap((page) => page.events) ?? [],
+    [events.data],
+  );
+  const myMissions = useMemo(
+    (): readonly Mission[] =>
+      missions.data?.pages.flatMap((page) => page.missions) ?? [],
+    [missions.data],
+  );
+
   const myPostItems = useMemo((): readonly PostActivityItem[] => {
     const created = myPosts.map(
       (post): PostActivityItem => ({
@@ -275,30 +314,28 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
       (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
     );
   }, [myPosts, myComments]);
-  const myEventItems = useMemo((): readonly EventActivityItem[] => {
-    const all = events.data?.events ?? [];
-    return all
-      .filter((event) => event.author.id === userId || event.joined)
-      .map(
+  const myEventItems = useMemo(
+    (): readonly EventActivityItem[] =>
+      myEvents.map(
         (event): EventActivityItem => ({
           event,
           going: event.author.id !== userId && event.joined,
           key: event.id,
         }),
-      );
-  }, [events.data, userId]);
-  const myMissionItems = useMemo((): readonly MissionActivityItem[] => {
-    const all = missions.data?.missions ?? [];
-    return all
-      .filter((mission) => mission.author.id === userId || mission.status === 'done')
-      .map(
+      ),
+    [myEvents, userId],
+  );
+  const myMissionItems = useMemo(
+    (): readonly MissionActivityItem[] =>
+      myMissions.map(
         (mission): MissionActivityItem => ({
           completed: mission.status === 'done',
           key: mission.id,
           mission,
         }),
-      );
-  }, [missions.data, userId]);
+      ),
+    [myMissions],
+  );
 
   const isPending =
     posts.isPending || comments.isPending || events.isPending || missions.isPending;
@@ -367,6 +404,12 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
                     />
                   ))
                 )}
+                {posts.hasNextPage ? (
+                  <LoadMoreRow
+                    isLoading={posts.isFetchingNextPage}
+                    onPress={() => void posts.fetchNextPage()}
+                  />
+                ) : null}
               </>
             ) : null}
 
@@ -387,6 +430,12 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
                     />
                   ))
                 )}
+                {events.hasNextPage ? (
+                  <LoadMoreRow
+                    isLoading={events.isFetchingNextPage}
+                    onPress={() => void events.fetchNextPage()}
+                  />
+                ) : null}
               </>
             ) : null}
 
@@ -411,6 +460,12 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
                     />
                   ))
                 )}
+                {missions.hasNextPage ? (
+                  <LoadMoreRow
+                    isLoading={missions.isFetchingNextPage}
+                    onPress={() => void missions.fetchNextPage()}
+                  />
+                ) : null}
               </>
             ) : null}
           </ScrollView>

@@ -1,7 +1,12 @@
 export {
+  countUnreadNotifications,
   createNotificationMemory,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from './notifications';
-export type { Notification } from './types';
+export type {
+  ListNotificationsOptions,
+  Notification,
+  NotificationsPage,
+} from './types';

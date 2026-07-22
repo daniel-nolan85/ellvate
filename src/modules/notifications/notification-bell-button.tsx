@@ -6,15 +6,13 @@ import { Box } from '@/src/components/ui/box';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 
-import { useNotifications } from './use-notifications';
+import { useUnreadNotificationsCount } from './use-notifications';
 
 // A persistent entry point to the notifications inbox, shown on every screen
 // title alongside the profile avatar — mirrors ProfileAvatarButton's role.
 export function NotificationBellButton() {
-  const notifications = useNotifications();
-  const unreadCount =
-    notifications.data?.notifications.filter((notification) => !notification.readAt)
-      .length ?? 0;
+  const unread = useUnreadNotificationsCount();
+  const unreadCount = unread.data?.count ?? 0;
 
   return (
     <Pressable

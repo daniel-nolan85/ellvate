@@ -1,12 +1,21 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, setState, type StoredNotification } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
+  countUnreadNotificationsSupabase,
   listNotificationsSupabase,
   markAllNotificationsReadSupabase,
   markNotificationReadSupabase,
 } from './notifications-supabase';
-import type { Notification } from './types';
+import type {
+  ListNotificationsOptions,
+  Notification,
+  NotificationsPage,
+} from './types';
+
+export const DEFAULT_NOTIFICATIONS_PAGE_SIZE = 20;
+export const MAX_NOTIFICATIONS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -51,12 +60,31 @@ export function createNotificationMemory(
   }));
 }
 
-function listNotificationsMemory(userId: string): readonly Notification[] {
-  return getState()
-    .notifications.filter((notification) => notification.userId === userId)
-    .slice()
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    .map(toNotification);
+function listNotificationsMemory(
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): NotificationsPage {
+  const mine = getState().notifications.filter(
+    (notification) => notification.userId === userId,
+  );
+  const wrapped = mine.map((notification) => ({
+    id: notification.id,
+    notification,
+    sortKey: notification.createdAt,
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    nextCursor: page.nextCursor,
+    notifications: page.items.map((item) => toNotification(item.notification)),
+  };
+}
+
+function countUnreadNotificationsMemory(userId: string): number {
+  return getState().notifications.filter(
+    (notification) => notification.userId === userId && notification.readAt === null,
+  ).length;
 }
 
 function markNotificationReadMemory(
@@ -107,10 +135,24 @@ function markAllNotificationsReadMemory(userId: string): number {
 
 export async function listNotifications(
   ctx: RequestContext,
-): Promise<readonly Notification[]> {
+  options?: ListNotificationsOptions,
+): Promise<NotificationsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_NOTIFICATIONS_PAGE_SIZE),
+    MAX_NOTIFICATIONS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
   return ctx.supabase
-    ? listNotificationsSupabase(ctx.supabase, ctx.userId)
-    : listNotificationsMemory(ctx.userId);
+    ? listNotificationsSupabase(ctx.supabase, ctx.userId, limit, cursor)
+    : listNotificationsMemory(ctx.userId, limit, cursor);
+}
+
+export async function countUnreadNotifications(
+  ctx: RequestContext,
+): Promise<number> {
+  return ctx.supabase
+    ? countUnreadNotificationsSupabase(ctx.supabase, ctx.userId)
+    : countUnreadNotificationsMemory(ctx.userId);
 }
 
 export async function markNotificationRead(

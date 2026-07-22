@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
+import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
@@ -9,6 +10,7 @@ import type {
   ForumPost,
   LikeResult,
   Media,
+  MyPostsPage,
   UpdatePostResult,
 } from './types';
 import {
@@ -165,6 +167,45 @@ export async function listPostsSupabase(
     .map((row) => toForumPost(row, likedIds));
 }
 
+// Scoped to posts the caller authored — bounded by one user's own activity
+// rather than the whole forum feed (unlike listPostsSupabase, which every
+// screen but the activity hub needs). A single `author_id` filter, so this
+// can use a true DB-level keyset query rather than merge-then-paginate.
+export async function getMyPostsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MyPostsPage> {
+  let query = supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit + 1);
+
+  const parsedCursor = cursor ? decodeCursor(cursor) : null;
+  if (parsedCursor) {
+    query = query.or(
+      `created_at.lt.${parsedCursor.sortKey},and(created_at.eq.${parsedCursor.sortKey},id.lt.${parsedCursor.id})`,
+    );
+  }
+
+  const { data, error } = await query;
+  throwIfSupabaseError(error, 'load my posts');
+  const rows = data as unknown as PostRow[];
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const likedIds = await likedPostIds(supabase, userId);
+
+  const last = page[page.length - 1];
+  const nextCursor =
+    hasMore && last ? encodeCursor({ id: last.id, sortKey: last.created_at }) : null;
+
+  return { nextCursor, posts: page.map((row) => toForumPost(row, likedIds)) };
+}
+
 export async function createPostSupabase(
   supabase: SupabaseClient,
   userId: string,
@@ -282,13 +323,16 @@ export async function deletePostSupabase(
   if (!existing || existing.author_id !== userId) {
     return false;
   }
-  const { error } = await supabase.from('posts').delete().eq('id', postId);
-  throwIfSupabaseError(error, 'delete post');
+  // WHY: clean up Storage before deleting the row — owner-scoped Storage RLS
+  // (see 0007) verifies ownership by looking the post back up, so the row
+  // must still exist when the cleanup call runs.
   const media = (existing.media as readonly Media[] | null) ?? [];
   await removeStorageObjects(
     supabase,
     media.map((item) => item.url),
   );
+  const { error } = await supabase.from('posts').delete().eq('id', postId);
+  throwIfSupabaseError(error, 'delete post');
   return true;
 }
 

@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -64,6 +69,13 @@ interface PostsResponse {
   readonly posts: readonly ForumPost[];
 }
 
+export interface MyPostsPage {
+  readonly posts: readonly ForumPost[];
+  readonly nextCursor: string | null;
+}
+
+const MY_POSTS_PAGE_SIZE = 20;
+
 interface ToggleLikeResponse {
   readonly id: string;
   readonly likes: number;
@@ -108,6 +120,30 @@ export function useForumPosts(forum: string) {
         signal,
       }),
     queryKey: ['forum', 'posts', session.userId ?? 'demo-user', forum],
+  });
+}
+
+// The activity hub — posts the caller authored, server-scoped and paginated
+// rather than filtered client-side from the full forum feed. Shares the
+// ['forum','posts',userId,...] key prefix so the existing post mutations'
+// broad invalidation keeps this in sync too.
+export function useMyPosts() {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MyPostsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: queryMeta,
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<MyPostsPage>({
+        getAccessToken: session.getToken,
+        path: `/api/forum/posts/mine?limit=${MY_POSTS_PAGE_SIZE}${
+          pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''
+        }`,
+        signal,
+      }),
+    queryKey: ['forum', 'posts', userId, 'mine'],
   });
 }
 

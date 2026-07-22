@@ -2,6 +2,7 @@ export {
   createEvent,
   deleteEvent,
   getEventsView,
+  getMyEventsView,
   toggleJoin,
   updateEvent,
 } from './events';
@@ -11,6 +12,8 @@ export type {
   EventMedia,
   EventsView,
   JoinResult,
+  MyEventsOptions,
+  MyEventsPage,
   PersonRef,
   UpdateEventResult,
   WeekDay,

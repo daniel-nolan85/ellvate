@@ -41,6 +41,16 @@ export interface MissionsView {
   readonly progress: UserProgress;
 }
 
+export interface MyMissionsPage {
+  readonly missions: readonly Mission[];
+  readonly nextCursor: string | null;
+}
+
+export interface MyMissionsOptions {
+  readonly limit?: number;
+  readonly cursor?: string | null;
+}
+
 export interface ValidatedMission {
   readonly title: string;
   readonly description: string;

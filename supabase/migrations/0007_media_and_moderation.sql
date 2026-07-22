@@ -96,18 +96,55 @@ create policy "insert own event comment report" on event_comment_reports for ins
   with check (reporter_id = public.clerk_user_id());
 
 -- Storage: public-read bucket for post/event/mission media + avatars.
--- Object keys encode the owning entity's id (posts/{postId}/..., not the
--- acting user's id), which Storage RLS can't correlate back to ownership
--- without a lookup function; the app layer already verifies the caller owns
--- the post/event/mission/profile before calling uploadDataUrl/removeStorageObjects,
--- so Storage policy here only gates "must be an authenticated app user."
+-- Object keys encode the owning entity's id (posts/{postId}/..., avatars/{userId}/...
+-- for the one self-owned case), so Storage RLS can't compare the key directly
+-- to the caller's JWT subject — it needs a table lookup. A direct call to the
+-- Storage API (bypassing the app layer entirely) must still be rejected for
+-- anyone who isn't the actual owner of that post/event/mission/profile, so
+-- ownership is checked here, not just at the app layer.
 insert into storage.buckets (id, name, public)
 values ('llv-community-media', 'llv-community-media', true)
 on conflict (id) do nothing;
 
+-- SECURITY DEFINER: parses the owning entity id out of an object key
+-- (folder/entityId/filename) and checks it against that entity's owner.
+-- Runs with elevated privileges so it can read posts/events/missions/app_users
+-- regardless of the calling user's own row-level access, but only ever
+-- returns a boolean — no row data is exposed to the caller.
+create or replace function public.owns_media_object(object_name text) returns boolean
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  parts text[];
+  folder text;
+  entity_id text;
+begin
+  parts := string_to_array(object_name, '/');
+  if array_length(parts, 1) < 2 then
+    return false;
+  end if;
+  folder := parts[1];
+  entity_id := parts[2];
+
+  return case folder
+    when 'avatars' then entity_id = public.clerk_user_id()
+    when 'posts' then exists (
+      select 1 from public.posts where id = entity_id and author_id = public.clerk_user_id()
+    )
+    when 'events' then exists (
+      select 1 from public.events where id = entity_id and created_by = public.clerk_user_id()
+    )
+    when 'missions' then exists (
+      select 1 from public.missions where id = entity_id and created_by = public.clerk_user_id()
+    )
+    else false
+  end;
+end;
+$$;
+
 create policy "public read media" on storage.objects for select to anon, authenticated
   using (bucket_id = 'llv-community-media');
-create policy "authenticated upload media" on storage.objects for insert to authenticated
-  with check (bucket_id = 'llv-community-media');
-create policy "authenticated delete media" on storage.objects for delete to authenticated
-  using (bucket_id = 'llv-community-media');
+create policy "owner upload media" on storage.objects for insert to authenticated
+  with check (bucket_id = 'llv-community-media' and public.owns_media_object(name));
+create policy "owner delete media" on storage.objects for delete to authenticated
+  using (bucket_id = 'llv-community-media' and public.owns_media_object(name));

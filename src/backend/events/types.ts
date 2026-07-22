@@ -38,6 +38,16 @@ export interface EventsView {
   readonly events: readonly CommunityEvent[];
 }
 
+export interface MyEventsPage {
+  readonly events: readonly CommunityEvent[];
+  readonly nextCursor: string | null;
+}
+
+export interface MyEventsOptions {
+  readonly limit?: number;
+  readonly cursor?: string | null;
+}
+
 export interface JoinResult {
   readonly id: string;
   readonly going: number;

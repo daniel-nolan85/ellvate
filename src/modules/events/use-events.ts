@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useSession } from '@/src/platform/session';
@@ -8,12 +13,17 @@ import type {
   CommunityEvent,
   CreateEventInput,
   EventsView,
+  MyEventsPage,
   ToggleJoinResult,
   UpdateEventInput,
 } from './events-types';
 
+const MY_EVENTS_PAGE_SIZE = 20;
+
 const eventsViewKey = (userId: string | null) =>
   ['events', 'view', userId ?? 'demo-user'] as const;
+const myEventsViewKey = (userId: string | null) =>
+  ['events', 'mine', userId ?? 'demo-user'] as const;
 
 const toggleEventJoin = (event: CommunityEvent): CommunityEvent => ({
   ...event,
@@ -35,6 +45,28 @@ export function useEventsView() {
       signal,
     }),
     queryKey: eventsViewKey(session.userId),
+  });
+}
+
+// The activity hub — events the caller created or joined, server-scoped and
+// paginated rather than filtered client-side from the full community list.
+export function useMyEventsView() {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MyEventsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<MyEventsPage>({
+        getAccessToken: session.getToken,
+        path: `/api/events/mine?limit=${MY_EVENTS_PAGE_SIZE}${
+          pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''
+        }`,
+        signal,
+      }),
+    queryKey: myEventsViewKey(userId),
   });
 }
 
@@ -126,6 +158,7 @@ export function useToggleJoin() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({ queryKey: myEventsViewKey(session.userId) });
     },
   });
 }

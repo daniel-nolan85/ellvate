@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
@@ -10,6 +11,7 @@ import type {
   EventMedia,
   EventsView,
   JoinResult,
+  MyEventsPage,
   PersonRef,
   UpdateEventResult,
   WeekDay,
@@ -242,6 +244,87 @@ export async function getEventsViewSupabase(
   };
 }
 
+// Scoped to events the caller created or joined — bounded by one user's own
+// activity rather than the whole community's event list (unlike
+// getEventsViewSupabase, which every screen but the activity hub needs).
+// "created by me" OR "joined by me" can't be expressed as a single
+// keyset-limited query, so this fetches both (each bounded by the caller's
+// own row count, not the community's) and paginates the merged result.
+export async function getMyEventsViewSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MyEventsPage> {
+  const [createdRes, myJoinsRes] = await Promise.all([
+    supabase.from('events').select(EVENT_SELECT).eq('created_by', userId),
+    supabase.from('event_joins').select('event_id').eq('user_id', userId),
+  ]);
+  throwIfSupabaseError(createdRes.error, 'load my events');
+  throwIfSupabaseError(myJoinsRes.error, 'load my event joins');
+
+  const createdRows = (createdRes.data ?? []) as unknown as EventRow[];
+  const joinedEventIds = ((myJoinsRes.data ?? []) as { event_id: string }[]).map(
+    (row) => row.event_id,
+  );
+  const createdIds = new Set(createdRows.map((row) => row.id));
+  const idsToFetch = joinedEventIds.filter((id) => !createdIds.has(id));
+
+  let joinedRows: readonly EventRow[] = [];
+  if (idsToFetch.length > 0) {
+    const { data, error } = await supabase
+      .from('events')
+      .select(EVENT_SELECT)
+      .in('id', idsToFetch);
+    throwIfSupabaseError(error, 'load joined events');
+    joinedRows = (data ?? []) as unknown as EventRow[];
+  }
+
+  const eventRows = [...createdRows, ...joinedRows];
+  const eventIds = eventRows.map((row) => row.id);
+
+  const { data: joinsData, error: joinsError } = eventIds.length
+    ? await supabase.from('event_joins').select('event_id,user_id').in('event_id', eventIds)
+    : { data: [] as JoinRow[], error: null };
+  throwIfSupabaseError(joinsError, 'load event joins for my events');
+  const joinRows = (joinsData ?? []) as unknown as JoinRow[];
+  const joinedByEvent = (eventId: string): readonly string[] =>
+    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+
+  const neededIds = uniqueIds([
+    ...eventRows.map((row) => row.created_by),
+    ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
+    ...joinRows.map((row) => row.user_id),
+  ]);
+  const { data: userData, error: userError } = neededIds.length
+    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', [...neededIds])
+    : { data: [], error: null };
+  throwIfSupabaseError(userError, 'load my events attendees');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (userData ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  const wrapped = eventRows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: row.starts_at,
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    events: page.items.map((item) =>
+      toCommunityEvent(item.row, joinedByEvent(item.row.id), userId, nameById),
+    ),
+    nextCursor: page.nextCursor,
+  };
+}
+
 export async function createEventSupabase(
   supabase: SupabaseClient,
   userId: string,
@@ -412,13 +495,16 @@ export async function deleteEventSupabase(
   if (!existing || existing.created_by !== userId) {
     return false;
   }
-  const { error } = await supabase.from('events').delete().eq('id', eventId);
-  throwIfSupabaseError(error, 'delete event');
+  // WHY: clean up Storage before deleting the row — owner-scoped Storage RLS
+  // (see 0007) verifies ownership by looking the event back up, so the row
+  // must still exist when the cleanup call runs.
   const media = (existing.media as readonly EventMedia[] | null) ?? [];
   await removeStorageObjects(
     supabase,
     media.map((item) => item.url),
   );
+  const { error } = await supabase.from('events').delete().eq('id', eventId);
+  throwIfSupabaseError(error, 'delete event');
   return true;
 }
 

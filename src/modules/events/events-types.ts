@@ -38,6 +38,11 @@ export interface EventsView {
   readonly events: readonly CommunityEvent[];
 }
 
+export interface MyEventsPage {
+  readonly events: readonly CommunityEvent[];
+  readonly nextCursor: string | null;
+}
+
 export interface ToggleJoinResult {
   readonly id: string;
   readonly going: number;

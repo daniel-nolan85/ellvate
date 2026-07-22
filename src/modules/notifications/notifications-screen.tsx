@@ -13,6 +13,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 
 import {
+  resolveNotificationRoute,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
@@ -79,21 +80,18 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
-  const items = notifications.data?.notifications ?? [];
+  const items =
+    notifications.data?.pages.flatMap((page) => page.notifications) ?? [];
   const hasUnread = items.some((notification) => notification.readAt === null);
 
   const handlePress = (notification: Notification) => {
     if (notification.readAt === null) {
       markRead.mutate(notification.id);
     }
-    const postId = notification.data.postId;
-    const eventId = notification.data.eventId;
-    if (typeof postId === 'string') {
+    const route = resolveNotificationRoute(notification.data);
+    if (route) {
       onClose();
-      router.push(`/post/${postId}`);
-    } else if (typeof eventId === 'string') {
-      onClose();
-      router.push(`/event/${eventId}`);
+      router.push(route);
     }
   };
 
@@ -147,6 +145,22 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
               {index < items.length - 1 ? <Divider /> : null}
             </View>
           ))}
+          {notifications.hasNextPage ? (
+            <Pressable
+              accessibilityRole="button"
+              className="items-center py-4"
+              disabled={notifications.isFetchingNextPage}
+              onPress={() => void notifications.fetchNextPage()}
+            >
+              {notifications.isFetchingNextPage ? (
+                <Spinner size="small" />
+              ) : (
+                <Text className="font-inter-semibold text-[13px] text-indigo">
+                  Load more
+                </Text>
+              )}
+            </Pressable>
+          ) : null}
         </ScrollView>
       )}
     </View>

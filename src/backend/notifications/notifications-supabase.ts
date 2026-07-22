@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { Notification } from './types';
+import type { Notification, NotificationsPage } from './types';
 
 const NOTIFICATION_SELECT = 'id,kind,title,body,data,read_at,created_at';
 
@@ -29,14 +30,49 @@ const toNotification = (row: NotificationRow): Notification => ({
 export async function listNotificationsSupabase(
   supabase: SupabaseClient,
   userId: string,
-): Promise<readonly Notification[]> {
-  const { data, error } = await supabase
+  limit: number,
+  cursor: string | null,
+): Promise<NotificationsPage> {
+  let query = supabase
     .from('notifications')
     .select(NOTIFICATION_SELECT)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    // One extra row so we know whether a next page exists without a second
+    // round trip.
+    .limit(limit + 1);
+
+  const parsedCursor = cursor ? decodeCursor(cursor) : null;
+  if (parsedCursor) {
+    query = query.or(
+      `created_at.lt.${parsedCursor.sortKey},and(created_at.eq.${parsedCursor.sortKey},id.lt.${parsedCursor.id})`,
+    );
+  }
+
+  const { data, error } = await query;
   throwIfSupabaseError(error, 'load notifications');
-  return (data as unknown as NotificationRow[]).map(toNotification);
+  const rows = data as unknown as NotificationRow[];
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+  const nextCursor =
+    hasMore && last ? encodeCursor({ id: last.id, sortKey: last.created_at }) : null;
+
+  return { notifications: page.map(toNotification), nextCursor };
+}
+
+export async function countUnreadNotificationsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null);
+  throwIfSupabaseError(error, 'count unread notifications');
+  return count ?? 0;
 }
 
 export async function markNotificationReadSupabase(

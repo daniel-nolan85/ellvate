@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useSession } from '@/src/platform/session';
@@ -46,6 +51,11 @@ export interface UserProgress {
 export interface MissionsView {
   readonly missions: readonly Mission[];
   readonly progress: UserProgress;
+}
+
+export interface MyMissionsPage {
+  readonly missions: readonly Mission[];
+  readonly nextCursor: string | null;
 }
 
 export interface CheckInResult {
@@ -113,6 +123,30 @@ export function useMissionsView() {
       signal,
     }),
     queryKey: missionsViewKey(userId),
+  });
+}
+
+const MY_MISSIONS_PAGE_SIZE = 20;
+
+// The activity hub — missions the caller created or completed, server-scoped
+// and paginated rather than filtered client-side from the full community list.
+export function useMyMissionsView() {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MyMissionsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<MyMissionsPage>({
+        getAccessToken: session.getToken,
+        path: `/api/missions/mine?limit=${MY_MISSIONS_PAGE_SIZE}${
+          pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''
+        }`,
+        signal,
+      }),
+    queryKey: ['missions', 'mine', userId],
   });
 }
 
