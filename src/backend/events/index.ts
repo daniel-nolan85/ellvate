@@ -1,6 +1,7 @@
 export {
   createEvent,
   deleteEvent,
+  getEventsByIds,
   getEventsView,
   getMyEventsView,
   toggleJoin,

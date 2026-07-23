@@ -1,10 +1,12 @@
 export type {
   AiComfortLevel,
+  BookmarkTargetType,
   CommunityRole,
   MissionIcon,
   MissionStatus,
   MissionUserProgress,
   NotificationPrefs,
+  StoredBookmark,
   StoredComment,
   StoredCommentReport,
   StoredEvent,

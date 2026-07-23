@@ -322,6 +322,47 @@ export async function getMyMissionsViewSupabase(
   };
 }
 
+// Fetches specific missions by id — used to hydrate bookmarks, which can
+// point at any mission regardless of authorship or completion status.
+export async function getMissionsByIdsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  ids: readonly string[],
+): Promise<readonly Mission[]> {
+  const { data, error } = await supabase.from('missions').select(MISSION_SELECT).in('id', ids);
+  throwIfSupabaseError(error, 'load missions by id');
+  const missionRows = (data ?? []) as unknown as MissionRow[];
+
+  const { data: progressData, error: progressError } = await supabase
+    .from('mission_progress')
+    .select('mission_id,stops_done,status')
+    .eq('user_id', userId)
+    .in('mission_id', ids);
+  throwIfSupabaseError(progressError, 'load bookmarked mission progress');
+  const progressByMission = new Map(
+    ((progressData ?? []) as unknown as ProgressRow[]).map((row) => [row.mission_id, row]),
+  );
+
+  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
+  const { data: authorRows, error: authorError } = authorIds.length
+    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    : { data: [], error: null };
+  throwIfSupabaseError(authorError, 'load bookmarked mission authors');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (authorRows ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  return missionRows.map((row) =>
+    toMissionView(row, progressByMission.get(row.id), nameById),
+  );
+}
+
 export async function createMissionSupabase(
   supabase: SupabaseClient,
   userId: string,

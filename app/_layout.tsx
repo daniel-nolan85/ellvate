@@ -39,6 +39,7 @@ function AppNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="bookmarks" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
     </ClerkAuthGate>

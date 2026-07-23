@@ -3,8 +3,12 @@ import { getState } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import { getUserMissionEntry, resolveMissionStatus, toMissionView } from './mission-view';
-import { getMissionsViewSupabase, getMyMissionsViewSupabase } from './missions-supabase';
-import type { MissionsView, MyMissionsOptions, MyMissionsPage } from './types';
+import {
+  getMissionsByIdsSupabase,
+  getMissionsViewSupabase,
+  getMyMissionsViewSupabase,
+} from './missions-supabase';
+import type { Mission, MissionsView, MyMissionsOptions, MyMissionsPage } from './types';
 import { buildUserProgress } from './user-progress';
 
 export const DEFAULT_MY_MISSIONS_PAGE_SIZE = 20;
@@ -56,12 +60,37 @@ function getMyMissionsViewMemory(
   };
 }
 
+// Fetches specific missions by id — used to hydrate bookmarks, which can
+// point at any mission regardless of authorship or completion status.
+function getMissionsByIdsMemory(
+  userId: string,
+  ids: readonly string[],
+): readonly Mission[] {
+  const state = getState();
+  const idSet = new Set(ids);
+  return state.missions
+    .filter((mission) => idSet.has(mission.id))
+    .map((mission) => toMissionView(mission, userId, state.users));
+}
+
 export async function getMissionsView(
   ctx: RequestContext,
 ): Promise<MissionsView> {
   return ctx.supabase
     ? getMissionsViewSupabase(ctx.supabase, ctx.userId)
     : getMissionsViewMemory(ctx.userId);
+}
+
+export async function getMissionsByIds(
+  ctx: RequestContext,
+  ids: readonly string[],
+): Promise<readonly Mission[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return ctx.supabase
+    ? getMissionsByIdsSupabase(ctx.supabase, ctx.userId, ids)
+    : getMissionsByIdsMemory(ctx.userId, ids);
 }
 
 export async function getMyMissionsView(

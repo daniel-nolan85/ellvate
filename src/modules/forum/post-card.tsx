@@ -16,6 +16,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
 import { PostComposer } from './post-composer';
@@ -249,6 +250,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
           </Text>
         </Pressable>
         <View className='flex-1' />
+        <BookmarkButton targetId={post.id} targetType='post' />
         <Pressable
           accessibilityLabel='Share post'
           accessibilityRole='button'

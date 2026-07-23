@@ -390,6 +390,7 @@ export const createSeedState = (): StoreState => {
     eventCommentReports: [],
     missions: seedMissions(),
     notifications: [],
+    bookmarks: [],
     users: seedUsers(),
     week: seedWeek(),
   };

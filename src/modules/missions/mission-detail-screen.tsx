@@ -17,6 +17,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
 import { MissionComposer } from './mission-composer';
@@ -144,6 +145,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
           Mission
         </Heading>
+        <BookmarkButton size={18} targetId={missionId} targetType='mission' />
         <Pressable
           accessibilityLabel='Share mission'
           accessibilityRole='button'

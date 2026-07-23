@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { toggleBookmarkSupabase } from '../src/backend/bookmarks/bookmarks-supabase';
 import { getMyEventsViewSupabase } from '../src/backend/events/events-supabase';
 import { getMyPostsSupabase } from '../src/backend/forum/posts-supabase';
 import { getMyMissionsViewSupabase } from '../src/backend/missions/missions-supabase';
@@ -563,10 +564,57 @@ try {
     'each page should return a distinct notification',
   );
 
+  // toggle_bookmark (0013_bookmarks.sql): two concurrent toggles on the same
+  // not-yet-bookmarked target must both resolve to bookmarked=true rather
+  // than one throwing a unique-violation error — the SECURITY DEFINER
+  // function treats a losing concurrent insert as success, since the
+  // desired "bookmarked" end state was already reached by the other call.
+  const [concurrentToggleOne, concurrentToggleTwo] = await Promise.all([
+    toggleBookmarkSupabase(a, idA, 'post', postId),
+    toggleBookmarkSupabase(a, idA, 'post', postId),
+  ]);
+  assert.equal(
+    concurrentToggleOne,
+    true,
+    'first concurrent toggle should report bookmarked',
+  );
+  assert.equal(
+    concurrentToggleTwo,
+    true,
+    'second concurrent toggle should also report bookmarked, not throw a unique-violation error',
+  );
+
+  const bookmarkRowsAfterConcurrentAdd = await unwrap(
+    'read bookmark rows after concurrent toggle',
+    a
+      .from('bookmarks')
+      .select('id')
+      .eq('user_id', idA)
+      .eq('target_type', 'post')
+      .eq('target_id', postId),
+  );
+  assert(bookmarkRowsAfterConcurrentAdd);
+  assert.equal(
+    bookmarkRowsAfterConcurrentAdd.length,
+    1,
+    'concurrent adds on the same target must not create a duplicate row',
+  );
+
+  await unwrap(
+    'clean up bookmark created during concurrency test',
+    a
+      .from('bookmarks')
+      .delete()
+      .eq('user_id', idA)
+      .eq('target_type', 'post')
+      .eq('target_id', postId),
+  );
+
   console.log(
     'Supabase integration passed: RLS identity isolation, writes, triggers, ' +
       'push-token ownership, events/missions owner-write grants, Storage owner ' +
-      'scoping, and scheduled reminder recipient scoping/idempotency/DST/reschedule behavior.',
+      'scoping, scheduled reminder recipient scoping/idempotency/DST/reschedule ' +
+      'behavior, and atomic concurrent bookmark toggles.',
   );
 } finally {
   if (postId) {

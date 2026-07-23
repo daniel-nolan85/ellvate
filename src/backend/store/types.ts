@@ -140,6 +140,16 @@ export interface StoredNotification {
   readonly createdAt: string;
 }
 
+export type BookmarkTargetType = 'post' | 'event' | 'mission';
+
+export interface StoredBookmark {
+  readonly id: string;
+  readonly userId: string;
+  readonly targetType: BookmarkTargetType;
+  readonly targetId: string;
+  readonly createdAt: string;
+}
+
 export interface StoreState {
   readonly subforums: readonly string[];
   readonly posts: readonly StoredPost[];
@@ -151,6 +161,7 @@ export interface StoreState {
   readonly eventCommentReports: readonly StoredEventCommentReport[];
   readonly missions: readonly StoredMission[];
   readonly notifications: readonly StoredNotification[];
+  readonly bookmarks: readonly StoredBookmark[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];
 }

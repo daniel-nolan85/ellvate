@@ -288,6 +288,11 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
           label="My Activity"
           onPress={() => router.push('/activity')}
         />
+        <Row
+          icon="Bookmark"
+          label="Bookmarks"
+          onPress={() => router.push('/bookmarks')}
+        />
 
         <SectionTitle>Notifications</SectionTitle>
         {profile.isPending || !prefs ? (
