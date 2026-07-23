@@ -111,16 +111,20 @@ function getMyPostsMemory(
 
 // Fetches specific posts by id, in no particular guaranteed order — used to
 // hydrate bookmarks, which can point at any post regardless of author/forum.
-// Deliberately does not apply the muted-author filter listPostsMemory does:
-// a user who bookmarked a post before muting its author should still see it.
+// Applies the same muted-author filter listPostsMemory does: mute is the
+// app's one visibility rule, so a muted author's post should stay hidden
+// even if it was bookmarked before the mute happened.
 function getPostsByIdsMemory(
   userId: string,
   ids: readonly string[],
 ): readonly ForumPost[] {
   const state = getState();
   const idSet = new Set(ids);
+  const mutedUserIds = new Set(
+    state.users.find((user) => user.id === userId)?.mutedUserIds ?? [],
+  );
   return state.posts
-    .filter((post) => idSet.has(post.id))
+    .filter((post) => idSet.has(post.id) && !mutedUserIds.has(post.authorId))
     .map((post) => toForumPost(post, state.users, userId));
 }
 

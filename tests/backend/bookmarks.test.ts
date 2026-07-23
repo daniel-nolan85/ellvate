@@ -5,10 +5,16 @@ import { GET as getBookmarkIds } from '../../app/api/bookmarks/ids+api';
 import { POST as postToggleBookmark } from '../../app/api/bookmarks/toggle+api';
 import { listBookmarkIds, listBookmarks, toggleBookmark } from '../../src/backend/bookmarks';
 import { deleteEvent } from '../../src/backend/events';
-import { deletePost } from '../../src/backend/forum';
+import { createPost, deletePost } from '../../src/backend/forum';
 import { memoryContext } from '../../src/backend/http';
 import { deleteMission } from '../../src/backend/missions';
-import { DEMO_USER_ID, resetStore } from '../../src/backend/store';
+import { toggleMute } from '../../src/backend/mutes';
+import {
+  DEMO_USER_ID,
+  resetStore,
+  setState,
+  type StoredBookmark,
+} from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -162,6 +168,119 @@ describe('listBookmarks', () => {
 
     expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toEqual([]);
   });
+
+  test('does not strand a valid bookmark behind a full raw page of orphans', async () => {
+    // One valid bookmark, older than everything else, followed by 20 more
+    // recent bookmarks whose targets no longer exist. A raw page of
+    // limit=20 (newest first) is therefore *entirely* orphans, with the one
+    // valid bookmark sitting just past it — reproducing the exact failure
+    // mode where hydration filters a full page down to nothing even though
+    // a real saved item exists.
+    const records: StoredBookmark[] = [
+      {
+        createdAt: '2020-01-01T00:00:00.000Z',
+        id: 'bookmark-valid',
+        targetId: 'post-1',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+      ...Array.from({ length: 20 }, (_, index) => ({
+        createdAt: `2021-01-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
+        id: `bookmark-orphan-${index}`,
+        targetId: `post-orphan-${index}`,
+        targetType: 'post' as const,
+        userId: DEMO_USER_ID,
+      })),
+    ];
+    setState((current) => ({ ...current, bookmarks: records }));
+
+    const page = await listBookmarks(ctx(DEMO_USER_ID), { limit: 20 });
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({ bookmarkId: 'bookmark-valid', kind: 'post' });
+    expect(page.nextCursor).toBeNull();
+  });
+
+  test('truncates an overshot page to a cursor mid-raw-page, not at a page boundary', async () => {
+    // 2 orphans + 1 valid (newest, raw page 1 with limit=3) followed by 3
+    // more valid bookmarks (raw page 2). Page 1 hydrates to just 1 item, so
+    // the loop fetches page 2 too — but page 2 contributes 3 more valid
+    // items, overshooting the limit of 3 (1 + 3 = 4 collected). The result
+    // must truncate to the 3 newest and produce a cursor pointing at the
+    // 3rd item specifically (partway through page 2's raw records), not at
+    // page 2's own raw cursor (which would incorrectly skip the 4th item).
+    const records: StoredBookmark[] = [
+      {
+        createdAt: '2021-06-06T00:00:00.000Z',
+        id: 'bookmark-orphan-a',
+        targetId: 'post-orphan-a',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+      {
+        createdAt: '2021-06-05T00:00:00.000Z',
+        id: 'bookmark-orphan-b',
+        targetId: 'post-orphan-b',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+      {
+        createdAt: '2021-06-04T00:00:00.000Z',
+        id: 'bookmark-valid-1',
+        targetId: 'post-1',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+      {
+        createdAt: '2021-06-03T00:00:00.000Z',
+        id: 'bookmark-valid-2',
+        targetId: 'post-2',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+      {
+        createdAt: '2021-06-02T00:00:00.000Z',
+        id: 'bookmark-valid-3',
+        targetId: 'post-3',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+      {
+        createdAt: '2021-06-01T00:00:00.000Z',
+        id: 'bookmark-valid-4',
+        targetId: 'post-4',
+        targetType: 'post',
+        userId: DEMO_USER_ID,
+      },
+    ];
+    setState((current) => ({ ...current, bookmarks: records }));
+
+    const firstPage = await listBookmarks(ctx(DEMO_USER_ID), { limit: 3 });
+    expect(firstPage.items.map((item) => item.bookmarkId)).toEqual([
+      'bookmark-valid-1',
+      'bookmark-valid-2',
+      'bookmark-valid-3',
+    ]);
+    expect(firstPage.nextCursor).not.toBeNull();
+
+    const secondPage = await listBookmarks(ctx(DEMO_USER_ID), {
+      cursor: firstPage.nextCursor,
+      limit: 3,
+    });
+    expect(secondPage.items.map((item) => item.bookmarkId)).toEqual(['bookmark-valid-4']);
+    expect(secondPage.nextCursor).toBeNull();
+  });
+
+  test('hides a bookmarked post once its author is muted', async () => {
+    // post-1 is authored by user-jordan (seeded). Mute is the app's one
+    // content-visibility rule, so it must apply to saved content too, not
+    // just the main forum feed.
+    await toggleBookmark(ctx(DEMO_USER_ID), { targetId: 'post-1', targetType: 'post' });
+    expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toHaveLength(1);
+
+    await toggleMute(ctx(DEMO_USER_ID), 'user-jordan');
+
+    expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toEqual([]);
+  });
 });
 
 describe('listBookmarkIds', () => {
@@ -176,6 +295,44 @@ describe('listBookmarkIds', () => {
   test('returns an empty list when nothing is bookmarked', async () => {
     expect(await listBookmarkIds(ctx(DEMO_USER_ID))).toEqual([]);
   });
+
+  test('preserves membership for bookmarks beyond the old 1000-item cap', async () => {
+    // A prior cap capped this list at 1000 ids: an older bookmark past that
+    // point would report as "not saved" via useIsBookmarked, so pressing its
+    // Save/Remove toggle would delete the real row instead of adding a
+    // duplicate. There must be no such destructive blind spot.
+    const TOTAL = 1001;
+    const postIds: string[] = [];
+    for (let i = 0; i < TOTAL; i += 1) {
+      const created = await createPost(ctx(DEMO_USER_ID), {
+        excerpt: 'x',
+        forum: 'All',
+        title: `Post ${i}`,
+      });
+      expect(created.ok).toBe(true);
+      if (!created.ok) return;
+      postIds.push(created.post.id);
+      await toggleBookmark(ctx(DEMO_USER_ID), {
+        targetId: created.post.id,
+        targetType: 'post',
+      });
+    }
+
+    const ids = await listBookmarkIds(ctx(DEMO_USER_ID));
+    expect(ids).toHaveLength(TOTAL);
+
+    const oldestPostId = postIds[0]!;
+    expect(ids.some((entry) => entry.targetId === oldestPostId)).toBe(true);
+
+    // Toggling the oldest bookmark again must remove it, not silently no-op
+    // or add a duplicate — proving the toggle sees it as already bookmarked.
+    const toggled = await toggleBookmark(ctx(DEMO_USER_ID), {
+      targetId: oldestPostId,
+      targetType: 'post',
+    });
+    expect(toggled).toEqual({ bookmarked: false, ok: true });
+    expect(await listBookmarkIds(ctx(DEMO_USER_ID))).toHaveLength(TOTAL - 1);
+  }, 20000);
 });
 
 describe('bookmark routes', () => {

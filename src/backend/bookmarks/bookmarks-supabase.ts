@@ -32,35 +32,34 @@ const ensureUser = async (supabase: SupabaseClient, userId: string): Promise<voi
   throwIfSupabaseError(error, 'ensure bookmark user');
 };
 
+// Thrown when the RPC's own internal existence check rejects the target —
+// this only fires in the narrow race where the target is deleted between
+// the app-level targetExists() check and this call; the caller maps it to
+// the same target_not_found result that check normally returns.
+export class BookmarkTargetNotFoundError extends Error {}
+
+// Delegates to a SECURITY DEFINER SQL function (toggle_bookmark, see
+// 0013_bookmarks.sql) that validates the target and performs the
+// delete-or-insert as one atomic statement. A plain check-then-write here
+// would let two rapid taps both see "not bookmarked" and both attempt an
+// insert, so the unique constraint would reject the loser as a hard error
+// instead of a deterministic toggle.
 export async function toggleBookmarkSupabase(
   supabase: SupabaseClient,
   userId: string,
   targetType: BookmarkTargetType,
   targetId: string,
 ): Promise<boolean> {
-  const { data: existing, error: existingError } = await supabase
-    .from('bookmarks')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('target_type', targetType)
-    .eq('target_id', targetId)
-    .maybeSingle();
-  throwIfSupabaseError(existingError, 'load existing bookmark');
-
-  if (existing) {
-    const { error } = await supabase.from('bookmarks').delete().eq('id', existing.id as string);
-    throwIfSupabaseError(error, 'remove bookmark');
-    return false;
-  }
-
   await ensureUser(supabase, userId);
-  const { error } = await supabase.from('bookmarks').insert({
-    target_id: targetId,
-    target_type: targetType,
-    user_id: userId,
+  const { data, error } = await supabase.rpc('toggle_bookmark', {
+    p_target_id: targetId,
+    p_target_type: targetType,
   });
-  throwIfSupabaseError(error, 'create bookmark');
-  return true;
+  if (error?.message === 'target_not_found') {
+    throw new BookmarkTargetNotFoundError('Bookmark target no longer exists.');
+  }
+  throwIfSupabaseError(error, 'toggle bookmark');
+  return Boolean(data);
 }
 
 export async function listBookmarksSupabase(
@@ -100,17 +99,19 @@ export async function listBookmarksSupabase(
   return { nextCursor, records: page.map(toStoredBookmark) };
 }
 
+// Returns every one of the caller's bookmark ids, unbounded — see the
+// matching comment on listBookmarkIdsMemory for why a display-only cap here
+// would be unsafe (it would make a real toggle silently delete a save the
+// cap just couldn't see).
 export async function listBookmarkIdsSupabase(
   supabase: SupabaseClient,
   userId: string,
-  maxIds: number,
 ): Promise<readonly BookmarkIdEntry[]> {
   const { data, error } = await supabase
     .from('bookmarks')
     .select('target_type,target_id')
     .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(maxIds);
+    .order('created_at', { ascending: false });
   throwIfSupabaseError(error, 'load bookmark ids');
   return ((data ?? []) as { target_type: BookmarkTargetType; target_id: string }[]).map(
     (row) => ({ targetId: row.target_id, targetType: row.target_type }),

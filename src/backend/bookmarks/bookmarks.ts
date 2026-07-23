@@ -8,9 +8,10 @@ import {
   type BookmarkTargetType,
   type StoredBookmark,
 } from '@/src/backend/store';
-import { paginateInMemory } from '@/src/lib/cursor-pagination';
+import { encodeCursor, paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
+  BookmarkTargetNotFoundError,
   listBookmarkIdsSupabase,
   listBookmarksSupabase,
   toggleBookmarkSupabase,
@@ -25,10 +26,6 @@ import type {
 
 export const DEFAULT_BOOKMARKS_PAGE_SIZE = 20;
 export const MAX_BOOKMARKS_PAGE_SIZE = 50;
-// A generous cap on the lightweight ids-only lookup (used to render the
-// bookmark icon's filled/outline state on cards) — not a real pagination
-// limit, just a backstop against an unbounded fetch for a runaway account.
-export const MAX_BOOKMARK_IDS = 1000;
 
 const TARGET_TYPES: readonly BookmarkTargetType[] = ['post', 'event', 'mission'];
 
@@ -109,10 +106,14 @@ function listBookmarkRecordsMemory(
   };
 }
 
+// Returns every one of the caller's bookmark ids, unbounded — this drives
+// useIsBookmarked's card-icon state, and a display-only cap here would mean
+// an older bookmark reports as "not saved", so its Save/Remove toggle would
+// silently delete the real row instead of adding a duplicate. Cheap id pairs,
+// so this mirrors the same unbounded shape likedPostIds already uses.
 function listBookmarkIdsMemory(userId: string): readonly BookmarkIdEntry[] {
   return getState()
     .bookmarks.filter((bookmark) => bookmark.userId === userId)
-    .slice(0, MAX_BOOKMARK_IDS)
     .map((bookmark) => ({
       targetId: bookmark.targetId,
       targetType: bookmark.targetType,
@@ -123,13 +124,20 @@ function listBookmarkIdsMemory(userId: string): readonly BookmarkIdEntry[] {
 // Hydration (shared across memory/Supabase — composes the already-dispatched
 // getPostsByIds/getEventsByIds/getMissionsByIds, so this logic isn't
 // duplicated per backend). Bookmarks whose target has since been deleted are
-// silently dropped rather than surfaced as broken rows.
+// silently dropped rather than surfaced as broken rows. Each hydrated item is
+// paired with its source record so listBookmarks can compute a correct
+// cursor even after dropping some records and/or truncating to the page size.
 // ---------------------------------------------------------------------------
+
+interface HydratedBookmark {
+  readonly item: BookmarkedItem;
+  readonly record: StoredBookmark;
+}
 
 async function hydrateBookmarks(
   ctx: RequestContext,
   records: readonly StoredBookmark[],
-): Promise<readonly BookmarkedItem[]> {
+): Promise<readonly HydratedBookmark[]> {
   const idsFor = (targetType: BookmarkTargetType): readonly string[] =>
     records
       .filter((record) => record.targetType === targetType)
@@ -144,22 +152,37 @@ async function hydrateBookmarks(
   const eventById = new Map(events.map((event) => [event.id, event]));
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
 
-  return records.flatMap((record): readonly BookmarkedItem[] => {
+  return records.flatMap((record): readonly HydratedBookmark[] => {
     if (record.targetType === 'post') {
       const post = postById.get(record.targetId);
       return post
-        ? [{ bookmarkedAt: record.createdAt, bookmarkId: record.id, kind: 'post', post }]
+        ? [
+            {
+              item: { bookmarkedAt: record.createdAt, bookmarkId: record.id, kind: 'post', post },
+              record,
+            },
+          ]
         : [];
     }
     if (record.targetType === 'event') {
       const event = eventById.get(record.targetId);
       return event
-        ? [{ bookmarkedAt: record.createdAt, bookmarkId: record.id, event, kind: 'event' }]
+        ? [
+            {
+              item: { bookmarkedAt: record.createdAt, bookmarkId: record.id, event, kind: 'event' },
+              record,
+            },
+          ]
         : [];
     }
     const mission = missionById.get(record.targetId);
     return mission
-      ? [{ bookmarkedAt: record.createdAt, bookmarkId: record.id, kind: 'mission', mission }]
+      ? [
+          {
+            item: { bookmarkedAt: record.createdAt, bookmarkId: record.id, kind: 'mission', mission },
+            record,
+          },
+        ]
       : [];
   });
 }
@@ -208,10 +231,19 @@ export async function toggleBookmark(
     return { code: 'target_not_found', message: 'That item no longer exists.', ok: false };
   }
 
-  const bookmarked = ctx.supabase
-    ? await toggleBookmarkSupabase(ctx.supabase, ctx.userId, targetType, targetId)
-    : toggleBookmarkMemory(ctx.userId, targetType, targetId);
-  return { bookmarked, ok: true };
+  try {
+    const bookmarked = ctx.supabase
+      ? await toggleBookmarkSupabase(ctx.supabase, ctx.userId, targetType, targetId)
+      : toggleBookmarkMemory(ctx.userId, targetType, targetId);
+    return { bookmarked, ok: true };
+  } catch (error) {
+    // Narrow race: the target was deleted between the targetExists() check
+    // above and the atomic toggle itself running.
+    if (error instanceof BookmarkTargetNotFoundError) {
+      return { code: 'target_not_found', message: 'That item no longer exists.', ok: false };
+    }
+    throw error;
+  }
 }
 
 export async function listBookmarks(
@@ -222,20 +254,48 @@ export async function listBookmarks(
     Math.max(1, options?.limit ?? DEFAULT_BOOKMARKS_PAGE_SIZE),
     MAX_BOOKMARKS_PAGE_SIZE,
   );
-  const cursor = options?.cursor ?? null;
   const targetType = options?.targetType;
 
-  const { records, nextCursor } = ctx.supabase
-    ? await listBookmarksSupabase(ctx.supabase, ctx.userId, limit, cursor, targetType)
-    : listBookmarkRecordsMemory(ctx.userId, limit, cursor, targetType);
+  const collected: HydratedBookmark[] = [];
+  let cursor = options?.cursor ?? null;
+  let exhausted = false;
 
-  return { items: await hydrateBookmarks(ctx, records), nextCursor };
+  // Hydration drops bookmarks whose target has since been deleted, which can
+  // leave an entire raw page empty after filtering even though valid
+  // bookmarks exist further on. Keep pulling raw pages until this page is
+  // full or the underlying list is exhausted, rather than ever returning a
+  // spurious empty page alongside a live cursor — that would strand any
+  // bookmarks past a run of orphans, with no way to reach or clear them
+  // (BookmarksScreen treats an empty page as the terminal empty state, and
+  // toggleBookmark already rejects re-toggling a deleted target).
+  while (collected.length < limit && !exhausted) {
+    const { records, nextCursor: rawNextCursor } = ctx.supabase
+      ? await listBookmarksSupabase(ctx.supabase, ctx.userId, limit, cursor, targetType)
+      : listBookmarkRecordsMemory(ctx.userId, limit, cursor, targetType);
+
+    collected.push(...(await hydrateBookmarks(ctx, records)));
+    cursor = rawNextCursor;
+    exhausted = rawNextCursor === null;
+  }
+
+  const page = collected.slice(0, limit);
+  const truncated = page.length < collected.length;
+  const lastIncluded = page[page.length - 1];
+  const nextCursor = truncated
+    ? lastIncluded
+      ? encodeCursor({ id: lastIncluded.record.id, sortKey: lastIncluded.record.createdAt })
+      : null
+    : exhausted
+      ? null
+      : cursor;
+
+  return { items: page.map((entry) => entry.item), nextCursor };
 }
 
 export async function listBookmarkIds(
   ctx: RequestContext,
 ): Promise<readonly BookmarkIdEntry[]> {
   return ctx.supabase
-    ? listBookmarkIdsSupabase(ctx.supabase, ctx.userId, MAX_BOOKMARK_IDS)
+    ? listBookmarkIdsSupabase(ctx.supabase, ctx.userId)
     : listBookmarkIdsMemory(ctx.userId);
 }
