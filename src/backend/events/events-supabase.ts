@@ -325,6 +325,50 @@ export async function getMyEventsViewSupabase(
   };
 }
 
+// Fetches specific events by id — used to hydrate bookmarks, which can point
+// at any event regardless of authorship or join status.
+export async function getEventsByIdsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  ids: readonly string[],
+): Promise<readonly CommunityEvent[]> {
+  const { data, error } = await supabase.from('events').select(EVENT_SELECT).in('id', ids);
+  throwIfSupabaseError(error, 'load events by id');
+  const eventRows = (data ?? []) as unknown as EventRow[];
+
+  const { data: joinsData, error: joinsError } = await supabase
+    .from('event_joins')
+    .select('event_id,user_id')
+    .in('event_id', ids);
+  throwIfSupabaseError(joinsError, 'load event joins for bookmarked events');
+  const joinRows = (joinsData ?? []) as unknown as JoinRow[];
+  const joinedByEvent = (eventId: string): readonly string[] =>
+    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+
+  const neededIds = uniqueIds([
+    ...eventRows.map((row) => row.created_by),
+    ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
+    ...joinRows.map((row) => row.user_id),
+  ]);
+  const { data: userData, error: userError } = neededIds.length
+    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', [...neededIds])
+    : { data: [], error: null };
+  throwIfSupabaseError(userError, 'load bookmarked events attendees');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (userData ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  return eventRows.map((row) =>
+    toCommunityEvent(row, joinedByEvent(row.id), userId, nameById),
+  );
+}
+
 export async function createEventSupabase(
   supabase: SupabaseClient,
   userId: string,

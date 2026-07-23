@@ -25,6 +25,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
 import {
@@ -115,6 +116,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
           Post
         </Heading>
+        <BookmarkButton size={18} targetId={postId} targetType='post' />
         <Pressable
           accessibilityLabel='Share post'
           accessibilityRole='button'

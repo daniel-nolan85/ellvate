@@ -206,6 +206,24 @@ export async function getMyPostsSupabase(
   return { nextCursor, posts: page.map((row) => toForumPost(row, likedIds)) };
 }
 
+// Fetches specific posts by id — used to hydrate bookmarks, which can point
+// at any post regardless of author/forum. Deliberately skips the muted-author
+// filter listPostsSupabase applies: a post bookmarked before its author was
+// muted should still show up here.
+export async function getPostsByIdsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  ids: readonly string[],
+): Promise<readonly ForumPost[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .in('id', ids);
+  throwIfSupabaseError(error, 'load posts by id');
+  const likedIds = await likedPostIds(supabase, userId);
+  return (data as unknown as PostRow[]).map((row) => toForumPost(row, likedIds));
+}
+
 export async function createPostSupabase(
   supabase: SupabaseClient,
   userId: string,

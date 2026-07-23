@@ -9,6 +9,7 @@ import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 
 import type { CommunityEvent } from './events-types';
 
@@ -100,6 +101,12 @@ export function FeaturedEventCard({
           <Text className="flex-1 text-[rgba(250,250,250,0.75)]" size="xs">
             {event.going} going
           </Text>
+          <BookmarkButton
+            activeColor="rgb(250,250,250)"
+            inactiveColor="rgba(250,250,250,0.6)"
+            targetId={event.id}
+            targetType="event"
+          />
           <Pressable
             accessibilityRole="button"
             className={`rounded-full px-5 py-2.5 ${

@@ -8,7 +8,7 @@ import { Badge } from '@/src/components/ui/badge';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
-import { Sheet } from '@/src/components/ui/sheet';
+import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -22,7 +22,11 @@ import {
   type ForumPost,
   type MyComment,
 } from '@/src/modules/forum';
-import { useMyEventsView, type CommunityEvent } from '@/src/modules/events';
+import {
+  EventSummaryCard,
+  useMyEventsView,
+  type CommunityEvent,
+} from '@/src/modules/events';
 import { MissionCard, useMyMissionsView, type Mission } from '@/src/modules/missions';
 import { useSession } from '@/src/platform/session';
 
@@ -194,41 +198,6 @@ function ActivityRow({
   );
 }
 
-function EventDetailCard({ event }: { readonly event: CommunityEvent }) {
-  return (
-    <VStack className="gap-3 px-5 pb-6" space="sm">
-      <HStack className="items-center justify-between gap-2">
-        <Text className="flex-1 font-inter-bold text-[18px] text-content">
-          {event.title}
-        </Text>
-        {event.featured ? <Badge variant="indigo">Featured</Badge> : null}
-      </HStack>
-      <HStack className="items-center gap-1.5">
-        <Icon color="rgb(113,113,123)" name="CalendarDays" size={14} />
-        <Text className="text-text-muted" size="sm">
-          {event.dayLabel} {event.dateLabel} · {event.timeLabel}
-        </Text>
-      </HStack>
-      <Text className="text-text-muted" size="sm">
-        {event.place}
-      </Text>
-      <Badge variant="outline">{event.tag}</Badge>
-      <Text className="text-text-muted" size="sm">
-        {event.going} going
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        className="self-start"
-        onPress={() => router.push(`/event/${event.id}`)}
-      >
-        <Text className="font-inter-semibold text-indigo" size="sm">
-          Open full event
-        </Text>
-      </Pressable>
-    </VStack>
-  );
-}
-
 interface PostActivityItem {
   readonly key: string;
   readonly createdAt: string;
@@ -268,6 +237,18 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
   const [openPost, setOpenPost] = useState<ForumPost | null>(null);
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
+
+  // Close the open sheet first and let it slide down, then navigate once
+  // the close animation finishes — navigating immediately would unmount the
+  // screen (and the sheet with it) mid-animation.
+  const closeThenNavigate = (
+    path: `/post/${string}` | `/event/${string}` | `/mission/${string}`,
+  ) => {
+    setOpenPost(null);
+    setOpenEvent(null);
+    setOpenMission(null);
+    setTimeout(() => router.push(path), CLOSE_DURATION);
+  };
 
   const myPosts = useMemo(
     (): readonly ForumPost[] =>
@@ -476,10 +457,7 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
         {openPost ? (
           <View className="px-1 pb-4">
             <PostCard
-              onOpen={() => {
-                setOpenPost(null);
-                router.push(`/post/${openPost.id}`);
-              }}
+              onOpen={() => closeThenNavigate(`/post/${openPost.id}`)}
               onToggleLike={() =>
                 toggleLike.mutate({ forum: openPost.forum, postId: openPost.id })
               }
@@ -490,7 +468,12 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
       </Sheet>
 
       <Sheet onClose={() => setOpenEvent(null)} visible={openEvent !== null}>
-        {openEvent ? <EventDetailCard event={openEvent} /> : null}
+        {openEvent ? (
+          <EventSummaryCard
+            event={openEvent}
+            onOpen={(eventId) => closeThenNavigate(`/event/${eventId}`)}
+          />
+        ) : null}
       </Sheet>
 
       <Sheet onClose={() => setOpenMission(null)} visible={openMission !== null}>
@@ -498,10 +481,7 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
           <View className="px-1 pb-4">
             <MissionCard
               mission={openMission}
-              onOpen={(missionId) => {
-                setOpenMission(null);
-                router.push(`/mission/${missionId}`);
-              }}
+              onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
         ) : null}

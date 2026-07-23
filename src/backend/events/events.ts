@@ -7,6 +7,7 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import {
   createEventSupabase,
   deleteEventSupabase,
+  getEventsByIdsSupabase,
   getEventsViewSupabase,
   getMyEventsViewSupabase,
   toggleJoinSupabase,
@@ -89,6 +90,19 @@ function getEventsViewMemory(userId: string): EventsView {
       .sort(byFeaturedThenStartsAt)
       .map((event) => toCommunityEvent(event, userId, users)),
   };
+}
+
+// Fetches specific events by id — used to hydrate bookmarks, which can point
+// at any event regardless of authorship or join status.
+function getEventsByIdsMemory(
+  userId: string,
+  ids: readonly string[],
+): readonly CommunityEvent[] {
+  const { events, users } = getState();
+  const idSet = new Set(ids);
+  return events
+    .filter((event) => idSet.has(event.id))
+    .map((event) => toCommunityEvent(event, userId, users));
 }
 
 // Scoped to events the caller created or joined — bounded by one user's own
@@ -266,6 +280,18 @@ export async function getEventsView(ctx: RequestContext): Promise<EventsView> {
   return ctx.supabase
     ? getEventsViewSupabase(ctx.supabase, ctx.userId)
     : getEventsViewMemory(ctx.userId);
+}
+
+export async function getEventsByIds(
+  ctx: RequestContext,
+  ids: readonly string[],
+): Promise<readonly CommunityEvent[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return ctx.supabase
+    ? getEventsByIdsSupabase(ctx.supabase, ctx.userId, ids)
+    : getEventsByIdsMemory(ctx.userId, ids);
 }
 
 export async function getMyEventsView(

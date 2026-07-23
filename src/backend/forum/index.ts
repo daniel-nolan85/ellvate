@@ -2,6 +2,7 @@ export {
   createPost,
   deletePost,
   getMyPosts,
+  getPostsByIds,
   listPosts,
   toggleLike,
   updatePost,

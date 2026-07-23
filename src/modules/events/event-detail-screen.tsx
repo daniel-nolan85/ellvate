@@ -25,6 +25,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
 import { EventComposer } from './event-composer';
@@ -153,6 +154,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
           Event
         </Heading>
+        <BookmarkButton size={18} targetId={eventId} targetType='event' />
         <Pressable
           accessibilityLabel='Share event'
           accessibilityRole='button'

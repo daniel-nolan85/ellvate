@@ -13,6 +13,7 @@ import {
   createPostSupabase,
   deletePostSupabase,
   getMyPostsSupabase,
+  getPostsByIdsSupabase,
   listPostsSupabase,
   toggleLikeSupabase,
   updatePostSupabase,
@@ -106,6 +107,21 @@ function getMyPostsMemory(
     nextCursor: page.nextCursor,
     posts: page.items.map((item) => toForumPost(item.post, state.users, userId)),
   };
+}
+
+// Fetches specific posts by id, in no particular guaranteed order — used to
+// hydrate bookmarks, which can point at any post regardless of author/forum.
+// Deliberately does not apply the muted-author filter listPostsMemory does:
+// a user who bookmarked a post before muting its author should still see it.
+function getPostsByIdsMemory(
+  userId: string,
+  ids: readonly string[],
+): readonly ForumPost[] {
+  const state = getState();
+  const idSet = new Set(ids);
+  return state.posts
+    .filter((post) => idSet.has(post.id))
+    .map((post) => toForumPost(post, state.users, userId));
 }
 
 // WHY: seed timestamps are anchored at SEED_NOW_ISO, which may be ahead of
@@ -285,6 +301,18 @@ export async function getMyPosts(
   return ctx.supabase
     ? getMyPostsSupabase(ctx.supabase, ctx.userId, limit, cursor)
     : getMyPostsMemory(ctx.userId, limit, cursor);
+}
+
+export async function getPostsByIds(
+  ctx: RequestContext,
+  ids: readonly string[],
+): Promise<readonly ForumPost[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return ctx.supabase
+    ? getPostsByIdsSupabase(ctx.supabase, ctx.userId, ids)
+    : getPostsByIdsMemory(ctx.userId, ids);
 }
 
 export async function createPost(

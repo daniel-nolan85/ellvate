@@ -4,6 +4,7 @@ import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 
 import type { CommunityEvent } from './events-types';
 
@@ -40,6 +41,7 @@ export function EventRow({ event, onOpen, onToggleJoin }: EventRowProps) {
             {event.going} going
           </Text>
         </VStack>
+        <BookmarkButton targetId={event.id} targetType='event' />
         <Pressable
           accessibilityRole="button"
           className={`h-[34px] w-[34px] items-center justify-center rounded-full ${

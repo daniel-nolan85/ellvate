@@ -19,7 +19,10 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const OPEN_DURATION = 280;
-const CLOSE_DURATION = 220;
+// Exported so callers that navigate away on tap (rather than just dismissing)
+// can delay that navigation until the close animation finishes, instead of
+// unmounting the screen mid-slide.
+export const CLOSE_DURATION = 220;
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 800;
 // Off-screen offset used before the panel has measured its own height.

@@ -6,6 +6,7 @@ import {
   ArrowUp,
   AtSign,
   Bell,
+  Bookmark,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -77,7 +78,8 @@ export type AppIconName =
   | 'Link'
   | 'Eye'
   | 'EyeOff'
-  | 'Image';
+  | 'Image'
+  | 'Bookmark';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -115,6 +117,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Eye,
   EyeOff,
   Image,
+  Bookmark,
 };
 
 Object.values(ICON_MAP).forEach((component) => {

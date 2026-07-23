@@ -10,6 +10,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 
 import { useCheckIn, type Mission, type MissionStatus } from './use-missions';
 
@@ -88,6 +89,7 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
           ) : null}
         </VStack>
         <Badge variant={badge.variant}>{badge.label}</Badge>
+        <BookmarkButton targetId={mission.id} targetType='mission' />
       </HStack>
       <HStack className="items-center gap-2">
         <HStack className="flex-1 gap-1">
