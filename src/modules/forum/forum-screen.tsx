@@ -12,9 +12,11 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
+import { PinExplainerModal } from './pin-explainer-modal';
 import { PostCard } from './post-card';
 import { PostComposer, type PostComposerDraft } from './post-composer';
 import { SubforumChips } from './subforum-chips';
+import { usePinAction } from './use-pin-action';
 import {
   useCreatePost,
   useForumPosts,
@@ -37,6 +39,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   const posts = useForumPosts(activeForum);
   const toggleLike = useToggleLike();
   const createPost = useCreatePost();
+  const pinAction = usePinAction();
 
   const subforumNames = subforums.data?.subforums ?? FALLBACK_SUBFORUMS;
   const composerForum =
@@ -136,6 +139,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
                 onToggleLike={() =>
                   toggleLike.mutate({ forum: activeForum, postId: post.id })
                 }
+                pinAction={pinAction}
                 post={post}
               />
             ))}
@@ -168,6 +172,12 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         onSelect={(post) => onOpenPost?.(post.id)}
         placeholder="Search posts"
         visible={isSearching}
+      />
+
+      <PinExplainerModal
+        onCancel={pinAction.cancelPending}
+        onConfirm={pinAction.confirmPending}
+        visible={pinAction.explainerVisible}
       />
     </>
   );

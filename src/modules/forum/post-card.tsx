@@ -20,7 +20,9 @@ import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
+import { PinExplainerModal } from './pin-explainer-modal';
 import { PostComposer } from './post-composer';
+import type { PinAction } from './use-pin-action';
 import {
   useDeletePost,
   useMuteUser,
@@ -30,6 +32,7 @@ import {
   useUpdatePost,
   type ForumPost,
 } from './use-forum';
+import { usePinExplainerDismissed } from './use-pin-explainer';
 
 const COLOR_CONTENT = 'rgb(37,30,23)';
 const COLOR_TEXT_SUBTLE = 'rgb(169,156,139)';
@@ -40,6 +43,13 @@ interface PostCardProps {
   readonly post: ForumPost;
   readonly onToggleLike: () => void;
   readonly onOpen?: () => void;
+  // Screens that render many PostCards at once (the forum list) pass a
+  // shared PinAction so only one <PinExplainerModal> is ever mounted — see
+  // use-pin-action.ts for why. Screens showing a single card at a time
+  // (bookmarks/activity/digest preview sheets) can omit it; PostCard falls
+  // back to managing its own local modal, which is safe with only one
+  // instance on screen.
+  readonly pinAction?: PinAction;
 }
 
 function PostMenuRow({
@@ -71,7 +81,7 @@ function PostMenuRow({
   );
 }
 
-export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
+export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const currentUserId = session.userId ?? 'demo-user';
@@ -82,6 +92,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
   const muteUser = useMuteUser();
   const reportPost = useReportPost();
   const togglePin = useTogglePin();
+  const pinExplainer = usePinExplainerDismissed();
   const subforums = useSubforums();
   const subforumNames = (subforums.data?.subforums ?? []).filter(
     (name) => name !== 'All',
@@ -91,6 +102,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -136,6 +148,36 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
         showToast(result.pinned ? 'Post pinned' : 'Post unpinned'),
       onError: () => showToast('Couldn’t update pin status. Try again.'),
     });
+  };
+
+  // Unpinning is self-explanatory and skips the explainer — only pinning
+  // (which replaces whatever the user already had pinned) needs it, and
+  // only until they've dismissed it once. When a shared pinAction is
+  // provided (the forum list), defer to it instead of managing a local
+  // modal — see PostCardProps.pinAction.
+  const requestTogglePin = () => {
+    if (pinAction) {
+      setMenuOpen(false);
+      pinAction.requestTogglePin(post, {
+        onError: () => showToast('Couldn’t update pin status. Try again.'),
+        onSuccess: (pinned) =>
+          showToast(pinned ? 'Post pinned' : 'Post unpinned'),
+      });
+      return;
+    }
+    if (!post.pinned && !pinExplainer.dismissed) {
+      setPinExplainerOpen(true);
+      return;
+    }
+    handleTogglePin();
+  };
+
+  const confirmPinFromExplainer = (dontShowAgain: boolean) => {
+    setPinExplainerOpen(false);
+    if (dontShowAgain) {
+      void pinExplainer.dismissForever();
+    }
+    handleTogglePin();
   };
 
   const confirmDelete = () => {
@@ -210,7 +252,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               hitSlop={8}
               onPress={(event) => {
                 event.stopPropagation();
-                handleTogglePin();
+                requestTogglePin();
               }}
             >
               <Icon
@@ -393,6 +435,14 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
           submitLabel='Save'
         />
       </Sheet>
+
+      {pinAction ? null : (
+        <PinExplainerModal
+          onCancel={() => setPinExplainerOpen(false)}
+          onConfirm={confirmPinFromExplainer}
+          visible={pinExplainerOpen}
+        />
+      )}
 
       {toast ? (
         <View

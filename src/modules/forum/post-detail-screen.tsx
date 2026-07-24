@@ -31,6 +31,7 @@ import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
+import { PinExplainerModal } from './pin-explainer-modal';
 import { PostComposer } from './post-composer';
 import {
   useCreateComment,
@@ -49,6 +50,7 @@ import {
   useToggleLike,
   useUpdatePost,
 } from './use-forum';
+import { usePinExplainerDismissed } from './use-pin-explainer';
 
 const COLOR_TEXT_SUBTLE = 'rgb(120,108,94)';
 const COLOR_AMBER = 'rgb(217,123,41)';
@@ -75,6 +77,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const reportComment = useReportComment();
   const toggleLike = useToggleLike();
   const togglePin = useTogglePin();
+  const pinExplainer = usePinExplainerDismissed();
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
   const muteUser = useMuteUser();
@@ -91,6 +94,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const [postMenuOpen, setPostMenuOpen] = useState(false);
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const isOwnPost = post !== undefined && userId === post.author.id;
 
@@ -108,6 +112,22 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         showToast(result.pinned ? 'Post pinned' : 'Post unpinned'),
       onError: () => showToast('Couldn’t update pin status. Try again.'),
     });
+  };
+
+  const requestTogglePin = () => {
+    if (post && !post.pinned && !pinExplainer.dismissed) {
+      setPinExplainerOpen(true);
+      return;
+    }
+    handleTogglePin();
+  };
+
+  const confirmPinFromExplainer = (dontShowAgain: boolean) => {
+    setPinExplainerOpen(false);
+    if (dontShowAgain) {
+      void pinExplainer.dismissForever();
+    }
+    handleTogglePin();
   };
 
   const handleEditPost = () => {
@@ -261,7 +281,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                     accessibilityLabel={post.pinned ? 'Unpin post' : 'Pin post'}
                     accessibilityRole='button'
                     hitSlop={8}
-                    onPress={handleTogglePin}
+                    onPress={requestTogglePin}
                   >
                     <Icon
                       color={post.pinned ? COLOR_AMBER : COLOR_TEXT_SUBTLE}
@@ -344,8 +364,8 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
           </Text>
 
           {comments.isPending ? (
-            <View className='items-center py-6'>
-              <Spinner />
+            <View className='items-center py-10'>
+              <Spinner size='xlarge' />
             </View>
           ) : comments.isError ? (
             <VStack className='items-start gap-2 py-2' testID='comments-error'>
@@ -576,6 +596,12 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
           />
         </Sheet>
       ) : null}
+
+      <PinExplainerModal
+        onCancel={() => setPinExplainerOpen(false)}
+        onConfirm={confirmPinFromExplainer}
+        visible={pinExplainerOpen}
+      />
 
       {toast ? (
         <View

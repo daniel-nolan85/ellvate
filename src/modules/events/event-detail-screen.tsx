@@ -271,8 +271,8 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           </Text>
 
           {comments.isPending ? (
-            <View className='items-center py-6'>
-              <Spinner />
+            <View className='items-center py-10'>
+              <Spinner size='xlarge' />
             </View>
           ) : comments.isError ? (
             <VStack className='items-start gap-2 py-2' testID='event-comments-error'>
