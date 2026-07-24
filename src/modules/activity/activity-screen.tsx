@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Badge } from '@/src/components/ui/badge';
-import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
@@ -14,6 +14,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import {
   PostCard,
   useMyComments,
@@ -29,10 +30,6 @@ import {
 } from '@/src/modules/events';
 import { MissionCard, useMyMissionsView, type Mission } from '@/src/modules/missions';
 import { useSession } from '@/src/platform/session';
-
-interface ActivityScreenProps {
-  readonly onClose: () => void;
-}
 
 type ActivityKind = 'post' | 'event' | 'mission';
 type ActivityFilter = 'all' | ActivityKind;
@@ -84,14 +81,14 @@ function FilterChips({
         return (
           <Pressable
             className={`shrink-0 rounded-full px-3.5 py-[7px] ${
-              isActive ? 'bg-primary' : 'bg-secondary'
+              isActive ? 'bg-accent' : 'bg-secondary'
             }`}
             key={filter.key}
             onPress={() => onSelect(filter.key)}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${
-                isActive ? 'text-primary-foreground' : 'text-secondary-foreground'
+                isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
               }`}
             >
               {filter.label}
@@ -105,7 +102,10 @@ function FilterChips({
 
 function StatBox({ label, value }: { readonly label: string; readonly value: number }) {
   return (
-    <VStack className="flex-1 items-center rounded-2xl bg-secondary py-3.5" space="xs">
+    <VStack
+      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper py-3.5 shadow-card"
+      space="xs"
+    >
       <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
       <Text className="text-text-muted" size="xs">
         {label}
@@ -122,7 +122,7 @@ function SectionHeader({
   readonly title: string;
 }) {
   return (
-    <HStack className="items-center gap-2 px-5 pb-1 pt-6">
+    <HStack className="items-center gap-2 px-5 pb-1.5 pt-6">
       <Text className="font-inter-bold text-[12px] uppercase tracking-[1px] text-text-muted">
         {title}
       </Text>
@@ -131,8 +131,20 @@ function SectionHeader({
   );
 }
 
+function SectionCard({ children }: { readonly children: ReactNode }) {
+  return (
+    <VStack className="mx-5 overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
+      {children}
+    </VStack>
+  );
+}
+
 function EmptyHint({ label }: { readonly label: string }) {
-  return <Text className="px-5 pb-2 text-[13px] text-text-muted">{label}</Text>;
+  return (
+    <SectionCard>
+      <Text className="px-4 py-4 text-[13px] text-text-muted">{label}</Text>
+    </SectionCard>
+  );
 }
 
 function LoadMoreRow({
@@ -145,14 +157,14 @@ function LoadMoreRow({
   return (
     <Pressable
       accessibilityRole="button"
-      className="items-center py-3"
+      className="items-center border-t border-surface-hairline py-3"
       disabled={isLoading}
       onPress={onPress}
     >
       {isLoading ? (
         <Spinner size="small" />
       ) : (
-        <Text className="font-inter-semibold text-[13px] text-indigo">
+        <Text className="font-inter-semibold text-[13px] text-accent">
           Load more
         </Text>
       )}
@@ -177,7 +189,7 @@ function ActivityRow({
     <Pressable
       accessibilityLabel={`${label}: ${title}`}
       accessibilityRole="button"
-      className="flex-row items-center gap-3 border-b border-line px-5 py-3.5"
+      className="flex-row items-center gap-3 border-b border-surface-hairline px-4 py-3.5"
       onPress={onPress}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
@@ -193,7 +205,7 @@ function ActivityRow({
         </Text>
         <Text className="text-[12px] text-text-muted">{subtitle}</Text>
       </VStack>
-      <Icon color="rgb(161,161,170)" name="ChevronRight" size={16} />
+      <Icon color="rgb(169,156,139)" name="ChevronRight" size={16} />
     </Pressable>
   );
 }
@@ -219,7 +231,14 @@ interface EventActivityItem {
   readonly going: boolean;
 }
 
-export function ActivityScreen({ onClose }: ActivityScreenProps) {
+interface SearchableActivityItem {
+  readonly key: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly onSelect: () => void;
+}
+
+export function ActivityScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
@@ -327,23 +346,46 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
   const showEvents = filter === 'all' || filter === 'event';
   const showMissions = filter === 'all' || filter === 'mission';
 
+  const [isSearching, setIsSearching] = useState(false);
+  const searchItems = useMemo(
+    (): readonly SearchableActivityItem[] => [
+      ...myPostItems.map(
+        (item): SearchableActivityItem => ({
+          key: item.key,
+          onSelect: item.onPress,
+          subtitle: item.label,
+          title: item.title,
+        }),
+      ),
+      ...myEventItems.map(
+        ({ event, key }): SearchableActivityItem => ({
+          key,
+          onSelect: () => setOpenEvent(event),
+          subtitle: `${event.dayLabel} ${event.dateLabel}`,
+          title: event.title,
+        }),
+      ),
+      ...myMissionItems.map(
+        ({ key, mission }): SearchableActivityItem => ({
+          key,
+          onSelect: () => setOpenMission(mission),
+          subtitle: KIND_LABEL.mission,
+          title: mission.title,
+        }),
+      ),
+    ],
+    [myPostItems, myEventItems, myMissionItems],
+  );
+
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center justify-between px-5 pb-3"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <Heading className="font-inter-bold" size="xl">
-          My Activity
-        </Heading>
-        <Pressable
-          accessibilityLabel="Close"
-          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          onPress={onClose}
-        >
-          <Icon name="Close" size={18} />
-        </Pressable>
-      </HStack>
+      <View style={{ paddingTop: insets.top }}>
+        <ScreenTitle
+          eyebrow="Your history"
+          onSearch={() => setIsSearching(true)}
+          title="My Activity"
+        />
+      </View>
 
       {isPending ? (
         <VStack className="items-center py-16">
@@ -367,30 +409,32 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
 
           <FilterChips active={filter} onSelect={setFilter} />
 
-          <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
             {showPosts ? (
               <>
                 <SectionHeader count={myPostItems.length} title="Posts" />
                 {myPostItems.length === 0 ? (
                   <EmptyHint label="You haven't posted or commented in the forum yet." />
                 ) : (
-                  myPostItems.map((item) => (
-                    <ActivityRow
-                      key={item.key}
-                      kind="post"
-                      label={item.label}
-                      onPress={item.onPress}
-                      subtitle={item.subtitle}
-                      title={item.title}
-                    />
-                  ))
+                  <SectionCard>
+                    {myPostItems.map((item) => (
+                      <ActivityRow
+                        key={item.key}
+                        kind="post"
+                        label={item.label}
+                        onPress={item.onPress}
+                        subtitle={item.subtitle}
+                        title={item.title}
+                      />
+                    ))}
+                    {posts.hasNextPage ? (
+                      <LoadMoreRow
+                        isLoading={posts.isFetchingNextPage}
+                        onPress={() => void posts.fetchNextPage()}
+                      />
+                    ) : null}
+                  </SectionCard>
                 )}
-                {posts.hasNextPage ? (
-                  <LoadMoreRow
-                    isLoading={posts.isFetchingNextPage}
-                    onPress={() => void posts.fetchNextPage()}
-                  />
-                ) : null}
               </>
             ) : null}
 
@@ -400,23 +444,25 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
                 {myEventItems.length === 0 ? (
                   <EmptyHint label="You haven't created or gone to an event yet." />
                 ) : (
-                  myEventItems.map(({ event, going, key }) => (
-                    <ActivityRow
-                      key={key}
-                      kind="event"
-                      label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
-                      onPress={() => setOpenEvent(event)}
-                      subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
-                      title={event.title}
-                    />
-                  ))
+                  <SectionCard>
+                    {myEventItems.map(({ event, going, key }) => (
+                      <ActivityRow
+                        key={key}
+                        kind="event"
+                        label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
+                        onPress={() => setOpenEvent(event)}
+                        subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
+                        title={event.title}
+                      />
+                    ))}
+                    {events.hasNextPage ? (
+                      <LoadMoreRow
+                        isLoading={events.isFetchingNextPage}
+                        onPress={() => void events.fetchNextPage()}
+                      />
+                    ) : null}
+                  </SectionCard>
                 )}
-                {events.hasNextPage ? (
-                  <LoadMoreRow
-                    isLoading={events.isFetchingNextPage}
-                    onPress={() => void events.fetchNextPage()}
-                  />
-                ) : null}
               </>
             ) : null}
 
@@ -426,27 +472,29 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
                 {myMissionItems.length === 0 ? (
                   <EmptyHint label="You haven't created or completed a mission yet." />
                 ) : (
-                  myMissionItems.map(({ completed, key, mission }) => (
-                    <ActivityRow
-                      key={key}
-                      kind="mission"
-                      label={completed ? MISSION_COMPLETED_LABEL : KIND_LABEL.mission}
-                      onPress={() => setOpenMission(mission)}
-                      subtitle={
-                        mission.scheduledFor
-                          ? formatDateOnly(mission.scheduledFor)
-                          : `${mission.stopsDone}/${mission.stopsTotal} stops`
-                      }
-                      title={mission.title}
-                    />
-                  ))
+                  <SectionCard>
+                    {myMissionItems.map(({ completed, key, mission }) => (
+                      <ActivityRow
+                        key={key}
+                        kind="mission"
+                        label={completed ? MISSION_COMPLETED_LABEL : KIND_LABEL.mission}
+                        onPress={() => setOpenMission(mission)}
+                        subtitle={
+                          mission.scheduledFor
+                            ? formatDateOnly(mission.scheduledFor)
+                            : `${mission.stopsDone}/${mission.stopsTotal} stops`
+                        }
+                        title={mission.title}
+                      />
+                    ))}
+                    {missions.hasNextPage ? (
+                      <LoadMoreRow
+                        isLoading={missions.isFetchingNextPage}
+                        onPress={() => void missions.fetchNextPage()}
+                      />
+                    ) : null}
+                  </SectionCard>
                 )}
-                {missions.hasNextPage ? (
-                  <LoadMoreRow
-                    isLoading={missions.isFetchingNextPage}
-                    onPress={() => void missions.fetchNextPage()}
-                  />
-                ) : null}
               </>
             ) : null}
           </ScrollView>
@@ -486,6 +534,19 @@ export function ActivityScreen({ onClose }: ActivityScreenProps) {
           </View>
         ) : null}
       </Sheet>
+
+      <SearchSheet
+        getKey={(item) => item.key}
+        getSubtitle={(item) => item.subtitle}
+        getTitle={(item) => item.title}
+        items={searchItems}
+        onClose={() => setIsSearching(false)}
+        onSelect={(item) => item.onSelect()}
+        placeholder="Search your activity"
+        visible={isSearching}
+      />
+
+      <CommunityNavBar />
     </View>
   );
 }

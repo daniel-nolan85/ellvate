@@ -52,7 +52,7 @@ export function AuthenticationStateScreen() {
       <Card className="w-full max-w-lg border border-outline-200 bg-background-0">
         <VStack space="lg">
           {session.status === 'loading' ? (
-            <Spinner className="text-primary-500" size="large" />
+            <Spinner size="large" />
           ) : null}
           <VStack space="sm">
             <Heading className="text-typography-950" size="xl">

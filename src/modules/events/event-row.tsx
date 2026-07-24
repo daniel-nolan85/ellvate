@@ -21,12 +21,12 @@ export function EventRow({ event, onOpen, onToggleJoin }: EventRowProps) {
       accessibilityRole="button"
       onPress={() => onOpen?.(event.id)}
     >
-      <HStack className="items-center gap-3 rounded-[18px] border border-line p-3.5">
-        <VStack className="w-12 items-center rounded-[14px] bg-indigo-subtle py-[9px]" space="xs">
-          <Text className="font-inter-bold text-[10px] leading-[12px] tracking-[0.5px] text-indigo">
+      <HStack className="items-center gap-3 rounded-[18px] border border-surface-hairline bg-paper p-3.5 shadow-card">
+        <VStack className="w-12 items-center rounded-[14px] bg-accent-subtle py-[9px]" space="xs">
+          <Text className="font-inter-bold text-[10px] leading-[12px] tracking-[0.5px] text-accent">
             {event.dayLabel}
           </Text>
-          <Text className="font-inter-bold text-[19px] leading-[20px] text-indigo">
+          <Text className="font-inter-bold text-[19px] leading-[20px] text-accent">
             {event.dateLabel}
           </Text>
         </VStack>
@@ -53,7 +53,7 @@ export function EventRow({ event, onOpen, onToggleJoin }: EventRowProps) {
           }}
         >
           <Icon
-            color={event.joined ? 'rgb(255,255,255)' : 'rgb(10,10,10)'}
+            color={event.joined ? 'rgb(255,255,255)' : 'rgb(37,30,23)'}
             name={event.joined ? 'Check' : 'Add'}
             size={16}
           />

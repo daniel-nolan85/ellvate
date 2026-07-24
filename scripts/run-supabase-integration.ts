@@ -60,6 +60,9 @@ let missionId: string | null = null;
 let reminderEventId: string | null = null;
 let reminderMissionId: string | null = null;
 let secondPostId: string | null = null;
+let digestPostId: string | null = null;
+let digestEventId: string | null = null;
+let digestMissionId: string | null = null;
 
 try {
   await unwrap(
@@ -542,6 +545,151 @@ try {
   );
   assert.equal(await countMissionReminderNotifications(), 2);
 
+  // send_weekly_digest: a community-wide recap, not a per-user reminder —
+  // fires once for every member with notif_digest on, gated to Monday 8am
+  // local time (both DST offsets), idempotent per recapped week, and counts
+  // only content whose timestamp actually falls in that week.
+  await unwrap(
+    'enable digest preference for user A',
+    a.from('app_users').update({ notif_digest: true }).eq('id', idA).select('id').single(),
+  );
+
+  const digestPost = await unwrap(
+    'create post inside the digest window',
+    a
+      .from('posts')
+      .insert({
+        author_id: idA,
+        created_at: '2026-07-15T18:00:00Z',
+        excerpt: 'Digest window fixture',
+        forum: 'Dining',
+        title: `${title}-digest-post`,
+      })
+      .select('id')
+      .single(),
+  );
+  assert(digestPost);
+  digestPostId = digestPost.id as string;
+
+  const digestEvent = await unwrap(
+    'create event inside the digest window',
+    a
+      .from('events')
+      .insert({
+        created_by: idA,
+        date_label: 'Jul 15',
+        day_label: 'WED',
+        featured: false,
+        going_base: 5,
+        place: 'Digest Pavilion',
+        seed_attendee_ids: [],
+        starts_at: '2026-07-15T18:00:00Z',
+        tag: 'Integration',
+        time_label: '11:00 AM',
+        title: `${title}-digest-event`,
+      })
+      .select('id')
+      .single(),
+  );
+  assert(digestEvent);
+  digestEventId = digestEvent.id as string;
+
+  const digestMissionSeedId = `msn-digest-${suffix}`;
+  const digestMission = await unwrap(
+    'create mission for digest completion fixture',
+    a
+      .from('missions')
+      .insert({
+        created_by: idA,
+        description: 'Digest window fixture',
+        icon: 'Star',
+        id: digestMissionSeedId,
+        locked_by_default: false,
+        position: 997,
+        title: `${title}-digest-mission`,
+        xp: 15,
+      })
+      .select('id')
+      .single(),
+  );
+  assert(digestMission);
+  digestMissionId = digestMission.id as string;
+
+  await unwrap(
+    'complete digest mission inside the digest window',
+    a.from('mission_progress').upsert({
+      completed_at: '2026-07-15T18:00:00Z',
+      mission_id: digestMissionId,
+      status: 'done',
+      stops_done: 1,
+      user_id: idA,
+    }),
+  );
+
+  const countDigestNotifications = async (userId: string): Promise<number> => {
+    const rows = await unwrap(
+      'count digest notifications',
+      a.from('notifications').select('id,body').eq('user_id', userId).eq('kind', 'digest'),
+    );
+    assert(rows);
+    return rows.length;
+  };
+
+  // Wrong hour on a Monday — must be a no-op.
+  await unwrap(
+    'call digest function outside the target hour',
+    a.rpc('send_weekly_digest', { check_time: '2026-07-20T20:00:00Z' }),
+  );
+  assert.equal(await countDigestNotifications(idA), 0);
+
+  // 8am PDT (July = daylight time, UTC-7) on the Monday after the fixture
+  // week — should fire for user A (digest preference on) and recap exactly
+  // the fixtures created above.
+  await unwrap(
+    'call digest function at 8am PDT on the recap Monday',
+    a.rpc('send_weekly_digest', { check_time: '2026-07-20T15:00:00Z' }),
+  );
+  assert.equal(await countDigestNotifications(idA), 1);
+  assert.equal(
+    await countDigestNotifications(idB),
+    0,
+    'user B has notif_digest off and must not receive a digest',
+  );
+  const digestNotificationRows = await unwrap(
+    'read the digest notification body',
+    a
+      .from('notifications')
+      .select('body')
+      .eq('user_id', idA)
+      .eq('kind', 'digest')
+      .order('created_at', { ascending: false })
+      .limit(1),
+  );
+  assert(digestNotificationRows);
+  const [digestNotification] = digestNotificationRows as { body: string }[];
+  assert(digestNotification);
+  assert(
+    digestNotification.body.startsWith('1 posts, 1 events, 1 missions completed'),
+    'digest body should reflect the exact fixture counts',
+  );
+
+  // Calling again with the same reference time must not double-send for the
+  // same recapped week.
+  await unwrap(
+    'call digest function again for the same week (idempotency)',
+    a.rpc('send_weekly_digest', { check_time: '2026-07-20T15:00:00Z' }),
+  );
+  assert.equal(await countDigestNotifications(idA), 1);
+
+  // 8am PST (January = standard time, UTC-8) on a different Monday — proves
+  // the local-hour/weekday gate is correct for the other DST offset too, and
+  // that a new week is independently eligible to fire.
+  await unwrap(
+    'call digest function at 8am PST on a different Monday',
+    a.rpc('send_weekly_digest', { check_time: '2026-01-19T16:00:00Z' }),
+  );
+  assert.equal(await countDigestNotifications(idA), 2);
+
   // listNotificationsSupabase: cursor pagination against a real keyset query
   // (the reminder calls above guarantee idA has at least two rows by now).
   const notificationsFirstPage = await listNotificationsSupabase(a, idA, 1, null);
@@ -614,7 +762,8 @@ try {
     'Supabase integration passed: RLS identity isolation, writes, triggers, ' +
       'push-token ownership, events/missions owner-write grants, Storage owner ' +
       'scoping, scheduled reminder recipient scoping/idempotency/DST/reschedule ' +
-      'behavior, and atomic concurrent bookmark toggles.',
+      'behavior, atomic concurrent bookmark toggles, and the weekly digest ' +
+      'function preference gating/idempotency/DST behavior.',
   );
 } finally {
   if (postId) {
@@ -658,6 +807,32 @@ try {
   }
   if (reminderMissionId) {
     const cleanup = await a.from('missions').delete().eq('id', reminderMissionId);
+    if (cleanup.error) {
+      console.error(`Supabase integration cleanup failed: ${cleanup.error.message}`);
+      process.exitCode = 1;
+    }
+  }
+  if (digestPostId) {
+    const cleanup = await a.from('posts').delete().eq('id', digestPostId);
+    if (cleanup.error) {
+      console.error(`Supabase integration cleanup failed: ${cleanup.error.message}`);
+      process.exitCode = 1;
+    }
+  }
+  if (digestEventId) {
+    const cleanup = await a.from('events').delete().eq('id', digestEventId);
+    if (cleanup.error) {
+      console.error(`Supabase integration cleanup failed: ${cleanup.error.message}`);
+      process.exitCode = 1;
+    }
+  }
+  if (digestMissionId) {
+    // mission_progress rows cascade-delete with the mission (on delete
+    // cascade). The two weekly_digest_runs marker rows this test created
+    // have no delete RLS policy (an internal-only tracking table nothing
+    // else references) and are left in place as harmless residue, same as
+    // the reminder notifications above.
+    const cleanup = await a.from('missions').delete().eq('id', digestMissionId);
     if (cleanup.error) {
       console.error(`Supabase integration cleanup failed: ${cleanup.error.message}`);
       process.exitCode = 1;

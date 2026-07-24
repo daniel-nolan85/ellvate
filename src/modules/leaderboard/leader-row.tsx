@@ -18,7 +18,7 @@ export function LeaderRow({ entry }: LeaderRowProps) {
 
   return (
     <HStack
-      className={`items-center gap-3 rounded-[16px] px-3.5 py-3 ${me ? 'bg-primary' : 'border border-line'}`}
+      className={`items-center gap-3 rounded-[16px] px-3.5 py-3 shadow-card ${me ? 'bg-primary' : 'border border-surface-hairline bg-paper'}`}
     >
       <Text
         className={`w-5 text-center font-inter-bold text-[14px] leading-[18px] ${me ? 'text-primary-foreground' : 'text-text-muted'}`}

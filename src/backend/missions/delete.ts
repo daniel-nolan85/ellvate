@@ -10,10 +10,23 @@ function deleteMissionMemory(userId: string, missionId: string): boolean {
   if (!existing) {
     return false;
   }
-  setState((current) => ({
-    ...current,
-    missions: current.missions.filter((mission) => mission.id !== missionId),
-  }));
+  setState((current) => {
+    const removedCommentIds = new Set(
+      current.missionComments
+        .filter((comment) => comment.missionId === missionId)
+        .map((comment) => comment.id),
+    );
+    return {
+      ...current,
+      missionCommentReports: current.missionCommentReports.filter(
+        (report) => !removedCommentIds.has(report.missionCommentId),
+      ),
+      missionComments: current.missionComments.filter(
+        (comment) => comment.missionId !== missionId,
+      ),
+      missions: current.missions.filter((mission) => mission.id !== missionId),
+    };
+  });
   return true;
 }
 

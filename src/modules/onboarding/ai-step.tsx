@@ -9,8 +9,8 @@ import { Text } from '@/src/components/ui/text';
 import { ObCta, ObTitle } from './chrome';
 import type { AiComfortLevel } from './use-onboarding-state';
 
-const INDIGO = 'rgb(99,102,241)';
-const TEXT_MUTED = 'rgb(113,113,123)';
+const ACCENT = 'rgb(181,80,44)';
+const TEXT_MUTED = 'rgb(120,108,94)';
 
 interface AiLevel {
   readonly id: AiComfortLevel;
@@ -58,7 +58,7 @@ export function AiStep({ chrome, onNext, onPick, value }: AiStepProps) {
       />
       <View className="mx-5 mt-3.5 flex-row items-center gap-3 rounded-[18px] bg-primary p-3.5">
         <View className="h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-[rgba(250,250,250,0.12)]">
-          <AiMark color={INDIGO} size={18} />
+          <AiMark color={ACCENT} size={18} />
         </View>
         <Text className="flex-1 font-sans text-[13px] leading-[19px] text-[rgba(250,250,250,0.85)]">
           &quot;Any networking events this weekend?&quot; — ask me things like that,
@@ -72,24 +72,24 @@ export function AiStep({ chrome, onNext, onPick, value }: AiStepProps) {
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              className={`flex-row items-center gap-3.5 rounded-[18px] px-4 py-3.5 ${
+              className={`flex-row items-center gap-3.5 rounded-[18px] px-4 py-3.5 shadow-card ${
                 selected
-                  ? 'border-[1.5px] border-indigo bg-indigo-subtle'
-                  : 'border border-line bg-canvas'
+                  ? 'border-[1.5px] border-accent bg-accent-subtle'
+                  : 'border border-surface-hairline bg-paper'
               }`}
               key={level.id}
               onPress={() => onPick(level.id)}
               testID={`onboarding-ai-${level.id}`}
             >
               <Icon
-                color={selected ? INDIGO : TEXT_MUTED}
+                color={selected ? ACCENT : TEXT_MUTED}
                 name={level.icon}
                 size={18}
               />
               <View className="flex-1">
                 <Text
                   className={`font-inter-semibold text-[14px] ${
-                    selected ? 'text-indigo' : 'text-content'
+                    selected ? 'text-accent' : 'text-content'
                   }`}
                 >
                   {level.title}

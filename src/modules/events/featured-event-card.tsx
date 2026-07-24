@@ -22,7 +22,7 @@ interface FeaturedEventCardProps {
 const formatDayLabel = (dayLabel: string) =>
   dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1).toLowerCase();
 
-function IndigoGlow() {
+function WarmGlow() {
   return (
     <Box
       className="absolute right-[-40px] top-[-50px] h-[190px] w-[190px]"
@@ -31,9 +31,9 @@ function IndigoGlow() {
       <Svg height={190} width={190}>
         <Defs>
           <RadialGradient cx="50%" cy="50%" id="featuredGlow" r="50%">
-            <Stop offset="0" stopColor="rgb(99,102,241)" stopOpacity={0.4} />
-            <Stop offset="0.7" stopColor="rgb(99,102,241)" stopOpacity={0} />
-            <Stop offset="1" stopColor="rgb(99,102,241)" stopOpacity={0} />
+            <Stop offset="0" stopColor="rgb(217,123,41)" stopOpacity={0.35} />
+            <Stop offset="0.7" stopColor="rgb(217,123,41)" stopOpacity={0} />
+            <Stop offset="1" stopColor="rgb(217,123,41)" stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Circle cx={95} cy={95} fill="url(#featuredGlow)" r={95} />
@@ -54,10 +54,10 @@ export function FeaturedEventCard({
       className="mx-5 mt-1 overflow-hidden rounded-[24px] bg-primary p-[22px]"
       onPress={() => onOpen?.(event.id)}
     >
-      <IndigoGlow />
+      <WarmGlow />
       <VStack space="md">
         <HStack className="items-center" space="xs">
-          <Badge variant="indigo">Featured</Badge>
+          <Badge variant="amber">Featured</Badge>
           <Badge
             className="border-[rgba(250,250,250,0.25)]"
             textClassName="text-[rgba(250,250,250,0.85)]"
@@ -121,7 +121,7 @@ export function FeaturedEventCard({
           >
             <Text
               className={`font-inter-semibold text-[13px] leading-[16px] ${
-                event.joined ? 'text-primary-foreground' : 'text-primary'
+                event.joined ? 'text-primary-foreground' : 'text-accent'
               }`}
             >
               {event.joined ? 'Going ✓' : 'Join event'}

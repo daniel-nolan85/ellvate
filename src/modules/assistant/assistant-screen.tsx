@@ -20,7 +20,7 @@ import { SuggestionChips } from './suggestion-chips';
 import { ToolCallChip } from './tool-call-chip';
 import { useAssistantChat } from './use-assistant-chat';
 
-const INDIGO = 'rgb(99,102,241)';
+const ACCENT = 'rgb(181,80,44)';
 
 interface AssistantScreenProps {
   readonly onClose: () => void;
@@ -49,7 +49,7 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
         style={{ paddingTop: insets.top + 16 }}
       >
         <Box className="h-9 w-9 items-center justify-center rounded-[12px] bg-primary">
-          <AiMark color={INDIGO} size={18} />
+          <AiMark color={ACCENT} size={18} />
         </Box>
         <VStack className="flex-1 gap-0.5">
           <Text className="font-inter-bold text-content" size="sm">
@@ -78,7 +78,7 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
         {entries.length === 0 && !pendingReply ? (
           <VStack className="items-center gap-2.5 px-6 pt-16">
             <Box className="h-14 w-14 items-center justify-center rounded-2xl bg-primary">
-              <AiMark color={INDIGO} size={26} />
+              <AiMark color={ACCENT} size={26} />
             </Box>
             <Text className="text-center font-inter-bold text-content" size="lg">
               Ask the Lake Assistant

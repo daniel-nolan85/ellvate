@@ -8,9 +8,9 @@ import { Text } from '@/src/components/ui/text';
 
 import { ObCta } from './chrome';
 
-const INDIGO = 'rgb(99,102,241)';
+const ACCENT = 'rgb(181,80,44)';
 const WHITE = 'rgb(255,255,255)';
-const FOREGROUND = 'rgb(10,10,10)';
+const FOREGROUND = 'rgb(37,30,23)';
 
 function ForumArt() {
   return (
@@ -31,12 +31,12 @@ function ForumArt() {
 
 function EventsArt() {
   return (
-    <View className="flex-row items-center gap-3 rounded-[18px] border border-line bg-canvas p-3.5">
-      <View className="w-[46px] items-center rounded-[12px] bg-indigo-subtle py-2">
-        <Text className="font-inter-bold text-[9px] tracking-[0.5px] text-indigo">
+    <View className="flex-row items-center gap-3 rounded-[18px] border border-surface-hairline bg-paper p-3.5 shadow-card">
+      <View className="w-[46px] items-center rounded-[12px] bg-accent-subtle py-2">
+        <Text className="font-inter-bold text-[9px] tracking-[0.5px] text-accent">
           FRI
         </Text>
-        <Text className="font-inter-bold text-[18px] text-indigo">18</Text>
+        <Text className="font-inter-bold text-[18px] text-accent">18</Text>
       </View>
       <View className="flex-1">
         <Text className="font-inter-semibold text-[14px] text-content">
@@ -46,8 +46,8 @@ function EventsArt() {
           6:30 PM · MonteLago Village
         </Text>
       </View>
-      <View className="rounded-full bg-primary px-3.5 py-2">
-        <Text className="font-inter-semibold text-[12px] text-primary-foreground">
+      <View className="rounded-full bg-accent px-3.5 py-2">
+        <Text className="font-inter-semibold text-[12px] text-accent-foreground">
           Join
         </Text>
       </View>
@@ -61,7 +61,7 @@ function MissionsArt() {
   return (
     <View className="flex-row items-center gap-3 rounded-[18px] bg-primary p-3.5">
       <View className="h-10 w-10 items-center justify-center rounded-[12px] bg-[rgba(250,250,250,0.12)]">
-        <Icon color={INDIGO} name="Sun" size={18} />
+        <Icon color={ACCENT} name="Sun" size={18} />
       </View>
       <View className="flex-1">
         <Text className="font-inter-semibold text-[14px] text-primary-foreground">
@@ -71,14 +71,14 @@ function MissionsArt() {
           {MISSION_SEGMENTS.map((filled, index) => (
             <View
               className={`h-1 flex-1 rounded-full ${
-                filled ? 'bg-indigo' : 'bg-[rgba(250,250,250,0.15)]'
+                filled ? 'bg-accent' : 'bg-[rgba(250,250,250,0.15)]'
               }`}
               key={index}
             />
           ))}
         </View>
       </View>
-      <Text className="font-inter-bold text-[13px] text-indigo">+50 XP</Text>
+      <Text className="font-inter-bold text-[13px] text-accent">+50 XP</Text>
     </View>
   );
 }
@@ -189,7 +189,7 @@ export function FeatureStep({
         >
           {moment.art()}
           <View>
-            <Text className="font-inter-bold text-[11px] tracking-[1.5px] text-indigo">
+            <Text className="font-inter-bold text-[11px] tracking-[1.5px] text-accent">
               {moment.eyebrow}
             </Text>
             <Text className="mt-2 font-inter-bold text-[30px] leading-[34px] tracking-[-0.9px] text-content">
@@ -199,9 +199,9 @@ export function FeatureStep({
               {moment.sub}
             </Text>
           </View>
-          <View className="flex-row items-center gap-2 self-start rounded-full bg-indigo-subtle px-3.5 py-2">
-            <View className="h-1.5 w-1.5 rounded-full bg-indigo" />
-            <Text className="font-inter-medium text-[12px] text-indigo">
+          <View className="flex-row items-center gap-2 self-start rounded-full bg-accent-subtle px-3.5 py-2">
+            <View className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <Text className="font-inter-medium text-[12px] text-accent">
               {moment.proof}
             </Text>
           </View>

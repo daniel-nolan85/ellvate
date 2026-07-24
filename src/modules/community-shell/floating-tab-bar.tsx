@@ -10,7 +10,7 @@ import { Text } from '@/src/components/ui/text';
 export type CommunityTabId = 'forum' | 'events' | 'missions' | 'leaderboard';
 
 interface FloatingTabBarProps {
-  readonly activeTab: CommunityTabId;
+  readonly activeTab: CommunityTabId | null;
   readonly onTabPress: (id: CommunityTabId) => void;
   readonly onAssistantPress: () => void;
 }
@@ -28,7 +28,7 @@ const LEFT_TABS: readonly TabDefinition[] = [
 
 const RIGHT_TABS: readonly TabDefinition[] = [
   { id: 'missions', label: 'Missions', icon: 'Star' },
-  { id: 'leaderboard', label: 'Ranks', icon: 'ChevronsUpDown' },
+  { id: 'leaderboard', label: 'Ranks', icon: 'Trophy' },
 ];
 
 const ACTIVE_COLOR = '#ffffff';
@@ -43,7 +43,7 @@ const barShadow: ViewStyle = {
 };
 
 const glowShadow: ViewStyle = {
-  shadowColor: 'rgb(99,102,241)',
+  shadowColor: 'rgb(181,80,44)',
   shadowOffset: { width: 0, height: 6 },
   shadowOpacity: 0.5,
   shadowRadius: 9,
@@ -99,7 +99,7 @@ function AssistantButton({ onPress }: AssistantButtonProps) {
     >
       {({ pressed }) => (
         <View
-          className="h-[52px] w-[52px] items-center justify-center rounded-full bg-indigo"
+          className="h-[52px] w-[52px] items-center justify-center rounded-full bg-accent"
           style={[glowShadow, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}
         >
           <AiMark color="#ffffff" size={24} />

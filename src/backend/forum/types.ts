@@ -49,6 +49,14 @@ export interface LikeResult {
   readonly liked: boolean;
 }
 
+export type TogglePinResult =
+  | { readonly ok: true; readonly id: string; readonly pinned: boolean }
+  | {
+      readonly ok: false;
+      readonly code: 'post_not_found';
+      readonly message: string;
+    };
+
 export interface MyPostsPage {
   readonly posts: readonly ForumPost[];
   readonly nextCursor: string | null;

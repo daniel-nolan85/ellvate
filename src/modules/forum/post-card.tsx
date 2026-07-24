@@ -15,6 +15,7 @@ import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
@@ -24,14 +25,15 @@ import {
   useDeletePost,
   useMuteUser,
   useReportPost,
+  useSubforums,
+  useTogglePin,
   useUpdatePost,
   type ForumPost,
 } from './use-forum';
 
-const COLOR_CONTENT = 'rgb(10,10,10)';
-const COLOR_PRIMARY_FOREGROUND = 'rgb(250,250,250)';
-const COLOR_TEXT_SUBTLE = 'rgb(161,161,170)';
-const COLOR_INDIGO = 'rgb(99,102,241)';
+const COLOR_CONTENT = 'rgb(37,30,23)';
+const COLOR_TEXT_SUBTLE = 'rgb(169,156,139)';
+const COLOR_AMBER = 'rgb(217,123,41)';
 const COLOR_DESTRUCTIVE = 'rgb(231,0,11)';
 
 interface PostCardProps {
@@ -79,6 +81,11 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
   const deletePost = useDeletePost();
   const muteUser = useMuteUser();
   const reportPost = useReportPost();
+  const togglePin = useTogglePin();
+  const subforums = useSubforums();
+  const subforumNames = (subforums.data?.subforums ?? []).filter(
+    (name) => name !== 'All',
+  );
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -122,6 +129,15 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
     setConfirmDeleteOpen(true);
   };
 
+  const handleTogglePin = () => {
+    setMenuOpen(false);
+    togglePin.mutate(post.id, {
+      onSuccess: (result) =>
+        showToast(result.pinned ? 'Post pinned' : 'Post unpinned'),
+      onError: () => showToast('Couldn’t update pin status. Try again.'),
+    });
+  };
+
   const confirmDelete = () => {
     setConfirmDeleteOpen(false);
     deletePost.mutate(post.id, {
@@ -151,7 +167,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
   };
 
   return (
-    <View className='gap-4 rounded-[20px] border border-line bg-canvas p-[18px]'>
+    <View className='gap-4 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
       <Pressable
         accessibilityLabel={`Open post: ${post.title}`}
         accessibilityRole='button'
@@ -179,20 +195,31 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               <Text className='font-inter-bold' size='sm'>
                 {post.author.name}
               </Text>
-              <Text className='text-text-muted' size='xs'>
-                {post.forum} · {formatRelativeTime(post.createdAt)}
-              </Text>
+              <HStack className='items-center' space='xs'>
+                <Badge variant={categoryAccent(post.forum)}>{post.forum}</Badge>
+                <Text className='text-text-muted' size='xs'>
+                  · {formatRelativeTime(post.createdAt)}
+                </Text>
+              </HStack>
             </VStack>
           </Pressable>
           <HStack className='items-center' space='sm'>
-            {post.pinned ? (
-              <Badge
-                leftIcon={<Icon color={COLOR_INDIGO} name='Star' size={12} />}
-                variant='indigo'
-              >
-                Pinned
-              </Badge>
-            ) : null}
+            <Pressable
+              accessibilityLabel={post.pinned ? 'Unpin post' : 'Pin post'}
+              accessibilityRole='button'
+              hitSlop={8}
+              onPress={(event) => {
+                event.stopPropagation();
+                handleTogglePin();
+              }}
+            >
+              <Icon
+                color={post.pinned ? COLOR_AMBER : COLOR_TEXT_SUBTLE}
+                fill={post.pinned ? COLOR_AMBER : 'none'}
+                name='Pin'
+                size={16}
+              />
+            </Pressable>
             <Pressable
               accessibilityLabel='More options'
               accessibilityRole='button'
@@ -223,18 +250,19 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
       <HStack className='items-center' space='sm'>
         <Pressable
           className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
-            post.liked ? 'bg-primary' : 'bg-secondary'
+            post.liked ? 'bg-amber-subtle' : 'bg-secondary'
           }`}
           onPress={handleLike}
         >
           <Icon
-            color={post.liked ? COLOR_PRIMARY_FOREGROUND : COLOR_CONTENT}
+            color={post.liked ? COLOR_AMBER : COLOR_CONTENT}
+            fill={post.liked ? COLOR_AMBER : 'none'}
             name='Favourite'
             size={14}
           />
           <Text
             className={`font-inter-semibold text-[12px] leading-[16px] ${
-              post.liked ? 'text-primary-foreground' : 'text-content'
+              post.liked ? 'text-amber' : 'text-content'
             }`}
           >
             {post.likes}
@@ -303,7 +331,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
           onPress={() => setConfirmDeleteOpen(false)}
         >
           <Pressable
-            className='w-full gap-1 rounded-[20px] bg-canvas p-5'
+            className='w-full gap-1 rounded-[20px] bg-paper p-5'
             onPress={(event) => event.stopPropagation()}
           >
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -344,6 +372,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               {
                 excerpt: draft.excerpt,
                 existingMedia: draft.existingMedia,
+                forum: draft.forum,
                 newMedia: draft.newMedia,
                 postId: post.id,
                 title: draft.title,
@@ -360,6 +389,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               },
             )
           }
+          subforums={subforumNames}
           submitLabel='Save'
         />
       </Sheet>

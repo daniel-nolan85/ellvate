@@ -7,6 +7,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { CATEGORY_CHIP_ACTIVE_TREATMENT, categoryAccent } from '@/src/lib/category-accent';
 import { pickGalleryImages } from '@/src/platform/media-picker';
 
 export interface PostComposerDraft {
@@ -35,6 +36,7 @@ type MediaItem = ExistingMediaItem | NewMediaItem;
 
 interface PostComposerProps {
   readonly forum: string;
+  readonly subforums: readonly string[];
   readonly isSubmitting: boolean;
   readonly onDismiss: () => void;
   readonly onSubmit: (draft: PostComposerDraft) => void;
@@ -44,15 +46,6 @@ interface PostComposerProps {
   readonly submitLabel?: string;
 }
 
-const FORUMS = [
-  'Announcements',
-  'Marina & Boating',
-  'Dining',
-  'Trails',
-  'Buy & Sell',
-  'Events',
-];
-
 export function PostComposer({
   forum: initialForum,
   initialExcerpt = '',
@@ -61,6 +54,7 @@ export function PostComposer({
   isSubmitting,
   onDismiss,
   onSubmit,
+  subforums,
   submitLabel = 'Post',
 }: PostComposerProps) {
   const [title, setTitle] = useState(initialTitle);
@@ -113,34 +107,36 @@ export function PostComposer({
         </Text>
 
         {/* Forum selector - horizontal scroll */}
-        {submitLabel === 'Post' && (
-          <View className='gap-1'>
-            <Text className='text-xs text-text-muted'>Category</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {FORUMS.map((f) => (
+        <View className='gap-1'>
+          <Text className='text-xs text-text-muted'>Category</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {subforums.map((f) => {
+              const isActive = forum === f;
+              const treatment = CATEGORY_CHIP_ACTIVE_TREATMENT[categoryAccent(f)];
+              return (
                 <Pressable
                   key={f}
                   className={`rounded-full px-4 py-2 ${
-                    forum === f ? 'bg-primary' : 'bg-secondary'
+                    isActive ? treatment.bg : 'bg-secondary'
                   }`}
                   onPress={() => setForum(f)}
                 >
                   <Text
                     className={`text-[13px] font-inter-semibold ${
-                      forum === f ? 'text-primary-foreground' : 'text-content'
+                      isActive ? treatment.text : 'text-content'
                     }`}
                   >
                     {f}
                   </Text>
                 </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+              );
+            })}
+          </ScrollView>
+        </View>
 
         <ScrollView className='flex-1' showsVerticalScrollIndicator={false}>
           <VStack space='md'>
@@ -193,7 +189,7 @@ export function PostComposer({
                       className='flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-line bg-secondary'
                       onPress={pickImage}
                     >
-                      <Icon color='rgb(161,161,170)' name='Add' size={20} />
+                      <Icon color='rgb(169,156,139)' name='Add' size={20} />
                     </Pressable>
                   )}
                 </View>
@@ -206,7 +202,7 @@ export function PostComposer({
                 className='flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3'
                 onPress={pickImage}
               >
-                <Icon color='rgb(161,161,170)' name='Image' size={20} />
+                <Icon color='rgb(169,156,139)' name='Image' size={20} />
               </Pressable>
             )}
           </VStack>
@@ -227,7 +223,7 @@ export function PostComposer({
         </Button>
         <View className='flex-1' />
         <Button
-          className='rounded-full bg-primary px-4'
+          className='rounded-full bg-accent px-4'
           isDisabled={!canSubmit}
           onPress={() =>
             onSubmit({
@@ -235,7 +231,7 @@ export function PostComposer({
               existingMedia: media
                 .filter((item): item is ExistingMediaItem => item.kind === 'existing')
                 .map((item) => ({ filename: item.filename, url: item.url })),
-              forum: submitLabel === 'Post' ? forum : undefined,
+              forum,
               newMedia: media
                 .filter((item): item is NewMediaItem => item.kind === 'new')
                 .map((item) => ({
@@ -248,7 +244,7 @@ export function PostComposer({
           testID='forum-submit-post'
           size='sm'
         >
-          <ButtonText className='font-inter-semibold text-[13px] text-primary-foreground'>
+          <ButtonText className='font-inter-semibold text-[13px] text-accent-foreground'>
             {submitLabel}
           </ButtonText>
         </Button>
@@ -266,7 +262,7 @@ export function PostComposer({
           onPress={() => setAlertTitle(null)}
         >
           <Pressable
-            className='w-full gap-3 rounded-[20px] bg-canvas p-5'
+            className='w-full gap-3 rounded-[20px] bg-paper p-5'
             onPress={(event) => event.stopPropagation()}
           >
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -277,7 +273,7 @@ export function PostComposer({
             </Text>
             <HStack className='justify-end'>
               <Pressable onPress={() => setAlertTitle(null)}>
-                <Text className='font-inter-semibold text-[15px] text-primary'>
+                <Text className='font-inter-semibold text-[15px] text-accent'>
                   OK
                 </Text>
               </Pressable>

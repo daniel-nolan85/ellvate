@@ -14,13 +14,16 @@ afterEach(() => {
 });
 
 describe('seed data', () => {
-  test('seeds the 7 design subforums starting with All', () => {
+  test('seeds the 10 design subforums starting with All', () => {
     expect(getState().subforums).toEqual([
       'All',
       'Announcements',
+      'HOA',
       'Marina & Boating',
       'Dining',
       'Trails',
+      'Golf',
+      'Sports Club',
       'Buy & Sell',
       'Events',
     ]);
@@ -42,16 +45,33 @@ describe('seed data', () => {
     expect(posts.map((post) => hoursBefore(post.createdAt))).toEqual([
       2, 5, 24, 25,
     ]);
-    expect(posts.filter((post) => post.pinned).map((post) => post.id)).toEqual([
-      'post-2',
-    ]);
     expect(posts.map((post) => post.likes)).toEqual([61, 138, 92, 27]);
     expect(posts.every((post) => post.likedBy.length === 0)).toBe(true);
+  });
+
+  test('seeds the demo user with post-2 already pinned', () => {
+    const { users } = getState();
+    expect(
+      users.find((user) => user.id === DEMO_USER_ID)?.pinnedPostId,
+    ).toBe('post-2');
+    expect(
+      users
+        .filter((user) => user.id !== DEMO_USER_ID)
+        .every((user) => user.pinnedPostId === null),
+    ).toBe(true);
   });
 
   test('seeds 4 events with the featured mixer and attendee refs', () => {
     const { events, users } = getState();
     const userIds = new Set(users.map((user) => user.id));
+
+    // Seeded events are anchored to SEED_NOW_ISO (see seedEventFields in
+    // seed.ts) rather than a fixed calendar date, so their day/date labels
+    // shift with whenever the suite runs — derive the expectation the same
+    // way instead of hardcoding a date that will eventually go stale.
+    const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const mixerDate = new Date(Date.parse(SEED_NOW_ISO));
+    mixerDate.setUTCDate(mixerDate.getUTCDate() + 2);
 
     expect(events).toHaveLength(4);
     expect(events.filter((event) => event.featured).map((e) => e.id)).toEqual([
@@ -60,8 +80,8 @@ describe('seed data', () => {
     expect(events[0]).toMatchObject({
       title: 'Locals Networking Mixer',
       timeLabel: '6:30 PM',
-      dayLabel: 'FRI',
-      dateLabel: '18',
+      dayLabel: weekdays[mixerDate.getUTCDay()],
+      dateLabel: String(mixerDate.getUTCDate()),
       place: 'MonteLago Village',
       tag: 'Networking',
       going: 48,
@@ -178,8 +198,8 @@ describe('store', () => {
 
     expect(after).not.toBe(before);
     expect(getState()).toBe(after);
-    expect(before.subforums).toHaveLength(7);
-    expect(getState().subforums).toHaveLength(8);
+    expect(before.subforums).toHaveLength(10);
+    expect(getState().subforums).toHaveLength(11);
   });
 
   test('resetStore restores the seed state', () => {

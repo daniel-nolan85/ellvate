@@ -50,7 +50,9 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
             <Pressable
               accessibilityRole="button"
               className={`flex-row items-center gap-3.5 rounded-[18px] px-4 py-[15px] ${
-                selected ? 'border border-primary bg-primary' : 'border border-line bg-canvas'
+                selected
+                  ? 'border border-primary bg-primary shadow-card'
+                  : 'border border-surface-hairline bg-paper shadow-card'
               }`}
               key={role.id}
               onPress={() => onPick(role.id)}
@@ -58,11 +60,11 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
             >
               <View
                 className={`h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${
-                  selected ? 'bg-[rgba(250,250,250,0.12)]' : 'bg-indigo-subtle'
+                  selected ? 'bg-[rgba(250,250,250,0.12)]' : 'bg-accent-subtle'
                 }`}
               >
                 <Icon
-                  color={selected ? '#fff' : 'rgb(99,102,241)'}
+                  color={selected ? '#fff' : 'rgb(181,80,44)'}
                   name={role.icon}
                   size={18}
                 />

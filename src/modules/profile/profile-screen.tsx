@@ -14,6 +14,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
@@ -58,16 +59,24 @@ const NOTIFICATION_ROWS: readonly {
   {
     key: 'digest',
     label: 'Weekly digest',
-    hint: 'A Sunday recap of the week',
+    hint: 'Monday morning: the week at the lake',
     icon: 'Mail',
   },
 ];
 
 function SectionTitle({ children }: { readonly children: string }) {
   return (
-    <Text className="px-5 pb-1.5 pt-5 font-inter-bold text-[12px] uppercase tracking-[1px] text-text-muted">
+    <Text className="px-6 pb-1.5 pt-5 font-inter-bold text-[12px] uppercase tracking-[1px] text-text-muted">
       {children}
     </Text>
+  );
+}
+
+function SectionCard({ children }: { readonly children: ReactNode }) {
+  return (
+    <VStack className="mx-5 overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
+      {children}
+    </VStack>
   );
 }
 
@@ -88,13 +97,13 @@ function Row({
 }) {
   return (
     <Pressable
-      className="flex-row items-center gap-3 border-b border-line bg-canvas px-5 py-3.5"
+      className="flex-row items-center gap-3 border-b border-surface-hairline px-4 py-3.5"
       disabled={!onPress}
       onPress={onPress}
     >
       <View className="h-8 w-8 items-center justify-center rounded-full bg-secondary">
         <Icon
-          color={danger ? 'rgb(220,38,38)' : 'rgb(99,102,241)'}
+          color={danger ? 'rgb(231,0,11)' : 'rgb(181,80,44)'}
           name={icon}
           size={16}
         />
@@ -111,7 +120,7 @@ function Row({
       ) : null}
       {right}
       {onPress && !right ? (
-        <Icon color="rgb(161,161,170)" name="ChevronLeft" size={16} />
+        <Icon color="rgb(169,156,139)" name="ChevronLeft" size={16} />
       ) : null}
     </Pressable>
   );
@@ -119,7 +128,10 @@ function Row({
 
 function StatCard({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <VStack className="flex-1 items-center rounded-2xl bg-secondary py-3.5" space="xs">
+    <VStack
+      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper py-3.5 shadow-card"
+      space="xs"
+    >
       <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
       <Text className="text-text-muted" size="xs">
         {label}
@@ -200,24 +212,12 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
 
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center justify-between px-5 pb-3"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <Heading className="font-inter-bold" size="xl">
-          You
-        </Heading>
-        <Pressable
-          accessibilityLabel="Close"
-          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          onPress={onClose}
-        >
-          <Icon name="Close" size={18} />
-        </Pressable>
-      </HStack>
+      <View style={{ paddingTop: insets.top }}>
+        <ScreenTitle eyebrow="Account" showAvatar={false} title="Profile" />
+      </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-        <VStack className="items-center px-5 pb-2 pt-3" space="sm">
+      <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+        <VStack className="mx-5 items-center gap-3 rounded-[20px] border border-surface-hairline bg-paper px-5 pb-5 pt-6 shadow-card">
           <Pressable
             accessibilityLabel="Change your photo"
             accessibilityRole="button"
@@ -230,11 +230,11 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
               size="2xl"
               src={profile.data?.profile.avatarUrl ?? undefined}
             />
-            <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-canvas bg-primary">
+            <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-paper bg-accent">
               {updateProfile.isPending ? (
                 <Spinner size="small" />
               ) : (
-                <Icon color="#fff" name="Edit" size={14} />
+                <Icon color="rgb(255,255,255)" name="Edit" size={14} />
               )}
             </View>
           </Pressable>
@@ -258,7 +258,7 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
           </Button>
         </VStack>
 
-        <HStack className="px-5 pt-3" space="sm">
+        <HStack className="px-5 pt-4" space="sm">
           <StatCard label="Level" value={String(stats.data?.level ?? 1)} />
           <StatCard label="XP" value={String(stats.data?.xp ?? 0)} />
           <StatCard
@@ -269,30 +269,32 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
         </HStack>
 
         <SectionTitle>Your profile</SectionTitle>
-        <Row
-          icon="Globe"
-          label="Community role"
-          value={
-            profile.data?.profile.role
-              ? ROLE_LABELS[profile.data.profile.role]
-              : '—'
-          }
-        />
-        <Row
-          icon="Star"
-          label="Interests"
-          value={`${profile.data?.profile.interests.length ?? 0} picked`}
-        />
-        <Row
-          icon="Edit"
-          label="My Activity"
-          onPress={() => router.push('/activity')}
-        />
-        <Row
-          icon="Bookmark"
-          label="Bookmarks"
-          onPress={() => router.push('/bookmarks')}
-        />
+        <SectionCard>
+          <Row
+            icon="Globe"
+            label="Community role"
+            value={
+              profile.data?.profile.role
+                ? ROLE_LABELS[profile.data.profile.role]
+                : '—'
+            }
+          />
+          <Row
+            icon="Star"
+            label="Interests"
+            value={`${profile.data?.profile.interests.length ?? 0} picked`}
+          />
+          <Row
+            icon="Edit"
+            label="My Activity"
+            onPress={() => router.push('/activity')}
+          />
+          <Row
+            icon="Bookmark"
+            label="Bookmarks"
+            onPress={() => router.push('/bookmarks')}
+          />
+        </SectionCard>
 
         <SectionTitle>Notifications</SectionTitle>
         {profile.isPending || !prefs ? (
@@ -300,26 +302,30 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
             <Spinner />
           </View>
         ) : (
-          NOTIFICATION_ROWS.map((row) => (
-            <Row
-              icon={row.icon}
-              key={row.key}
-              label={row.label}
-              right={
-                <Switch
-                  onValueChange={(next) => toggle(row.key, next)}
-                  value={prefs[row.key]}
-                />
-              }
-              value={row.hint}
-            />
-          ))
+          <SectionCard>
+            {NOTIFICATION_ROWS.map((row) => (
+              <Row
+                icon={row.icon}
+                key={row.key}
+                label={row.label}
+                right={
+                  <Switch
+                    onValueChange={(next) => toggle(row.key, next)}
+                    value={prefs[row.key]}
+                  />
+                }
+                value={row.hint}
+              />
+            ))}
+          </SectionCard>
         )}
 
         <SectionTitle>Account</SectionTitle>
-        <Row icon="Phone" label="Phone & password" value="Managed by Clerk" />
-        <Row icon="ArrowLeft" label="Sign out" onPress={confirmSignOut} />
-        <Row danger icon="AlertCircle" label="Delete account" onPress={confirmDelete} />
+        <SectionCard>
+          <Row icon="Phone" label="Phone & password" value="Managed by Clerk" />
+          <Row icon="ArrowLeft" label="Sign out" onPress={confirmSignOut} />
+          <Row danger icon="AlertCircle" label="Delete account" onPress={confirmDelete} />
+        </SectionCard>
       </ScrollView>
 
       <Sheet onClose={() => setEditing(false)} visible={editing}>
@@ -340,17 +346,19 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
             />
           </Input>
           <Button
-            className="h-[52px] rounded-2xl bg-primary"
+            className="h-[52px] rounded-2xl bg-accent"
             isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
             onPress={saveName}
             size="lg"
           >
-            <ButtonText className="font-inter-semibold text-primary-foreground">
+            <ButtonText className="font-inter-semibold text-accent-foreground">
               {updateProfile.isPending ? 'Saving…' : 'Save'}
             </ButtonText>
           </Button>
         </VStack>
       </Sheet>
+
+      <CommunityNavBar />
     </View>
   );
 }

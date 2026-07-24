@@ -55,7 +55,7 @@ export const calendarDayStyle = tva({
       'range-middle': 'rounded-none bg-secondary',
       'range-start': 'bg-primary',
       selected: 'bg-primary',
-      today: 'border border-indigo',
+      today: 'border border-accent',
     },
   },
 });
@@ -71,7 +71,7 @@ export const calendarDayTextStyle = tva({
       'range-middle': 'text-content',
       'range-start': 'font-inter-semibold text-primary-foreground',
       selected: 'font-inter-semibold text-primary-foreground',
-      today: 'font-inter-semibold text-indigo',
+      today: 'font-inter-semibold text-accent',
     },
   },
 });

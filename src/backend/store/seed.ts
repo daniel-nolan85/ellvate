@@ -22,6 +22,28 @@ const HOUR_MS = 60 * 60 * 1000;
 const isoHoursBeforeSeedNow = (hours: number): string =>
   new Date(Date.parse(SEED_NOW_ISO) - hours * HOUR_MS).toISOString();
 
+const EVENT_WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+
+// WHY: anchored to the real wall clock (like isoHoursBeforeSeedNow above) so
+// seeded events always land in the future relative to whenever the app is
+// actually run, instead of drifting into the past on a fixed calendar date
+// and silently vanishing once the "hide past events" filter (events.ts)
+// ships.
+const seedEventFields = (
+  daysFromSeedNow: number,
+  hour: number,
+  minute: number,
+): { readonly startsAt: string; readonly dayLabel: string; readonly dateLabel: string } => {
+  const date = new Date(Date.parse(SEED_NOW_ISO));
+  date.setUTCDate(date.getUTCDate() + daysFromSeedNow);
+  date.setUTCHours(hour, minute, 0, 0);
+  return {
+    startsAt: date.toISOString(),
+    dayLabel: EVENT_WEEKDAYS[date.getUTCDay()],
+    dateLabel: String(date.getUTCDate()),
+  };
+};
+
 const defaultNotificationPrefs: NotificationPrefs = {
   events: true,
   replies: true,
@@ -44,12 +66,14 @@ interface SeedUserInput {
   readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly previousRank: number | null;
+  readonly pinnedPostId?: string | null;
 }
 
 const seedUser = ({
   id,
   missionsCompleted,
   name,
+  pinnedPostId = null,
   previousRank,
   streakDays,
   xp,
@@ -64,6 +88,7 @@ const seedUser = ({
   profile: emptyProfile(),
   mutedUserIds: [],
   avatarUrl: null,
+  pinnedPostId,
 });
 
 const seedUsers = (): readonly StoredUser[] => [
@@ -114,6 +139,10 @@ const seedUsers = (): readonly StoredUser[] => [
     streakDays: 12,
     missionsCompleted: 21,
     previousRank: 7,
+    // Seeded so the demo shows the pin feature already in use, matching the
+    // Announcements post that used to be globally pinned before pinning
+    // became per-user.
+    pinnedPostId: 'post-2',
   }),
   seedUser({
     id: 'user-hoa',
@@ -197,7 +226,6 @@ const seedPosts = (
     replies: replyCount(comments, 'post-1'),
     likes: 61,
     likedBy: [],
-    pinned: false,
   },
   {
     id: 'post-2',
@@ -210,7 +238,6 @@ const seedPosts = (
     replies: replyCount(comments, 'post-2'),
     likes: 138,
     likedBy: [],
-    pinned: true,
   },
   {
     id: 'post-3',
@@ -223,7 +250,6 @@ const seedPosts = (
     replies: replyCount(comments, 'post-3'),
     likes: 92,
     likedBy: [],
-    pinned: false,
   },
   {
     id: 'post-4',
@@ -236,7 +262,6 @@ const seedPosts = (
     replies: replyCount(comments, 'post-4'),
     likes: 27,
     likedBy: [],
-    pinned: false,
   },
 ];
 
@@ -244,10 +269,8 @@ const seedEvents = (): readonly StoredEvent[] => [
   {
     id: 'event-1',
     authorId: 'user-hoa',
-    startsAt: '2026-07-18T18:30:00.000Z',
+    ...seedEventFields(2, 18, 30),
     timeLabel: '6:30 PM',
-    dayLabel: 'FRI',
-    dateLabel: '18',
     title: 'Locals Networking Mixer',
     place: 'MonteLago Village',
     tag: 'Networking',
@@ -259,10 +282,8 @@ const seedEvents = (): readonly StoredEvent[] => [
   {
     id: 'event-2',
     authorId: 'user-mia',
-    startsAt: '2026-07-19T09:00:00.000Z',
+    ...seedEventFields(3, 9, 0),
     timeLabel: '9:00 AM',
-    dayLabel: 'SAT',
-    dateLabel: '19',
     title: 'Farmers Market on the Promenade',
     place: 'Waterfront Promenade',
     tag: 'Community',
@@ -274,10 +295,8 @@ const seedEvents = (): readonly StoredEvent[] => [
   {
     id: 'event-3',
     authorId: 'user-andre',
-    startsAt: '2026-07-20T17:45:00.000Z',
+    ...seedEventFields(4, 17, 45),
     timeLabel: '5:45 PM',
-    dayLabel: 'SUN',
-    dateLabel: '20',
     title: 'Sunset Paddleboard Meetup',
     place: 'Village Marina',
     tag: 'Outdoors',
@@ -289,10 +308,8 @@ const seedEvents = (): readonly StoredEvent[] => [
   {
     id: 'event-4',
     authorId: 'user-jordan',
-    startsAt: '2026-07-23T08:00:00.000Z',
+    ...seedEventFields(7, 8, 0),
     timeLabel: '8:00 AM',
-    dayLabel: 'WED',
-    dateLabel: '23',
     title: 'Small Business Coffee & Connect',
     place: 'Lakeside Café',
     tag: 'Networking',
@@ -314,7 +331,7 @@ const seedMissions = (): readonly StoredMission[] => [
     stopsTotal: 1,
     icon: 'Sun',
     progressByUser: {
-      [DEMO_USER_ID]: { status: 'active', stopsDone: 0 },
+      [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 0 },
     },
   },
   {
@@ -327,7 +344,7 @@ const seedMissions = (): readonly StoredMission[] => [
     stopsTotal: 3,
     icon: 'ArrowUp',
     progressByUser: {
-      [DEMO_USER_ID]: { status: 'active', stopsDone: 2 },
+      [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 2 },
     },
   },
   {
@@ -340,7 +357,11 @@ const seedMissions = (): readonly StoredMission[] => [
     stopsTotal: 3,
     icon: 'Star',
     progressByUser: {
-      [DEMO_USER_ID]: { status: 'done', stopsDone: 3 },
+      [DEMO_USER_ID]: {
+        completedAt: isoHoursBeforeSeedNow(48),
+        status: 'done',
+        stopsDone: 3,
+      },
     },
   },
   {
@@ -353,7 +374,7 @@ const seedMissions = (): readonly StoredMission[] => [
     stopsTotal: 1,
     icon: 'Moon',
     progressByUser: {
-      [DEMO_USER_ID]: { status: 'locked', stopsDone: 0 },
+      [DEMO_USER_ID]: { completedAt: null, status: 'locked', stopsDone: 0 },
     },
   },
 ];
@@ -375,9 +396,12 @@ export const createSeedState = (): StoreState => {
     subforums: [
       'All',
       'Announcements',
+      'HOA',
       'Marina & Boating',
       'Dining',
       'Trails',
+      'Golf',
+      'Sports Club',
       'Buy & Sell',
       'Events',
     ],
@@ -389,6 +413,8 @@ export const createSeedState = (): StoreState => {
     eventComments: [],
     eventCommentReports: [],
     missions: seedMissions(),
+    missionComments: [],
+    missionCommentReports: [],
     notifications: [],
     bookmarks: [],
     users: seedUsers(),

@@ -16,7 +16,7 @@ function CommentBody({ body }: { readonly body: string }) {
       {segments.map((segment, index) => (
         <RNText
           className={
-            segment.startsWith('@') ? 'font-inter-medium text-indigo' : undefined
+            segment.startsWith('@') ? 'font-inter-medium text-accent' : undefined
           }
           key={`${index}-${segment}`}
         >
@@ -69,7 +69,7 @@ export function CommentItem<TComment extends DisplayComment>({
             onPress={() => onActions(comment)}
             testID={`comment-actions-${comment.id}`}
           >
-            <Icon color="rgb(113,113,123)" name="ThreeDots" size={16} />
+            <Icon color="rgb(120,108,94)" name="ThreeDots" size={16} />
           </Pressable>
         </HStack>
       </VStack>

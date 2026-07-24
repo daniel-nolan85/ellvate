@@ -18,7 +18,7 @@ export function ObProgress({ step, total }: ObProgressProps) {
       {Array.from({ length: total }).map((_, index) => (
         <View
           key={index}
-          className={`h-1 flex-1 rounded-full ${index <= step ? 'bg-indigo' : 'bg-muted'}`}
+          className={`h-1 flex-1 rounded-full ${index <= step ? 'bg-accent' : 'bg-muted'}`}
         />
       ))}
     </View>
@@ -78,7 +78,7 @@ export function ObTitle({ eyebrow, title, sub }: ObTitleProps) {
   return (
     <VStack className="px-6 pb-1 pt-[18px]" space="xs">
       {eyebrow ? (
-        <Text className="font-inter-bold text-[11px] uppercase tracking-[1.2px] text-indigo">
+        <Text className="font-inter-bold text-[11px] uppercase tracking-[1.2px] text-accent">
           {eyebrow}
         </Text>
       ) : null}

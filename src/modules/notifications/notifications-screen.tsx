@@ -26,6 +26,7 @@ interface NotificationsScreenProps {
 
 const ICON_BY_KIND: Readonly<Record<string, AppIconName>> = {
   comment: 'MessageCircle',
+  digest: 'Newspaper',
   event: 'CalendarDays',
   like: 'Favourite',
   mission: 'Star',
@@ -120,7 +121,7 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
           className="self-end px-5 pb-2"
           onPress={() => markAllRead.mutate()}
         >
-          <Text className="font-inter-semibold text-[13px] text-indigo">
+          <Text className="font-inter-semibold text-[13px] text-accent">
             Mark all as read
           </Text>
         </Pressable>
@@ -155,7 +156,7 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
               {notifications.isFetchingNextPage ? (
                 <Spinner size="small" />
               ) : (
-                <Text className="font-inter-semibold text-[13px] text-indigo">
+                <Text className="font-inter-semibold text-[13px] text-accent">
                   Load more
                 </Text>
               )}

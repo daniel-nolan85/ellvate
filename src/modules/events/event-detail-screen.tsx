@@ -25,6 +25,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { categoryAccent } from '@/src/lib/category-accent';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
@@ -57,7 +58,7 @@ function EventMenuRow({
   readonly label: string;
   readonly onPress: () => void;
 }) {
-  const color = destructive ? 'rgb(231,0,11)' : 'rgb(10,10,10)';
+  const color = destructive ? 'rgb(231,0,11)' : 'rgb(37,30,23)';
   return (
     <Pressable
       accessibilityRole='button'
@@ -167,7 +168,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
             });
           }}
         >
-          <Icon color='rgb(113,113,123)' name='Share' size={18} />
+          <Icon color='rgb(120,108,94)' name='Share' size={18} />
         </Pressable>
         {isOwnEvent && (
           <Pressable
@@ -176,7 +177,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
             hitSlop={8}
             onPress={() => setMenuOpen(true)}
           >
-            <Icon color='rgb(113,113,123)' name='ThreeDots' size={18} />
+            <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
           </Pressable>
         )}
       </HStack>
@@ -187,7 +188,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
       >
         <ScrollView className='flex-1' contentContainerClassName='gap-4 px-[18px] py-4'>
           {event ? (
-            <VStack className='gap-3'>
+            <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
               {event.media && event.media.length > 0 && (
                 <MediaGallery media={event.media} />
               )}
@@ -206,8 +207,8 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               </Pressable>
 
               <HStack className='items-center' space='xs'>
-                <Badge variant='indigo'>{event.tag}</Badge>
-                {event.featured ? <Badge variant='outline'>Featured</Badge> : null}
+                <Badge variant={categoryAccent(event.tag)}>{event.tag}</Badge>
+                {event.featured ? <Badge variant='amber'>Featured</Badge> : null}
               </HStack>
 
               <Heading className='font-inter-bold text-[22px]' size='lg'>
@@ -215,13 +216,13 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               </Heading>
 
               <HStack className='items-center gap-1.5'>
-                <Icon color='rgb(113,113,123)' name='Clock' size={16} />
+                <Icon color='rgb(120,108,94)' name='Clock' size={16} />
                 <Text className='text-[14px] text-text-muted'>
                   {formatDayLabel(event.dayLabel)} {event.dateLabel} · {event.timeLabel}
                 </Text>
               </HStack>
               <HStack className='items-center gap-1.5'>
-                <Icon color='rgb(113,113,123)' name='Globe' size={16} />
+                <Icon color='rgb(120,108,94)' name='Globe' size={16} />
                 <Text className='text-[14px] text-text-muted'>{event.place}</Text>
               </HStack>
 
@@ -231,7 +232,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                 <HStack>
                   {event.attendees.map((attendee, index) => (
                     <View
-                      className={`rounded-full border-2 border-canvas ${index > 0 ? '-ml-[9px]' : ''}`}
+                      className={`rounded-full border-2 border-paper ${index > 0 ? '-ml-[9px]' : ''}`}
                       key={attendee.id}
                     >
                       <Avatar name={attendee.name} size='xs' src={attendee.avatarUrl ?? undefined} />
@@ -244,11 +245,11 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                 <Pressable
                   accessibilityRole='button'
                   className={`rounded-full px-5 py-2.5 ${
-                    event.joined ? 'bg-success' : 'bg-primary'
+                    event.joined ? 'bg-success' : 'bg-accent'
                   }`}
                   onPress={() => toggleJoin.mutate(event.id)}
                 >
-                  <Text className='font-inter-semibold text-[13px] text-primary-foreground'>
+                  <Text className='font-inter-semibold text-[13px] text-accent-foreground'>
                     {event.joined ? 'Going ✓' : 'Join event'}
                   </Text>
                 </Pressable>
@@ -265,7 +266,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           )}
 
           <Divider />
-          <Text className='font-inter-semibold text-[13px] text-content'>
+          <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
             {commentList.length} comments
           </Text>
 
@@ -353,7 +354,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           onPress={() => setConfirmCancelOpen(false)}
         >
           <Pressable
-            className='w-full gap-1 rounded-[20px] bg-canvas p-5'
+            className='w-full gap-1 rounded-[20px] bg-paper p-5'
             onPress={(pressEvent) => pressEvent.stopPropagation()}
           >
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -424,7 +425,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           onPress={() => setActionsFor(null)}
         />
         <View
-          className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-canvas px-[18px] pt-2.5'
+          className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5'
           style={{ paddingBottom: insets.bottom + 24 }}
         >
           <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />

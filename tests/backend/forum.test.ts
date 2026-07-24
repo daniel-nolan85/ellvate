@@ -9,6 +9,7 @@ import {
   PATCH as patchPost,
 } from '../../app/api/forum/posts/[id]/index+api';
 import { POST as postLike } from '../../app/api/forum/posts/[id]/like+api';
+import { POST as postPin } from '../../app/api/forum/posts/[id]/pin+api';
 import { GET as getSubforums } from '../../app/api/forum/subforums+api';
 import {
   createPost,
@@ -16,6 +17,7 @@ import {
   listPosts,
   listSubforums,
   toggleLike,
+  togglePin,
   updatePost,
 } from '../../src/backend/forum';
 import { listComments } from '../../src/backend/comments';
@@ -39,9 +41,12 @@ describe('listSubforums', () => {
     expect(subforums).toEqual([
       'All',
       'Announcements',
+      'HOA',
       'Marina & Boating',
       'Dining',
       'Trails',
+      'Golf',
+      'Sports Club',
       'Buy & Sell',
       'Events',
     ]);
@@ -442,6 +447,105 @@ describe('updatePost', () => {
   });
 });
 
+describe('togglePin', () => {
+  test('pins then unpins a post for the caller', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Pin me',
+      excerpt: 'Body',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const pinned = await togglePin(ctx(), created.post.id);
+    expect(pinned).toMatchObject({ ok: true, pinned: true });
+
+    const unpinned = await togglePin(ctx(), created.post.id);
+    expect(unpinned).toMatchObject({ ok: true, pinned: false });
+  });
+
+  test('pinning a second post replaces the first, for that user only', async () => {
+    await togglePin(ctx(), 'post-1');
+    expect(
+      (await listPosts(ctx())).find((post) => post.id === 'post-1')?.pinned,
+    ).toBe(true);
+
+    await togglePin(ctx(), 'post-3');
+    const posts = await listPosts(ctx());
+    expect(posts.find((post) => post.id === 'post-1')?.pinned).toBe(false);
+    expect(posts.find((post) => post.id === 'post-3')?.pinned).toBe(true);
+  });
+
+  test('pinning is private — does not show as pinned for a different user', async () => {
+    await togglePin(ctx(), 'post-1');
+
+    const mine = await listPosts(ctx());
+    const someoneElses = await listPosts(ctx('user-mia'));
+
+    expect(mine.find((post) => post.id === 'post-1')?.pinned).toBe(true);
+    expect(someoneElses.find((post) => post.id === 'post-1')?.pinned).toBe(
+      false,
+    );
+  });
+
+  test('lets a non-author pin someone else’s post', async () => {
+    const result = await togglePin(ctx('user-mia'), 'post-1');
+    expect(result).toMatchObject({ ok: true, pinned: true });
+  });
+
+  test('returns post_not_found for an unknown post', async () => {
+    const result = await togglePin(ctx(), 'post-nope');
+    expect(result).toMatchObject({ ok: false, code: 'post_not_found' });
+  });
+});
+
+describe('POST /api/forum/posts/:id/pin', () => {
+  test('pins a post the caller owns', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Pin me',
+      excerpt: 'Body',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    const response = await postPin(
+      new Request(`http://localhost/api/forum/posts/${created.post.id}/pin`, {
+        method: 'POST',
+      }),
+      { id: created.post.id },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { pinned: boolean };
+    expect(body.pinned).toBe(true);
+  });
+
+  test('lets a non-author pin someone else’s post via the route', async () => {
+    const response = await postPin(
+      new Request('http://localhost/api/forum/posts/post-1/pin', {
+        method: 'POST',
+      }),
+      { id: 'post-1' },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { pinned: boolean };
+    expect(body.pinned).toBe(true);
+  });
+
+  test('returns 404 for an unknown post', async () => {
+    const response = await postPin(
+      new Request('http://localhost/api/forum/posts/post-nope/pin', {
+        method: 'POST',
+      }),
+      { id: 'post-nope' },
+    );
+    expect(response.status).toBe(404);
+  });
+});
+
 describe('GET /api/forum/subforums', () => {
   test('returns { subforums } starting with All', async () => {
     const response = await getSubforums(
@@ -451,7 +555,7 @@ describe('GET /api/forum/subforums', () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { subforums: string[] };
     expect(body.subforums[0]).toBe('All');
-    expect(body.subforums).toHaveLength(7);
+    expect(body.subforums).toHaveLength(10);
   });
 });
 

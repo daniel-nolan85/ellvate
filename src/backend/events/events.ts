@@ -81,12 +81,26 @@ const toCommunityEvent = (
   attendees: toPersonRefs(event.attendeeIds, users),
 });
 
+// Events from earlier calendar days are hidden from the main "Coming up"
+// list — they're just clutter once the day's gone. An event happening
+// later today still counts as upcoming even if its listed time already
+// passed, since people may still be arriving/attending. getMyEventsView
+// (the activity hub) deliberately does NOT apply this filter — that's a
+// history of what the user created/attended, where past events are the
+// point.
+function isUpcoming(startsAt: string): boolean {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return Date.parse(startsAt) >= startOfToday.getTime();
+}
+
 function getEventsViewMemory(userId: string): EventsView {
   const { events, users, week } = getState();
 
   return {
     week: week.map((day) => ({ ...day })),
-    events: [...events]
+    events: events
+      .filter((event) => isUpcoming(event.startsAt))
       .sort(byFeaturedThenStartsAt)
       .map((event) => toCommunityEvent(event, userId, users)),
   };

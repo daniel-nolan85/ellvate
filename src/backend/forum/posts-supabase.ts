@@ -11,6 +11,7 @@ import type {
   LikeResult,
   Media,
   MyPostsPage,
+  TogglePinResult,
   UpdatePostResult,
 } from './types';
 import {
@@ -20,7 +21,7 @@ import {
 } from './validation';
 
 const POST_SELECT =
-  'id,forum,author_id,title,excerpt,media,like_count,reply_count,pinned,created_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
+  'id,forum,author_id,title,excerpt,media,like_count,reply_count,created_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
 
 interface PostRow {
   readonly id: string;
@@ -31,7 +32,6 @@ interface PostRow {
   readonly media: readonly Media[] | null;
   readonly like_count: number;
   readonly reply_count: number;
-  readonly pinned: boolean;
   readonly created_at: string;
   readonly author: {
     readonly id: string;
@@ -44,9 +44,13 @@ type UploadPostMediaResult =
   | { readonly ok: true; readonly media: readonly Media[] }
   | { readonly ok: false; readonly uploaded: readonly Media[] };
 
+// pinned is viewer-relative — a Twitter/Telegram-style personal pin stored
+// on app_users.pinned_post_id, not a shared column on posts — so it takes
+// the viewing user's own pinned post id, not anything off the row itself.
 const toForumPost = (
   row: PostRow,
   likedIds: ReadonlySet<string>,
+  viewerPinnedPostId: string | null,
 ): ForumPost => ({
   author: {
     avatarUrl: row.author?.avatar_url ?? null,
@@ -60,10 +64,21 @@ const toForumPost = (
   liked: likedIds.has(row.id),
   likes: row.like_count,
   media: row.media ?? undefined,
-  pinned: row.pinned,
+  pinned: row.id === viewerPinnedPostId,
   replies: row.reply_count,
   title: row.title,
 });
+
+const byPinnedThenNewest =
+  (viewerPinnedPostId: string | null) =>
+  (a: PostRow, b: PostRow): number => {
+    const aPinned = a.id === viewerPinnedPostId;
+    const bPinned = b.id === viewerPinnedPostId;
+    if (aPinned !== bPinned) {
+      return aPinned ? -1 : 1;
+    }
+    return Date.parse(b.created_at) - Date.parse(a.created_at);
+  };
 
 // Uploads each picked image to Supabase Storage under the post's own id.
 // WHY: a failed upload is surfaced as `ok: false` (with whatever succeeded so
@@ -112,6 +127,19 @@ const likedPostIds = async (
   return new Set((data ?? []).map((row) => row.post_id as string));
 };
 
+const getPinnedPostId = async (
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('pinned_post_id')
+    .eq('id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(error, 'load pinned post');
+  return (data?.pinned_post_id as string | null) ?? null;
+};
+
 // A new Clerk user has no app_users row yet; create it before any owned write so
 // foreign keys resolve. RLS allows inserting only your own row.
 const ensureUser = async (
@@ -150,21 +178,24 @@ export async function listPostsSupabase(
   let query = supabase
     .from('posts')
     .select(POST_SELECT)
-    .order('pinned', { ascending: false })
     .order('created_at', { ascending: false });
   if (forum && forum !== 'All') {
     query = query.eq('forum', forum);
   }
   const { data, error } = await query;
   throwIfSupabaseError(error, 'load posts');
-  const [likedIds, mutedUserIds] = await Promise.all([
+  const [likedIds, mutedUserIds, viewerPinnedPostId] = await Promise.all([
     likedPostIds(supabase, userId),
     getMutedUserIdsSupabase(supabase, userId),
+    getPinnedPostId(supabase, userId),
   ]);
   const mutedSet = new Set(mutedUserIds);
-  return (data as unknown as PostRow[])
-    .filter((row) => !mutedSet.has(row.author_id))
-    .map((row) => toForumPost(row, likedIds));
+  const rows = (data as unknown as PostRow[]).filter(
+    (row) => !mutedSet.has(row.author_id),
+  );
+  return [...rows]
+    .sort(byPinnedThenNewest(viewerPinnedPostId))
+    .map((row) => toForumPost(row, likedIds, viewerPinnedPostId));
 }
 
 // Scoped to posts the caller authored — bounded by one user's own activity
@@ -197,13 +228,19 @@ export async function getMyPostsSupabase(
   const rows = data as unknown as PostRow[];
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
-  const likedIds = await likedPostIds(supabase, userId);
+  const [likedIds, viewerPinnedPostId] = await Promise.all([
+    likedPostIds(supabase, userId),
+    getPinnedPostId(supabase, userId),
+  ]);
 
   const last = page[page.length - 1];
   const nextCursor =
     hasMore && last ? encodeCursor({ id: last.id, sortKey: last.created_at }) : null;
 
-  return { nextCursor, posts: page.map((row) => toForumPost(row, likedIds)) };
+  return {
+    nextCursor,
+    posts: page.map((row) => toForumPost(row, likedIds, viewerPinnedPostId)),
+  };
 }
 
 // Fetches specific posts by id — used to hydrate bookmarks, which can point
@@ -221,14 +258,15 @@ export async function getPostsByIdsSupabase(
     .select(POST_SELECT)
     .in('id', ids);
   throwIfSupabaseError(error, 'load posts by id');
-  const [likedIds, mutedUserIds] = await Promise.all([
+  const [likedIds, mutedUserIds, viewerPinnedPostId] = await Promise.all([
     likedPostIds(supabase, userId),
     getMutedUserIdsSupabase(supabase, userId),
+    getPinnedPostId(supabase, userId),
   ]);
   const mutedSet = new Set(mutedUserIds);
   return (data as unknown as PostRow[])
     .filter((row) => !mutedSet.has(row.author_id))
-    .map((row) => toForumPost(row, likedIds));
+    .map((row) => toForumPost(row, likedIds, viewerPinnedPostId));
 }
 
 export async function createPostSupabase(
@@ -270,8 +308,10 @@ export async function createPostSupabase(
       ok: false,
     };
   }
+  // A brand-new post can never already be the caller's pinned post (its id
+  // didn't exist a moment ago), so pinned is always false here.
   if (mediaResult.media.length === 0) {
-    return { ok: true, post: toForumPost(insertedRow, new Set()) };
+    return { ok: true, post: toForumPost(insertedRow, new Set(), null) };
   }
 
   const { data: updated, error: updateError } = await supabase
@@ -283,7 +323,7 @@ export async function createPostSupabase(
   throwIfSupabaseError(updateError, 'attach post media');
   return {
     ok: true,
-    post: toForumPost((updated as unknown as PostRow) ?? insertedRow, new Set()),
+    post: toForumPost((updated as unknown as PostRow) ?? insertedRow, new Set(), null),
   };
 }
 
@@ -332,6 +372,36 @@ export async function toggleLikeSupabase(
     .single();
   throwIfSupabaseError(updatedError, 'load post like count');
   return { id: postId, liked: !existing, likes: updated?.like_count ?? 0 };
+}
+
+// Pinning is a Twitter/Telegram-style personal pin (see togglePinMemory):
+// any signed-in member can pin any post, but it's exclusive and private to
+// them, stored on app_users.pinned_post_id rather than the post itself. The
+// toggle_post_pin() SECURITY DEFINER function (see 0019 migration) resolves
+// the caller from the JWT itself (clerk_user_id()), not a client-supplied
+// id, so a request can't toggle another user's pin by passing their id.
+export async function togglePinSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  postId: string,
+): Promise<TogglePinResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('id', postId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load post');
+  if (!existing) {
+    return { code: 'post_not_found', message: 'Post not found.', ok: false };
+  }
+  // A new Clerk user pinning before ever posting/liking has no app_users row
+  // yet — the RPC's update would silently affect 0 rows without this.
+  await ensureUser(supabase, userId);
+  const { data: pinned, error } = await supabase.rpc('toggle_post_pin', {
+    post_id: postId,
+  });
+  throwIfSupabaseError(error, 'toggle post pin');
+  return { id: postId, ok: true, pinned: pinned ?? false };
 }
 
 export async function deletePostSupabase(
@@ -387,8 +457,10 @@ export async function updatePostSupabase(
     typeof input === 'object' && input !== null
       ? (input as Record<string, unknown>)
       : {};
+  const requestedForum =
+    typeof raw.forum === 'string' && raw.forum.trim() ? raw.forum : existing.forum;
   const validation = validatePostInput(
-    { excerpt: raw.excerpt, forum: existing.forum, title: raw.title },
+    { excerpt: raw.excerpt, forum: requestedForum, title: raw.title },
     await listForumNames(supabase),
   );
   if (!validation.ok) {
@@ -413,6 +485,7 @@ export async function updatePostSupabase(
     .from('posts')
     .update({
       excerpt: validation.value.excerpt,
+      forum: validation.value.forum,
       media: media.length ? media : null,
       title: validation.value.title,
     })
@@ -432,6 +505,12 @@ export async function updatePostSupabase(
     removedMedia.map((item) => item.url),
   );
 
-  const likedIds = await likedPostIds(supabase, userId);
-  return { ok: true, post: toForumPost(data as unknown as PostRow, likedIds) };
+  const [likedIds, viewerPinnedPostId] = await Promise.all([
+    likedPostIds(supabase, userId),
+    getPinnedPostId(supabase, userId),
+  ]);
+  return {
+    ok: true,
+    post: toForumPost(data as unknown as PostRow, likedIds, viewerPinnedPostId),
+  };
 }

@@ -18,7 +18,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { ProgressRing } from '@/src/components/ui/progress-ring';
 import { Text } from '@/src/components/ui/text';
 
-const INDIGO = 'rgb(99,102,241)';
+const ACCENT = 'rgb(181,80,44)';
 const WHITE = 'rgb(255,255,255)';
 const HOLD_DURATION_MS = 750;
 const CELEBRATION_MS = 1400;
@@ -32,8 +32,8 @@ function GlowBackdrop() {
       <Svg height={300} viewBox="0 0 300 300" width={300}>
         <Defs>
           <RadialGradient cx="50%" cy="50%" id="commit-glow" r="50%">
-            <Stop offset="0%" stopColor={INDIGO} stopOpacity={0.35} />
-            <Stop offset="70%" stopColor={INDIGO} stopOpacity={0} />
+            <Stop offset="0%" stopColor={ACCENT} stopOpacity={0.35} />
+            <Stop offset="70%" stopColor={ACCENT} stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Circle cx={150} cy={150} fill="url(#commit-glow)" r={150} />
@@ -56,7 +56,7 @@ function Celebration() {
         You&apos;re in.
       </Text>
       <View className="flex-row items-center gap-2 rounded-full bg-[rgba(250,250,250,0.1)] px-[18px] py-[9px]">
-        <Icon color={INDIGO} name="Star" size={14} />
+        <Icon color={ACCENT} name="Star" size={14} />
         <Text className="font-inter-semibold text-[13px] text-primary-foreground">
           +50 XP · First mission complete
         </Text>
@@ -150,7 +150,7 @@ export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
         ) : (
           <>
             <View className="items-center">
-              <Text className="text-center font-inter-bold text-[11px] tracking-[2px] text-indigo">
+              <Text className="text-center font-inter-bold text-[11px] tracking-[2px] text-accent">
                 ONE LAST THING
               </Text>
               <Text className="mt-2.5 text-center font-inter-bold text-[30px] leading-[34px] tracking-[-0.9px] text-primary-foreground">
@@ -170,7 +170,7 @@ export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
             >
               <View className="absolute inset-[4px] rounded-full bg-[rgba(250,250,250,0.06)]" />
               <ProgressRing
-                color={INDIGO}
+                color={ACCENT}
                 progress={ringProgress}
                 size={132}
                 strokeWidth={6}
@@ -178,7 +178,8 @@ export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
               >
                 <View className="items-center gap-1">
                   <Icon
-                    color={holding ? INDIGO : 'rgba(250,250,250,0.7)'}
+                    color={holding ? ACCENT : 'rgba(250,250,250,0.7)'}
+                    fill={holding ? ACCENT : 'none'}
                     name="Favourite"
                     size={26}
                   />

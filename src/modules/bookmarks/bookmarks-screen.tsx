@@ -4,8 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
-import { Heading } from '@/src/components/ui/heading';
-import { HStack } from '@/src/components/ui/hstack';
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
@@ -13,15 +12,12 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
 import { MissionCard } from '@/src/modules/missions';
 
 import { useBookmarks, type BookmarkedItem, type BookmarkTargetType } from './use-bookmarks';
-
-interface BookmarksScreenProps {
-  readonly onClose: () => void;
-}
 
 type BookmarksFilter = 'all' | BookmarkTargetType;
 
@@ -76,14 +72,14 @@ function FilterChips({
         return (
           <Pressable
             className={`shrink-0 rounded-full px-3.5 py-[7px] ${
-              isActive ? 'bg-primary' : 'bg-secondary'
+              isActive ? 'bg-accent' : 'bg-secondary'
             }`}
             key={filter.key}
             onPress={() => onSelect(filter.key)}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${
-                isActive ? 'text-primary-foreground' : 'text-secondary-foreground'
+                isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
               }`}
             >
               {filter.label}
@@ -105,14 +101,14 @@ function LoadMoreRow({
   return (
     <Pressable
       accessibilityRole="button"
-      className="items-center py-3"
+      className="items-center border-t border-surface-hairline py-3"
       disabled={isLoading}
       onPress={onPress}
     >
       {isLoading ? (
         <Spinner size="small" />
       ) : (
-        <Text className="font-inter-semibold text-[13px] text-indigo">
+        <Text className="font-inter-semibold text-[13px] text-accent">
           Load more
         </Text>
       )}
@@ -155,7 +151,7 @@ function BookmarkRow({
     <Pressable
       accessibilityLabel={`${KIND_LABEL[item.kind]}: ${titleFor(item)}`}
       accessibilityRole="button"
-      className="flex-row items-center gap-3 border-b border-line px-5 py-3.5"
+      className="flex-row items-center gap-3 border-b border-surface-hairline px-4 py-3.5"
       onPress={onPress}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
@@ -171,18 +167,19 @@ function BookmarkRow({
         </Text>
         <Text className="text-[12px] text-text-muted">{subtitleFor(item)}</Text>
       </VStack>
-      <Icon color="rgb(161,161,170)" name="ChevronRight" size={16} />
+      <Icon color="rgb(169,156,139)" name="ChevronRight" size={16} />
     </Pressable>
   );
 }
 
-export function BookmarksScreen({ onClose }: BookmarksScreenProps) {
+export function BookmarksScreen() {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<BookmarksFilter>('all');
   const bookmarks = useBookmarks(filterToTargetType(filter));
   const toggleLike = useToggleLike();
 
   const [openItem, setOpenItem] = useState<BookmarkedItem | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Close the sheet first and let it slide down, then navigate once the
   // close animation finishes — navigating immediately would unmount the
@@ -202,21 +199,13 @@ export function BookmarksScreen({ onClose }: BookmarksScreenProps) {
 
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center justify-between px-5 pb-3"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <Heading className="font-inter-bold" size="xl">
-          Bookmarks
-        </Heading>
-        <Pressable
-          accessibilityLabel="Close"
-          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          onPress={onClose}
-        >
-          <Icon name="Close" size={18} />
-        </Pressable>
-      </HStack>
+      <View style={{ paddingTop: insets.top }}>
+        <ScreenTitle
+          eyebrow="Saved for later"
+          onSearch={() => setIsSearching(true)}
+          title="Bookmarks"
+        />
+      </View>
 
       <FilterChips active={filter} onSelect={setFilter} />
 
@@ -233,20 +222,22 @@ export function BookmarksScreen({ onClose }: BookmarksScreenProps) {
           </Text>
         </VStack>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-          {items.map((item) => (
-            <BookmarkRow
-              item={item}
-              key={item.bookmarkId}
-              onPress={() => setOpenItem(item)}
-            />
-          ))}
-          {bookmarks.hasNextPage ? (
-            <LoadMoreRow
-              isLoading={bookmarks.isFetchingNextPage}
-              onPress={() => void bookmarks.fetchNextPage()}
-            />
-          ) : null}
+        <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+          <VStack className="mx-5 mt-2 overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
+            {items.map((item) => (
+              <BookmarkRow
+                item={item}
+                key={item.bookmarkId}
+                onPress={() => setOpenItem(item)}
+              />
+            ))}
+            {bookmarks.hasNextPage ? (
+              <LoadMoreRow
+                isLoading={bookmarks.isFetchingNextPage}
+                onPress={() => void bookmarks.fetchNextPage()}
+              />
+            ) : null}
+          </VStack>
         </ScrollView>
       )}
 
@@ -280,6 +271,19 @@ export function BookmarksScreen({ onClose }: BookmarksScreenProps) {
           </View>
         ) : null}
       </Sheet>
+
+      <SearchSheet
+        getKey={(item) => item.bookmarkId}
+        getSubtitle={subtitleFor}
+        getTitle={titleFor}
+        items={items}
+        onClose={() => setIsSearching(false)}
+        onSelect={(item) => setOpenItem(item)}
+        placeholder="Search your bookmarks"
+        visible={isSearching}
+      />
+
+      <CommunityNavBar />
     </View>
   );
 }

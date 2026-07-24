@@ -16,6 +16,7 @@ import {
   getPostsByIdsSupabase,
   listPostsSupabase,
   toggleLikeSupabase,
+  togglePinSupabase,
   updatePostSupabase,
 } from './posts-supabase';
 import type {
@@ -25,6 +26,7 @@ import type {
   MyPostsOptions,
   MyPostsPage,
   PersonRef,
+  TogglePinResult,
   UpdatePostResult,
 } from './types';
 
@@ -51,10 +53,14 @@ const toAuthorRef = (
     : { avatarUrl: null, id: authorId, name: 'You' };
 };
 
+// pinned is viewer-relative — a Twitter/Telegram-style personal pin, not a
+// shared post property (see StoredUser.pinnedPostId) — so computing it needs
+// the viewing user's own pinnedPostId, not anything stored on the post.
 const toForumPost = (
   post: StoredPost,
   users: readonly StoredUser[],
   userId: string,
+  viewerPinnedPostId: string | null,
 ): ForumPost => ({
   author: toAuthorRef(users, post.authorId),
   createdAt: post.createdAt,
@@ -64,29 +70,33 @@ const toForumPost = (
   liked: post.likedBy.includes(userId),
   likes: post.likes,
   media: post.media,
-  pinned: post.pinned,
+  pinned: post.id === viewerPinnedPostId,
   replies: post.replies,
   title: post.title,
 });
 
-const byPinnedThenNewest = (a: StoredPost, b: StoredPost): number => {
-  if (a.pinned !== b.pinned) {
-    return a.pinned ? -1 : 1;
-  }
-  return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-};
+const byPinnedThenNewest =
+  (viewerPinnedPostId: string | null) =>
+  (a: StoredPost, b: StoredPost): number => {
+    const aPinned = a.id === viewerPinnedPostId;
+    const bPinned = b.id === viewerPinnedPostId;
+    if (aPinned !== bPinned) {
+      return aPinned ? -1 : 1;
+    }
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  };
 
 function listPostsMemory(userId: string, forum?: string): readonly ForumPost[] {
   const state = getState();
-  const mutedUserIds = new Set(
-    state.users.find((user) => user.id === userId)?.mutedUserIds ?? [],
-  );
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
+  const viewerPinnedPostId = viewer?.pinnedPostId ?? null;
   const filtered = state.posts
     .filter((post) => !forum || forum === 'All' || post.forum === forum)
     .filter((post) => !mutedUserIds.has(post.authorId));
   return [...filtered]
-    .sort(byPinnedThenNewest)
-    .map((post) => toForumPost(post, state.users, userId));
+    .sort(byPinnedThenNewest(viewerPinnedPostId))
+    .map((post) => toForumPost(post, state.users, userId, viewerPinnedPostId));
 }
 
 // Scoped to posts the caller authored — bounded by one user's own activity
@@ -98,6 +108,8 @@ function getMyPostsMemory(
   cursor: string | null,
 ): MyPostsPage {
   const state = getState();
+  const viewerPinnedPostId =
+    state.users.find((user) => user.id === userId)?.pinnedPostId ?? null;
   const mine = state.posts
     .filter((post) => post.authorId === userId)
     .map((post) => ({ id: post.id, post, sortKey: post.createdAt }));
@@ -105,7 +117,9 @@ function getMyPostsMemory(
 
   return {
     nextCursor: page.nextCursor,
-    posts: page.items.map((item) => toForumPost(item.post, state.users, userId)),
+    posts: page.items.map((item) =>
+      toForumPost(item.post, state.users, userId, viewerPinnedPostId),
+    ),
   };
 }
 
@@ -120,12 +134,12 @@ function getPostsByIdsMemory(
 ): readonly ForumPost[] {
   const state = getState();
   const idSet = new Set(ids);
-  const mutedUserIds = new Set(
-    state.users.find((user) => user.id === userId)?.mutedUserIds ?? [],
-  );
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
+  const viewerPinnedPostId = viewer?.pinnedPostId ?? null;
   return state.posts
     .filter((post) => idSet.has(post.id) && !mutedUserIds.has(post.authorId))
-    .map((post) => toForumPost(post, state.users, userId));
+    .map((post) => toForumPost(post, state.users, userId, viewerPinnedPostId));
 }
 
 // WHY: seed timestamps are anchored at SEED_NOW_ISO, which may be ahead of
@@ -154,7 +168,6 @@ function createPostMemory(userId: string, input: unknown): CreatePostResult {
           url: upload.dataUrl,
         }))
       : undefined,
-    pinned: false,
     replies: 0,
     title: validation.value.title,
   };
@@ -162,7 +175,9 @@ function createPostMemory(userId: string, input: unknown): CreatePostResult {
     ...current,
     posts: [stored, ...current.posts],
   }));
-  return { ok: true, post: toForumPost(stored, next.users, userId) };
+  const viewerPinnedPostId =
+    next.users.find((user) => user.id === userId)?.pinnedPostId ?? null;
+  return { ok: true, post: toForumPost(stored, next.users, userId, viewerPinnedPostId) };
 }
 
 function toggleLikeMemory(userId: string, postId: string): LikeResult | null {
@@ -194,6 +209,28 @@ function toggleLikeMemory(userId: string, postId: string): LikeResult | null {
     );
   }
   return { id: postId, liked: !wasLiked, likes };
+}
+
+// Pinning is a Twitter/Telegram-style personal pin: any signed-in member can
+// pin any post (not just their own, unlike edit/delete below), but it's
+// exclusive and private to them — at most one pinned post per user, stored
+// on StoredUser.pinnedPostId, and it never affects what any other user sees.
+function togglePinMemory(userId: string, postId: string): TogglePinResult {
+  const existing = getState().posts.find((post) => post.id === postId);
+  if (!existing) {
+    return { code: 'post_not_found', message: 'Post not found.', ok: false };
+  }
+  const viewer = getState().users.find((user) => user.id === userId);
+  const pinned = viewer?.pinnedPostId !== postId;
+  setState((current) => ({
+    ...current,
+    users: current.users.map((user) =>
+      user.id === userId
+        ? { ...user, pinnedPostId: pinned ? postId : null }
+        : user,
+    ),
+  }));
+  return { id: postId, ok: true, pinned };
 }
 
 function deletePostMemory(userId: string, postId: string): boolean {
@@ -244,8 +281,10 @@ function updatePostMemory(
     typeof input === 'object' && input !== null
       ? (input as Record<string, unknown>)
       : {};
+  const requestedForum =
+    typeof raw.forum === 'string' && raw.forum.trim() ? raw.forum : existing.forum;
   const validation = validatePostInput(
-    { excerpt: raw.excerpt, forum: existing.forum, title: raw.title },
+    { excerpt: raw.excerpt, forum: requestedForum, title: raw.title },
     getState().subforums,
   );
   if (!validation.ok) {
@@ -267,6 +306,7 @@ function updatePostMemory(
         ? {
             ...post,
             excerpt: validation.value.excerpt,
+            forum: validation.value.forum,
             media: media.length ? media : undefined,
             title: validation.value.title,
           }
@@ -277,7 +317,9 @@ function updatePostMemory(
   if (!updated) {
     return { code: 'post_not_found', message: 'Post not found.', ok: false };
   }
-  return { ok: true, post: toForumPost(updated, next.users, userId) };
+  const viewerPinnedPostId =
+    next.users.find((user) => user.id === userId)?.pinnedPostId ?? null;
+  return { ok: true, post: toForumPost(updated, next.users, userId, viewerPinnedPostId) };
 }
 
 // ---------------------------------------------------------------------------
@@ -335,6 +377,15 @@ export async function toggleLike(
   return ctx.supabase
     ? toggleLikeSupabase(ctx.supabase, ctx.userId, postId)
     : toggleLikeMemory(ctx.userId, postId);
+}
+
+export async function togglePin(
+  ctx: RequestContext,
+  postId: string,
+): Promise<TogglePinResult> {
+  return ctx.supabase
+    ? togglePinSupabase(ctx.supabase, ctx.userId, postId)
+    : togglePinMemory(ctx.userId, postId);
 }
 
 export async function deletePost(

@@ -12,8 +12,8 @@ import { Text } from '@/src/components/ui/text';
 import { ObCta, ObTitle } from './chrome';
 import type { NotificationPrefs } from './use-onboarding-state';
 
-const INDIGO = 'rgb(99,102,241)';
-const TEXT_SUBTLE = 'rgb(161,161,170)';
+const ACCENT = 'rgb(181,80,44)';
+const TEXT_SUBTLE = 'rgb(169,156,139)';
 
 interface NotifOption {
   readonly id: keyof NotificationPrefs;
@@ -103,12 +103,12 @@ export function NotificationsStep({
           const on = prefs[option.id];
           return (
             <Pressable
-              className="flex-row items-center gap-3.5 rounded-[18px] border border-line bg-canvas px-4 py-[13px]"
+              className="flex-row items-center gap-3.5 rounded-[18px] border border-surface-hairline bg-paper px-4 py-[13px] shadow-card"
               key={option.id}
               onPress={() => onToggle(option.id)}
             >
               <Icon
-                color={on ? INDIGO : TEXT_SUBTLE}
+                color={on ? ACCENT : TEXT_SUBTLE}
                 name={option.icon}
                 size={18}
               />

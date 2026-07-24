@@ -22,6 +22,7 @@ export function ProfileAvatarButton() {
       onPress={() => router.push('/profile')}
     >
       <Avatar
+        className="rounded-full border-[1.5px] border-accent"
         name={name}
         size="sm"
         src={profile.data?.profile.avatarUrl ?? undefined}

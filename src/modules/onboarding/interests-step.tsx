@@ -62,7 +62,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
                 selected
                   ? {
                       elevation: 6,
-                      shadowColor: 'rgb(23,23,23)',
+                      shadowColor: 'rgb(37,30,23)',
                       shadowOffset: { height: 4, width: 0 },
                       shadowOpacity: 0.18,
                       shadowRadius: 12,

@@ -65,5 +65,5 @@ tags:
     timeout: 10000
 - assertNotVisible: "New mission around the lake"
 - tapOn:
-    id: missions-ranks
+    id: tab-ranks
 - assertVisible: "Leaderboard"
