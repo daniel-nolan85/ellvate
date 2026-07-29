@@ -1,6 +1,7 @@
 import { Pressable, ScrollView } from 'react-native';
 
 import { Text } from '@/src/components/ui/text';
+import { CATEGORY_CHIP_ACTIVE_TREATMENT, categoryAccent } from '@/src/lib/category-accent';
 
 interface SubforumChipsProps {
   readonly active: string;
@@ -25,20 +26,19 @@ export function SubforumChips({
     >
       {subforums.map((forum) => {
         const isActive = forum === active;
+        const treatment = CATEGORY_CHIP_ACTIVE_TREATMENT[categoryAccent(forum)];
 
         return (
           <Pressable
             className={`shrink-0 rounded-full px-3.5 py-[7px] ${
-              isActive ? 'bg-primary' : 'bg-secondary'
+              isActive ? treatment.bg : 'bg-secondary'
             }`}
             key={forum}
             onPress={() => onSelect(forum)}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${
-                isActive
-                  ? 'text-primary-foreground'
-                  : 'text-secondary-foreground'
+                isActive ? treatment.text : 'text-secondary-foreground'
               }`}
             >
               {forum}

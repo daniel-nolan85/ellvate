@@ -7,7 +7,11 @@ import type {
 
 import type { Mission, PersonRef } from './types';
 
-const DEFAULT_ENTRY: MissionUserProgress = { status: 'active', stopsDone: 0 };
+const DEFAULT_ENTRY: MissionUserProgress = {
+  completedAt: null,
+  status: 'active',
+  stopsDone: 0,
+};
 
 export function getUserMissionEntry(
   mission: StoredMission,

@@ -20,8 +20,8 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: 'rgb(23,23,23)',
-          foreground: 'rgb(250,250,250)',
+          DEFAULT: 'rgb(37,30,23)',
+          foreground: 'rgb(253,250,246)',
           0: 'rgb(var(--color-primary-0)/<alpha-value>)',
           50: 'rgb(var(--color-primary-50)/<alpha-value>)',
           100: 'rgb(var(--color-primary-100)/<alpha-value>)',
@@ -36,8 +36,8 @@ module.exports = {
           950: 'rgb(var(--color-primary-950)/<alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'rgb(245,245,245)',
-          foreground: 'rgb(23,23,23)',
+          DEFAULT: 'rgb(238,231,219)',
+          foreground: 'rgb(37,30,23)',
           0: 'rgb(var(--color-secondary-0)/<alpha-value>)',
           50: 'rgb(var(--color-secondary-50)/<alpha-value>)',
           100: 'rgb(var(--color-secondary-100)/<alpha-value>)',
@@ -179,31 +179,48 @@ module.exports = {
           error: 'rgb(var(--color-indicator-error)/<alpha-value>)',
         },
         muted: {
-          DEFAULT: 'rgb(245,245,245)',
-          foreground: 'rgb(115,115,115)',
+          DEFAULT: 'rgb(238,231,219)',
+          foreground: 'rgb(120,108,94)',
         },
+        // Desert-oasis primary accent (terracotta) — repurposes the previously
+        // unused shadcn-style `accent` token. Replaces indigo as the app's one
+        // primary action/link color; see src/lib/category-accent.ts for the
+        // contextual accents (lake/palm/amber) used on category tags.
         accent: {
-          DEFAULT: 'rgb(247,247,247)',
-          foreground: 'rgb(52,52,52)',
+          DEFAULT: 'rgb(181,80,44)',
+          subtle: 'rgb(247,226,216)',
+          foreground: 'rgb(255,255,255)',
+        },
+        // Warmth accent — likes, pinned/featured badges, streaks, XP.
+        amber: {
+          DEFAULT: 'rgb(217,123,41)',
+          subtle: 'rgb(251,234,214)',
+        },
+        // Water accent — content actually about the lake/marina/boating.
+        lake: {
+          DEFAULT: 'rgb(47,110,114)',
+          subtle: 'rgb(220,238,238)',
+        },
+        // Nature accent — trails, golf, outdoor content.
+        palm: {
+          DEFAULT: 'rgb(110,127,74)',
+          subtle: 'rgb(233,238,221)',
         },
         destructive: {
           DEFAULT: 'rgb(231,0,11)',
           foreground: 'rgb(255,255,255)',
         },
-        canvas: 'rgb(255,255,255)',
-        content: 'rgb(10,10,10)',
-        line: 'rgb(229,229,229)',
-        'text-strong': 'rgb(24,24,27)',
-        'text-muted': 'rgb(113,113,123)',
-        'text-subtle': 'rgb(161,161,170)',
+        canvas: 'rgb(247,241,230)',
+        paper: 'rgb(253,247,237)',
+        content: 'rgb(37,30,23)',
+        line: 'rgba(37,30,23,0.12)',
+        'text-strong': 'rgb(37,30,23)',
+        'text-muted': 'rgb(120,108,94)',
+        'text-subtle': 'rgb(169,156,139)',
         surface: {
-          subtle: 'rgb(250,250,251)',
-          header: 'rgb(250,250,251)',
-          hairline: 'rgb(227,227,229)',
-        },
-        indigo: {
-          DEFAULT: 'rgb(99,102,241)',
-          subtle: 'rgb(238,241,255)',
+          subtle: 'rgb(239,230,212)',
+          header: 'rgb(247,241,230)',
+          hairline: 'rgba(37,30,23,0.10)',
         },
       },
       fontFamily: {
@@ -219,6 +236,7 @@ module.exports = {
         'inter-medium': ['Inter_500Medium'],
         'inter-semibold': ['Inter_600SemiBold'],
         'inter-bold': ['Inter_700Bold'],
+        'inter-extrabold': ['Inter_800ExtraBold'],
       },
       fontWeight: {
         extrablack: '950',
@@ -227,6 +245,10 @@ module.exports = {
         '2xs': '10px',
       },
       boxShadow: {
+        // Real elevation for cards, replacing the flat 1px border they used
+        // to rely on — single-layer so it translates cleanly to native
+        // shadow props via NativeWind.
+        card: '0px 4px 16px rgba(37, 30, 23, 0.10)',
         'hard-1': '-2px 2px 8px 0px rgba(38, 38, 38, 0.20)',
         'hard-2': '0px 3px 10px 0px rgba(38, 38, 38, 0.20)',
         'hard-3': '2px 2px 8px 0px rgba(38, 38, 38, 0.20)',

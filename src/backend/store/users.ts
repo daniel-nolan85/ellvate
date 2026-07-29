@@ -38,6 +38,7 @@ export function ensureUser(userId: string): StoredUser {
     title: DEFAULT_PROGRESS_TITLE,
     profile: defaultProfile(),
     mutedUserIds: [],
+    pinnedPostId: null,
   };
 
   setState((current) => ({

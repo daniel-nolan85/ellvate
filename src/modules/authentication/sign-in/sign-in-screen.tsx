@@ -183,7 +183,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
             <Pressable onPress={() => void flow.resend()}>
               <Text className="text-center text-muted-foreground" size="sm">
                 Didn’t come through?{' '}
-                <Text className="font-inter-semibold text-indigo">Send a new one</Text>
+                <Text className="font-inter-semibold text-accent">Send a new one</Text>
               </Text>
             </Pressable>
           </VStack>

@@ -3,6 +3,7 @@ import { ScrollView } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -11,9 +12,11 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
+import { PinExplainerModal } from './pin-explainer-modal';
 import { PostCard } from './post-card';
 import { PostComposer, type PostComposerDraft } from './post-composer';
 import { SubforumChips } from './subforum-chips';
+import { usePinAction } from './use-pin-action';
 import {
   useCreatePost,
   useForumPosts,
@@ -21,7 +24,7 @@ import {
   useToggleLike,
 } from './use-forum';
 
-const COLOR_PRIMARY_FOREGROUND = 'rgb(250,250,250)';
+const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 const FALLBACK_SUBFORUMS: readonly string[] = ['All'];
 
 interface ForumScreenProps {
@@ -31,10 +34,12 @@ interface ForumScreenProps {
 export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   const [activeForum, setActiveForum] = useState('All');
   const [isComposing, setIsComposing] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const subforums = useSubforums();
   const posts = useForumPosts(activeForum);
   const toggleLike = useToggleLike();
   const createPost = useCreatePost();
+  const pinAction = usePinAction();
 
   const subforumNames = subforums.data?.subforums ?? FALLBACK_SUBFORUMS;
   const composerForum =
@@ -73,15 +78,16 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       <VStack space="md">
         <ScreenTitle
           eyebrow="Lake Las Vegas"
+          onSearch={() => setIsSearching(true)}
           right={
             <Button
-              className="rounded-full bg-primary px-4"
+              className="rounded-full bg-accent px-4"
               onPress={() => setIsComposing(true)}
               testID="forum-add-post"
               size="sm"
             >
-              <Icon color={COLOR_PRIMARY_FOREGROUND} name="Edit" size={14} />
-              <ButtonText className="font-inter-semibold text-[13px] text-primary-foreground">
+              <Icon color={COLOR_ACCENT_FOREGROUND} name="Edit" size={14} />
+              <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
                 Post
               </ButtonText>
             </Button>
@@ -116,7 +122,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           </VStack>
         ) : posts.data.posts.length === 0 ? (
           <VStack className="items-center px-10 py-16" space="xs">
-            <Icon color="rgb(161,161,170)" name="MessageCircle" size={28} />
+            <Icon color="rgb(169,156,139)" name="MessageCircle" size={28} />
             <Text className="text-center font-inter-semibold text-content" size="sm">
               No posts here yet
             </Text>
@@ -133,6 +139,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
                 onToggleLike={() =>
                   toggleLike.mutate({ forum: activeForum, postId: post.id })
                 }
+                pinAction={pinAction}
                 post={post}
               />
             ))}
@@ -147,6 +154,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           isSubmitting={createPost.isPending}
           onDismiss={() => setIsComposing(false)}
           onSubmit={handleCreatePost}
+          subforums={subforumNames.filter((name) => name !== 'All')}
         />
         {createPost.isError ? (
           <Text className="px-5 pb-2 text-destructive" size="xs">
@@ -154,6 +162,23 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           </Text>
         ) : null}
       </Sheet>
+
+      <SearchSheet
+        getKey={(post) => post.id}
+        getSubtitle={(post) => post.forum}
+        getTitle={(post) => post.title}
+        items={posts.data?.posts ?? []}
+        onClose={() => setIsSearching(false)}
+        onSelect={(post) => onOpenPost?.(post.id)}
+        placeholder="Search posts"
+        visible={isSearching}
+      />
+
+      <PinExplainerModal
+        onCancel={pinAction.cancelPending}
+        onConfirm={pinAction.confirmPending}
+        visible={pinAction.explainerVisible}
+      />
     </>
   );
 }

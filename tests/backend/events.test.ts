@@ -19,6 +19,18 @@ import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
+// getEventsView hides past events (see events.ts), so a fixture date used to
+// assert presence in that view must always be in the future relative to
+// whenever the suite runs — a fixed calendar date would eventually go stale.
+const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+const futureDate = (daysFromNow: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+const dayLabelFor = (date: string): string =>
+  WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+
 afterEach(() => {
   resetStore();
 });
@@ -110,8 +122,9 @@ describe('toggleJoin', () => {
 });
 
 describe('createEvent', () => {
+  const eventDate = futureDate(30);
   const validInput = {
-    date: '2026-07-18',
+    date: eventDate,
     place: 'Village Marina',
     tag: 'Outdoors',
     time: '18:00',
@@ -130,8 +143,8 @@ describe('createEvent', () => {
       place: 'Village Marina',
       tag: 'Outdoors',
       timeLabel: '6:00 PM',
-      dayLabel: 'SAT',
-      dateLabel: '18',
+      dayLabel: dayLabelFor(eventDate),
+      dateLabel: String(Number(eventDate.slice(8, 10))),
       going: 0,
       joined: false,
       featured: false,

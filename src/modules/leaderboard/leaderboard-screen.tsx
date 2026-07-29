@@ -1,10 +1,7 @@
-import { Pressable, ScrollView } from 'react-native';
-
-import * as Haptics from 'expo-haptics';
+import { ScrollView } from 'react-native';
 
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
-import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -14,17 +11,8 @@ import { LeaderRow } from './leader-row';
 import { Podium } from './podium';
 import { useLeaderboard } from './use-leaderboard';
 
-interface LeaderboardScreenProps {
-  readonly onBackToMissions: () => void;
-}
-
-export function LeaderboardScreen({ onBackToMissions }: LeaderboardScreenProps) {
+export function LeaderboardScreen() {
   const leaderboard = useLeaderboard();
-
-  const handleBackToMissions = () => {
-    void Haptics.selectionAsync();
-    onBackToMissions();
-  };
 
   return (
     <ScrollView
@@ -32,21 +20,7 @@ export function LeaderboardScreen({ onBackToMissions }: LeaderboardScreenProps) 
       contentContainerStyle={{ paddingBottom: 130 }}
     >
       <VStack space="md">
-        <ScreenTitle
-          eyebrow="This month"
-          title="Leaderboard"
-          right={
-            <Pressable
-              accessibilityLabel="Back to missions"
-              accessibilityRole="button"
-              className="h-10 w-10 items-center justify-center rounded-full bg-secondary"
-              onPress={handleBackToMissions}
-              testID="leaderboard-back"
-            >
-              <Icon name="ArrowLeft" size={18} />
-            </Pressable>
-          }
-        />
+        <ScreenTitle eyebrow="This month" title="Leaderboard" />
         {leaderboard.isPending ? (
           <Box className="items-center justify-center py-24">
             <Spinner />

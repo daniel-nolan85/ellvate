@@ -27,6 +27,18 @@ describe('resolveNotificationRoute', () => {
     ).toBe('/post/post-1');
   });
 
+  test('routes a digest notification to the digest screen with its week', () => {
+    expect(resolveNotificationRoute({ weekStart: '2026-01-05' })).toBe(
+      '/digest?weekStart=2026-01-05',
+    );
+  });
+
+  test('prefers postId/eventId/missionId over weekStart when both are present', () => {
+    expect(
+      resolveNotificationRoute({ postId: 'post-1', weekStart: '2026-01-05' }),
+    ).toBe('/post/post-1');
+  });
+
   test('returns null when no known id is present', () => {
     expect(resolveNotificationRoute({})).toBeNull();
   });

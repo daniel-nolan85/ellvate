@@ -52,6 +52,7 @@ export interface UpdatePostInput {
   readonly postId: string;
   readonly title: string;
   readonly excerpt: string;
+  readonly forum?: string;
   readonly existingMedia?: readonly ExistingMediaInput[];
   readonly newMedia?: readonly NewMediaInput[];
 }
@@ -193,6 +194,35 @@ export function useToggleLike() {
   });
 }
 
+interface TogglePinResponse {
+  readonly id: string;
+  readonly pinned: boolean;
+}
+
+// No optimistic update here, unlike useToggleLike — pinning changes sort
+// order (pinned posts float to the top), so a client-side patch would need
+// to re-sort the whole list too; simpler and still snappy enough to just
+// invalidate and let the server's already-correct order come back.
+export function useTogglePin() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: (postId: string) =>
+      requestJson<TogglePinResponse>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/forum/posts/${postId}/pin`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'posts', userId],
+      });
+    },
+  });
+}
+
 export function useCreatePost() {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -223,12 +253,13 @@ export function useUpdatePost() {
     mutationFn: ({
       excerpt,
       existingMedia,
+      forum,
       newMedia,
       postId,
       title,
     }: UpdatePostInput) =>
       requestJson<CreatePostResponse>({
-        body: { excerpt, existingMedia, newMedia, title },
+        body: { excerpt, existingMedia, forum, newMedia, title },
         getAccessToken: session.getToken,
         method: 'PATCH',
         path: `/api/forum/posts/${postId}`,

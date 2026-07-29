@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
-import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -18,6 +18,8 @@ import { FeaturedEventCard } from './featured-event-card';
 import { useCreateEvent, useEventsView, useToggleJoin } from './use-events';
 
 import type { EventsView } from './events-types';
+
+const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 
 function EventsBody({
   onOpenEvent,
@@ -76,17 +78,19 @@ function EventsBody({
   );
 }
 
-function AddButton({ onPress }: { readonly onPress: () => void }) {
+function CreateButton({ onPress }: { readonly onPress: () => void }) {
   return (
-    <Pressable
-      accessibilityLabel="Add event"
-      accessibilityRole="button"
-      className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+    <Button
+      className="rounded-full bg-accent px-4"
       onPress={onPress}
+      size="sm"
       testID="events-add"
     >
-      <Icon color="#fff" name="Add" size={20} />
-    </Pressable>
+      <Icon color={COLOR_ACCENT_FOREGROUND} name="Add" size={14} />
+      <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
+        Create
+      </ButtonText>
+    </Button>
   );
 }
 
@@ -99,6 +103,7 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   const toggleJoin = useToggleJoin();
   const createEvent = useCreateEvent();
   const [composing, setComposing] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const handleToggleJoin = (eventId: string) => {
     toggleJoin.mutate(eventId);
@@ -114,14 +119,8 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
         <VStack space="md">
           <ScreenTitle
             eyebrow="This week at the lake"
-            right={
-              <HStack className="items-center" space="sm">
-                <AddButton onPress={() => setComposing(true)} />
-                <Box className="h-10 w-10 items-center justify-center rounded-full bg-secondary">
-                  <Icon name="Search" size={18} />
-                </Box>
-              </HStack>
-            }
+            onSearch={() => setIsSearching(true)}
+            right={<CreateButton onPress={() => setComposing(true)} />}
             title="Events"
           />
 
@@ -174,6 +173,17 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
           />
         ) : null}
       </Sheet>
+
+      <SearchSheet
+        getKey={(event) => event.id}
+        getSubtitle={(event) => event.place}
+        getTitle={(event) => event.title}
+        items={eventsView.data?.events ?? []}
+        onClose={() => setIsSearching(false)}
+        onSelect={(event) => onOpenEvent?.(event.id)}
+        placeholder="Search events"
+        visible={isSearching}
+      />
     </>
   );
 }

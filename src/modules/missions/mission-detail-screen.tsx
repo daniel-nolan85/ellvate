@@ -1,9 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Share, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { CommentComposer } from '@/src/components/shared/comment-composer';
+import { CommentItem } from '@/src/components/shared/comment-item';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
@@ -22,6 +32,13 @@ import { useSession } from '@/src/platform/session';
 
 import { MissionComposer } from './mission-composer';
 import {
+  useCreateMissionComment,
+  useDeleteMissionComment,
+  useMissionComments,
+  useReportMissionComment,
+  type MissionComment,
+} from './use-mission-comments';
+import {
   useCheckIn,
   useDeleteMission,
   useMissionsView,
@@ -34,14 +51,15 @@ interface MissionDetailScreenProps {
   readonly onBack: () => void;
 }
 
-const INDIGO = 'rgb(99,102,241)';
+const ACCENT = 'rgb(181,80,44)';
+const AMBER = 'rgb(217,123,41)';
 const WHITE = 'rgb(255,255,255)';
 
 const STATUS_BADGE: Readonly<Record<
   MissionStatus,
   { readonly variant: BadgeVariant; readonly label: string }
 >> = {
-  active: { label: 'In progress', variant: 'indigo' },
+  active: { label: 'In progress', variant: 'accent' },
   done: { label: 'Complete', variant: 'success' },
   locked: { label: 'Locked', variant: 'muted' },
 };
@@ -57,7 +75,7 @@ function MissionMenuRow({
   readonly label: string;
   readonly onPress: () => void;
 }) {
-  const color = destructive ? 'rgb(231,0,11)' : 'rgb(10,10,10)';
+  const color = destructive ? 'rgb(231,0,11)' : 'rgb(37,30,23)';
   return (
     <Pressable
       accessibilityRole='button'
@@ -84,10 +102,18 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const checkIn = useCheckIn();
   const updateMission = useUpdateMission();
   const deleteMission = useDeleteMission();
+  const comments = useMissionComments(missionId);
+  const createComment = useCreateMissionComment(missionId);
+  const deleteComment = useDeleteMissionComment(missionId);
+  const reportComment = useReportMissionComment();
+
   const [awardedXp, setAwardedXp] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [actionsFor, setActionsFor] = useState<MissionComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const mission = useMemo(
@@ -133,6 +159,28 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
     });
   };
 
+  const handleReply = (name: string) => {
+    setReplyTo(name);
+    setDraft((current) => (current.length === 0 ? `@${name} ` : current));
+  };
+
+  const handleSend = () => {
+    const body = draft.trim();
+    if (!body) {
+      return;
+    }
+    createComment.mutate(body, {
+      onSuccess: () => {
+        setDraft('');
+        setReplyTo(null);
+        void Haptics.selectionAsync();
+      },
+      onError: () => showToast('Couldn’t post your comment. Try again.'),
+    });
+  };
+
+  const commentList = comments.data?.comments ?? [];
+
   return (
     <View className='flex-1 bg-canvas'>
       <HStack
@@ -158,7 +206,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
             });
           }}
         >
-          <Icon color='rgb(113,113,123)' name='Share' size={18} />
+          <Icon color='rgb(120,108,94)' name='Share' size={18} />
         </Pressable>
         {isOwnMission && (
           <Pressable
@@ -167,14 +215,18 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
             hitSlop={8}
             onPress={() => setMenuOpen(true)}
           >
-            <Icon color='rgb(113,113,123)' name='ThreeDots' size={18} />
+            <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
           </Pressable>
         )}
       </HStack>
 
-      <ScrollView className='flex-1' contentContainerClassName='gap-4 px-[18px] py-4'>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className='flex-1'
+      >
+        <ScrollView className='flex-1' contentContainerClassName='gap-4 px-[18px] py-4'>
         {mission && badge ? (
-          <VStack className='gap-3'>
+          <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
             {mission.media && mission.media.length > 0 && (
               <MediaGallery media={mission.media} />
             )}
@@ -196,11 +248,11 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
             <HStack className='items-center gap-3'>
               <View
                 className={`h-11 w-11 items-center justify-center rounded-[14px] ${
-                  done ? 'bg-success' : 'bg-indigo-subtle'
+                  done ? 'bg-success' : 'bg-accent-subtle'
                 }`}
               >
                 <Icon
-                  color={done ? WHITE : INDIGO}
+                  color={done ? WHITE : ACCENT}
                   name={locked ? 'Lock' : done ? 'Check' : mission.icon}
                   size={20}
                 />
@@ -217,7 +269,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
 
             {mission.scheduledFor ? (
               <HStack className='items-center gap-1.5'>
-                <Icon color='rgb(113,113,123)' name='CalendarDays' size={16} />
+                <Icon color='rgb(120,108,94)' name='CalendarDays' size={16} />
                 <Text className='text-[14px] text-text-muted'>
                   {formatDateOnly(mission.scheduledFor)}
                 </Text>
@@ -234,7 +286,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
                       index < mission.stopsDone
                         ? done
                           ? 'bg-success'
-                          : 'bg-indigo'
+                          : 'bg-accent'
                         : 'bg-muted'
                     }`}
                     key={index}
@@ -244,20 +296,20 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               <Text className='shrink-0 text-muted-foreground' size='xs'>
                 {mission.stopsDone}/{mission.stopsTotal} stops
               </Text>
-              <Badge leftIcon={<Icon name='Star' size={11} />} variant='outline'>
+              <Badge leftIcon={<Icon color={AMBER} name='Star' size={11} />} variant='amber'>
                 {mission.xp} XP
               </Badge>
             </HStack>
 
             {mission.status === 'active' && awardedXp === null ? (
               <Button
-                className='self-start rounded-full bg-primary'
+                className='self-start rounded-full bg-accent'
                 isDisabled={checkIn.isPending}
                 onPress={handleCheckIn}
                 size='sm'
               >
-                <Icon color='rgb(250,250,250)' name='CheckCircle' size={15} />
-                <ButtonText className='font-inter-semibold text-primary-foreground'>
+                <Icon color={WHITE} name='CheckCircle' size={15} />
+                <ButtonText className='font-inter-semibold text-accent-foreground'>
                   Check in
                 </ButtonText>
               </Button>
@@ -277,7 +329,59 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
             This mission is no longer available.
           </Text>
         )}
-      </ScrollView>
+
+        <Divider />
+        <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
+          {commentList.length} comments
+        </Text>
+
+        {comments.isPending ? (
+          <View className='items-center py-10'>
+            <Spinner size='xlarge' />
+          </View>
+        ) : comments.isError ? (
+          <VStack className='items-start gap-2 py-2' testID='mission-comments-error'>
+            <Text className='text-text-muted' size='sm'>
+              Couldn&apos;t load comments.
+            </Text>
+            <Pressable
+              accessibilityRole='button'
+              className='rounded-full border border-line px-3 py-2'
+              onPress={() => void comments.refetch()}
+              testID='mission-comments-retry'
+            >
+              <Text className='font-inter-semibold text-content' size='xs'>
+                Retry
+              </Text>
+            </Pressable>
+          </VStack>
+        ) : commentList.length === 0 ? (
+          <Text className='py-2 text-text-muted' size='sm'>
+            No comments yet — start the conversation.
+          </Text>
+        ) : (
+          <VStack className='gap-4'>
+            {commentList.map((comment) => (
+              <CommentItem
+                comment={comment}
+                key={comment.id}
+                onActions={setActionsFor}
+                onReply={handleReply}
+              />
+            ))}
+          </VStack>
+        )}
+        </ScrollView>
+
+        <CommentComposer
+          isSending={createComment.isPending}
+          onChangeText={setDraft}
+          onClearReply={() => setReplyTo(null)}
+          onSend={handleSend}
+          replyTo={replyTo}
+          value={draft}
+        />
+      </KeyboardAvoidingView>
 
       {/* Own-mission options menu */}
       <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
@@ -315,7 +419,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
           onPress={() => setConfirmDeleteOpen(false)}
         >
           <Pressable
-            className='w-full gap-1 rounded-[20px] bg-canvas p-5'
+            className='w-full gap-1 rounded-[20px] bg-paper p-5'
             onPress={(event) => event.stopPropagation()}
           >
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -375,6 +479,54 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
           />
         </Sheet>
       )}
+
+      {/* Comment actions */}
+      <Modal
+        animationType='fade'
+        onRequestClose={() => setActionsFor(null)}
+        transparent
+        visible={actionsFor !== null}
+      >
+        <Pressable
+          className='flex-1 bg-[rgba(0,0,0,0.4)]'
+          onPress={() => setActionsFor(null)}
+        />
+        <View
+          className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5'
+          style={{ paddingBottom: insets.bottom + 24 }}
+        >
+          <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />
+          {actionsFor && actionsFor.author.id === userId ? (
+            <MissionMenuRow
+              destructive
+              icon='AlertCircle'
+              label='Delete comment'
+              onPress={() => {
+                const target = actionsFor;
+                setActionsFor(null);
+                deleteComment.mutate(target.id);
+              }}
+            />
+          ) : (
+            <MissionMenuRow
+              destructive
+              icon='AlertCircle'
+              label='Report comment'
+              onPress={() => {
+                const target = actionsFor;
+                setActionsFor(null);
+                if (!target) return;
+                reportComment.mutate(target.id, {
+                  onError: () =>
+                    showToast('Couldn’t report this comment. Try again.'),
+                  onSuccess: () =>
+                    showToast('Thanks — our moderators will take a look.'),
+                });
+              }}
+            />
+          )}
+        </View>
+      </Modal>
 
       {toast ? (
         <View

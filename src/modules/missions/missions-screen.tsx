@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Button, ButtonText } from '@/src/components/ui/button';
-import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
@@ -15,47 +15,35 @@ import { MissionComposer } from './mission-composer';
 import { useCreateMission, useMissionsView } from './use-missions';
 import { XpHero } from './xp-hero';
 
+const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
+
 interface MissionsScreenProps {
-  readonly onOpenLeaderboard: () => void;
   readonly onOpenMission?: (missionId: string) => void;
 }
 
-function RanksChip({ onPress }: { readonly onPress: () => void }) {
+function CreateButton({ onPress }: { readonly onPress: () => void }) {
   return (
-    <Pressable
-      className="flex-row items-center gap-1.5 rounded-full bg-secondary px-3.5 py-[9px]"
+    <Button
+      className="rounded-full bg-accent px-4"
       onPress={onPress}
-      testID="missions-ranks"
-    >
-      <Icon name="ChevronsUpDown" size={14} />
-      <Text className="font-inter-semibold text-[12px] leading-[16px] text-content">
-        Ranks
-      </Text>
-    </Pressable>
-  );
-}
-
-function AddButton({ onPress }: { readonly onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityLabel="Add mission"
-      accessibilityRole="button"
-      className="h-10 w-10 items-center justify-center rounded-full bg-primary"
-      onPress={onPress}
+      size="sm"
       testID="missions-add"
     >
-      <Icon color="#fff" name="Add" size={20} />
-    </Pressable>
+      <Icon color={COLOR_ACCENT_FOREGROUND} name="Add" size={14} />
+      <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
+        Create
+      </ButtonText>
+    </Button>
   );
 }
 
 export function MissionsScreen({
-  onOpenLeaderboard,
   onOpenMission,
 }: MissionsScreenProps) {
   const missionsView = useMissionsView();
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   return (
     <>
@@ -66,12 +54,8 @@ export function MissionsScreen({
         <VStack className="gap-4">
           <ScreenTitle
             eyebrow="Explore & earn"
-            right={
-              <HStack className="items-center" space="sm">
-                <AddButton onPress={() => setComposing(true)} />
-                <RanksChip onPress={onOpenLeaderboard} />
-              </HStack>
-            }
+            onSearch={() => setIsSearching(true)}
+            right={<CreateButton onPress={() => setComposing(true)} />}
             title="Missions"
           />
 
@@ -140,6 +124,17 @@ export function MissionsScreen({
           }
         />
       </Sheet>
+
+      <SearchSheet
+        getKey={(mission) => mission.id}
+        getSubtitle={(mission) => mission.description}
+        getTitle={(mission) => mission.title}
+        items={missionsView.data?.missions ?? []}
+        onClose={() => setIsSearching(false)}
+        onSelect={(mission) => onOpenMission?.(mission.id)}
+        placeholder="Search missions"
+        visible={isSearching}
+      />
     </>
   );
 }

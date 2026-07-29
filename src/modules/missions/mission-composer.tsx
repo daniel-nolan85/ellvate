@@ -61,12 +61,12 @@ function Chip({ label, onPress, selected, testID }: ChipProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      className={`rounded-full px-3.5 py-2 ${selected ? 'bg-primary' : 'bg-secondary'}`}
+      className={`rounded-full px-3.5 py-2 ${selected ? 'bg-accent' : 'bg-secondary'}`}
       onPress={onPress}
       testID={testID}
     >
       <Text
-        className={`font-inter-medium text-[13px] ${selected ? 'text-primary-foreground' : 'text-content'}`}
+        className={`font-inter-medium text-[13px] ${selected ? 'text-accent-foreground' : 'text-content'}`}
       >
         {label}
       </Text>
@@ -257,13 +257,13 @@ export function MissionComposer({
                   accessibilityLabel={option.label}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  className={`h-11 w-11 items-center justify-center rounded-full ${active ? 'bg-primary' : 'bg-secondary'}`}
+                  className={`h-11 w-11 items-center justify-center rounded-full ${active ? 'bg-accent' : 'bg-secondary'}`}
                   key={option.icon}
                   onPress={() => setIcon(option.icon)}
                   testID={`mission-icon-${option.icon.toLowerCase()}`}
                 >
                   <Icon
-                    color={active ? '#fff' : 'rgb(63,63,70)'}
+                    color={active ? '#fff' : 'rgb(37,30,23)'}
                     name={option.icon}
                     size={18}
                   />
@@ -303,7 +303,7 @@ export function MissionComposer({
                     className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-line bg-secondary"
                     onPress={pickImage}
                   >
-                    <Icon color="rgb(161,161,170)" name="Add" size={20} />
+                    <Icon color="rgb(169,156,139)" name="Add" size={20} />
                   </Pressable>
                 )}
               </HStack>
@@ -313,7 +313,7 @@ export function MissionComposer({
               className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3"
               onPress={pickImage}
             >
-              <Icon color="rgb(161,161,170)" name="Image" size={20} />
+              <Icon color="rgb(169,156,139)" name="Image" size={20} />
             </Pressable>
           )}
         </Field>
@@ -332,7 +332,7 @@ export function MissionComposer({
             </ButtonText>
           </Button>
           <Button
-            className="rounded-full bg-primary px-5"
+            className="rounded-full bg-accent px-5"
             isDisabled={!canSubmit}
             onPress={() => {
               if (xp === null || stopsTotal === null || icon === null) {
@@ -359,7 +359,7 @@ export function MissionComposer({
             testID="mission-submit"
             size="sm"
           >
-            <ButtonText className="font-inter-semibold text-[13px] text-primary-foreground">
+            <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
               {isSubmitting ? 'Saving…' : submitLabel}
             </ButtonText>
           </Button>

@@ -8,7 +8,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import type { LeaderboardEntry } from './use-leaderboard';
 
 const MEDAL_CLASS_BY_RANK: Readonly<Record<number, string>> = {
-  1: 'bg-indigo',
+  1: 'bg-accent',
   2: 'bg-[rgb(148,152,163)]',
   3: 'bg-[rgb(196,132,72)]',
 };
@@ -23,7 +23,7 @@ function PodiumAvatar({ entry }: { readonly entry: LeaderboardEntry }) {
   return (
     <View className="relative mb-1">
       {first ? (
-        <View className="rounded-full bg-indigo p-[3px]">
+        <View className="rounded-full bg-accent p-[3px]">
           <View className="rounded-full bg-canvas p-[3px]">
             <Avatar name={entry.user.name} size="xl" src={entry.user.avatarUrl ?? undefined} />
           </View>
@@ -34,7 +34,7 @@ function PodiumAvatar({ entry }: { readonly entry: LeaderboardEntry }) {
       <View className="absolute -bottom-2 left-0 right-0 items-center">
         <View className="rounded-full bg-canvas p-[2px]">
           <View
-            className={`h-[22px] w-[22px] items-center justify-center rounded-full ${MEDAL_CLASS_BY_RANK[entry.rank] ?? 'bg-indigo'}`}
+            className={`h-[22px] w-[22px] items-center justify-center rounded-full ${MEDAL_CLASS_BY_RANK[entry.rank] ?? 'bg-accent'}`}
           >
             <Text className="font-inter-bold text-[11px] leading-[13px] text-white">
               {entry.rank}

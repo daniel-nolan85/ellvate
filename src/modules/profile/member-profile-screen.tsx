@@ -131,7 +131,7 @@ export function MemberProfileScreen({
                 </Text>
                 <HStack className='flex-wrap gap-2'>
                   {member.data.profile.interests.map((interest) => (
-                    <Badge key={interest} variant='indigo'>
+                    <Badge key={interest} variant='accent'>
                       {interest}
                     </Badge>
                   ))}

@@ -160,7 +160,7 @@ export function Sheet({ children, onClose, visible }: SheetProps) {
             style={[
               panelStyle,
               {
-                backgroundColor: 'rgb(255,255,255)',
+                backgroundColor: 'rgb(253,247,237)',
                 borderTopLeftRadius: 24,
                 borderTopRightRadius: 24,
                 maxHeight: '92%',

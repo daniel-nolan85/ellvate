@@ -74,7 +74,7 @@ export function PasskeyOffer({
         <Centered
           body="No problem — you can turn on Face ID later in Settings. Your password still works."
           icon="AlertCircle"
-          iconColor="rgb(113,113,123)"
+          iconColor="rgb(120,108,94)"
           iconTint="rgb(245,245,245)"
           title="That didn’t finish"
         >
@@ -104,8 +104,8 @@ export function PasskeyOffer({
         <View className="flex-1">
           <View className="flex-1 justify-center">
             <VStack space="xl">
-              <View className="h-[72px] w-[72px] items-center justify-center rounded-full bg-indigo-subtle">
-                <Icon color="rgb(99,102,241)" name="Lock" size={30} />
+              <View className="h-[72px] w-[72px] items-center justify-center rounded-full bg-accent-subtle">
+                <Icon color="rgb(181,80,44)" name="Lock" size={30} />
               </View>
               <VStack space="sm">
                 <Heading className="font-inter-bold tracking-[-0.6px]" size="2xl">

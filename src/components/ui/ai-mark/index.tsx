@@ -2,7 +2,7 @@ import React from 'react';
 
 import Svg, { Path } from 'react-native-svg';
 
-const DEFAULT_COLOR = 'rgb(10,10,10)';
+const DEFAULT_COLOR = 'rgb(37,30,23)';
 
 type AiMarkProps = {
   size?: number;

@@ -18,12 +18,12 @@ export function SuggestionChips({ onSelect, suggestions }: SuggestionChipsProps)
       {suggestions.map((suggestion) => (
         <Pressable
           accessibilityRole="button"
-          className="shrink-0 rounded-full bg-indigo-subtle px-3.5 py-2"
+          className="shrink-0 rounded-full bg-accent-subtle px-3.5 py-2"
           key={suggestion}
           onPress={() => onSelect(suggestion)}
           testID={`assistant-suggestion-${suggestion.toLowerCase().replaceAll(' ', '-')}`}
         >
-          <Text className="font-inter-medium text-[12px] text-indigo">
+          <Text className="font-inter-medium text-[12px] text-accent">
             {suggestion}
           </Text>
         </Pressable>

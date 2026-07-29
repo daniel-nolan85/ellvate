@@ -14,14 +14,15 @@ import { BookmarkButton } from '@/src/modules/bookmarks';
 
 import { useCheckIn, type Mission, type MissionStatus } from './use-missions';
 
-const INDIGO = 'rgb(99,102,241)';
+const ACCENT = 'rgb(181,80,44)';
+const AMBER = 'rgb(217,123,41)';
 const WHITE = 'rgb(255,255,255)';
 
 const STATUS_BADGE: Readonly<Record<
   MissionStatus,
   { readonly variant: BadgeVariant; readonly label: string }
 >> = {
-  active: { label: 'In progress', variant: 'indigo' },
+  active: { label: 'In progress', variant: 'accent' },
   done: { label: 'Complete', variant: 'success' },
   locked: { label: 'Locked', variant: 'muted' },
 };
@@ -55,7 +56,7 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
     <Pressable
       accessibilityLabel={`Open mission: ${mission.title}`}
       accessibilityRole="button"
-      className={`gap-3 rounded-[20px] border border-line bg-canvas p-4 ${
+      className={`gap-3 rounded-[20px] border border-surface-hairline bg-paper p-4 shadow-card ${
         locked ? 'opacity-[0.55]' : ''
       }`}
       onPress={() => onOpen?.(mission.id)}
@@ -63,11 +64,11 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
       <HStack className="items-center gap-3">
         <View
           className={`h-11 w-11 items-center justify-center rounded-[14px] ${
-            done ? 'bg-success' : 'bg-indigo-subtle'
+            done ? 'bg-success' : 'bg-accent-subtle'
           }`}
         >
           <Icon
-            color={done ? WHITE : INDIGO}
+            color={done ? WHITE : ACCENT}
             name={locked ? 'Lock' : done ? 'Check' : mission.icon}
             size={20}
           />
@@ -81,7 +82,7 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
           </Text>
           {mission.scheduledFor ? (
             <HStack className="items-center gap-1">
-              <Icon color="rgb(113,113,123)" name="CalendarDays" size={12} />
+              <Icon color="rgb(120,108,94)" name="CalendarDays" size={12} />
               <Text className="text-muted-foreground" size="xs">
                 {formatDateOnly(mission.scheduledFor)}
               </Text>
@@ -97,7 +98,7 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
             <View
               className={`h-[5px] flex-1 rounded-full ${
                 index < mission.stopsDone
-                  ? done ? 'bg-success' : 'bg-indigo'
+                  ? done ? 'bg-success' : 'bg-accent'
                   : 'bg-muted'
               }`}
               key={index}
@@ -107,19 +108,19 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
         <Text className="shrink-0 text-muted-foreground" size="xs">
           {mission.stopsDone}/{mission.stopsTotal} stops
         </Text>
-        <Badge leftIcon={<Icon name="Star" size={11} />} variant="outline">
+        <Badge leftIcon={<Icon color={AMBER} name="Star" size={11} />} variant="amber">
           {mission.xp} XP
         </Badge>
       </HStack>
       {mission.status === 'active' && awardedXp === null ? (
         <Button
-          className="self-start rounded-full bg-primary"
+          className="self-start rounded-full bg-accent"
           isDisabled={checkIn.isPending}
           onPress={handleCheckIn}
           size="sm"
         >
-          <Icon color="rgb(250,250,250)" name="CheckCircle" size={15} />
-          <ButtonText className="font-inter-semibold text-primary-foreground">
+          <Icon color={WHITE} name="CheckCircle" size={15} />
+          <ButtonText className="font-inter-semibold text-accent-foreground">
             Check in
           </ButtonText>
         </Button>

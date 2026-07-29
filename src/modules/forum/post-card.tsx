@@ -15,29 +15,41 @@ import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useSession } from '@/src/platform/session';
 
+import { PinExplainerModal } from './pin-explainer-modal';
 import { PostComposer } from './post-composer';
+import type { PinAction } from './use-pin-action';
 import {
   useDeletePost,
   useMuteUser,
   useReportPost,
+  useSubforums,
+  useTogglePin,
   useUpdatePost,
   type ForumPost,
 } from './use-forum';
+import { usePinExplainerDismissed } from './use-pin-explainer';
 
-const COLOR_CONTENT = 'rgb(10,10,10)';
-const COLOR_PRIMARY_FOREGROUND = 'rgb(250,250,250)';
-const COLOR_TEXT_SUBTLE = 'rgb(161,161,170)';
-const COLOR_INDIGO = 'rgb(99,102,241)';
+const COLOR_CONTENT = 'rgb(37,30,23)';
+const COLOR_TEXT_SUBTLE = 'rgb(169,156,139)';
+const COLOR_AMBER = 'rgb(217,123,41)';
 const COLOR_DESTRUCTIVE = 'rgb(231,0,11)';
 
 interface PostCardProps {
   readonly post: ForumPost;
   readonly onToggleLike: () => void;
   readonly onOpen?: () => void;
+  // Screens that render many PostCards at once (the forum list) pass a
+  // shared PinAction so only one <PinExplainerModal> is ever mounted — see
+  // use-pin-action.ts for why. Screens showing a single card at a time
+  // (bookmarks/activity/digest preview sheets) can omit it; PostCard falls
+  // back to managing its own local modal, which is safe with only one
+  // instance on screen.
+  readonly pinAction?: PinAction;
 }
 
 function PostMenuRow({
@@ -69,7 +81,7 @@ function PostMenuRow({
   );
 }
 
-export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
+export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const currentUserId = session.userId ?? 'demo-user';
@@ -79,11 +91,18 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
   const deletePost = useDeletePost();
   const muteUser = useMuteUser();
   const reportPost = useReportPost();
+  const togglePin = useTogglePin();
+  const pinExplainer = usePinExplainerDismissed();
+  const subforums = useSubforums();
+  const subforumNames = (subforums.data?.subforums ?? []).filter(
+    (name) => name !== 'All',
+  );
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -122,6 +141,45 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
     setConfirmDeleteOpen(true);
   };
 
+  const handleTogglePin = () => {
+    setMenuOpen(false);
+    togglePin.mutate(post.id, {
+      onSuccess: (result) =>
+        showToast(result.pinned ? 'Post pinned' : 'Post unpinned'),
+      onError: () => showToast('Couldn’t update pin status. Try again.'),
+    });
+  };
+
+  // Unpinning is self-explanatory and skips the explainer — only pinning
+  // (which replaces whatever the user already had pinned) needs it, and
+  // only until they've dismissed it once. When a shared pinAction is
+  // provided (the forum list), defer to it instead of managing a local
+  // modal — see PostCardProps.pinAction.
+  const requestTogglePin = () => {
+    if (pinAction) {
+      setMenuOpen(false);
+      pinAction.requestTogglePin(post, {
+        onError: () => showToast('Couldn’t update pin status. Try again.'),
+        onSuccess: (pinned) =>
+          showToast(pinned ? 'Post pinned' : 'Post unpinned'),
+      });
+      return;
+    }
+    if (!post.pinned && !pinExplainer.dismissed) {
+      setPinExplainerOpen(true);
+      return;
+    }
+    handleTogglePin();
+  };
+
+  const confirmPinFromExplainer = (dontShowAgain: boolean) => {
+    setPinExplainerOpen(false);
+    if (dontShowAgain) {
+      void pinExplainer.dismissForever();
+    }
+    handleTogglePin();
+  };
+
   const confirmDelete = () => {
     setConfirmDeleteOpen(false);
     deletePost.mutate(post.id, {
@@ -151,7 +209,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
   };
 
   return (
-    <View className='gap-4 rounded-[20px] border border-line bg-canvas p-[18px]'>
+    <View className='gap-4 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
       <Pressable
         accessibilityLabel={`Open post: ${post.title}`}
         accessibilityRole='button'
@@ -179,20 +237,31 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               <Text className='font-inter-bold' size='sm'>
                 {post.author.name}
               </Text>
-              <Text className='text-text-muted' size='xs'>
-                {post.forum} · {formatRelativeTime(post.createdAt)}
-              </Text>
+              <HStack className='items-center' space='xs'>
+                <Badge variant={categoryAccent(post.forum)}>{post.forum}</Badge>
+                <Text className='text-text-muted' size='xs'>
+                  · {formatRelativeTime(post.createdAt)}
+                </Text>
+              </HStack>
             </VStack>
           </Pressable>
           <HStack className='items-center' space='sm'>
-            {post.pinned ? (
-              <Badge
-                leftIcon={<Icon color={COLOR_INDIGO} name='Star' size={12} />}
-                variant='indigo'
-              >
-                Pinned
-              </Badge>
-            ) : null}
+            <Pressable
+              accessibilityLabel={post.pinned ? 'Unpin post' : 'Pin post'}
+              accessibilityRole='button'
+              hitSlop={8}
+              onPress={(event) => {
+                event.stopPropagation();
+                requestTogglePin();
+              }}
+            >
+              <Icon
+                color={post.pinned ? COLOR_AMBER : COLOR_TEXT_SUBTLE}
+                fill={post.pinned ? COLOR_AMBER : 'none'}
+                name='Pin'
+                size={16}
+              />
+            </Pressable>
             <Pressable
               accessibilityLabel='More options'
               accessibilityRole='button'
@@ -223,18 +292,19 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
       <HStack className='items-center' space='sm'>
         <Pressable
           className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
-            post.liked ? 'bg-primary' : 'bg-secondary'
+            post.liked ? 'bg-amber-subtle' : 'bg-secondary'
           }`}
           onPress={handleLike}
         >
           <Icon
-            color={post.liked ? COLOR_PRIMARY_FOREGROUND : COLOR_CONTENT}
+            color={post.liked ? COLOR_AMBER : COLOR_CONTENT}
+            fill={post.liked ? COLOR_AMBER : 'none'}
             name='Favourite'
             size={14}
           />
           <Text
             className={`font-inter-semibold text-[12px] leading-[16px] ${
-              post.liked ? 'text-primary-foreground' : 'text-content'
+              post.liked ? 'text-amber' : 'text-content'
             }`}
           >
             {post.likes}
@@ -303,7 +373,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
           onPress={() => setConfirmDeleteOpen(false)}
         >
           <Pressable
-            className='w-full gap-1 rounded-[20px] bg-canvas p-5'
+            className='w-full gap-1 rounded-[20px] bg-paper p-5'
             onPress={(event) => event.stopPropagation()}
           >
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -344,6 +414,7 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               {
                 excerpt: draft.excerpt,
                 existingMedia: draft.existingMedia,
+                forum: draft.forum,
                 newMedia: draft.newMedia,
                 postId: post.id,
                 title: draft.title,
@@ -360,9 +431,18 @@ export function PostCard({ onOpen, onToggleLike, post }: PostCardProps) {
               },
             )
           }
+          subforums={subforumNames}
           submitLabel='Save'
         />
       </Sheet>
+
+      {pinAction ? null : (
+        <PinExplainerModal
+          onCancel={() => setPinExplainerOpen(false)}
+          onConfirm={confirmPinFromExplainer}
+          visible={pinExplainerOpen}
+        />
+      )}
 
       {toast ? (
         <View

@@ -9,9 +9,11 @@ import {
   Bookmark,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  ChevronUp,
   Circle,
   CircleAlert,
   CircleCheck,
@@ -28,14 +30,17 @@ import {
   Mail,
   MessageCircle,
   Moon,
+  Newspaper,
   Pencil,
   Phone,
+  Pin,
   Play,
   Plus,
   Search,
   Share2,
   Star,
   Sun,
+  Trophy,
   X,
   type LucideProps,
 } from 'lucide-react-native';
@@ -73,13 +78,18 @@ export type AppIconName =
   | 'HelpCircle'
   | 'ChevronLeft'
   | 'ChevronRight'
+  | 'ChevronDown'
+  | 'ChevronUp'
   | 'Bell'
   | 'AlertCircle'
   | 'Link'
   | 'Eye'
   | 'EyeOff'
   | 'Image'
-  | 'Bookmark';
+  | 'Bookmark'
+  | 'Newspaper'
+  | 'Trophy'
+  | 'Pin';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -111,6 +121,8 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   HelpCircle: CircleQuestionMark,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Bell,
   AlertCircle: CircleAlert,
   Link: Link2,
@@ -118,6 +130,9 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   EyeOff,
   Image,
   Bookmark,
+  Newspaper,
+  Trophy,
+  Pin,
 };
 
 Object.values(ICON_MAP).forEach((component) => {
@@ -126,12 +141,13 @@ Object.values(ICON_MAP).forEach((component) => {
   });
 });
 
-const DEFAULT_COLOR = 'rgb(10,10,10)';
+const DEFAULT_COLOR = 'rgb(37,30,23)';
 
 type IconProps = {
   name: AppIconName;
   size?: number;
   color?: string;
+  fill?: string;
   strokeWidth?: number;
   className?: string;
 };
@@ -140,6 +156,7 @@ const Icon = ({
   name,
   size = 20,
   color = DEFAULT_COLOR,
+  fill = 'none',
   strokeWidth = 2,
   className,
 }: IconProps) => {
@@ -148,6 +165,7 @@ const Icon = ({
     <IconGlyph
       size={size}
       color={color}
+      fill={fill}
       strokeWidth={strokeWidth}
       className={className}
     />

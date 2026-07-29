@@ -20,8 +20,8 @@ function GlowCircle({ id, size, opacity, fade, className }: GlowCircleProps) {
       <Svg height={size} width={size}>
         <Defs>
           <RadialGradient cx="50%" cy="50%" id={id} r="50%">
-            <Stop offset={0} stopColor="rgb(99,102,241)" stopOpacity={opacity} />
-            <Stop offset={fade} stopColor="rgb(99,102,241)" stopOpacity={0} />
+            <Stop offset={0} stopColor="rgb(181,80,44)" stopOpacity={opacity} />
+            <Stop offset={fade} stopColor="rgb(181,80,44)" stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Circle cx={size / 2} cy={size / 2} fill={`url(#${id})`} r={size / 2} />
@@ -53,7 +53,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
         size={300}
       />
       <View className="flex-1 justify-end px-[26px] pb-2">
-        <Text className="font-inter-bold text-[11px] tracking-[2px] text-indigo">
+        <Text className="font-inter-bold text-[11px] tracking-[2px] text-accent">
           LAKE LAS VEGAS
         </Text>
         <Text className="mt-2.5 font-inter-bold text-[44px] leading-[46px] tracking-[-0.035em] text-primary-foreground">

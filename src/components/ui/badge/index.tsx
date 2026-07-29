@@ -3,7 +3,15 @@ import { Text, View } from 'react-native';
 import type { ViewProps } from 'react-native';
 import { tva } from '@gluestack-ui/utils/nativewind-utils';
 
-type BadgeVariant = 'solid' | 'muted' | 'outline' | 'success' | 'indigo';
+type BadgeVariant =
+  | 'solid'
+  | 'muted'
+  | 'outline'
+  | 'success'
+  | 'accent'
+  | 'amber'
+  | 'lake'
+  | 'palm';
 
 const badgeStyle = tva({
   base: 'flex-row items-center justify-center self-start gap-[4px] h-[20px] px-[8px] rounded-[6px]',
@@ -13,7 +21,10 @@ const badgeStyle = tva({
       muted: 'bg-muted',
       outline: 'bg-transparent border border-line',
       success: 'bg-success',
-      indigo: 'bg-indigo-subtle',
+      accent: 'bg-accent-subtle',
+      amber: 'bg-amber-subtle',
+      lake: 'bg-lake-subtle',
+      palm: 'bg-palm-subtle',
     },
   },
 });
@@ -26,7 +37,10 @@ const badgeTextStyle = tva({
       muted: 'text-secondary-foreground',
       outline: 'text-content',
       success: 'text-primary-foreground',
-      indigo: 'text-indigo',
+      accent: 'text-accent',
+      amber: 'text-amber',
+      lake: 'text-lake',
+      palm: 'text-palm',
     },
   },
 });

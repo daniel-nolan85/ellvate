@@ -5,6 +5,7 @@ import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { categoryAccent } from '@/src/lib/category-accent';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 
 import type { CommunityEvent } from './events-types';
@@ -32,11 +33,11 @@ export function EventSummaryCard({ event, onOpen }: EventSummaryCardProps) {
           <Text className="flex-1 font-inter-bold text-[18px] text-content">
             {event.title}
           </Text>
-          {event.featured ? <Badge variant="indigo">Featured</Badge> : null}
+          {event.featured ? <Badge variant="amber">Featured</Badge> : null}
           <BookmarkButton targetId={event.id} targetType="event" />
         </HStack>
         <HStack className="items-center gap-1.5">
-          <Icon color="rgb(113,113,123)" name="CalendarDays" size={14} />
+          <Icon color="rgb(120,108,94)" name="CalendarDays" size={14} />
           <Text className="text-text-muted" size="sm">
             {event.dayLabel} {event.dateLabel} · {event.timeLabel}
           </Text>
@@ -44,7 +45,7 @@ export function EventSummaryCard({ event, onOpen }: EventSummaryCardProps) {
         <Text className="text-text-muted" size="sm">
           {event.place}
         </Text>
-        <Badge variant="outline">{event.tag}</Badge>
+        <Badge variant={categoryAccent(event.tag)}>{event.tag}</Badge>
         <Text className="text-text-muted" size="sm">
           {event.going} going
         </Text>

@@ -25,13 +25,13 @@ export function CommentComposer({
     <View className="gap-2.5 border-t border-line px-[18px] pb-9 pt-2.5">
       {replyTo ? (
         <View className="flex-row items-center gap-2 rounded-lg bg-secondary px-3 py-2">
-          <Icon color="rgb(113,113,123)" name="MessageCircle" size={16} />
+          <Icon color="rgb(120,108,94)" name="MessageCircle" size={16} />
           <Text className="flex-1 text-[13px] text-text-muted">
             Replying to{' '}
             <Text className="font-inter-semibold text-content">{replyTo}</Text>
           </Text>
           <Pressable accessibilityLabel="Cancel reply" onPress={onClearReply}>
-            <Icon color="rgb(113,113,123)" name="Close" size={16} />
+            <Icon color="rgb(120,108,94)" name="Close" size={16} />
           </Pressable>
         </View>
       ) : null}
@@ -42,7 +42,7 @@ export function CommentComposer({
           onChangeText={onChangeText}
           onSubmitEditing={() => canSend && onSend()}
           placeholder={replyTo ? 'Write a reply…' : 'Add a comment…'}
-          placeholderTextColor="rgb(161,161,170)"
+          placeholderTextColor="rgb(169,156,139)"
           returnKeyType="send"
           testID="comment-input"
           value={value}

@@ -21,8 +21,8 @@ function HeroGlow() {
       <Svg height={220} width={220}>
         <Defs>
           <RadialGradient cx="50%" cy="50%" id="xpHeroGlow" r="50%">
-            <Stop offset="0%" stopColor="rgb(99,102,241)" stopOpacity={0.35} />
-            <Stop offset="70%" stopColor="rgb(99,102,241)" stopOpacity={0} />
+            <Stop offset="0%" stopColor="rgb(181,80,44)" stopOpacity={0.35} />
+            <Stop offset="70%" stopColor="rgb(181,80,44)" stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Circle cx={110} cy={110} fill="url(#xpHeroGlow)" r={110} />

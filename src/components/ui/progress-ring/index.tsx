@@ -19,7 +19,7 @@ function ProgressRing({
   progress,
   size = 74,
   strokeWidth = 6,
-  color = 'rgb(99,102,241)',
+  color = 'rgb(181,80,44)',
   trackColor = 'rgba(250,250,250,0.15)',
   rounded = true,
   children,

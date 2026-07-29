@@ -622,6 +622,7 @@ export async function checkInSupabase(
 
   const { error: progressWriteError } = await supabase.from('mission_progress').upsert(
     {
+      completed_at: completed ? new Date().toISOString() : null,
       mission_id: missionId,
       user_id: userId,
       stops_done: stopsDone,

@@ -55,6 +55,9 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
             progressByUser: {
               ...item.progressByUser,
               [userId]: {
+                completedAt: completed
+                  ? new Date().toISOString()
+                  : (entry.completedAt ?? null),
                 status: completed ? ('done' as const) : ('active' as const),
                 stopsDone,
               },

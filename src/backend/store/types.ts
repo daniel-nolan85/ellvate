@@ -29,6 +29,10 @@ export interface StoredUser {
   readonly title: string;
   readonly profile: StoredProfile;
   readonly mutedUserIds: readonly string[];
+  // Twitter/Telegram-style pin: at most one post, private to this user —
+  // pinning a second post replaces it rather than allowing several at once,
+  // and it never affects what any other user sees as pinned.
+  readonly pinnedPostId: string | null;
 }
 
 export interface StoredMedia {
@@ -47,7 +51,6 @@ export interface StoredPost {
   readonly replies: number;
   readonly likes: number;
   readonly likedBy: readonly string[];
-  readonly pinned: boolean;
 }
 
 export interface StoredComment {
@@ -87,6 +90,21 @@ export interface StoredEventCommentReport {
   readonly createdAt: string;
 }
 
+export interface StoredMissionComment {
+  readonly id: string;
+  readonly missionId: string;
+  readonly authorId: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
+export interface StoredMissionCommentReport {
+  readonly id: string;
+  readonly missionCommentId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
 export interface StoredEvent {
   readonly id: string;
   readonly authorId: string;
@@ -107,6 +125,10 @@ export interface StoredEvent {
 export interface MissionUserProgress {
   readonly status: MissionStatus;
   readonly stopsDone: number;
+  // Set only when status transitions to 'done' — the digest feature needs to
+  // know *when* a mission was completed to scope "completed this week",
+  // which stopsDone/status alone can't answer.
+  readonly completedAt: string | null;
 }
 
 export interface StoredMission {
@@ -160,6 +182,8 @@ export interface StoreState {
   readonly eventComments: readonly StoredEventComment[];
   readonly eventCommentReports: readonly StoredEventCommentReport[];
   readonly missions: readonly StoredMission[];
+  readonly missionComments: readonly StoredMissionComment[];
+  readonly missionCommentReports: readonly StoredMissionCommentReport[];
   readonly notifications: readonly StoredNotification[];
   readonly bookmarks: readonly StoredBookmark[];
   readonly users: readonly StoredUser[];

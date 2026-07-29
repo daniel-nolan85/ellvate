@@ -80,7 +80,7 @@ const InputField = React.forwardRef<
   return (
     <UIInput.Input
       className={inputFieldStyle({ class: className })}
-      placeholderTextColor="rgb(161,161,170)"
+      placeholderTextColor="rgb(169,156,139)"
       ref={ref}
       {...props}
     />

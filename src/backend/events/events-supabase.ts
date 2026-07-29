@@ -190,6 +190,16 @@ const uploadEventMedia = async (
 const MEDIA_UPLOAD_FAILED_MESSAGE =
   'One or more images failed to upload. Please try again.';
 
+// Mirrors isUpcoming in events.ts (memory backend) — events from earlier
+// calendar days are hidden from the main "Coming up" list, but an event
+// later today still counts as upcoming. getMyEventsViewSupabase does NOT
+// apply this, since that's an activity history where past events belong.
+function isUpcoming(startsAt: string): boolean {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return Date.parse(startsAt) >= startOfToday.getTime();
+}
+
 export async function getEventsViewSupabase(
   supabase: SupabaseClient,
   userId: string,
@@ -210,7 +220,8 @@ export async function getEventsViewSupabase(
   throwIfSupabaseError(joinsRes.error, 'load event joins');
 
   const weekRows = (weekRes.data ?? []) as unknown as WeekDayRow[];
-  const eventRows = (eventsRes.data ?? []) as unknown as EventRow[];
+  const allEventRows = (eventsRes.data ?? []) as unknown as EventRow[];
+  const eventRows = allEventRows.filter((row) => isUpcoming(row.starts_at));
   const joinRows = (joinsRes.data ?? []) as unknown as JoinRow[];
 
   const joinedByEvent = (eventId: string): readonly string[] =>

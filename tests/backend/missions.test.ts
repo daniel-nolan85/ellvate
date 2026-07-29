@@ -217,7 +217,7 @@ describe('checkIn', () => {
       state.missions.find((m) => m.id === 'mission-1')?.progressByUser[
         DEMO_USER_ID
       ],
-    ).toEqual({ status: 'active', stopsDone: 0 });
+    ).toEqual({ completedAt: null, status: 'active', stopsDone: 0 });
   });
 });
 

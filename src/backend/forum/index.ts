@@ -5,6 +5,7 @@ export {
   getPostsByIds,
   listPosts,
   toggleLike,
+  togglePin,
   updatePost,
 } from './posts';
 export { listSubforums } from './subforums';
@@ -16,5 +17,6 @@ export type {
   MyPostsOptions,
   MyPostsPage,
   PersonRef,
+  TogglePinResult,
   UpdatePostResult,
 } from './types';
