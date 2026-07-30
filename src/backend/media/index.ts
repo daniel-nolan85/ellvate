@@ -174,12 +174,13 @@ export function extractAvatarUpload(input: unknown): RawMediaUpload | null {
 }
 
 // WHY: a business logo is a single image like an avatar, not a gallery item
-// — reads `raw.logo` rather than the `newMedia` array field. Mirrors
-// extractAvatarUpload's permissive/strict split (missing or malformed shape
-// is "no change"; a real data URL that violates a limit rejects the request).
+// — reads `raw.newLogo` (matching the `newMedia` naming convention) rather
+// than a bare `logo` field. Mirrors extractAvatarUpload's permissive/strict
+// split (missing or malformed shape is "no change"; a real data URL that
+// violates a limit rejects the request).
 export function extractLogoUpload(input: unknown): RawMediaUpload | null {
   const raw = isRecord(input) ? input : {};
-  const logo = isRecord(raw.logo) ? raw.logo : null;
+  const logo = isRecord(raw.newLogo) ? raw.newLogo : null;
   if (!logo) {
     return null;
   }

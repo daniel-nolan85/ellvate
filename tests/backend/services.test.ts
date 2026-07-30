@@ -142,6 +142,51 @@ describe('createServiceListing', () => {
       ]);
     }
   });
+
+  test('stores an uploaded logo separately from listing media', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      newLogo: { dataUrl: 'data:image/png;base64,bG9nbw==', filename: 'logo.png' },
+      newMedia: [
+        { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'yard.jpg' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.logo).toEqual({
+        filename: 'logo.png',
+        url: 'data:image/png;base64,bG9nbw==',
+      });
+      expect(result.listing.media).toEqual([
+        { filename: 'yard.jpg', url: 'data:image/jpeg;base64,b25l' },
+      ]);
+    }
+  });
+
+  test('normalizes a bare domain contactWebsite to a full https URL', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      contactWebsite: 'nolancode.com',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.contactWebsite).toBe('https://nolancode.com');
+    }
+  });
+
+  test('leaves an already-schemed contactWebsite untouched', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      contactWebsite: 'https://www.nolancode.com',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.contactWebsite).toBe('https://www.nolancode.com');
+    }
+  });
 });
 
 describe('updateServiceListing', () => {
@@ -170,6 +215,47 @@ describe('updateServiceListing', () => {
     const result = await updateServiceListing(ctx(), 'service-999', validListingInput);
 
     expect(result).toMatchObject({ ok: false, code: 'service_listing_not_found' });
+  });
+
+  test('can add a logo on edit, and keeps it if re-submitted as existingLogo', async () => {
+    const created = await createServiceListing(ctx(), validListingInput);
+    if (!created.ok) throw new Error('setup failed');
+
+    const withLogo = await updateServiceListing(ctx(), created.listing.id, {
+      ...validListingInput,
+      newLogo: { dataUrl: 'data:image/png;base64,bG9nbw==', filename: 'logo.png' },
+    });
+    expect(withLogo.ok).toBe(true);
+    if (!withLogo.ok) return;
+    expect(withLogo.listing.logo).toEqual({
+      filename: 'logo.png',
+      url: 'data:image/png;base64,bG9nbw==',
+    });
+
+    const kept = await updateServiceListing(ctx(), created.listing.id, {
+      ...validListingInput,
+      businessName: 'Updated Yard Care',
+      existingLogo: withLogo.listing.logo,
+    });
+    expect(kept.ok).toBe(true);
+    if (kept.ok) {
+      expect(kept.listing.logo).toEqual(withLogo.listing.logo);
+    }
+  });
+
+  test('normalizes a bare domain contactWebsite on edit too', async () => {
+    const created = await createServiceListing(ctx(), validListingInput);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await updateServiceListing(ctx(), created.listing.id, {
+      ...validListingInput,
+      contactWebsite: 'nolancode.com',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.contactWebsite).toBe('https://nolancode.com');
+    }
   });
 });
 
