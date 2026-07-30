@@ -7,7 +7,7 @@ import { AiMark } from '@/src/components/ui/ai-mark';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 
-export type CommunityTabId = 'forum' | 'events' | 'missions' | 'leaderboard';
+export type CommunityTabId = 'forum' | 'events' | 'missions' | 'services';
 
 interface FloatingTabBarProps {
   readonly activeTab: CommunityTabId | null;
@@ -28,7 +28,7 @@ const LEFT_TABS: readonly TabDefinition[] = [
 
 const RIGHT_TABS: readonly TabDefinition[] = [
   { id: 'missions', label: 'Missions', icon: 'Star' },
-  { id: 'leaderboard', label: 'Ranks', icon: 'Trophy' },
+  { id: 'services', label: 'Services', icon: 'Store' },
 ];
 
 const ACTIVE_COLOR = '#ffffff';

@@ -144,6 +144,49 @@ export interface StoredMission {
   readonly progressByUser: Readonly<Record<string, MissionUserProgress>>;
 }
 
+export type ServiceCategory =
+  | 'pet-care'
+  | 'home-services'
+  | 'beauty'
+  | 'automotive'
+  | 'pool-spa'
+  | 'tech-web'
+  | 'other';
+
+export interface StoredServiceListing {
+  readonly id: string;
+  readonly authorId: string;
+  readonly businessName: string;
+  readonly category: ServiceCategory;
+  readonly description: string;
+  readonly contactPhone: string | null;
+  readonly contactEmail: string | null;
+  readonly contactWebsite: string | null;
+  readonly serviceArea: string | null;
+  // A single business logo, distinct from `media` (the photo gallery) — shown
+  // in place of the category's default icon wherever the listing appears
+  // compactly (card, list rows).
+  readonly logo?: StoredMedia;
+  readonly media?: readonly StoredMedia[];
+  readonly createdAt: string;
+}
+
+export interface StoredServiceReview {
+  readonly id: string;
+  readonly listingId: string;
+  readonly authorId: string;
+  readonly rating: 1 | 2 | 3 | 4 | 5;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
+export interface StoredServiceReviewReport {
+  readonly id: string;
+  readonly serviceReviewId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
 export interface StoredWeekDay {
   readonly dayLabel: string;
   readonly dateLabel: string;
@@ -162,7 +205,7 @@ export interface StoredNotification {
   readonly createdAt: string;
 }
 
-export type BookmarkTargetType = 'post' | 'event' | 'mission';
+export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service';
 
 export interface StoredBookmark {
   readonly id: string;
@@ -184,6 +227,9 @@ export interface StoreState {
   readonly missions: readonly StoredMission[];
   readonly missionComments: readonly StoredMissionComment[];
   readonly missionCommentReports: readonly StoredMissionCommentReport[];
+  readonly serviceListings: readonly StoredServiceListing[];
+  readonly serviceReviews: readonly StoredServiceReview[];
+  readonly serviceReviewReports: readonly StoredServiceReviewReport[];
   readonly notifications: readonly StoredNotification[];
   readonly bookmarks: readonly StoredBookmark[];
   readonly users: readonly StoredUser[];

@@ -5,7 +5,7 @@ import { Button, ButtonText } from '@/src/components/ui/button';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { ScreenTitle } from '@/src/modules/community-shell';
+import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 
 import { LeaderRow } from './leader-row';
 import { Podium } from './podium';
@@ -15,7 +15,8 @@ export function LeaderboardScreen() {
   const leaderboard = useLeaderboard();
 
   return (
-    <ScrollView
+    <>
+      <ScrollView
       className="flex-1 bg-canvas"
       contentContainerStyle={{ paddingBottom: 130 }}
     >
@@ -52,5 +53,7 @@ export function LeaderboardScreen() {
         )}
       </VStack>
     </ScrollView>
+      <CommunityNavBar />
+    </>
   );
 }

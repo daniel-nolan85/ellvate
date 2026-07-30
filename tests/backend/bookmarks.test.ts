@@ -9,6 +9,7 @@ import { createPost, deletePost } from '../../src/backend/forum';
 import { memoryContext } from '../../src/backend/http';
 import { deleteMission } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
+import { deleteServiceListing } from '../../src/backend/services';
 import {
   DEMO_USER_ID,
   resetStore,
@@ -66,7 +67,7 @@ describe('toggleBookmark', () => {
     expect(result).toMatchObject({ code: 'target_not_found', ok: false });
   });
 
-  test('allows bookmarking events and missions as well as posts', async () => {
+  test('allows bookmarking events, missions, and service listings as well as posts', async () => {
     const event = await toggleBookmark(ctx(DEMO_USER_ID), {
       targetId: 'event-1',
       targetType: 'event',
@@ -79,8 +80,18 @@ describe('toggleBookmark', () => {
     });
     expect(mission).toEqual({ bookmarked: true, ok: true });
 
+    const service = await toggleBookmark(ctx(DEMO_USER_ID), {
+      targetId: 'service-1',
+      targetType: 'service',
+    });
+    expect(service).toEqual({ bookmarked: true, ok: true });
+
     const page = await listBookmarks(ctx(DEMO_USER_ID));
-    expect(page.items.map((item) => item.kind).sort()).toEqual(['event', 'mission']);
+    expect(page.items.map((item) => item.kind).sort()).toEqual([
+      'event',
+      'mission',
+      'service',
+    ]);
   });
 
   test('allows bookmarking content the caller authored themselves', async () => {
@@ -165,6 +176,14 @@ describe('listBookmarks', () => {
     await toggleBookmark(ctx(DEMO_USER_ID), { targetId: 'mission-1', targetType: 'mission' });
     // mission-1 is authored by user-hoa (seeded).
     expect(await deleteMission(ctx('user-hoa'), 'mission-1')).toBe(true);
+
+    expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toEqual([]);
+  });
+
+  test('drops an orphaned service listing bookmark the same way', async () => {
+    await toggleBookmark(ctx(DEMO_USER_ID), { targetId: 'service-1', targetType: 'service' });
+    // service-1 is authored by user-riley (seeded).
+    expect(await deleteServiceListing(ctx('user-riley'), 'service-1')).toBe(true);
 
     expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toEqual([]);
   });

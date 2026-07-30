@@ -172,3 +172,43 @@ export function extractAvatarUpload(input: unknown): RawMediaUpload | null {
 
   return { dataUrl, filename };
 }
+
+// WHY: a business logo is a single image like an avatar, not a gallery item
+// — reads `raw.logo` rather than the `newMedia` array field. Mirrors
+// extractAvatarUpload's permissive/strict split (missing or malformed shape
+// is "no change"; a real data URL that violates a limit rejects the request).
+export function extractLogoUpload(input: unknown): RawMediaUpload | null {
+  const raw = isRecord(input) ? input : {};
+  const logo = isRecord(raw.logo) ? raw.logo : null;
+  if (!logo) {
+    return null;
+  }
+  const dataUrl = typeof logo.dataUrl === 'string' ? logo.dataUrl : '';
+  if (!dataUrl.startsWith('data:')) {
+    return null;
+  }
+  const filename = typeof logo.filename === 'string' ? logo.filename : 'logo';
+  assertValidFilename(filename);
+  assertValidDataUrl(dataUrl);
+
+  return { dataUrl, filename };
+}
+
+// WHY: when editing, the client sends back the current logo (unchanged) as
+// `existingLogo`, or omits it entirely to remove the logo — mirrors
+// extractExistingMedia's kept-subset contract but for a single item.
+export function extractExistingLogo(input: unknown): RawExistingMedia | null {
+  const raw = isRecord(input) ? input : {};
+  const logo = isRecord(raw.existingLogo) ? raw.existingLogo : null;
+  if (!logo) {
+    return null;
+  }
+  const url = typeof logo.url === 'string' ? logo.url : '';
+  if (!url) {
+    return null;
+  }
+  const filename = typeof logo.filename === 'string' ? logo.filename : 'logo';
+  assertValidFilename(filename);
+
+  return { filename, url };
+}

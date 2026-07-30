@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
@@ -19,6 +21,7 @@ const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 
 interface MissionsScreenProps {
   readonly onOpenMission?: (missionId: string) => void;
+  readonly onOpenLeaderboard?: () => void;
 }
 
 function CreateButton({ onPress }: { readonly onPress: () => void }) {
@@ -37,7 +40,22 @@ function CreateButton({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
+function LeaderboardButton({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Button
+      accessibilityLabel="Open leaderboard"
+      className="rounded-full bg-accent-subtle px-3"
+      onPress={onPress}
+      size="sm"
+      testID="missions-open-leaderboard"
+    >
+      <Icon color="rgb(181,80,44)" name="Trophy" size={16} />
+    </Button>
+  );
+}
+
 export function MissionsScreen({
+  onOpenLeaderboard,
   onOpenMission,
 }: MissionsScreenProps) {
   const missionsView = useMissionsView();
@@ -55,7 +73,14 @@ export function MissionsScreen({
           <ScreenTitle
             eyebrow="Explore & earn"
             onSearch={() => setIsSearching(true)}
-            right={<CreateButton onPress={() => setComposing(true)} />}
+            right={
+              <HStack className="items-center gap-2">
+                {onOpenLeaderboard ? (
+                  <LeaderboardButton onPress={onOpenLeaderboard} />
+                ) : null}
+                <CreateButton onPress={() => setComposing(true)} />
+              </HStack>
+            }
             title="Missions"
           />
 
@@ -90,13 +115,16 @@ export function MissionsScreen({
                   No missions yet. Tap + to create the first one.
                 </Text>
               ) : (
-                missionsView.data.missions.map((mission) => (
-                  <MissionCard
-                    key={mission.id}
-                    mission={mission}
-                    onOpen={onOpenMission}
-                  />
-                ))
+                <>
+                  {missionsView.data.missions.map((mission) => (
+                    <MissionCard
+                      key={mission.id}
+                      mission={mission}
+                      onOpen={onOpenMission}
+                    />
+                  ))}
+                  <AllCaughtUp />
+                </>
               )}
             </VStack>
           </>

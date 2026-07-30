@@ -11,7 +11,8 @@ type BadgeVariant =
   | 'accent'
   | 'amber'
   | 'lake'
-  | 'palm';
+  | 'palm'
+  | 'plum';
 
 const badgeStyle = tva({
   base: 'flex-row items-center justify-center self-start gap-[4px] h-[20px] px-[8px] rounded-[6px]',
@@ -25,6 +26,7 @@ const badgeStyle = tva({
       amber: 'bg-amber-subtle',
       lake: 'bg-lake-subtle',
       palm: 'bg-palm-subtle',
+      plum: 'bg-[rgb(241,232,238)]',
     },
   },
 });
@@ -41,6 +43,7 @@ const badgeTextStyle = tva({
       amber: 'text-amber',
       lake: 'text-lake',
       palm: 'text-palm',
+      plum: 'text-[rgb(139,90,120)]',
     },
   },
 });

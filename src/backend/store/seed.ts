@@ -5,6 +5,8 @@ import type {
   StoredMission,
   StoredPost,
   StoredProfile,
+  StoredServiceListing,
+  StoredServiceReview,
   StoredUser,
   StoredWeekDay,
   StoreState,
@@ -379,6 +381,78 @@ const seedMissions = (): readonly StoredMission[] => [
   },
 ];
 
+const seedServiceListings = (): readonly StoredServiceListing[] => [
+  {
+    id: 'service-1',
+    authorId: 'user-riley',
+    businessName: 'Lakeside Tails Dog Walking',
+    category: 'pet-care',
+    description:
+      'Daily walks and drop-in visits for dogs of all sizes, seven days a week.',
+    contactPhone: '(702) 555-0142',
+    contactEmail: 'riley@lakesidetails.example',
+    contactWebsite: null,
+    serviceArea: 'Lake Las Vegas & MonteLago Village',
+    createdAt: isoHoursBeforeSeedNow(96),
+  },
+  {
+    id: 'service-2',
+    authorId: 'user-andre',
+    businessName: "King's Mobile Detailing",
+    category: 'automotive',
+    description:
+      'Full interior and exterior detailing at your driveway — no drop-off needed.',
+    contactPhone: '(702) 555-0198',
+    contactEmail: null,
+    contactWebsite: 'https://kingsdetailing.example',
+    serviceArea: 'Lake Las Vegas',
+    createdAt: isoHoursBeforeSeedNow(72),
+  },
+  {
+    id: 'service-3',
+    authorId: 'user-sam',
+    businessName: 'Crystal Clear Pool Care',
+    category: 'pool-spa',
+    description: 'Weekly pool cleaning, chemical balancing, and equipment repair.',
+    contactPhone: '(702) 555-0176',
+    contactEmail: 'sam@crystalclearpools.example',
+    contactWebsite: null,
+    serviceArea: 'Lake Las Vegas & Henderson',
+    createdAt: isoHoursBeforeSeedNow(50),
+  },
+  {
+    id: 'service-4',
+    authorId: 'user-priya',
+    businessName: 'Priya Rao Web Design',
+    category: 'tech-web',
+    description: 'Websites and small business branding for neighbors — from a neighbor.',
+    contactPhone: null,
+    contactEmail: 'priya@priyaraodesign.example',
+    contactWebsite: 'https://priyaraodesign.example',
+    serviceArea: 'Remote & on-site',
+    createdAt: isoHoursBeforeSeedNow(30),
+  },
+];
+
+const seedServiceReviews = (): readonly StoredServiceReview[] => [
+  {
+    id: 'service-review-1',
+    listingId: 'service-1',
+    authorId: 'user-mia',
+    rating: 5,
+    body: 'Riley has been walking our lab for months — always on time and sends photos!',
+    createdAt: isoHoursBeforeSeedNow(40),
+  },
+  {
+    id: 'service-review-2',
+    listingId: 'service-2',
+    authorId: DEMO_USER_ID,
+    rating: 4,
+    body: 'Came right to our driveway and the car looked brand new.',
+    createdAt: isoHoursBeforeSeedNow(20),
+  },
+];
+
 const seedWeek = (): readonly StoredWeekDay[] => [
   { dayLabel: 'MON', dateLabel: '14', date: '2026-07-14', isToday: false },
   { dayLabel: 'TUE', dateLabel: '15', date: '2026-07-15', isToday: false },
@@ -415,6 +489,9 @@ export const createSeedState = (): StoreState => {
     missions: seedMissions(),
     missionComments: [],
     missionCommentReports: [],
+    serviceListings: seedServiceListings(),
+    serviceReviews: seedServiceReviews(),
+    serviceReviewReports: [],
     notifications: [],
     bookmarks: [],
     users: seedUsers(),

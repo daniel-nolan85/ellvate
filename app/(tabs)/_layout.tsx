@@ -8,7 +8,7 @@ const TAB_IDS: readonly CommunityTabId[] = [
   'forum',
   'events',
   'missions',
-  'leaderboard',
+  'services',
 ];
 
 const toCommunityTabId = (name: string): CommunityTabId =>
@@ -55,7 +55,7 @@ export default function CommunityTabsLayout() {
       <Tabs.Screen name="forum" />
       <Tabs.Screen name="events" />
       <Tabs.Screen name="missions" />
-      <Tabs.Screen name="leaderboard" />
+      <Tabs.Screen name="services" />
     </Tabs>
   );
 }
