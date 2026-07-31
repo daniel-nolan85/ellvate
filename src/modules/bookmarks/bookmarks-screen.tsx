@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 
 import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
@@ -16,6 +16,7 @@ import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
 import { MissionCard } from '@/src/modules/missions';
+import { ServiceListingCard } from '@/src/modules/services';
 
 import { useBookmarks, type BookmarkedItem, type BookmarkTargetType } from './use-bookmarks';
 
@@ -25,12 +26,14 @@ const KIND_ICON: Readonly<Record<BookmarkTargetType, AppIconName>> = {
   event: 'CalendarDays',
   mission: 'Star',
   post: 'MessageCircle',
+  service: 'Store',
 };
 
 const KIND_LABEL: Readonly<Record<BookmarkTargetType, string>> = {
   event: 'Bookmarked event',
   mission: 'Bookmarked mission',
   post: 'Bookmarked post',
+  service: 'Bookmarked listing',
 };
 
 const FILTERS: readonly { readonly key: BookmarksFilter; readonly label: string }[] = [
@@ -38,6 +41,7 @@ const FILTERS: readonly { readonly key: BookmarksFilter; readonly label: string 
   { key: 'post', label: 'Posts' },
   { key: 'event', label: 'Events' },
   { key: 'mission', label: 'Missions' },
+  { key: 'service', label: 'Services' },
 ];
 
 // The API/backend model a bookmark list as one unified, server-paginated
@@ -126,6 +130,8 @@ function subtitleFor(item: BookmarkedItem): string {
         : `${item.mission.stopsDone}/${item.mission.stopsTotal} stops`;
     case 'post':
       return formatRelativeTime(item.bookmarkedAt);
+    case 'service':
+      return item.listing.serviceArea ?? formatRelativeTime(item.bookmarkedAt);
   }
 }
 
@@ -137,6 +143,8 @@ function titleFor(item: BookmarkedItem): string {
       return item.mission.title;
     case 'post':
       return item.post.title;
+    case 'service':
+      return item.listing.businessName;
   }
 }
 
@@ -185,10 +193,14 @@ export function BookmarksScreen() {
   // close animation finishes — navigating immediately would unmount the
   // screen (and the sheet with it) mid-animation.
   const closeThenNavigate = (
-    path: `/post/${string}` | `/event/${string}` | `/mission/${string}`,
+    path:
+      | `/post/${string}`
+      | `/event/${string}`
+      | `/mission/${string}`
+      | `/service/${string}`,
   ) => {
     setOpenItem(null);
-    setTimeout(() => router.push(path), CLOSE_DURATION);
+    setTimeout(() => router.push(path as Href), CLOSE_DURATION);
   };
 
   const items = useMemo(
@@ -217,8 +229,8 @@ export function BookmarksScreen() {
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
           <Icon name="Bookmark" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
-            Nothing bookmarked yet — tap the bookmark icon on a post, event, or
-            mission to save it here.
+            Nothing bookmarked yet — tap the bookmark icon on a post, event,
+            mission, or service listing to save it here.
           </Text>
         </VStack>
       ) : (
@@ -267,6 +279,14 @@ export function BookmarksScreen() {
             <MissionCard
               mission={openItem.mission}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
+            />
+          </View>
+        ) : null}
+        {openItem?.kind === 'service' ? (
+          <View className="px-1 pb-4">
+            <ServiceListingCard
+              listing={openItem.listing}
+              onOpen={(listingId) => closeThenNavigate(`/service/${listingId}`)}
             />
           </View>
         ) : null}

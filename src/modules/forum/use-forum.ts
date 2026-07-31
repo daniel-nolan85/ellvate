@@ -321,6 +321,9 @@ export function useMuteUser() {
       void queryClient.invalidateQueries({
         queryKey: ['forum', 'posts', userId],
       });
+      // Mute is a global visibility rule, not forum-scoped — also hide the
+      // muted neighbour's service reviews.
+      void queryClient.invalidateQueries({ queryKey: ['services', 'reviews'] });
     },
   });
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -71,6 +72,7 @@ function EventsBody({
                 onToggleJoin={onToggleJoin}
               />
             ))}
+            <AllCaughtUp />
           </VStack>
         )}
       </VStack>

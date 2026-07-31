@@ -3,6 +3,7 @@ import { ScrollView } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -143,6 +144,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
                 post={post}
               />
             ))}
+            <AllCaughtUp />
           </VStack>
         )}
       </VStack>

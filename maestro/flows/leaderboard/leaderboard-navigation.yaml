@@ -5,8 +5,9 @@ tags:
 ---
 - runFlow: ../../subflows/launch-demo-authenticated.yaml
 - tapOn:
-    id: tab-ranks
-- assertVisible: "Leaderboard"
-- tapOn:
     id: tab-missions
-- assertVisible: "Missions"
+- tapOn:
+    id: missions-open-leaderboard
+- assertVisible: "Leaderboard"
+- tapOn: "Forum"
+- assertVisible: "Forum"

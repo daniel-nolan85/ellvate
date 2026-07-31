@@ -1,4 +1,9 @@
-export type CategoryAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'muted';
+// Named 'plum' rather than 'muted' so it never collides with the Badge
+// component's own generic 'muted' variant (a plain grey used for unrelated
+// things like a "Locked" mission badge or an activity count) — passing this
+// accent straight through as a Badge `variant` prop must land on the plum
+// color, not silently fall back to that unrelated grey.
+export type CategoryAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'plum';
 
 // Only categories that genuinely mean "water" or "nature" get colored — a tag
 // like "Buy & Sell" or "Networking" doesn't carry any of that meaning, so it
@@ -24,7 +29,7 @@ export function categoryAccent(category: string): CategoryAccent {
   if (OFFICIAL_CATEGORIES.has(category)) {
     return 'accent';
   }
-  return 'muted';
+  return 'plum';
 }
 
 // Shared "selected chip" tint/text pairing for anywhere a category is picked
@@ -54,6 +59,6 @@ export const CATEGORY_CHIP_ACTIVE_TREATMENT: Readonly<
   accent: { bg: 'bg-accent-subtle', text: 'text-accent' },
   amber: { bg: 'bg-amber-subtle', text: 'text-amber' },
   lake: { bg: 'bg-lake-subtle', text: 'text-lake' },
-  muted: { bg: 'bg-[rgb(241,232,238)]', text: 'text-[rgb(139,90,120)]' },
   palm: { bg: 'bg-palm-subtle', text: 'text-palm' },
+  plum: { bg: 'bg-[rgb(241,232,238)]', text: 'text-[rgb(139,90,120)]' },
 };

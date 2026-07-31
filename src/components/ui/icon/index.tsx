@@ -8,6 +8,7 @@ import {
   Bell,
   Bookmark,
   CalendarDays,
+  Car,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -25,12 +26,14 @@ import {
   Globe,
   Heart,
   Image,
+  Laptop,
   Link2,
   Lock,
   Mail,
   MessageCircle,
   Moon,
   Newspaper,
+  PawPrint,
   Pencil,
   Phone,
   Pin,
@@ -38,9 +41,13 @@ import {
   Plus,
   Search,
   Share2,
+  Sparkles,
   Star,
+  Store,
   Sun,
   Trophy,
+  WavesHorizontal,
+  Wrench,
   X,
   type LucideProps,
 } from 'lucide-react-native';
@@ -89,7 +96,14 @@ export type AppIconName =
   | 'Bookmark'
   | 'Newspaper'
   | 'Trophy'
-  | 'Pin';
+  | 'Pin'
+  | 'Store'
+  | 'PawPrint'
+  | 'Wrench'
+  | 'Car'
+  | 'Waves'
+  | 'Sparkles'
+  | 'Laptop';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -133,6 +147,13 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Newspaper,
   Trophy,
   Pin,
+  Store,
+  PawPrint,
+  Wrench,
+  Car,
+  Waves: WavesHorizontal,
+  Sparkles,
+  Laptop,
 };
 
 Object.values(ICON_MAP).forEach((component) => {
