@@ -9,7 +9,7 @@ export interface ServiceReview {
   readonly listingId: string;
   readonly author: PersonRef;
   readonly rating: 1 | 2 | 3 | 4 | 5;
-  readonly body: string;
+  readonly body: string | null;
   readonly createdAt: string;
 }
 
@@ -17,7 +17,11 @@ export type CreateServiceReviewResult =
   | { readonly ok: true; readonly review: ServiceReview }
   | {
       readonly ok: false;
-      readonly code: 'invalid_review' | 'service_listing_not_found';
+      readonly code:
+        | 'invalid_review'
+        | 'service_listing_not_found'
+        | 'forbidden'
+        | 'already_reviewed';
       readonly message: string;
     };
 
@@ -25,7 +29,7 @@ export type UpdateServiceReviewResult =
   | { readonly ok: true; readonly review: ServiceReview }
   | {
       readonly ok: false;
-      readonly code: 'invalid_review' | 'service_review_not_found';
+      readonly code: 'invalid_review' | 'service_review_not_found' | 'forbidden';
       readonly message: string;
     };
 

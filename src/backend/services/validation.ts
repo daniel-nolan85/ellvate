@@ -69,7 +69,8 @@ export function validateServiceListingInput(
   if (
     (contactPhone !== null && contactPhone.length > MAX_CONTACT) ||
     (contactEmail !== null && contactEmail.length > MAX_CONTACT) ||
-    (contactWebsite !== null && contactWebsite.length > MAX_CONTACT)
+    (contactWebsite !== null && contactWebsite.length > MAX_CONTACT) ||
+    (serviceArea !== null && serviceArea.length > MAX_CONTACT)
   ) {
     return invalid('A contact field exceeds its maximum length.');
   }

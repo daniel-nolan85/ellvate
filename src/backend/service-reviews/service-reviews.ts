@@ -1,4 +1,3 @@
-import { validateCommentBody } from '@/src/backend/comments';
 import type { RequestContext } from '@/src/backend/http';
 import {
   getState,
@@ -23,6 +22,7 @@ import type {
 } from './types';
 
 const VALID_RATINGS = new Set([1, 2, 3, 4, 5]);
+const MAX_REVIEW_BODY_LENGTH = 2000;
 
 function validateRating(input: unknown): 1 | 2 | 3 | 4 | 5 | null {
   const raw =
@@ -32,6 +32,25 @@ function validateRating(input: unknown): 1 | 2 | 3 | 4 | 5 | null {
   const rating =
     typeof raw.rating === 'number' ? raw.rating : Number(raw.rating);
   return VALID_RATINGS.has(rating) ? (rating as 1 | 2 | 3 | 4 | 5) : null;
+}
+
+type ReviewBodyValidation =
+  | { readonly ok: true; readonly body: string | null }
+  | { readonly ok: false; readonly message: string };
+
+// WHY: unlike a forum/mission/event comment, a star rating alone is a
+// complete review — text is optional. Mirrors validateCommentBody's
+// trim/length-limit handling but never rejects an empty body.
+function validateReviewBody(input: unknown): ReviewBodyValidation {
+  const raw =
+    typeof input === 'object' && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
+  const trimmed = typeof raw.body === 'string' ? raw.body.trim() : '';
+  if (trimmed.length > MAX_REVIEW_BODY_LENGTH) {
+    return { ok: false, message: 'The review is too long.' };
+  }
+  return { body: trimmed || null, ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +98,7 @@ function createServiceReviewMemory(
   listingId: string,
   input: unknown,
 ): CreateServiceReviewResult {
-  const bodyValidation = validateCommentBody(input);
+  const bodyValidation = validateReviewBody(input);
   if (!bodyValidation.ok) {
     return { code: 'invalid_review', message: bodyValidation.message, ok: false };
   }
@@ -98,6 +117,24 @@ function createServiceReviewMemory(
     return {
       code: 'service_listing_not_found',
       message: 'Listing not found.',
+      ok: false,
+    };
+  }
+  if (listing.authorId === userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can’t review your own listing.',
+      ok: false,
+    };
+  }
+  if (
+    getState().serviceReviews.some(
+      (review) => review.listingId === listingId && review.authorId === userId,
+    )
+  ) {
+    return {
+      code: 'already_reviewed',
+      message: 'You’ve already reviewed this listing — edit your existing review instead.',
       ok: false,
     };
   }
@@ -133,12 +170,12 @@ function updateServiceReviewMemory(
   }
   if (existing.authorId !== userId) {
     return {
-      code: 'service_review_not_found',
+      code: 'forbidden',
       message: 'You can only edit your own review.',
       ok: false,
     };
   }
-  const bodyValidation = validateCommentBody(input);
+  const bodyValidation = validateReviewBody(input);
   if (!bodyValidation.ok) {
     return { code: 'invalid_review', message: bodyValidation.message, ok: false };
   }

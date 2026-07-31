@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { validateCommentBody } from '@/src/backend/comments';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -19,7 +18,7 @@ interface ServiceReviewRow {
   readonly listing_id: string;
   readonly author_id: string;
   readonly rating: number;
-  readonly body: string;
+  readonly body: string | null;
   readonly created_at: string;
   readonly author: {
     readonly id: string;
@@ -29,6 +28,7 @@ interface ServiceReviewRow {
 }
 
 const VALID_RATINGS = new Set([1, 2, 3, 4, 5]);
+const MAX_REVIEW_BODY_LENGTH = 2000;
 
 function validateRating(input: unknown): 1 | 2 | 3 | 4 | 5 | null {
   const raw =
@@ -38,6 +38,25 @@ function validateRating(input: unknown): 1 | 2 | 3 | 4 | 5 | null {
   const rating =
     typeof raw.rating === 'number' ? raw.rating : Number(raw.rating);
   return VALID_RATINGS.has(rating) ? (rating as 1 | 2 | 3 | 4 | 5) : null;
+}
+
+type ReviewBodyValidation =
+  | { readonly ok: true; readonly body: string | null }
+  | { readonly ok: false; readonly message: string };
+
+// WHY: unlike a forum/mission/event comment, a star rating alone is a
+// complete review — text is optional. Mirrors validateCommentBody's
+// trim/length-limit handling but never rejects an empty body.
+function validateReviewBody(input: unknown): ReviewBodyValidation {
+  const raw =
+    typeof input === 'object' && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
+  const trimmed = typeof raw.body === 'string' ? raw.body.trim() : '';
+  if (trimmed.length > MAX_REVIEW_BODY_LENGTH) {
+    return { ok: false, message: 'The review is too long.' };
+  }
+  return { body: trimmed || null, ok: true };
 }
 
 const toServiceReview = (row: ServiceReviewRow): ServiceReview => ({
@@ -92,7 +111,7 @@ export async function createServiceReviewSupabase(
   listingId: string,
   input: unknown,
 ): Promise<CreateServiceReviewResult> {
-  const bodyValidation = validateCommentBody(input);
+  const bodyValidation = validateReviewBody(input);
   if (!bodyValidation.ok) {
     return { code: 'invalid_review', message: bodyValidation.message, ok: false };
   }
@@ -106,7 +125,7 @@ export async function createServiceReviewSupabase(
   }
   const { data: listing, error: listingError } = await supabase
     .from('service_listings')
-    .select('id')
+    .select('id,created_by')
     .eq('id', listingId)
     .maybeSingle();
   throwIfSupabaseError(listingError, 'load review listing');
@@ -114,6 +133,27 @@ export async function createServiceReviewSupabase(
     return {
       code: 'service_listing_not_found',
       message: 'Listing not found.',
+      ok: false,
+    };
+  }
+  if (listing.created_by === userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can’t review your own listing.',
+      ok: false,
+    };
+  }
+  const { data: existingReview, error: existingReviewError } = await supabase
+    .from('service_reviews')
+    .select('id')
+    .eq('listing_id', listingId)
+    .eq('author_id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(existingReviewError, 'check existing service review');
+  if (existingReview) {
+    return {
+      code: 'already_reviewed',
+      message: 'You’ve already reviewed this listing — edit your existing review instead.',
       ok: false,
     };
   }
@@ -144,7 +184,7 @@ export async function updateServiceReviewSupabase(
   reviewId: string,
   input: unknown,
 ): Promise<UpdateServiceReviewResult> {
-  const bodyValidation = validateCommentBody(input);
+  const bodyValidation = validateReviewBody(input);
   if (!bodyValidation.ok) {
     return { code: 'invalid_review', message: bodyValidation.message, ok: false };
   }
@@ -153,6 +193,26 @@ export async function updateServiceReviewSupabase(
     return {
       code: 'invalid_review',
       message: 'A rating between 1 and 5 is required.',
+      ok: false,
+    };
+  }
+  const { data: existing, error: existingError } = await supabase
+    .from('service_reviews')
+    .select('author_id')
+    .eq('id', reviewId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load service review for update');
+  if (!existing) {
+    return {
+      code: 'service_review_not_found',
+      message: 'Review not found.',
+      ok: false,
+    };
+  }
+  if (existing.author_id !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own review.',
       ok: false,
     };
   }

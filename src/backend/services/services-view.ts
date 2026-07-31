@@ -25,6 +25,8 @@ function getServicesViewMemory(
   const state = getState();
   const listings = state.serviceListings
     .filter((listing) => !category || listing.category === category)
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .map((listing) =>
       toServiceListingView(listing, state.users, state.serviceReviews),
     );

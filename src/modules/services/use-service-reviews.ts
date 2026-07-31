@@ -10,7 +10,7 @@ export interface ServiceReview {
   readonly listingId: string;
   readonly author: PersonRef;
   readonly rating: 1 | 2 | 3 | 4 | 5;
-  readonly body: string;
+  readonly body: string | null;
   readonly createdAt: string;
 }
 

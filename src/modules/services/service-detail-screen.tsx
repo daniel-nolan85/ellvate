@@ -25,6 +25,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useMuteUser } from '@/src/modules/forum';
 import { useSession } from '@/src/platform/session';
+import { ApiError } from '@/src/services/api';
 
 import { SERVICE_CATEGORY_LABEL, serviceCategoryAccent } from './service-category';
 import { ServiceComposer } from './service-composer';
@@ -122,6 +123,10 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const [actionsFor, setActionsFor] = useState<ServiceReview | null>(null);
   const [editingReview, setEditingReview] = useState<ServiceReview | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // Forces the create-review composer to remount (fresh, empty state) only
+  // once a submission actually succeeds — see the WHY comment in
+  // ServiceReviewComposer for why clearing can't happen on submit itself.
+  const [reviewComposerKey, setReviewComposerKey] = useState(0);
 
   const listing = useMemo(
     () => servicesView.data?.listings.find((entry) => entry.id === listingId),
@@ -290,10 +295,19 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
 
         <ServiceReviewComposer
           isSubmitting={createReview.isPending}
+          key={reviewComposerKey}
           onSubmit={(input) =>
             createReview.mutate(input, {
-              onSuccess: () => void Haptics.selectionAsync(),
-              onError: () => showToast('Couldn’t post your review. Try again.'),
+              onSuccess: () => {
+                setReviewComposerKey((key) => key + 1);
+                void Haptics.selectionAsync();
+              },
+              onError: (error) =>
+                showToast(
+                  error instanceof ApiError
+                    ? error.message
+                    : 'Couldn’t post your review. Try again.',
+                ),
             })
           }
         />
@@ -456,7 +470,10 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                 onPress={() => {
                   const target = actionsFor;
                   setActionsFor(null);
-                  deleteReview.mutate(target.id);
+                  deleteReview.mutate(target.id, {
+                    onError: () =>
+                      showToast('Couldn’t delete this review. Try again.'),
+                  });
                 }}
               />
             </>

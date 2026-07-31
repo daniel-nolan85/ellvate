@@ -12,6 +12,7 @@ import {
   GET as getServiceReviews,
   POST as postServiceReview,
 } from '../../app/api/services/[id]/reviews+api';
+import { GET as getMyServiceListingsRoute } from '../../app/api/services/mine+api';
 import {
   DELETE as deleteReviewRoute,
   PATCH as patchReviewRoute,
@@ -29,6 +30,7 @@ import {
 import {
   createServiceListing,
   deleteServiceListing,
+  getMyServiceListingsView,
   getServicesView,
   updateServiceListing,
 } from '../../src/backend/services';
@@ -55,10 +57,10 @@ describe('getServicesView', () => {
     const { listings } = await getServicesView(ctx());
 
     expect(listings.map((listing) => listing.id)).toEqual([
-      'service-1',
-      'service-2',
-      'service-3',
       'service-4',
+      'service-3',
+      'service-2',
+      'service-1',
     ]);
     const dogWalker = listings.find((listing) => listing.id === 'service-1');
     expect(dogWalker).toMatchObject({
@@ -74,6 +76,14 @@ describe('getServicesView', () => {
     const { listings } = await getServicesView(ctx(), { category: 'pool-spa' });
 
     expect(listings.map((listing) => listing.id)).toEqual(['service-3']);
+  });
+
+  test('a newly created listing sorts first, matching the Supabase ordering', async () => {
+    const created = await createServiceListing(ctx(), validListingInput);
+    if (!created.ok) throw new Error('setup failed');
+
+    const { listings } = await getServicesView(ctx());
+    expect(listings[0]?.id).toBe(created.listing.id);
   });
 });
 
@@ -122,6 +132,42 @@ describe('createServiceListing', () => {
       contactPhone: '',
       contactEmail: '',
       contactWebsite: '',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
+  });
+
+  test('rejects an oversized business name', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      businessName: 'x'.repeat(81),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
+  });
+
+  test('rejects an oversized description', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      description: 'x'.repeat(501),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
+  });
+
+  test('rejects an oversized contact field', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      contactPhone: 'x'.repeat(121),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
+  });
+
+  test('rejects an oversized serviceArea', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      serviceArea: 'x'.repeat(121),
     });
 
     expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
@@ -259,6 +305,50 @@ describe('updateServiceListing', () => {
   });
 });
 
+describe('getMyServiceListingsView', () => {
+  test("returns only the caller's own listings, not the whole directory", async () => {
+    const demoPage = await getMyServiceListingsView(ctx());
+    expect(demoPage).toEqual({ listings: [], nextCursor: null });
+
+    const rileyPage = await getMyServiceListingsView(ctx('user-riley'));
+    expect(rileyPage.listings.map((listing) => listing.id)).toEqual([
+      'service-1',
+    ]);
+  });
+
+  test('paginates with a cursor rather than returning the whole directory', async () => {
+    await createServiceListing(ctx('user-riley'), {
+      ...validListingInput,
+      businessName: 'Second Listing',
+    });
+
+    const firstPage = await getMyServiceListingsView(ctx('user-riley'), {
+      limit: 1,
+    });
+    expect(firstPage.listings).toHaveLength(1);
+    expect(firstPage.nextCursor).not.toBeNull();
+
+    const secondPage = await getMyServiceListingsView(ctx('user-riley'), {
+      cursor: firstPage.nextCursor,
+      limit: 1,
+    });
+    expect(secondPage.listings).toHaveLength(1);
+    expect(secondPage.nextCursor).toBeNull();
+  });
+
+  test('route returns a bounded page shape', async () => {
+    const response = await getMyServiceListingsRoute(
+      new Request('http://localhost/api/services/mine'),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      listings: readonly unknown[];
+      nextCursor: string | null;
+    };
+    expect(Array.isArray(body.listings)).toBe(true);
+  });
+});
+
 describe('deleteServiceListing', () => {
   test('the owner can delete their own listing, cascading its reviews', async () => {
     const created = await createServiceListing(ctx(), validListingInput);
@@ -313,15 +403,37 @@ describe('listServiceReviews', () => {
 });
 
 describe('createServiceReview', () => {
-  test('rejects an empty body', async () => {
+  test('allows a rating with no body — text is optional, unlike a comment', async () => {
+    const result = await createServiceReview(ctx(), 'service-1', {
+      body: '  ',
+      rating: 5,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.review.body).toBeNull();
+      expect(result.review.rating).toBe(5);
+    }
+  });
+
+  test('rejects an oversized body', async () => {
     expect(
-      await createServiceReview(ctx(), 'service-1', { body: '  ', rating: 5 }),
+      await createServiceReview(ctx(), 'service-1', {
+        body: 'x'.repeat(2001),
+        rating: 5,
+      }),
     ).toMatchObject({ ok: false, code: 'invalid_review' });
   });
 
   test('rejects a rating outside 1-5', async () => {
     expect(
       await createServiceReview(ctx(), 'service-1', { body: 'nice', rating: 6 }),
+    ).toMatchObject({ ok: false, code: 'invalid_review' });
+  });
+
+  test('rejects a review with no rating at all — text alone is not a complete review', async () => {
+    expect(
+      await createServiceReview(ctx(), 'service-1', { body: 'nice' }),
     ).toMatchObject({ ok: false, code: 'invalid_review' });
   });
 
@@ -332,7 +444,7 @@ describe('createServiceReview', () => {
   });
 
   test('creates a review attributed to the acting user', async () => {
-    const result = await createServiceReview(ctx(), 'service-2', {
+    const result = await createServiceReview(ctx(), 'service-4', {
       body: ' Fast and friendly! ',
       rating: 5,
     });
@@ -340,11 +452,33 @@ describe('createServiceReview', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.review).toMatchObject({
-      listingId: 'service-2',
+      listingId: 'service-4',
       author: { id: DEMO_USER_ID, name: 'You' },
       body: 'Fast and friendly!',
       rating: 5,
     });
+  });
+
+  test('rejects reviewing your own listing', async () => {
+    const created = await createServiceListing(ctx(), validListingInput);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await createServiceReview(ctx(), created.listing.id, {
+      body: 'nice',
+      rating: 5,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('rejects a second review from the same author on the same listing', async () => {
+    // service-2 already has a seeded review authored by DEMO_USER_ID.
+    const result = await createServiceReview(ctx(), 'service-2', {
+      body: 'trying again',
+      rating: 1,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'already_reviewed' });
   });
 });
 
@@ -379,7 +513,7 @@ describe('updateServiceReview', () => {
       rating: 1,
     });
 
-    expect(result).toMatchObject({ ok: false, code: 'service_review_not_found' });
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
   });
 
   test('rejects an invalid rating', async () => {
@@ -404,6 +538,21 @@ describe('updateServiceReview', () => {
     });
 
     expect(result).toMatchObject({ ok: false, code: 'service_review_not_found' });
+  });
+
+  test('can clear the body down to a rating-only review', async () => {
+    const created = await createServiceReview(ctx(), 'service-3', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await updateServiceReview(ctx(), created.review.id, {
+      body: '   ',
+      rating: 4,
+    });
+
+    expect(result).toMatchObject({ ok: true, review: { body: null, rating: 4 } });
   });
 });
 
@@ -523,19 +672,19 @@ describe('service routes', () => {
 
   test('GET returns { reviews }; POST creates 201; DELETE removes; report is 200', async () => {
     const created = await postServiceReview(
-      new Request('http://localhost/api/services/service-2/reviews', {
+      new Request('http://localhost/api/services/service-4/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: 'Looking sharp', rating: 5 }),
       }),
-      { id: 'service-2' },
+      { id: 'service-4' },
     );
     expect(created.status).toBe(201);
     const { review } = (await created.json()) as { review: { id: string } };
 
     const listed = await getServiceReviews(
-      new Request('http://localhost/api/services/service-2/reviews'),
-      { id: 'service-2' },
+      new Request('http://localhost/api/services/service-4/reviews'),
+      { id: 'service-4' },
     );
     const { reviews } = (await listed.json()) as {
       reviews: readonly { id: string }[];
@@ -583,5 +732,56 @@ describe('service routes', () => {
       { id: 'service-nope' },
     );
     expect(response.status).toBe(404);
+  });
+
+  test('POST review returns 403 when the acting user owns the listing', async () => {
+    const ownListing = await postService(
+      new Request('http://localhost/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validListingInput),
+      }),
+    );
+    const { listing } = (await ownListing.json()) as { listing: { id: string } };
+
+    const response = await postServiceReview(
+      new Request(`http://localhost/api/services/${listing.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'hi', rating: 5 }),
+      }),
+      { id: listing.id },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  test('POST review returns 400 for a listing the acting user already reviewed', async () => {
+    // service-2 already has a seeded review authored by DEMO_USER_ID (the
+    // route's fixed acting user in this test suite).
+    const response = await postServiceReview(
+      new Request('http://localhost/api/services/service-2/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'trying again', rating: 1 }),
+      }),
+      { id: 'service-2' },
+    );
+    expect(response.status).toBe(400);
+  });
+
+  test('PATCH review returns 403 for a review owned by someone else', async () => {
+    // service-review-1 is seeded as authored by user-mia; the route always
+    // acts as DEMO_USER_ID, so this exercises the ownership check exactly
+    // like the "PATCH returns 403 for a listing owned by someone else" test
+    // above does for listings.
+    const response = await patchReviewRoute(
+      new Request('http://localhost/api/service-reviews/service-review-1', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'hijacked', rating: 1 }),
+      }),
+      { id: 'service-review-1' },
+    );
+    expect(response.status).toBe(403);
   });
 });

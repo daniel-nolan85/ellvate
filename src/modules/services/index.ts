@@ -8,6 +8,7 @@ export {
   useDeleteServiceReview,
   useReportServiceReview,
   useServiceReviews,
+  useUpdateServiceReview,
 } from './use-service-reviews';
 export type {
   CreateServiceReviewInput,

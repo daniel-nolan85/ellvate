@@ -15,14 +15,14 @@ interface ServiceReviewComposerProps {
   readonly isSubmitting: boolean;
   readonly onSubmit: (input: { readonly rating: 1 | 2 | 3 | 4 | 5; readonly body: string }) => void;
   readonly initialRating?: 1 | 2 | 3 | 4 | 5;
-  readonly initialBody?: string;
+  readonly initialBody?: string | null;
   readonly onCancel?: () => void;
   readonly submitLabel?: string;
   readonly title?: string;
 }
 
 export function ServiceReviewComposer({
-  initialBody = '',
+  initialBody,
   initialRating,
   isSubmitting,
   onCancel,
@@ -33,10 +33,17 @@ export function ServiceReviewComposer({
   const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | null>(
     initialRating ?? null,
   );
-  const [body, setBody] = useState(initialBody);
+  const [body, setBody] = useState(initialBody ?? '');
 
-  const canSubmit = rating !== null && body.trim().length > 0 && !isSubmitting;
+  // A rating alone is a complete review — the body is optional.
+  const canSubmit = rating !== null && !isSubmitting;
   const isEditing = onCancel !== undefined;
+  const hasBody = body.trim().length > 0;
+
+  // WHY: fields are NOT cleared here on submit — clearing before the mutation
+  // resolves would wipe the user's text even if the request fails. Instead the
+  // parent forces a remount (via a changing `key` prop) once the create
+  // mutation actually succeeds, which resets this component's state fresh.
 
   return (
     <VStack className="gap-2.5 rounded-[16px] border border-surface-hairline bg-paper p-3.5" space="xs">
@@ -66,7 +73,7 @@ export function ServiceReviewComposer({
       <Input size="lg">
         <InputField
           onChangeText={setBody}
-          placeholder="How was it?"
+          placeholder="How was it? (optional)"
           testID="service-review-body"
           value={body}
         />
@@ -80,10 +87,6 @@ export function ServiceReviewComposer({
               return;
             }
             onSubmit({ body: body.trim(), rating });
-            if (!isEditing) {
-              setRating(null);
-              setBody('');
-            }
           }}
           size="sm"
           testID="service-review-submit"
@@ -92,8 +95,10 @@ export function ServiceReviewComposer({
             {isSubmitting
               ? isEditing
                 ? 'Saving…'
-                : 'Posting…'
-              : (submitLabel ?? 'Post review')}
+                : hasBody
+                  ? 'Posting review…'
+                  : 'Posting rating…'
+              : (submitLabel ?? (hasBody ? 'Post review' : 'Post rating'))}
           </ButtonText>
         </Button>
         {onCancel ? (

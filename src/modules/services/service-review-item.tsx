@@ -61,9 +61,11 @@ export function ServiceReviewItem({ review, onActions }: ServiceReviewItemProps)
             ) : null}
           </HStack>
         </HStack>
-        <Text className="text-[14px] leading-[20px] text-muted-foreground">
-          {review.body}
-        </Text>
+        {review.body ? (
+          <Text className="text-[14px] leading-[20px] text-muted-foreground">
+            {review.body}
+          </Text>
+        ) : null}
       </VStack>
     </HStack>
   );

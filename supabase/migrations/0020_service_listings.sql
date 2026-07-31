@@ -28,8 +28,12 @@ create table service_reviews (
   listing_id text not null references service_listings(id) on delete cascade,
   author_id text not null references app_users(id) on delete cascade,
   rating smallint not null check (rating between 1 and 5),
-  body text not null,
-  created_at timestamptz not null default now()
+  -- Nullable: a rating alone is a complete review, text is optional.
+  body text,
+  created_at timestamptz not null default now(),
+  -- Backstops the app-layer duplicate-review check under concurrent
+  -- requests: one review per (listing, author).
+  unique (listing_id, author_id)
 );
 create index service_reviews_listing_created_idx on service_reviews (listing_id, created_at desc);
 

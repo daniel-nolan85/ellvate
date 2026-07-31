@@ -19,11 +19,13 @@ export async function POST(
     const result = await createServiceReview(ctx, id, body);
 
     if (!result.ok) {
-      return jsonError(
-        result.code === 'service_listing_not_found' ? 404 : 400,
-        result.code,
-        result.message,
-      );
+      const status =
+        result.code === 'service_listing_not_found'
+          ? 404
+          : result.code === 'forbidden'
+            ? 403
+            : 400;
+      return jsonError(status, result.code, result.message);
     }
     return jsonOk({ review: result.review }, { status: 201 });
   });

@@ -10,7 +10,12 @@ export async function PATCH(
     const result = await updateServiceReview(ctx, id, body);
 
     if (!result.ok) {
-      const status = result.code === 'service_review_not_found' ? 404 : 400;
+      const status =
+        result.code === 'service_review_not_found'
+          ? 404
+          : result.code === 'forbidden'
+            ? 403
+            : 400;
       return jsonError(status, result.code, result.message);
     }
     return jsonOk({ review: result.review });
