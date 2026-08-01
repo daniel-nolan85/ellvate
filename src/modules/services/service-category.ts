@@ -10,12 +10,14 @@ export const SERVICE_CATEGORIES: readonly ServiceCategory[] = [
   'pool-spa',
   'beauty',
   'tech-web',
+  'dining',
   'other',
 ];
 
 export const SERVICE_CATEGORY_LABEL: Readonly<Record<ServiceCategory, string>> = {
   automotive: 'Automotive',
   beauty: 'Beauty',
+  dining: 'Dining',
   'home-services': 'Home services',
   other: 'Other',
   'pet-care': 'Pet care',
@@ -26,10 +28,12 @@ export const SERVICE_CATEGORY_LABEL: Readonly<Record<ServiceCategory, string>> =
 // Reuses the same 5-accent palette the forum's category chips use, mapped by
 // what each trade evokes rather than by insertion order — pool/spa gets the
 // water accent, pet care gets the nature/palm accent, tech gets the primary
-// "official" accent, and the rest stay neutral.
+// "official" accent, dining matches the forum's own Dining category (also
+// amber — see src/lib/category-accent.ts), and the rest stay neutral.
 const SERVICE_CATEGORY_ACCENT: Readonly<Record<ServiceCategory, CategoryAccent>> = {
   automotive: 'plum',
   beauty: 'amber',
+  dining: 'amber',
   'home-services': 'plum',
   other: 'plum',
   'pet-care': 'palm',
@@ -47,6 +51,7 @@ export function serviceCategoryAccent(category: ServiceCategory): CategoryAccent
 const SERVICE_CATEGORY_ICON: Readonly<Record<ServiceCategory, AppIconName>> = {
   automotive: 'Car',
   beauty: 'Sparkles',
+  dining: 'Utensils',
   'home-services': 'Wrench',
   other: 'Store',
   'pet-care': 'PawPrint',

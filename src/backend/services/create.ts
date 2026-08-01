@@ -28,6 +28,7 @@ function createServiceListingMemory(
     contactEmail: value.contactEmail,
     contactWebsite: value.contactWebsite,
     serviceArea: value.serviceArea,
+    hours: value.hours,
     logo: logoUpload
       ? { filename: logoUpload.filename, url: logoUpload.dataUrl }
       : undefined,

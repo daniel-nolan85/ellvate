@@ -15,6 +15,7 @@ export type ServiceCategory =
   | 'automotive'
   | 'pool-spa'
   | 'tech-web'
+  | 'dining'
   | 'other';
 
 export interface ServiceMedia {
@@ -38,6 +39,7 @@ export interface ServiceListing {
   readonly contactEmail: string | null;
   readonly contactWebsite: string | null;
   readonly serviceArea: string | null;
+  readonly hours: string | null;
   readonly logo?: ServiceMedia;
   readonly media?: readonly ServiceMedia[];
   readonly createdAt: string;
@@ -72,6 +74,7 @@ export interface CreateServiceListingInput {
   readonly contactEmail: string;
   readonly contactWebsite: string;
   readonly serviceArea: string;
+  readonly hours: string;
   readonly newLogo?: NewServiceMediaInput;
   readonly newMedia?: readonly NewServiceMediaInput[];
 }
@@ -85,6 +88,7 @@ export interface UpdateServiceListingInput {
   readonly contactEmail: string;
   readonly contactWebsite: string;
   readonly serviceArea: string;
+  readonly hours: string;
   readonly existingLogo?: ExistingServiceMediaInput;
   readonly newLogo?: NewServiceMediaInput;
   readonly existingMedia?: readonly ExistingServiceMediaInput[];

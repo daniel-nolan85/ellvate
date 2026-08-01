@@ -23,7 +23,7 @@ import type {
 import { validateServiceListingInput } from './validation';
 
 const SERVICE_SELECT =
-  'id,created_by,business_name,category,description,contact_phone,contact_email,contact_website,service_area,logo,media,created_at';
+  'id,created_by,business_name,category,description,contact_phone,contact_email,contact_website,service_area,hours,logo,media,created_at';
 
 interface ServiceRow {
   readonly id: string;
@@ -35,6 +35,7 @@ interface ServiceRow {
   readonly contact_email: string | null;
   readonly contact_website: string | null;
   readonly service_area: string | null;
+  readonly hours: string | null;
   readonly logo: ServiceMedia | null;
   readonly media: readonly ServiceMedia[] | null;
   readonly created_at: string;
@@ -90,6 +91,7 @@ const toServiceListingView = (
     contactWebsite: row.contact_website,
     createdAt: row.created_at,
     description: row.description,
+    hours: row.hours,
     logo: row.logo ?? undefined,
     media: row.media ?? undefined,
     averageRating,
@@ -320,6 +322,7 @@ export async function createServiceListingSupabase(
       contact_website: value.contactWebsite,
       created_by: userId,
       description: value.description,
+      hours: value.hours,
       id: listingId,
       service_area: value.serviceArea,
     })
@@ -435,6 +438,7 @@ export async function updateServiceListingSupabase(
       contact_phone: value.contactPhone,
       contact_website: value.contactWebsite,
       description: value.description,
+      hours: value.hours,
       logo,
       media: media.length ? media : null,
       service_area: value.serviceArea,

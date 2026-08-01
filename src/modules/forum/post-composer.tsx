@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
@@ -150,14 +151,14 @@ export function PostComposer({
               />
             </Input>
 
-            <Input size='lg'>
-              <InputField
-                onChangeText={setExcerpt}
-                placeholder='What do you want to share?'
-                testID='forum-post-body'
-                value={excerpt}
-              />
-            </Input>
+            <GrowingTextInput
+              className='w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content'
+              maxHeight={200}
+              onChangeText={setExcerpt}
+              placeholder='What do you want to share?'
+              testID='forum-post-body'
+              value={excerpt}
+            />
 
             {/* Media preview grid */}
             {media.length > 0 && (

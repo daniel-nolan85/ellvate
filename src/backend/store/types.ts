@@ -151,6 +151,7 @@ export type ServiceCategory =
   | 'automotive'
   | 'pool-spa'
   | 'tech-web'
+  | 'dining'
   | 'other';
 
 export interface StoredServiceListing {
@@ -163,6 +164,9 @@ export interface StoredServiceListing {
   readonly contactEmail: string | null;
   readonly contactWebsite: string | null;
   readonly serviceArea: string | null;
+  // Free text, e.g. "Mon–Fri 8am–9pm, Sat–Sun 9am–10pm" — not a structured
+  // schedule, so no "open now" logic can be derived from it.
+  readonly hours: string | null;
   // A single business logo, distinct from `media` (the photo gallery) — shown
   // in place of the category's default icon wherever the listing appears
   // compactly (card, list rows).

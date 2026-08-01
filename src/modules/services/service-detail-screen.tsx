@@ -252,6 +252,15 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               </HStack>
             ) : null}
 
+            {listing.hours ? (
+              <HStack className="items-center gap-1.5">
+                <Icon color="rgb(120,108,94)" name="Clock" size={16} />
+                <Text className="text-[14px] text-text-muted">
+                  {listing.hours}
+                </Text>
+              </HStack>
+            ) : null}
+
             <Divider />
 
             <VStack space="xs">
@@ -423,6 +432,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
             initialContactPhone={listing.contactPhone ?? ''}
             initialContactWebsite={listing.contactWebsite ?? ''}
             initialDescription={listing.description}
+            initialHours={listing.hours ?? ''}
             initialLogo={listing.logo ?? null}
             initialMedia={listing.media}
             initialServiceArea={listing.serviceArea ?? ''}

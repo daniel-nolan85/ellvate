@@ -12,6 +12,7 @@ const CATEGORIES: readonly ServiceCategory[] = [
   'automotive',
   'pool-spa',
   'tech-web',
+  'dining',
   'other',
 ];
 
@@ -53,6 +54,7 @@ export function validateServiceListingInput(
   const contactEmail = asNullableTrimmedString(raw.contactEmail);
   const contactWebsite = normalizeWebsite(asNullableTrimmedString(raw.contactWebsite));
   const serviceArea = asNullableTrimmedString(raw.serviceArea);
+  const hours = asNullableTrimmedString(raw.hours);
 
   if (!businessName || !description) {
     return invalid('A business name and description are required.');
@@ -70,7 +72,8 @@ export function validateServiceListingInput(
     (contactPhone !== null && contactPhone.length > MAX_CONTACT) ||
     (contactEmail !== null && contactEmail.length > MAX_CONTACT) ||
     (contactWebsite !== null && contactWebsite.length > MAX_CONTACT) ||
-    (serviceArea !== null && serviceArea.length > MAX_CONTACT)
+    (serviceArea !== null && serviceArea.length > MAX_CONTACT) ||
+    (hours !== null && hours.length > MAX_CONTACT)
   ) {
     return invalid('A contact field exceeds its maximum length.');
   }
@@ -87,6 +90,7 @@ export function validateServiceListingInput(
       contactPhone,
       contactWebsite,
       description,
+      hours,
       serviceArea,
     },
   };

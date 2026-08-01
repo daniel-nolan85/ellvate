@@ -8,8 +8,13 @@ export {
   resetAssistantRateLimit,
 } from './rate-limit';
 export type { RespondToChatOptions } from './orchestrator';
-export { searchEvents, searchMissions, searchPosts } from './search';
-export type { EventSummary, MissionSummary, PostSummary } from './search';
+export { searchEvents, searchMissions, searchPosts, searchServices } from './search';
+export type {
+  EventSummary,
+  MissionSummary,
+  PostSummary,
+  ServiceSummary,
+} from './search';
 export type {
   AssistantChatMessage,
   AssistantReply,

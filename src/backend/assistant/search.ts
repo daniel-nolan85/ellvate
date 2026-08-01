@@ -2,6 +2,7 @@ import { getEventsView } from '@/src/backend/events';
 import { listPosts } from '@/src/backend/forum';
 import type { RequestContext } from '@/src/backend/http';
 import { getMissionsView } from '@/src/backend/missions';
+import { getServicesView } from '@/src/backend/services';
 
 export interface EventSummary {
   readonly id: string;
@@ -30,9 +31,36 @@ export interface PostSummary {
   readonly likes: number;
 }
 
+export interface ServiceSummary {
+  readonly id: string;
+  readonly businessName: string;
+  readonly category: string;
+  readonly description: string;
+  readonly serviceArea: string | null;
+  readonly hours: string | null;
+  readonly averageRating: number | null;
+}
+
 const MAX_RESULTS = 3;
 const MIN_TOKEN_LENGTH = 3;
 
+// WHY: "lake" and "village" are excluded alongside ordinary stop words, not
+// because they're grammatical filler, but because nearly every seeded event,
+// mission, post, and listing mentions Lake Las Vegas or MonteLago Village
+// somewhere — as the community's own name, they carry no discriminating
+// power for content search and would token-match almost anything (e.g. "any
+// ev chargers near the lake?" matching services and missions that have
+// nothing to do with EV chargers, just because they also mention the lake).
+// "near" is excluded for the same reason from the other direction: it's a
+// generic relative-location word ("near the village", "near the boat club")
+// that shows up incidentally in posts about completely unrelated topics, so
+// a query using "near" would drag those posts into an otherwise-good answer
+// alongside the one actually being asked about. "marina" is deliberately
+// NOT on this list, even though it caused a similar-looking symptom during
+// testing — unlike "lake"/"village" it's a genuine, searchable topic (marina
+// events, boating), and stop-wording it would silently break a query that is
+// actually about the marina (see the "searchEvents matches place and tag
+// tokens" test, which relies on 'marina' finding the paddleboard meetup).
 const STOP_WORDS: ReadonlySet<string> = new Set([
   'about',
   'all',
@@ -42,9 +70,13 @@ const STOP_WORDS: ReadonlySet<string> = new Set([
   'can',
   'for',
   'how',
+  'lake',
+  'near',
   'the',
   'that',
   'this',
+  'vegas',
+  'village',
   'what',
   'when',
   'where',
@@ -62,9 +94,14 @@ const tokenize = (query: string): readonly string[] =>
 const scoreOf = (haystack: string, tokens: readonly string[]): number =>
   tokens.filter((token) => haystack.includes(token)).length;
 
-// WHY: an empty or fully-unmatched query still returns the first few items so
-// replies stay grounded in real data instead of "no results" dead ends. When the
-// database itself is empty (fresh shell) this naturally returns nothing.
+// WHY: an unmatched query returns nothing — it used to fall back to the
+// first few items unconditionally "to stay grounded in real data instead of
+// a dead end," but that's exactly what made a seeded event's place field
+// ("MonteLago Village") token-match an unrelated "village" query and get
+// cited as if it were a real answer. The caller (respondWithLocalSearch) now
+// owns the honest "I don't know" response when every search comes back
+// empty, so a search function returning nothing here is the correct signal,
+// not a gap to paper over.
 function rankByTokens<T>(
   items: readonly T[],
   query: string,
@@ -75,17 +112,79 @@ function rankByTokens<T>(
     item,
     score: scoreOf(haystackOf(item).toLowerCase(), tokens),
   }));
-  const matched = scored.filter(({ score }) => score > 0);
 
-  if (matched.length === 0) {
-    return items.slice(0, MAX_RESULTS);
-  }
-
-  return [...matched]
+  return scored
+    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_RESULTS)
     .map(({ item }) => item);
 }
+
+const toEventSummary = (event: {
+  readonly id: string;
+  readonly title: string;
+  readonly place: string;
+  readonly tag: string;
+  readonly dayLabel: string;
+  readonly timeLabel: string;
+  readonly going: number;
+}): EventSummary => ({
+  id: event.id,
+  title: event.title,
+  place: event.place,
+  tag: event.tag,
+  dayLabel: event.dayLabel,
+  timeLabel: event.timeLabel,
+  going: event.going,
+});
+
+const toMissionSummary = (mission: {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly xp: number;
+  readonly stopsTotal: number;
+}): MissionSummary => ({
+  id: mission.id,
+  title: mission.title,
+  description: mission.description,
+  xp: mission.xp,
+  stopsTotal: mission.stopsTotal,
+});
+
+const toPostSummary = (post: {
+  readonly id: string;
+  readonly title: string;
+  readonly forum: string;
+  readonly excerpt: string;
+  readonly replies: number;
+  readonly likes: number;
+}): PostSummary => ({
+  id: post.id,
+  title: post.title,
+  forum: post.forum,
+  excerpt: post.excerpt,
+  replies: post.replies,
+  likes: post.likes,
+});
+
+const toServiceSummary = (listing: {
+  readonly id: string;
+  readonly businessName: string;
+  readonly category: string;
+  readonly description: string;
+  readonly serviceArea: string | null;
+  readonly hours: string | null;
+  readonly averageRating: number | null;
+}): ServiceSummary => ({
+  id: listing.id,
+  businessName: listing.businessName,
+  category: listing.category,
+  description: listing.description,
+  serviceArea: listing.serviceArea,
+  hours: listing.hours,
+  averageRating: listing.averageRating,
+});
 
 // The assistant reads the same live data the screens do (Supabase when
 // configured, the in-memory store otherwise), so it never cites content that is
@@ -99,15 +198,7 @@ export async function searchEvents(
     events,
     query,
     (event) => `${event.title} ${event.place} ${event.tag}`,
-  ).map((event) => ({
-    id: event.id,
-    title: event.title,
-    place: event.place,
-    tag: event.tag,
-    dayLabel: event.dayLabel,
-    timeLabel: event.timeLabel,
-    going: event.going,
-  }));
+  ).map(toEventSummary);
 }
 
 export async function searchMissions(
@@ -119,13 +210,7 @@ export async function searchMissions(
     missions,
     query,
     (mission) => `${mission.title} ${mission.description}`,
-  ).map((mission) => ({
-    id: mission.id,
-    title: mission.title,
-    description: mission.description,
-    xp: mission.xp,
-    stopsTotal: mission.stopsTotal,
-  }));
+  ).map(toMissionSummary);
 }
 
 export async function searchPosts(
@@ -137,12 +222,54 @@ export async function searchPosts(
     posts,
     query,
     (post) => `${post.title} ${post.excerpt} ${post.forum}`,
-  ).map((post) => ({
-    id: post.id,
-    title: post.title,
-    forum: post.forum,
-    excerpt: post.excerpt,
-    replies: post.replies,
-    likes: post.likes,
-  }));
+  ).map(toPostSummary);
+}
+
+export async function searchServices(
+  ctx: RequestContext,
+  query: string,
+): Promise<readonly ServiceSummary[]> {
+  const { listings } = await getServicesView(ctx);
+  return rankByTokens(
+    listings,
+    query,
+    (listing) =>
+      `${listing.businessName} ${listing.category} ${listing.description} ${listing.serviceArea ?? ''}`,
+  ).map(toServiceSummary);
+}
+
+// WHY: distinct from searchX — used only by the local-search fallback's
+// "browse" path, when the user's message explicitly names a category (e.g.
+// "any events this weekend?") but nothing in the current data literally
+// token-matches their wording. Showing what's currently there is a
+// reasonable answer to a category-level question; searchX intentionally does
+// NOT do this itself since a real tool call (from the Anthropic path, or a
+// content-topic query with no named category) should never get back
+// unrelated items dressed up as a match.
+export async function browseEvents(
+  ctx: RequestContext,
+): Promise<readonly EventSummary[]> {
+  const { events } = await getEventsView(ctx);
+  return events.slice(0, MAX_RESULTS).map(toEventSummary);
+}
+
+export async function browseMissions(
+  ctx: RequestContext,
+): Promise<readonly MissionSummary[]> {
+  const { missions } = await getMissionsView(ctx);
+  return missions.slice(0, MAX_RESULTS).map(toMissionSummary);
+}
+
+export async function browsePosts(
+  ctx: RequestContext,
+): Promise<readonly PostSummary[]> {
+  const posts = await listPosts(ctx);
+  return posts.slice(0, MAX_RESULTS).map(toPostSummary);
+}
+
+export async function browseServices(
+  ctx: RequestContext,
+): Promise<readonly ServiceSummary[]> {
+  const { listings } = await getServicesView(ctx);
+  return listings.slice(0, MAX_RESULTS).map(toServiceSummary);
 }

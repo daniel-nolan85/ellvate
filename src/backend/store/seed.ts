@@ -393,6 +393,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     contactEmail: 'riley@lakesidetails.example',
     contactWebsite: null,
     serviceArea: 'Lake Las Vegas & MonteLago Village',
+    hours: 'Mon–Sun 7am–7pm',
     createdAt: isoHoursBeforeSeedNow(96),
   },
   {
@@ -406,6 +407,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     contactEmail: null,
     contactWebsite: 'https://kingsdetailing.example',
     serviceArea: 'Lake Las Vegas',
+    hours: 'Mon–Sat 8am–6pm',
     createdAt: isoHoursBeforeSeedNow(72),
   },
   {
@@ -418,6 +420,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     contactEmail: 'sam@crystalclearpools.example',
     contactWebsite: null,
     serviceArea: 'Lake Las Vegas & Henderson',
+    hours: null,
     createdAt: isoHoursBeforeSeedNow(50),
   },
   {
@@ -430,6 +433,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     contactEmail: 'priya@priyaraodesign.example',
     contactWebsite: 'https://priyaraodesign.example',
     serviceArea: 'Remote & on-site',
+    hours: null,
     createdAt: isoHoursBeforeSeedNow(30),
   },
 ];

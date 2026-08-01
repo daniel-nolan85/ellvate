@@ -17,10 +17,8 @@ import { VStack } from '@/src/components/ui/vstack';
 import { Composer } from './composer';
 import { MessageBubble } from './message-bubble';
 import { SuggestionChips } from './suggestion-chips';
-import { ToolCallChip } from './tool-call-chip';
+import { ThinkingIndicator } from './thinking-indicator';
 import { useAssistantChat } from './use-assistant-chat';
-
-const ACCENT = 'rgb(181,80,44)';
 
 interface AssistantScreenProps {
   readonly onClose: () => void;
@@ -48,19 +46,13 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
         className="items-center gap-2 border-b border-line px-5 pb-3 pt-4"
         style={{ paddingTop: insets.top + 16 }}
       >
-        <Box className="h-9 w-9 items-center justify-center rounded-[12px] bg-primary">
-          <AiMark color={ACCENT} size={18} />
+        <Box className="h-9 w-9 items-center justify-center rounded-[12px] bg-accent">
+          <AiMark color="#ffffff" size={18} />
         </Box>
         <VStack className="flex-1 gap-0.5">
           <Text className="font-inter-bold text-content" size="sm">
             Lake Assistant
           </Text>
-          <HStack className="items-center gap-1">
-            <Box className="h-[6px] w-[6px] rounded-full bg-success" />
-            <Text className="text-text-muted" size="xs">
-              Connected to events · forum · missions
-            </Text>
-          </HStack>
         </VStack>
         <Pressable
           accessibilityLabel="Close assistant"
@@ -77,8 +69,8 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
       >
         {entries.length === 0 && !pendingReply ? (
           <VStack className="items-center gap-2.5 px-6 pt-16">
-            <Box className="h-14 w-14 items-center justify-center rounded-2xl bg-primary">
-              <AiMark color={ACCENT} size={26} />
+            <Box className="h-14 w-14 items-center justify-center rounded-2xl bg-accent">
+              <AiMark color="#ffffff" size={26} />
             </Box>
             <Text className="text-center font-inter-bold text-content" size="lg">
               Ask the Lake Assistant
@@ -87,29 +79,19 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
               className="max-w-[280px] text-center leading-[20px] text-text-muted"
               size="sm"
             >
-              Events, missions, or what neighbours are posting around Lake Las
-              Vegas — just ask.
+              Events, missions, local businesses, or what neighbours are
+              posting around Lake Las Vegas — just ask.
             </Text>
           </VStack>
         ) : null}
-        {entries.map((entry, index) =>
-          entry.kind === 'tool' ? (
-            <ToolCallChip
-              isActive={isSending && index === entries.length - 1}
-              key={`${index}-${entry.tool}`}
-              tool={entry.tool}
-            />
-          ) : (
-            <MessageBubble
-              key={`${index}-${entry.kind}`}
-              kind={entry.kind}
-              text={entry.text}
-            />
-          ),
-        )}
-        {pendingReply ? (
-          <ToolCallChip isActive tool="search" />
-        ) : null}
+        {entries.map((entry, index) => (
+          <MessageBubble
+            key={`${index}-${entry.kind}`}
+            kind={entry.kind}
+            text={entry.text}
+          />
+        ))}
+        {pendingReply ? <ThinkingIndicator /> : null}
       </ScrollView>
       <SuggestionChips onSelect={sendMessage} suggestions={suggestions} />
       <Composer isSending={isSending} onSend={sendMessage} />

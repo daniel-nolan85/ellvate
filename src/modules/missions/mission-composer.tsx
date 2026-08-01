@@ -3,6 +3,7 @@ import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { DateCalendar } from '@/src/components/shared/date-calendar';
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
@@ -200,14 +201,14 @@ export function MissionComposer({
         </Field>
 
         <Field label="What to do">
-          <Input size="lg">
-            <InputField
-              onChangeText={setDescription}
-              placeholder="Describe the challenge"
-              testID="mission-description"
-              value={description}
-            />
-          </Input>
+          <GrowingTextInput
+            className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
+            maxHeight={200}
+            onChangeText={setDescription}
+            placeholder="Describe the challenge"
+            testID="mission-description"
+            value={description}
+          />
         </Field>
 
         <Field label="Scheduled for">
