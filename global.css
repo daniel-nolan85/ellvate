@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Auto-growing text inputs (composer, post/mission/service description
+   fields, etc.) scroll internally once they hit their max height, but the
+   browser's default scrollbar chrome is visual noise on a field this small. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

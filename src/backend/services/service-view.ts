@@ -47,6 +47,7 @@ export function toServiceListingView(
     contactEmail: listing.contactEmail,
     contactWebsite: listing.contactWebsite,
     serviceArea: listing.serviceArea,
+    hours: listing.hours,
     logo: listing.logo,
     media: listing.media,
     createdAt: listing.createdAt,

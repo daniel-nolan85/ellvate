@@ -8,8 +8,10 @@ import {
   searchEvents,
   searchMissions,
   searchPosts,
+  searchServices,
   validateChatMessages,
 } from '../../src/backend/assistant';
+import { createPost } from '../../src/backend/forum';
 import { memoryContext } from '../../src/backend/http';
 import { resetStore } from '../../src/backend/store';
 
@@ -66,14 +68,13 @@ describe('local search', () => {
     ).toEqual(['event-4', 'event-1']);
   });
 
-  test('searchEvents caps unmatched queries at the top 3 seeded events', async () => {
+  // searchX no longer falls back to "the first few items" when nothing
+  // token-matches — see the WHY comment on rankByTokens in search.ts. An
+  // unmatched query is a real "no results," not a guess dressed up as one.
+  test('searchEvents returns nothing for an unmatched query', async () => {
     const results = await searchEvents(ctx, 'zzz-no-such-token');
 
-    expect(results.map((event) => event.id)).toEqual([
-      'event-1',
-      'event-2',
-      'event-3',
-    ]);
+    expect(results).toEqual([]);
   });
 
   test('searchMissions matches titles and descriptions', async () => {
@@ -96,10 +97,25 @@ describe('local search', () => {
     ).toEqual(['post-3']);
   });
 
+  test('searchServices matches business name and category tokens', async () => {
+    expect(
+      (await searchServices(ctx, 'dog walking')).map((service) => service.id),
+    ).toEqual(['service-1']);
+    expect(
+      (await searchServices(ctx, 'detailing')).map((service) => service.id),
+    ).toEqual(['service-2']);
+    expect((await searchServices(ctx, 'pool'))[0]).toMatchObject({
+      id: 'service-3',
+      businessName: 'Crystal Clear Pool Care',
+      category: 'pool-spa',
+    });
+  });
+
   test('search returns at most 3 summaries', async () => {
     expect((await searchEvents(ctx, '')).length).toBeLessThanOrEqual(3);
     expect((await searchMissions(ctx, '')).length).toBeLessThanOrEqual(3);
     expect((await searchPosts(ctx, '')).length).toBeLessThanOrEqual(3);
+    expect((await searchServices(ctx, '')).length).toBeLessThanOrEqual(3);
   });
 });
 
@@ -135,6 +151,15 @@ describe('respondToChat fallback mode', () => {
     expect(reply.reply).toContain('Best spots to kayak at sunrise?');
   });
 
+  test('routes business keywords to search_services and cites real listings', async () => {
+    const reply = await fallback('Do you know any pet care businesses?');
+
+    expect(reply.toolCalls).toEqual([
+      { tool: 'search_services', label: 'Searching local services…' },
+    ]);
+    expect(reply.reply).toContain('Lakeside Tails Dog Walking');
+  });
+
   test('routes multi-topic questions to multiple tools in order', async () => {
     const reply = await fallback('Any events or missions this weekend?');
 
@@ -144,13 +169,85 @@ describe('respondToChat fallback mode', () => {
     ]);
   });
 
-  test('defaults to search_events when no keywords match', async () => {
+  // Regression test for a bug where an unmatched query defaulted to
+  // search_events, and a seeded event's place field ("MonteLago Village")
+  // happened to token-match the query's "village", returning an unrelated
+  // list of events instead of an honest "I don't know".
+  test('gives an honest non-answer for a genuinely off-topic query instead of guessing', async () => {
+    const reply = await fallback('Are there any ev chargers in the village?');
+
+    expect(reply.toolCalls).toEqual([]);
+    expect(reply.reply).not.toContain('Locals Networking Mixer');
+  });
+
+  test('gives an honest non-answer when no keywords match at all', async () => {
     const reply = await fallback('Hello there!');
 
+    expect(reply.toolCalls).toEqual([]);
+  });
+
+  // Regression test: "near" was previously part of the search_missions
+  // keyword route (to catch the "Missions near me" suggested prompt), causing
+  // it to mis-route unrelated questions to missions results just because they
+  // contained that one word. It's now a stop word for content search too
+  // (see search.ts) — it was generic enough to also drag unrelated posts
+  // ("near the village", "near the boat club") into otherwise-good answers,
+  // so this query should come back with no matches at all.
+  test('does not mis-route an off-topic query containing "near" to missions or posts', async () => {
+    const reply = await fallback('Are there any ev chargers near the lake?');
+
+    expect(reply.toolCalls).toEqual([]);
+  });
+
+  // Regression test for the real-world report that prompted this fix: the
+  // user created a forum post about an EV charger and the assistant said it
+  // didn't know anything about it. Root cause was the fallback keyword router
+  // only ever calling search_posts for queries containing "post"/"forum"/etc
+  // — a topic query with none of those words could never reach it, no matter
+  // how directly the post's own content answered the question.
+  test('finds a newly created forum post by topic, with no category keyword in the query', async () => {
+    const created = await createPost(ctx, {
+      title: 'New EV charger at the Hilton car park',
+      excerpt: 'Just spotted a new EV charging station going in by the marina.',
+      forum: 'Marina & Boating',
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const reply = await fallback('Do you know anything about EV charging stations?');
+
     expect(reply.toolCalls).toEqual([
-      { tool: 'search_events', label: 'Searching events…' },
+      { tool: 'search_posts', label: 'Searching posts…' },
     ]);
-    expect(reply.reply).toContain('Locals Networking Mixer');
+    expect(reply.reply).toContain('New EV charger at the Hilton car park');
+  });
+
+  // Regression test: once the topic query above worked, the next report was
+  // that adding "near" to the question (a very natural way to ask) dragged
+  // in unrelated seeded posts ("near the village", "near the boat club")
+  // alongside the real answer, because "near" alone was enough to score a
+  // token match. It's a stop word now — the reply should cite only the post
+  // that's actually about EV charging. Uses "tennis courts" rather than
+  // "marina" for the location, since "marina" is itself common enough across
+  // seed data (forum name, event place, mission description) to reintroduce
+  // the same kind of over-matching this test is guarding against.
+  test('does not pull in unrelated posts when the query includes "near"', async () => {
+    const created = await createPost(ctx, {
+      title: 'New EV charger installed at the Hilton',
+      excerpt: 'Just spotted a new EV charging station going in near the tennis courts.',
+      forum: 'Announcements',
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const reply = await fallback(
+      'Are there any EV charging stations near the tennis courts?',
+    );
+
+    expect(reply.toolCalls).toEqual([
+      { tool: 'search_posts', label: 'Searching posts…' },
+    ]);
+    expect(reply.reply).toContain('New EV charger installed at the Hilton');
+    expect(reply.reply).not.toContain('kayak');
+    expect(reply.reply).not.toContain('Loop trail');
   });
 
   test('uses the last user message when the thread ends with the assistant', async () => {
@@ -163,6 +260,9 @@ describe('respondToChat fallback mode', () => {
       { apiKey: null },
     );
 
+    // "missions" names the category (browse fallback); "near" is a stop word
+    // (see search.ts) so it no longer drags in unrelated posts that happen
+    // to also say "near" somewhere.
     expect(reply.toolCalls).toEqual([
       { tool: 'search_missions', label: 'Searching missions…' },
     ]);

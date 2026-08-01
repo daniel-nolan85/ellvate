@@ -9,13 +9,14 @@ create table service_listings (
   created_by text not null references app_users(id) on delete cascade,
   business_name text not null,
   category text not null check (
-    category in ('pet-care', 'home-services', 'beauty', 'automotive', 'pool-spa', 'tech-web', 'other')
+    category in ('pet-care', 'home-services', 'beauty', 'automotive', 'pool-spa', 'tech-web', 'dining', 'other')
   ),
   description text not null,
   contact_phone text,
   contact_email text,
   contact_website text,
   service_area text,
+  hours text,
   logo jsonb,
   media jsonb,
   created_at timestamptz not null default now()

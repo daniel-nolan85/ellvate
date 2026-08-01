@@ -126,6 +126,18 @@ describe('createServiceListing', () => {
     expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
   });
 
+  test('accepts the dining category', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      category: 'dining',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.category).toBe('dining');
+    }
+  });
+
   test('rejects a listing with no contact method at all', async () => {
     const result = await createServiceListing(ctx(), {
       ...validListingInput,
@@ -233,6 +245,39 @@ describe('createServiceListing', () => {
       expect(result.listing.contactWebsite).toBe('https://www.nolancode.com');
     }
   });
+
+  test('hours is optional — an empty value is stored as null', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      hours: '',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.hours).toBeNull();
+    }
+  });
+
+  test('stores a provided hours string', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      hours: 'Mon–Fri 8am–6pm',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.hours).toBe('Mon–Fri 8am–6pm');
+    }
+  });
+
+  test('rejects an oversized hours field', async () => {
+    const result = await createServiceListing(ctx(), {
+      ...validListingInput,
+      hours: 'x'.repeat(121),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
+  });
 });
 
 describe('updateServiceListing', () => {
@@ -301,6 +346,33 @@ describe('updateServiceListing', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.listing.contactWebsite).toBe('https://nolancode.com');
+    }
+  });
+
+  test('hours can be set, changed, and cleared across edits', async () => {
+    const created = await createServiceListing(ctx(), {
+      ...validListingInput,
+      hours: 'Mon–Fri 8am–6pm',
+    });
+    if (!created.ok) throw new Error('setup failed');
+    expect(created.listing.hours).toBe('Mon–Fri 8am–6pm');
+
+    const changed = await updateServiceListing(ctx(), created.listing.id, {
+      ...validListingInput,
+      hours: 'Mon–Sun 7am–9pm',
+    });
+    expect(changed.ok).toBe(true);
+    if (changed.ok) {
+      expect(changed.listing.hours).toBe('Mon–Sun 7am–9pm');
+    }
+
+    const cleared = await updateServiceListing(ctx(), created.listing.id, {
+      ...validListingInput,
+      hours: '',
+    });
+    expect(cleared.ok).toBe(true);
+    if (cleared.ok) {
+      expect(cleared.listing.hours).toBeNull();
     }
   });
 });

@@ -67,6 +67,7 @@ function updateServiceListingMemory(
             contactPhone: value.contactPhone,
             contactWebsite: value.contactWebsite,
             description: value.description,
+            hours: value.hours,
             logo,
             media: media.length ? media : undefined,
             serviceArea: value.serviceArea,

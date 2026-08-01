@@ -6,7 +6,7 @@ import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
 export interface AssistantToolCall {
-  readonly tool: 'search_events' | 'search_missions' | 'search_posts';
+  readonly tool: 'search_events' | 'search_missions' | 'search_posts' | 'search_services';
   readonly label: string;
 }
 
@@ -20,9 +20,10 @@ export interface AssistantReply {
   readonly toolCalls: readonly AssistantToolCall[];
 }
 
-export type ChatEntry =
-  | { readonly kind: 'user' | 'assistant'; readonly text: string }
-  | { readonly kind: 'tool'; readonly tool: string; readonly label: string };
+export interface ChatEntry {
+  readonly kind: 'user' | 'assistant';
+  readonly text: string;
+}
 
 // The assistant starts as a blank slate — no fabricated conversation. The screen
 // shows a greeting and suggestion chips until the user sends the first message.
@@ -40,9 +41,7 @@ const APOLOGY_TEXT =
 const toMessages = (
   entries: readonly ChatEntry[],
 ): readonly AssistantChatMessage[] =>
-  entries.flatMap((entry) =>
-    entry.kind === 'tool' ? [] : [{ role: entry.kind, text: entry.text }],
-  );
+  entries.map((entry) => ({ role: entry.kind, text: entry.text }));
 
 export function useAssistantChat() {
   const session = useSession();
@@ -68,16 +67,11 @@ export function useAssistantChat() {
       appendEntries([{ kind: 'assistant', text: APOLOGY_TEXT }]);
     },
     onSuccess: (reply) => {
-      appendEntries([
-        ...reply.toolCalls.map(
-          (call): ChatEntry => ({
-            kind: 'tool',
-            label: call.label,
-            tool: call.tool,
-          }),
-        ),
-        { kind: 'assistant', text: reply.reply },
-      ]);
+      // The tool-call labels (e.g. "Searching events…") only matter while the
+      // reply is in flight — see ThinkingIndicator. Once the reply lands, it
+      // fully replaces that indicator; the transcript never keeps a separate
+      // permanent "Searching X" line lingering above the answer.
+      appendEntries([{ kind: 'assistant', text: reply.reply }]);
     },
     onSettled: () => {
       inFlightRef.current = false;

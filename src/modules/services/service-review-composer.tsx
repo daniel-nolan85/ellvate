@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
-import { Input, InputField } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 
@@ -70,14 +70,14 @@ export function ServiceReviewComposer({
           </Pressable>
         ))}
       </HStack>
-      <Input size="lg">
-        <InputField
-          onChangeText={setBody}
-          placeholder="How was it? (optional)"
-          testID="service-review-body"
-          value={body}
-        />
-      </Input>
+      <GrowingTextInput
+        className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
+        maxHeight={160}
+        onChangeText={setBody}
+        placeholder="How was it? (optional)"
+        testID="service-review-body"
+        value={body}
+      />
       <HStack className="items-center gap-3">
         <Button
           className="self-start rounded-full bg-accent px-4"

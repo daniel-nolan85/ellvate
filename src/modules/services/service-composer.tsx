@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
@@ -25,6 +26,7 @@ export interface ServiceComposerDraft {
   readonly contactEmail: string;
   readonly contactWebsite: string;
   readonly serviceArea: string;
+  readonly hours: string;
   readonly existingLogo?: { readonly filename: string; readonly url: string };
   readonly newLogo?: { readonly filename: string; readonly dataUrl: string };
   readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
@@ -95,6 +97,7 @@ interface ServiceComposerProps {
   readonly initialContactEmail?: string;
   readonly initialContactWebsite?: string;
   readonly initialServiceArea?: string;
+  readonly initialHours?: string;
   readonly initialLogo?: { readonly filename: string; readonly url: string } | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
@@ -107,6 +110,7 @@ export function ServiceComposer({
   initialContactPhone = '',
   initialContactWebsite = '',
   initialDescription = '',
+  initialHours = '',
   initialLogo = null,
   initialMedia,
   initialServiceArea = '',
@@ -122,6 +126,7 @@ export function ServiceComposer({
   const [contactEmail, setContactEmail] = useState(initialContactEmail);
   const [contactWebsite, setContactWebsite] = useState(initialContactWebsite);
   const [serviceArea, setServiceArea] = useState(initialServiceArea);
+  const [hours, setHours] = useState(initialHours);
   const [logo, setLogo] = useState<ServiceLogoItem | null>(
     () =>
       initialLogo && { filename: initialLogo.filename, kind: 'existing' as const, url: initialLogo.url },
@@ -204,14 +209,14 @@ export function ServiceComposer({
         </Field>
 
         <Field label="What you do">
-          <Input size="lg">
-            <InputField
-              onChangeText={setDescription}
-              placeholder="Describe your service"
-              testID="service-description"
-              value={description}
-            />
-          </Input>
+          <GrowingTextInput
+            className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
+            maxHeight={200}
+            onChangeText={setDescription}
+            placeholder="Describe your service"
+            testID="service-description"
+            value={description}
+          />
         </Field>
 
         <Field label="Category">
@@ -315,6 +320,17 @@ export function ServiceComposer({
           </Input>
         </Field>
 
+        <Field label="Hours">
+          <Input size="lg">
+            <InputField
+              onChangeText={setHours}
+              placeholder="e.g. Mon–Fri 8am–6pm"
+              testID="service-hours"
+              value={hours}
+            />
+          </Input>
+        </Field>
+
         <Field label="Photos">
           {media.length > 0 ? (
             <VStack space="xs">
@@ -408,6 +424,7 @@ export function ServiceComposer({
                     filename: item.filename,
                   })),
                 serviceArea: serviceArea.trim(),
+                hours: hours.trim(),
               });
             }}
             testID="service-submit"

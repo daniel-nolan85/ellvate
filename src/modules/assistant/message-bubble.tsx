@@ -13,14 +13,14 @@ export function MessageBubble({ kind, text }: MessageBubbleProps) {
     <Box
       className={
         isUser
-          ? 'max-w-[84%] self-end rounded-[18px] rounded-br-[4px] bg-primary px-[15px] py-[11px]'
+          ? 'max-w-[84%] self-end rounded-[18px] rounded-br-[4px] bg-accent px-[15px] py-[11px]'
           : 'max-w-[84%] self-start rounded-[18px] rounded-bl-[4px] bg-secondary px-[15px] py-[11px]'
       }
     >
       <Text
         className={
           isUser
-            ? 'font-sans text-[14px] leading-[21px] text-primary-foreground'
+            ? 'font-sans text-[14px] leading-[21px] text-accent-foreground'
             : 'font-sans text-[14px] leading-[21px] text-content'
         }
       >

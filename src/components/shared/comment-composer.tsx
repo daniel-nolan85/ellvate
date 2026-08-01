@@ -1,5 +1,6 @@
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 
@@ -36,14 +37,13 @@ export function CommentComposer({
         </View>
       ) : null}
       <View className="flex-row items-end gap-2.5">
-        <TextInput
-          className="h-10 flex-1 rounded-full border border-content px-4 text-[14px] text-content"
-          multiline={false}
+        <GrowingTextInput
+          className="flex-1 rounded-[20px] border border-content px-4 py-2.5 text-[14px] text-content"
+          maxHeight={120}
           onChangeText={onChangeText}
           onSubmitEditing={() => canSend && onSend()}
           placeholder={replyTo ? 'Write a reply…' : 'Add a comment…'}
-          placeholderTextColor="rgb(169,156,139)"
-          returnKeyType="send"
+          submitOnEnter
           testID="comment-input"
           value={value}
         />

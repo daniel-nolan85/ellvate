@@ -21,6 +21,7 @@ export interface ServiceListing {
   readonly contactEmail: string | null;
   readonly contactWebsite: string | null;
   readonly serviceArea: string | null;
+  readonly hours: string | null;
   readonly logo?: ServiceMedia;
   readonly media?: readonly ServiceMedia[];
   readonly createdAt: string;
@@ -54,6 +55,7 @@ export interface ValidatedServiceListing {
   readonly contactEmail: string | null;
   readonly contactWebsite: string | null;
   readonly serviceArea: string | null;
+  readonly hours: string | null;
 }
 
 export type ServiceListingValidation =
