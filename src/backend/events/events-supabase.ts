@@ -20,7 +20,7 @@ import { validateEventInput } from './validation';
 
 const WEEK_SELECT = 'date,day_label,date_label,is_today';
 const EVENT_SELECT =
-  'id,created_by,starts_at,time_label,day_label,date_label,title,place,tag,media,featured,going_base,seed_attendee_ids';
+  'id,created_by,starts_at,time_label,day_label,date_label,title,place,tag,media,featured,going_base,seed_attendee_ids,edited_at';
 
 // Cap the avatar stack to a few faces (seed attendees plus joined users).
 const ATTENDEE_LIMIT = 6;
@@ -46,6 +46,7 @@ interface EventRow {
   readonly featured: boolean;
   readonly going_base: number;
   readonly seed_attendee_ids: readonly string[];
+  readonly edited_at: string | null;
 }
 
 interface JoinRow {
@@ -122,6 +123,7 @@ const toCommunityEvent = (
     going: row.going_base + joinedIds.length,
     joined: joinedIds.includes(userId),
     attendees,
+    editedAt: row.edited_at,
   };
 };
 
@@ -562,6 +564,7 @@ export async function updateEventSupabase(
       place: value.place,
       tag: value.tag,
       media: media.length ? media : null,
+      edited_at: new Date().toISOString(),
     })
     .eq('id', eventId)
     .select(EVENT_SELECT)

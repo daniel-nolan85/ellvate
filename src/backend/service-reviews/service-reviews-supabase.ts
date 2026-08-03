@@ -11,7 +11,7 @@ import type {
 } from './types';
 
 const SERVICE_REVIEW_SELECT =
-  'id,listing_id,author_id,rating,body,created_at,author:app_users!service_reviews_author_id_fkey(id,name,avatar_url)';
+  'id,listing_id,author_id,rating,body,created_at,edited_at,author:app_users!service_reviews_author_id_fkey(id,name,avatar_url)';
 
 interface ServiceReviewRow {
   readonly id: string;
@@ -20,6 +20,7 @@ interface ServiceReviewRow {
   readonly rating: number;
   readonly body: string | null;
   readonly created_at: string;
+  readonly edited_at: string | null;
   readonly author: {
     readonly id: string;
     readonly name: string;
@@ -67,6 +68,7 @@ const toServiceReview = (row: ServiceReviewRow): ServiceReview => ({
   },
   body: row.body,
   createdAt: row.created_at,
+  editedAt: row.edited_at,
   id: row.id,
   listingId: row.listing_id,
   rating: row.rating as 1 | 2 | 3 | 4 | 5,
@@ -218,7 +220,11 @@ export async function updateServiceReviewSupabase(
   }
   const { data, error } = await supabase
     .from('service_reviews')
-    .update({ body: bodyValidation.body, rating })
+    .update({
+      body: bodyValidation.body,
+      rating,
+      edited_at: new Date().toISOString(),
+    })
     .eq('id', reviewId)
     .eq('author_id', userId)
     .select(SERVICE_REVIEW_SELECT)

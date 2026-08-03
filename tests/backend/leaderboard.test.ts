@@ -127,4 +127,118 @@ describe('GET /api/leaderboard', () => {
       rankDelta: 1,
     });
   });
+
+  test('falls back to all-time for an unrecognized range value', async () => {
+    const response = await getLeaderboardRoute(
+      new Request('http://localhost/api/leaderboard?range=bogus'),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.leaders).toHaveLength(6);
+  });
+});
+
+describe('getLeaderboard (windowed ranges)', () => {
+  const daysAgoIso = (days: number) =>
+    new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  test('week range only counts completions within the last 7 days', async () => {
+    // Seed: mission-3 was completed 48h ago by DEMO_USER_ID — the only
+    // completion anywhere in the seed data, so it's the only weekly leader.
+    const { leaders } = await getLeaderboard(ctx(), 'week');
+
+    expect(leaders).toHaveLength(1);
+    expect(leaders[0]).toMatchObject({
+      missionsCompleted: 1,
+      rank: 1,
+      user: { id: DEMO_USER_ID },
+      xp: 90,
+    });
+  });
+
+  test('a completion outside the window is excluded from that range but not a longer one', async () => {
+    setState((state) => ({
+      ...state,
+      missions: state.missions.map((mission) =>
+        mission.id === 'mission-1'
+          ? {
+              ...mission,
+              progressByUser: {
+                ...mission.progressByUser,
+                'user-mia': {
+                  completedAt: daysAgoIso(10),
+                  status: 'done' as const,
+                  stopsDone: 1,
+                },
+              },
+            }
+          : mission,
+      ),
+    }));
+
+    const week = await getLeaderboard(ctx(), 'week');
+    const month = await getLeaderboard(ctx(), 'month');
+
+    expect(week.leaders.some((entry) => entry.user.id === 'user-mia')).toBe(
+      false,
+    );
+    expect(month.leaders.some((entry) => entry.user.id === 'user-mia')).toBe(
+      true,
+    );
+  });
+
+  test('lets a new user with no lifetime history outrank veterans in the weekly view', async () => {
+    // user-mia has the highest lifetime totals (41 missions, 3820 xp) but no
+    // recorded completions at all — demo-user's single recent check-in wins.
+    const { leaders } = await getLeaderboard(ctx(), 'week');
+
+    expect(leaders.map((entry) => entry.user.id)).toEqual([DEMO_USER_ID]);
+  });
+
+  test('computes rankDelta against the immediately preceding window of equal length', async () => {
+    setState((state) => ({
+      ...state,
+      missions: state.missions.map((mission) => {
+        if (mission.id === 'mission-1') {
+          // Only demo-user completed something in the previous week (8-14
+          // days ago), so they ranked 1st there.
+          return {
+            ...mission,
+            progressByUser: {
+              ...mission.progressByUser,
+              [DEMO_USER_ID]: {
+                completedAt: daysAgoIso(10),
+                status: 'done' as const,
+                stopsDone: 1,
+              },
+            },
+          };
+        }
+        if (mission.id === 'mission-2') {
+          // user-mia overtakes demo-user in the current week (higher xp),
+          // so demo-user drops from 1st to 2nd.
+          return {
+            ...mission,
+            progressByUser: {
+              ...mission.progressByUser,
+              'user-mia': {
+                completedAt: daysAgoIso(1),
+                status: 'done' as const,
+                stopsDone: 3,
+              },
+            },
+          };
+        }
+        return mission;
+      }),
+    }));
+
+    const { leaders } = await getLeaderboard(ctx(), 'week');
+
+    const mia = leaders.find((entry) => entry.user.id === 'user-mia');
+    const demo = leaders.find((entry) => entry.user.id === DEMO_USER_ID);
+    expect(mia).toMatchObject({ rank: 1, rankDelta: 0 });
+    expect(demo).toMatchObject({ rank: 2, rankDelta: -1 });
+  });
 });

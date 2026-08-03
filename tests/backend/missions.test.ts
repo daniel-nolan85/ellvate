@@ -339,6 +339,28 @@ describe('updateMission', () => {
     });
   });
 
+  test('stamps editedAt on update, unset until then', async () => {
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      icon: 'Sun',
+      scheduledFor: '2026-07-18',
+      stopsTotal: 1,
+      title: 'Paddle the Lake',
+      xp: 75,
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+    expect(created.mission.editedAt).toBeNull();
+
+    const result = await updateMission(ctx(), created.mission.id, editInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.mission.editedAt).not.toBeNull();
+  });
+
   test('rejects edits from a user who does not own the mission', async () => {
     const result = await updateMission(ctx(), 'mission-1', editInput);
 

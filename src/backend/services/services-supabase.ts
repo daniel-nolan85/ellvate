@@ -23,7 +23,7 @@ import type {
 import { validateServiceListingInput } from './validation';
 
 const SERVICE_SELECT =
-  'id,created_by,business_name,category,description,contact_phone,contact_email,contact_website,service_area,hours,logo,media,created_at';
+  'id,created_by,business_name,category,description,contact_phone,contact_email,contact_website,service_area,hours,logo,media,created_at,edited_at';
 
 interface ServiceRow {
   readonly id: string;
@@ -39,6 +39,7 @@ interface ServiceRow {
   readonly logo: ServiceMedia | null;
   readonly media: readonly ServiceMedia[] | null;
   readonly created_at: string;
+  readonly edited_at: string | null;
 }
 
 interface ReviewSummaryRow {
@@ -90,6 +91,7 @@ const toServiceListingView = (
     contactPhone: row.contact_phone,
     contactWebsite: row.contact_website,
     createdAt: row.created_at,
+    editedAt: row.edited_at,
     description: row.description,
     hours: row.hours,
     logo: row.logo ?? undefined,
@@ -442,6 +444,7 @@ export async function updateServiceListingSupabase(
       logo,
       media: media.length ? media : null,
       service_area: value.serviceArea,
+      edited_at: new Date().toISOString(),
     })
     .eq('id', listingId)
     .select(SERVICE_SELECT)

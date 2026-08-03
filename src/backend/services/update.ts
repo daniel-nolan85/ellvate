@@ -71,6 +71,7 @@ function updateServiceListingMemory(
             logo,
             media: media.length ? media : undefined,
             serviceArea: value.serviceArea,
+            editedAt: new Date().toISOString(),
           }
         : listing,
     ),

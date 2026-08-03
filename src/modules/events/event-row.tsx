@@ -1,5 +1,6 @@
 import { Pressable } from 'react-native';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
@@ -34,9 +35,12 @@ export function EventRow({ event, onOpen, onToggleJoin }: EventRowProps) {
           <Text className="font-inter-bold tracking-[-0.14px] text-content" size="sm">
             {event.title}
           </Text>
-          <Text className="text-muted-foreground" size="xs">
-            {event.timeLabel} · {event.place}
-          </Text>
+          <HStack className="items-center" space="xs">
+            <Text className="text-muted-foreground" size="xs">
+              {event.timeLabel} · {event.place}
+            </Text>
+            <EditedMark editedAt={event.editedAt} />
+          </HStack>
           <Text className="text-text-subtle" size="xs">
             {event.going} going
           </Text>

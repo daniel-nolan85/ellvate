@@ -7,10 +7,11 @@ import type {
   CreateEventCommentResult,
   EventComment,
   ReportEventCommentResult,
+  UpdateEventCommentResult,
 } from './types';
 
 const EVENT_COMMENT_SELECT =
-  'id,event_id,author_id,body,created_at,author:app_users!event_comments_author_id_fkey(id,name,avatar_url)';
+  'id,event_id,author_id,body,created_at,edited_at,author:app_users!event_comments_author_id_fkey(id,name,avatar_url)';
 
 interface EventCommentRow {
   readonly id: string;
@@ -18,6 +19,7 @@ interface EventCommentRow {
   readonly author_id: string;
   readonly body: string;
   readonly created_at: string;
+  readonly edited_at: string | null;
   readonly author: {
     readonly id: string;
     readonly name: string;
@@ -33,6 +35,7 @@ const toEventComment = (row: EventCommentRow): EventComment => ({
   },
   body: row.body,
   createdAt: row.created_at,
+  editedAt: row.edited_at,
   eventId: row.event_id,
   id: row.id,
 });
@@ -91,6 +94,49 @@ export async function createEventCommentSupabase(
   throwIfSupabaseError(error, 'create event comment');
   if (!data) {
     throw new Error('create event comment: database returned no comment.');
+  }
+  return { comment: toEventComment(data as unknown as EventCommentRow), ok: true };
+}
+
+export async function updateEventCommentSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  commentId: string,
+  input: unknown,
+): Promise<UpdateEventCommentResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('event_comments')
+    .select('id,author_id')
+    .eq('id', commentId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load event comment for update');
+  if (!existing) {
+    return {
+      code: 'event_comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+  if (existing.author_id !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own comments.',
+      ok: false,
+    };
+  }
+  const validation = validateCommentBody(input);
+  if (!validation.ok) {
+    return { code: 'invalid_comment', message: validation.message, ok: false };
+  }
+  const { data, error } = await supabase
+    .from('event_comments')
+    .update({ body: validation.body, edited_at: new Date().toISOString() })
+    .eq('id', commentId)
+    .select(EVENT_COMMENT_SELECT)
+    .single();
+  throwIfSupabaseError(error, 'update event comment');
+  if (!data) {
+    throw new Error('update event comment: database returned no comment.');
   }
   return { comment: toEventComment(data as unknown as EventCommentRow), ok: true };
 }

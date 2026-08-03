@@ -49,6 +49,8 @@ export interface StoredPost {
   readonly forum: string;
   readonly authorId: string;
   readonly createdAt: string;
+  // Null until the author edits the post at least once.
+  readonly editedAt: string | null;
   readonly title: string;
   readonly excerpt: string;
   readonly media?: readonly StoredMedia[];
@@ -63,6 +65,7 @@ export interface StoredComment {
   readonly authorId: string;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export interface StoredPostReport {
@@ -85,6 +88,7 @@ export interface StoredEventComment {
   readonly authorId: string;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export interface StoredEventCommentReport {
@@ -100,6 +104,7 @@ export interface StoredMissionComment {
   readonly authorId: string;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export interface StoredMissionCommentReport {
@@ -124,6 +129,8 @@ export interface StoredEvent {
   readonly going: number;
   readonly joinedBy: readonly string[];
   readonly attendeeIds: readonly string[];
+  // Null until the author edits the event at least once.
+  readonly editedAt: string | null;
 }
 
 export interface MissionUserProgress {
@@ -146,6 +153,8 @@ export interface StoredMission {
   readonly icon: MissionIcon;
   readonly media?: readonly StoredMedia[];
   readonly progressByUser: Readonly<Record<string, MissionUserProgress>>;
+  // Null until the author edits the mission at least once.
+  readonly editedAt: string | null;
 }
 
 export type ServiceCategory =
@@ -177,6 +186,8 @@ export interface StoredServiceListing {
   readonly logo?: StoredMedia;
   readonly media?: readonly StoredMedia[];
   readonly createdAt: string;
+  // Null until the author edits the listing at least once.
+  readonly editedAt: string | null;
 }
 
 export interface StoredServiceReview {
@@ -186,6 +197,8 @@ export interface StoredServiceReview {
   readonly rating: 1 | 2 | 3 | 4 | 5;
   readonly body: string | null;
   readonly createdAt: string;
+  // Null until the author edits the review at least once.
+  readonly editedAt: string | null;
 }
 
 export interface StoredServiceReviewReport {

@@ -91,6 +91,7 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
     stopsTotal: mission.stopsTotal,
     icon: mission.icon,
     media: mission.media,
+    editedAt: mission.editedAt,
   };
 
   return {

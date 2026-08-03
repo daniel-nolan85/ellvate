@@ -1,5 +1,6 @@
 import { Pressable } from 'react-native';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -41,6 +42,7 @@ export function EventSummaryCard({ event, onOpen }: EventSummaryCardProps) {
           <Text className="text-text-muted" size="sm">
             {event.dayLabel} {event.dateLabel} · {event.timeLabel}
           </Text>
+          <EditedMark editedAt={event.editedAt} />
         </HStack>
         <Text className="text-text-muted" size="sm">
           {event.place}

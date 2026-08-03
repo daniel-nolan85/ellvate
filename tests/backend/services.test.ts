@@ -296,6 +296,18 @@ describe('updateServiceListing', () => {
     }
   });
 
+  test('stamps editedAt on update, unset until then', async () => {
+    const created = await createServiceListing(ctx(), validListingInput);
+    if (!created.ok) throw new Error('setup failed');
+    expect(created.listing.editedAt).toBeNull();
+
+    const result = await updateServiceListing(ctx(), created.listing.id, validListingInput);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.listing.editedAt).not.toBeNull();
+    }
+  });
+
   test('rejects edits from a user who does not own the listing', async () => {
     const result = await updateServiceListing(ctx('user-mia'), 'service-1', validListingInput);
 
@@ -571,6 +583,24 @@ describe('updateServiceReview', () => {
       ok: true,
       review: { body: 'updated', rating: 5 },
     });
+  });
+
+  test('stamps editedAt on update, unset until then', async () => {
+    const created = await createServiceReview(ctx(), 'service-3', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+    expect(created.review.editedAt).toBeNull();
+
+    const result = await updateServiceReview(ctx(), created.review.id, {
+      body: 'updated',
+      rating: 5,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.review.editedAt).not.toBeNull();
+    }
   });
 
   test('rejects edits from a user who does not own the review', async () => {

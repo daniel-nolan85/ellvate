@@ -43,6 +43,7 @@ export interface ServiceListing {
   readonly logo?: ServiceMedia;
   readonly media?: readonly ServiceMedia[];
   readonly createdAt: string;
+  readonly editedAt: string | null;
   readonly averageRating: number | null;
   readonly reviewCount: number;
 }

@@ -10,6 +10,7 @@ export interface EventComment {
   readonly author: EventCommentAuthor;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export interface EventCommentsResponse {
@@ -57,6 +58,8 @@ const parseComment = (value: unknown, index: number): EventComment => {
     },
     body: requiredString(comment, 'body', `comments[${index}]`),
     createdAt: requiredString(comment, 'createdAt', `comments[${index}]`),
+    editedAt:
+      typeof comment.editedAt === 'string' ? comment.editedAt : null,
     eventId: requiredString(comment, 'eventId', `comments[${index}]`),
     id: requiredString(comment, 'id', `comments[${index}]`),
   };

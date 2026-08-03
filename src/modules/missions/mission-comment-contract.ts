@@ -10,6 +10,7 @@ export interface MissionComment {
   readonly author: MissionCommentAuthor;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export interface MissionCommentsResponse {
@@ -57,6 +58,8 @@ const parseComment = (value: unknown, index: number): MissionComment => {
     },
     body: requiredString(comment, 'body', `comments[${index}]`),
     createdAt: requiredString(comment, 'createdAt', `comments[${index}]`),
+    editedAt:
+      typeof comment.editedAt === 'string' ? comment.editedAt : null,
     id: requiredString(comment, 'id', `comments[${index}]`),
     missionId: requiredString(comment, 'missionId', `comments[${index}]`),
   };

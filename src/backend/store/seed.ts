@@ -170,6 +170,7 @@ const seedComments = (): readonly StoredComment[] => [
     authorId: 'user-mia',
     body: '@Jordan I launch before 7 AM and the water is usually glassy.',
     createdAt: isoHoursBeforeSeedNow(1.5),
+    editedAt: null,
     id: 'comment-1',
     postId: 'post-1',
   },
@@ -177,6 +178,7 @@ const seedComments = (): readonly StoredComment[] => [
     authorId: 'user-sam',
     body: 'The MonteLago marina has been the calmest launch for me.',
     createdAt: isoHoursBeforeSeedNow(1),
+    editedAt: null,
     id: 'comment-2',
     postId: 'post-1',
   },
@@ -184,6 +186,7 @@ const seedComments = (): readonly StoredComment[] => [
     authorId: 'user-riley',
     body: 'We will be there Friday. Thanks for the heads-up!',
     createdAt: isoHoursBeforeSeedNow(4),
+    editedAt: null,
     id: 'comment-3',
     postId: 'post-2',
   },
@@ -191,6 +194,7 @@ const seedComments = (): readonly StoredComment[] => [
     authorId: 'user-priya',
     body: 'The patio is especially nice right before sunset.',
     createdAt: isoHoursBeforeSeedNow(20),
+    editedAt: null,
     id: 'comment-4',
     postId: 'post-3',
   },
@@ -198,6 +202,7 @@ const seedComments = (): readonly StoredComment[] => [
     authorId: 'user-jordan',
     body: '@Mia Do they take reservations for the lakeside tables?',
     createdAt: isoHoursBeforeSeedNow(18),
+    editedAt: null,
     id: 'comment-5',
     postId: 'post-3',
   },
@@ -205,6 +210,7 @@ const seedComments = (): readonly StoredComment[] => [
     authorId: 'user-priya',
     body: 'The marked detour adds about ten minutes by bike.',
     createdAt: isoHoursBeforeSeedNow(22),
+    editedAt: null,
     id: 'comment-6',
     postId: 'post-4',
   },
@@ -229,6 +235,7 @@ const seedPosts = (
     replies: replyCount(comments, 'post-1'),
     likes: 61,
     likedBy: [],
+    editedAt: null,
   },
   {
     id: 'post-2',
@@ -241,6 +248,7 @@ const seedPosts = (
     replies: replyCount(comments, 'post-2'),
     likes: 138,
     likedBy: [],
+    editedAt: null,
   },
   {
     id: 'post-3',
@@ -253,6 +261,7 @@ const seedPosts = (
     replies: replyCount(comments, 'post-3'),
     likes: 92,
     likedBy: [],
+    editedAt: null,
   },
   {
     id: 'post-4',
@@ -265,6 +274,7 @@ const seedPosts = (
     replies: replyCount(comments, 'post-4'),
     likes: 27,
     likedBy: [],
+    editedAt: null,
   },
 ];
 
@@ -281,6 +291,7 @@ const seedEvents = (): readonly StoredEvent[] => [
     going: 48,
     joinedBy: [],
     attendeeIds: ['user-riley', 'user-mia', 'user-jordan', 'user-andre'],
+    editedAt: null,
   },
   {
     id: 'event-2',
@@ -294,6 +305,7 @@ const seedEvents = (): readonly StoredEvent[] => [
     going: 210,
     joinedBy: [],
     attendeeIds: ['user-mia', 'user-hoa', 'user-jordan'],
+    editedAt: null,
   },
   {
     id: 'event-3',
@@ -307,6 +319,7 @@ const seedEvents = (): readonly StoredEvent[] => [
     going: 32,
     joinedBy: [],
     attendeeIds: ['user-andre', 'user-jordan'],
+    editedAt: null,
   },
   {
     id: 'event-4',
@@ -320,6 +333,7 @@ const seedEvents = (): readonly StoredEvent[] => [
     going: 19,
     joinedBy: [],
     attendeeIds: ['user-riley', 'user-mia'],
+    editedAt: null,
   },
 ];
 
@@ -333,6 +347,7 @@ const seedMissions = (): readonly StoredMission[] => [
     xp: 50,
     stopsTotal: 1,
     icon: 'Sun',
+    editedAt: null,
     progressByUser: {
       [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 0 },
     },
@@ -346,6 +361,7 @@ const seedMissions = (): readonly StoredMission[] => [
     xp: 120,
     stopsTotal: 3,
     icon: 'ArrowUp',
+    editedAt: null,
     progressByUser: {
       [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 2 },
     },
@@ -359,6 +375,7 @@ const seedMissions = (): readonly StoredMission[] => [
     xp: 90,
     stopsTotal: 3,
     icon: 'Star',
+    editedAt: null,
     progressByUser: {
       [DEMO_USER_ID]: {
         completedAt: isoHoursBeforeSeedNow(48),
@@ -376,6 +393,7 @@ const seedMissions = (): readonly StoredMission[] => [
     xp: 40,
     stopsTotal: 1,
     icon: 'Moon',
+    editedAt: null,
     progressByUser: {
       [DEMO_USER_ID]: { completedAt: null, status: 'locked', stopsDone: 0 },
     },
@@ -396,6 +414,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     serviceArea: 'Lake Las Vegas & MonteLago Village',
     hours: 'Mon–Sun 7am–7pm',
     createdAt: isoHoursBeforeSeedNow(96),
+    editedAt: null,
   },
   {
     id: 'service-2',
@@ -410,6 +429,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     serviceArea: 'Lake Las Vegas',
     hours: 'Mon–Sat 8am–6pm',
     createdAt: isoHoursBeforeSeedNow(72),
+    editedAt: null,
   },
   {
     id: 'service-3',
@@ -423,6 +443,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     serviceArea: 'Lake Las Vegas & Henderson',
     hours: null,
     createdAt: isoHoursBeforeSeedNow(50),
+    editedAt: null,
   },
   {
     id: 'service-4',
@@ -436,6 +457,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     serviceArea: 'Remote & on-site',
     hours: null,
     createdAt: isoHoursBeforeSeedNow(30),
+    editedAt: null,
   },
 ];
 
@@ -447,6 +469,7 @@ const seedServiceReviews = (): readonly StoredServiceReview[] => [
     rating: 5,
     body: 'Riley has been walking our lab for months — always on time and sends photos!',
     createdAt: isoHoursBeforeSeedNow(40),
+    editedAt: null,
   },
   {
     id: 'service-review-2',
@@ -455,6 +478,7 @@ const seedServiceReviews = (): readonly StoredServiceReview[] => [
     rating: 4,
     body: 'Came right to our driveway and the car looked brand new.',
     createdAt: isoHoursBeforeSeedNow(20),
+    editedAt: null,
   },
 ];
 

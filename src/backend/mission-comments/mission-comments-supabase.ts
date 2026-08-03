@@ -7,10 +7,11 @@ import type {
   CreateMissionCommentResult,
   MissionComment,
   ReportMissionCommentResult,
+  UpdateMissionCommentResult,
 } from './types';
 
 const MISSION_COMMENT_SELECT =
-  'id,mission_id,author_id,body,created_at,author:app_users!mission_comments_author_id_fkey(id,name,avatar_url)';
+  'id,mission_id,author_id,body,created_at,edited_at,author:app_users!mission_comments_author_id_fkey(id,name,avatar_url)';
 
 interface MissionCommentRow {
   readonly id: string;
@@ -18,6 +19,7 @@ interface MissionCommentRow {
   readonly author_id: string;
   readonly body: string;
   readonly created_at: string;
+  readonly edited_at: string | null;
   readonly author: {
     readonly id: string;
     readonly name: string;
@@ -33,6 +35,7 @@ const toMissionComment = (row: MissionCommentRow): MissionComment => ({
   },
   body: row.body,
   createdAt: row.created_at,
+  editedAt: row.edited_at,
   id: row.id,
   missionId: row.mission_id,
 });
@@ -91,6 +94,52 @@ export async function createMissionCommentSupabase(
   throwIfSupabaseError(error, 'create mission comment');
   if (!data) {
     throw new Error('create mission comment: database returned no comment.');
+  }
+  return {
+    comment: toMissionComment(data as unknown as MissionCommentRow),
+    ok: true,
+  };
+}
+
+export async function updateMissionCommentSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  commentId: string,
+  input: unknown,
+): Promise<UpdateMissionCommentResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('mission_comments')
+    .select('id,author_id')
+    .eq('id', commentId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load mission comment for update');
+  if (!existing) {
+    return {
+      code: 'mission_comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+  if (existing.author_id !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own comments.',
+      ok: false,
+    };
+  }
+  const validation = validateCommentBody(input);
+  if (!validation.ok) {
+    return { code: 'invalid_comment', message: validation.message, ok: false };
+  }
+  const { data, error } = await supabase
+    .from('mission_comments')
+    .update({ body: validation.body, edited_at: new Date().toISOString() })
+    .eq('id', commentId)
+    .select(MISSION_COMMENT_SELECT)
+    .single();
+  throwIfSupabaseError(error, 'update mission comment');
+  if (!data) {
+    throw new Error('update mission comment: database returned no comment.');
   }
   return {
     comment: toMissionComment(data as unknown as MissionCommentRow),

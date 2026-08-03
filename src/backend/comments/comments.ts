@@ -13,6 +13,7 @@ import {
   listCommentsSupabase,
   listMyCommentsSupabase,
   reportCommentSupabase,
+  updateCommentSupabase,
 } from './comments-supabase';
 import type {
   Comment,
@@ -20,6 +21,7 @@ import type {
   MyComment,
   PersonRef,
   ReportCommentResult,
+  UpdateCommentResult,
 } from './types';
 import { validateCommentBody } from './validation';
 
@@ -41,6 +43,7 @@ const toComment = (
   author: authorRef(users, stored.authorId),
   body: stored.body,
   createdAt: stored.createdAt,
+  editedAt: stored.editedAt,
   id: stored.id,
   postId: stored.postId,
 });
@@ -89,6 +92,7 @@ function createCommentMemory(
     authorId: userId,
     body: validation.body,
     createdAt: new Date().toISOString(),
+    editedAt: null,
     id: `comment-${crypto.randomUUID()}`,
     postId,
   };
@@ -114,6 +118,46 @@ function createCommentMemory(
     );
   }
   return { comment: toComment(stored, next.users), ok: true };
+}
+
+function updateCommentMemory(
+  userId: string,
+  commentId: string,
+  input: unknown,
+): UpdateCommentResult {
+  const existing = getState().comments.find((comment) => comment.id === commentId);
+  if (!existing) {
+    return {
+      code: 'comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+  if (existing.authorId !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own comments.',
+      ok: false,
+    };
+  }
+  const validation = validateCommentBody(input);
+  if (!validation.ok) {
+    return { code: 'invalid_comment', message: validation.message, ok: false };
+  }
+  const editedAt = new Date().toISOString();
+  const next = setState((current) => ({
+    ...current,
+    comments: current.comments.map((comment) =>
+      comment.id === commentId
+        ? { ...comment, body: validation.body, editedAt }
+        : comment,
+    ),
+  }));
+  const updated = next.comments.find((comment) => comment.id === commentId);
+  if (!updated) {
+    throw new Error('update comment: comment vanished after update.');
+  }
+  return { comment: toComment(updated, next.users), ok: true };
 }
 
 function deleteCommentMemory(userId: string, commentId: string): boolean {
@@ -196,6 +240,16 @@ export async function createComment(
   return ctx.supabase
     ? createCommentSupabase(ctx.supabase, ctx.userId, postId, input)
     : createCommentMemory(ctx.userId, postId, input);
+}
+
+export async function updateComment(
+  ctx: RequestContext,
+  commentId: string,
+  input: unknown,
+): Promise<UpdateCommentResult> {
+  return ctx.supabase
+    ? updateCommentSupabase(ctx.supabase, ctx.userId, commentId, input)
+    : updateCommentMemory(ctx.userId, commentId, input);
 }
 
 export async function deleteComment(

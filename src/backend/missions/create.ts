@@ -30,6 +30,7 @@ function createMissionMemory(userId: string, input: unknown): CreateMissionResul
         }))
       : undefined,
     progressByUser: {},
+    editedAt: null,
   };
   const next = setState((current) => ({
     ...current,

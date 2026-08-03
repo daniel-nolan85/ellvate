@@ -13,12 +13,14 @@ import {
   deleteMissionCommentSupabase,
   listMissionCommentsSupabase,
   reportMissionCommentSupabase,
+  updateMissionCommentSupabase,
 } from './mission-comments-supabase';
 import type {
   CreateMissionCommentResult,
   MissionComment,
   PersonRef,
   ReportMissionCommentResult,
+  UpdateMissionCommentResult,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -39,6 +41,7 @@ const toMissionComment = (
   author: authorRef(users, stored.authorId),
   body: stored.body,
   createdAt: stored.createdAt,
+  editedAt: stored.editedAt,
   id: stored.id,
   missionId: stored.missionId,
 });
@@ -71,6 +74,7 @@ function createMissionCommentMemory(
     authorId: userId,
     body: validation.body,
     createdAt: new Date().toISOString(),
+    editedAt: null,
     id: `mission-comment-${crypto.randomUUID()}`,
     missionId,
   };
@@ -93,6 +97,50 @@ function createMissionCommentMemory(
     );
   }
   return { comment: toMissionComment(stored, next.users), ok: true };
+}
+
+function updateMissionCommentMemory(
+  userId: string,
+  commentId: string,
+  input: unknown,
+): UpdateMissionCommentResult {
+  const existing = getState().missionComments.find(
+    (comment) => comment.id === commentId,
+  );
+  if (!existing) {
+    return {
+      code: 'mission_comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+  if (existing.authorId !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own comments.',
+      ok: false,
+    };
+  }
+  const validation = validateCommentBody(input);
+  if (!validation.ok) {
+    return { code: 'invalid_comment', message: validation.message, ok: false };
+  }
+  const editedAt = new Date().toISOString();
+  const next = setState((current) => ({
+    ...current,
+    missionComments: current.missionComments.map((comment) =>
+      comment.id === commentId
+        ? { ...comment, body: validation.body, editedAt }
+        : comment,
+    ),
+  }));
+  const updated = next.missionComments.find(
+    (comment) => comment.id === commentId,
+  );
+  if (!updated) {
+    throw new Error('update mission comment: comment vanished after update.');
+  }
+  return { comment: toMissionComment(updated, next.users), ok: true };
 }
 
 function deleteMissionCommentMemory(userId: string, commentId: string): boolean {
@@ -169,6 +217,16 @@ export async function createMissionComment(
   return ctx.supabase
     ? createMissionCommentSupabase(ctx.supabase, ctx.userId, missionId, input)
     : createMissionCommentMemory(ctx.userId, missionId, input);
+}
+
+export async function updateMissionComment(
+  ctx: RequestContext,
+  commentId: string,
+  input: unknown,
+): Promise<UpdateMissionCommentResult> {
+  return ctx.supabase
+    ? updateMissionCommentSupabase(ctx.supabase, ctx.userId, commentId, input)
+    : updateMissionCommentMemory(ctx.userId, commentId, input);
 }
 
 export async function deleteMissionComment(

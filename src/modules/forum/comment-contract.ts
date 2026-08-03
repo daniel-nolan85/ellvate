@@ -10,6 +10,7 @@ export interface ForumComment {
   readonly author: CommentAuthor;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export interface CommentsResponse {
@@ -57,6 +58,8 @@ const parseComment = (value: unknown, index: number): ForumComment => {
     },
     body: requiredString(comment, 'body', `comments[${index}]`),
     createdAt: requiredString(comment, 'createdAt', `comments[${index}]`),
+    editedAt:
+      typeof comment.editedAt === 'string' ? comment.editedAt : null,
     id: requiredString(comment, 'id', `comments[${index}]`),
     postId: requiredString(comment, 'postId', `comments[${index}]`),
   };

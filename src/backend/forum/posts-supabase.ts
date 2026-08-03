@@ -21,7 +21,7 @@ import {
 } from './validation';
 
 const POST_SELECT =
-  'id,forum,author_id,title,excerpt,media,like_count,reply_count,created_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
+  'id,forum,author_id,title,excerpt,media,like_count,reply_count,created_at,edited_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
 
 interface PostRow {
   readonly id: string;
@@ -33,6 +33,7 @@ interface PostRow {
   readonly like_count: number;
   readonly reply_count: number;
   readonly created_at: string;
+  readonly edited_at: string | null;
   readonly author: {
     readonly id: string;
     readonly name: string;
@@ -58,6 +59,7 @@ const toForumPost = (
     name: row.author?.name ?? 'Member',
   },
   createdAt: row.created_at,
+  editedAt: row.edited_at,
   excerpt: row.excerpt,
   forum: row.forum,
   id: row.id,
@@ -488,6 +490,7 @@ export async function updatePostSupabase(
       forum: validation.value.forum,
       media: media.length ? media : null,
       title: validation.value.title,
+      edited_at: new Date().toISOString(),
     })
     .eq('id', postId)
     .select(POST_SELECT)

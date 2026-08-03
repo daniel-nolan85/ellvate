@@ -24,6 +24,7 @@ export interface CommunityEvent {
   readonly going: number;
   readonly joined: boolean;
   readonly attendees: readonly PersonRef[];
+  readonly editedAt: string | null;
 }
 
 export interface WeekDay {

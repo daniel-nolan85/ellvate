@@ -1,5 +1,6 @@
 import { Pressable } from 'react-native';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Avatar } from '@/src/components/ui/avatar';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -65,6 +66,7 @@ export function ServiceReviewItem({
             <Text className="text-[11px] text-text-muted">
               {formatRelativeTime(review.createdAt)}
             </Text>
+            <EditedMark editedAt={review.editedAt} />
             {onActions ? (
               <Pressable
                 accessibilityLabel="Review actions"

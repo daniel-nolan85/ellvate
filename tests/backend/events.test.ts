@@ -313,6 +313,19 @@ describe('updateEvent', () => {
     });
   });
 
+  test('stamps editedAt on update, unset until then', async () => {
+    expect(
+      getState().events.find((event) => event.id === 'event-1')?.editedAt,
+    ).toBeNull();
+
+    const result = await updateEvent(ctx('user-hoa'), 'event-1', editInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.event.editedAt).not.toBeNull();
+  });
+
   test('rejects edits from a user who does not own the event', async () => {
     const result = await updateEvent(ctx(DEMO_USER_ID), 'event-1', editInput);
 

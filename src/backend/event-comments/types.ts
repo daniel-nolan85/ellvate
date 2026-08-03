@@ -10,6 +10,7 @@ export interface EventComment {
   readonly author: PersonRef;
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 export type CreateEventCommentResult =
@@ -25,5 +26,13 @@ export type ReportEventCommentResult =
   | {
       readonly ok: false;
       readonly code: 'event_comment_not_found';
+      readonly message: string;
+    };
+
+export type UpdateEventCommentResult =
+  | { readonly ok: true; readonly comment: EventComment }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_comment' | 'event_comment_not_found' | 'forbidden';
       readonly message: string;
     };

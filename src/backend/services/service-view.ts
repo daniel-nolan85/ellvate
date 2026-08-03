@@ -51,6 +51,7 @@ export function toServiceListingView(
     logo: listing.logo,
     media: listing.media,
     createdAt: listing.createdAt,
+    editedAt: listing.editedAt,
     averageRating,
     reviewCount,
   };

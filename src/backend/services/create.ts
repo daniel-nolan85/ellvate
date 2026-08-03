@@ -39,6 +39,7 @@ function createServiceListingMemory(
         }))
       : undefined,
     createdAt: new Date().toISOString(),
+    editedAt: null,
   };
   const next = setState((current) => ({
     ...current,
