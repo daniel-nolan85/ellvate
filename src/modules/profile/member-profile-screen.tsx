@@ -1,6 +1,8 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { router } from 'expo-router';
+
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Heading } from '@/src/components/ui/heading';
@@ -30,21 +32,26 @@ interface MemberProfileScreenProps {
 
 function StatCard({
   label,
+  onPress,
   value,
 }: {
   readonly label: string;
   readonly value: string;
+  readonly onPress?: () => void;
 }) {
   return (
-    <VStack
+    <Pressable
       className='flex-1 items-center rounded-2xl bg-secondary py-3.5'
-      space='xs'
+      disabled={!onPress}
+      onPress={onPress}
     >
-      <Text className='font-inter-bold text-[20px] text-content'>{value}</Text>
-      <Text className='text-text-muted' size='xs'>
-        {label}
-      </Text>
-    </VStack>
+      <VStack className='items-center' space='xs'>
+        <Text className='font-inter-bold text-[20px] text-content'>{value}</Text>
+        <Text className='text-text-muted' size='xs'>
+          {label}
+        </Text>
+      </VStack>
+    </Pressable>
   );
 }
 
@@ -56,6 +63,9 @@ export function MemberProfileScreen({
   const insets = useSafeAreaInsets();
   const member = useMemberProfile(userId);
   const displayName = member.data?.profile.name ?? loadingName ?? 'Neighbour';
+  // Aggregate figures below are always shown; the detailed activity list is
+  // opt-in, so only open it when this member has chosen to share it.
+  const activityShared = member.data?.profile.activityVisible ?? false;
 
   return (
     <View className='flex-1 bg-canvas'>
@@ -112,6 +122,70 @@ export function MemberProfileScreen({
                 value={String(member.data.stats?.streakDays ?? 0)}
               />
             </HStack>
+
+            <VStack space='sm'>
+              <Text className='font-inter-bold text-content' size='sm'>
+                Activity
+              </Text>
+              <HStack space='sm'>
+                <StatCard
+                  label='Posts'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=post`)
+                      : undefined
+                  }
+                  value={String(member.data.stats?.postsCount ?? 0)}
+                />
+                <StatCard
+                  label='Events created'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=event`)
+                      : undefined
+                  }
+                  value={String(member.data.stats?.eventsCreated ?? 0)}
+                />
+                <StatCard
+                  label='Events attended'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=event`)
+                      : undefined
+                  }
+                  value={String(member.data.stats?.eventsAttended ?? 0)}
+                />
+              </HStack>
+              <HStack space='sm'>
+                <StatCard
+                  label='Missions created'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=mission`)
+                      : undefined
+                  }
+                  value={String(member.data.stats?.missionsCreated ?? 0)}
+                />
+                <StatCard
+                  label='Missions completed'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=mission`)
+                      : undefined
+                  }
+                  value={String(member.data.stats?.missionsCompleted ?? 0)}
+                />
+                <StatCard
+                  label='Services listed'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=service`)
+                      : undefined
+                  }
+                  value={String(member.data.stats?.servicesListed ?? 0)}
+                />
+              </HStack>
+            </VStack>
 
             <VStack space='sm'>
               <Text className='font-inter-bold text-content' size='sm'>

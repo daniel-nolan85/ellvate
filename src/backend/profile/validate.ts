@@ -31,6 +31,7 @@ export interface ProfileUpdate {
   readonly interests?: readonly string[];
   readonly aiComfort?: AiComfortLevel | null;
   readonly notificationPrefs?: Partial<NotificationPrefs>;
+  readonly activityVisible?: boolean;
 }
 
 export interface ProfileValidationFailure {
@@ -132,6 +133,16 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
     );
   }
 
+  if (
+    'activityVisible' in input &&
+    typeof input.activityVisible !== 'boolean'
+  ) {
+    return failure(
+      'invalid_activity_visible',
+      'activityVisible must be a boolean.',
+    );
+  }
+
   return {
     ok: true,
     update: {
@@ -149,6 +160,9 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
         ? {
             notificationPrefs: input.notificationPrefs as Partial<NotificationPrefs>,
           }
+        : {}),
+      ...('activityVisible' in input
+        ? { activityVisible: input.activityVisible as boolean }
         : {}),
     },
   };

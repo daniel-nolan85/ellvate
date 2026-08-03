@@ -21,8 +21,8 @@ export const INTERESTS: readonly string[] = [
   'Volunteering',
 ];
 
-const MIN_PICKS = 3;
-const MAX_PICKS = 5;
+export const MIN_PICKS = 3;
+export const MAX_PICKS = 5;
 
 interface InterestsStepProps {
   readonly picks: readonly string[];

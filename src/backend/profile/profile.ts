@@ -20,12 +20,14 @@ export const WELCOME_XP = 50;
 
 export interface UserProfile {
   readonly userId: string;
+  readonly name: string;
   readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly aiComfort: AiComfortLevel | null;
   readonly notificationPrefs: NotificationPrefs;
   readonly onboardedAt: string | null;
+  readonly activityVisible: boolean;
 }
 
 export interface ProfileResult {
@@ -41,16 +43,19 @@ export type UpdateProfileResult = ProfileValidationFailure | UpdateProfileSucces
 
 const toUserProfile = (
   userId: string,
+  name: string,
   profile: StoredProfile,
   avatarUrl: string | null,
 ): UserProfile => ({
   userId,
+  name,
   avatarUrl,
   role: profile.role,
   interests: profile.interests,
   aiComfort: profile.aiComfort,
   notificationPrefs: profile.notificationPrefs,
   onboardedAt: profile.onboardedAt,
+  activityVisible: profile.activityVisible,
 });
 
 const mergePrefs = (
@@ -75,6 +80,10 @@ const applyUpdate = (
     ? mergePrefs(profile.notificationPrefs, update.notificationPrefs)
     : profile.notificationPrefs,
   onboardedAt: profile.onboardedAt,
+  activityVisible:
+    update.activityVisible !== undefined
+      ? update.activityVisible
+      : profile.activityVisible,
 });
 
 const isOnboardingComplete = (profile: StoredProfile): boolean =>
@@ -84,7 +93,9 @@ const isOnboardingComplete = (profile: StoredProfile): boolean =>
 
 function getProfileMemory(userId: string): ProfileResult {
   const user = ensureUser(userId);
-  return { profile: toUserProfile(userId, user.profile, user.avatarUrl) };
+  return {
+    profile: toUserProfile(userId, user.name, user.profile, user.avatarUrl),
+  };
 }
 
 function updateProfileMemory(
@@ -120,10 +131,13 @@ function updateProfileMemory(
         : user,
     ),
   }));
-  const avatarUrl =
-    updated.users.find((user) => user.id === userId)?.avatarUrl ?? null;
+  const updatedUser = updated.users.find((user) => user.id === userId);
+  const avatarUrl = updatedUser?.avatarUrl ?? null;
 
-  return { ok: true, profile: toUserProfile(userId, next, avatarUrl) };
+  return {
+    ok: true,
+    profile: toUserProfile(userId, updatedUser?.name ?? '', next, avatarUrl),
+  };
 }
 
 export async function getProfile(

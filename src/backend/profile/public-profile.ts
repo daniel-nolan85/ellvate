@@ -2,7 +2,10 @@ import type { RequestContext } from '@/src/backend/http';
 import { getState, type CommunityRole } from '@/src/backend/store';
 import { getMissionsView } from '@/src/backend/missions';
 
-import { getMemberRowSupabase } from './public-profile-supabase';
+import {
+  getMemberActivityCountsSupabase,
+  getMemberRowSupabase,
+} from './public-profile-supabase';
 
 export interface PublicMemberRow {
   readonly id: string;
@@ -10,6 +13,7 @@ export interface PublicMemberRow {
   readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
+  readonly activityVisible: boolean;
 }
 
 export interface PublicProfile {
@@ -18,6 +22,7 @@ export interface PublicProfile {
   readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
+  readonly activityVisible: boolean;
 }
 
 export interface PublicMemberStats {
@@ -25,6 +30,19 @@ export interface PublicMemberStats {
   readonly xp: number;
   readonly streakDays: number;
   readonly missionsCompleted: number;
+  readonly missionsCreated: number;
+  readonly postsCount: number;
+  readonly eventsCreated: number;
+  readonly eventsAttended: number;
+  readonly servicesListed: number;
+}
+
+export interface MemberActivityCounts {
+  readonly missionsCreated: number;
+  readonly postsCount: number;
+  readonly eventsCreated: number;
+  readonly eventsAttended: number;
+  readonly servicesListed: number;
 }
 
 export interface PublicMemberSummary {
@@ -40,6 +58,7 @@ function getMemberRowMemory(memberUserId: string): PublicMemberRow | null {
   const user = getState().users.find((candidate) => candidate.id === memberUserId);
   return user
     ? {
+        activityVisible: user.profile.activityVisible,
         avatarUrl: user.avatarUrl,
         id: user.id,
         interests: user.profile.interests,
@@ -47,6 +66,45 @@ function getMemberRowMemory(memberUserId: string): PublicMemberRow | null {
         role: user.profile.role,
       }
     : null;
+}
+
+// Discriminates whether a member's detailed activity (actual post titles,
+// event names, etc. — not the aggregate figures in PublicMemberStats, which
+// are always public) may be shown to someone other than the member.
+export type MemberActivitySharing = 'not_found' | 'private' | 'shared';
+
+export async function getMemberActivitySharing(
+  ctx: RequestContext,
+  memberUserId: string,
+): Promise<MemberActivitySharing> {
+  const memberRow = ctx.supabase
+    ? await getMemberRowSupabase(ctx.supabase, memberUserId)
+    : getMemberRowMemory(memberUserId);
+  if (!memberRow) {
+    return 'not_found';
+  }
+  return memberRow.activityVisible ? 'shared' : 'private';
+}
+
+function getMemberActivityCountsMemory(
+  memberUserId: string,
+): MemberActivityCounts {
+  const { events, missions, posts, serviceListings } = getState();
+  return {
+    eventsAttended: events.filter((event) =>
+      event.joinedBy.includes(memberUserId),
+    ).length,
+    eventsCreated: events.filter(
+      (event) => event.authorId === memberUserId,
+    ).length,
+    missionsCreated: missions.filter(
+      (mission) => mission.authorId === memberUserId,
+    ).length,
+    postsCount: posts.filter((post) => post.authorId === memberUserId).length,
+    servicesListed: serviceListings.filter(
+      (listing) => listing.authorId === memberUserId,
+    ).length,
+  };
 }
 
 export async function getPublicProfile(
@@ -61,10 +119,16 @@ export async function getPublicProfile(
   }
 
   const memberCtx = { ...ctx, userId: memberUserId };
-  const { progress } = await getMissionsView(memberCtx);
+  const [{ progress }, activityCounts] = await Promise.all([
+    getMissionsView(memberCtx),
+    ctx.supabase
+      ? getMemberActivityCountsSupabase(ctx.supabase, memberUserId)
+      : getMemberActivityCountsMemory(memberUserId),
+  ]);
 
   return {
     profile: {
+      activityVisible: memberRow.activityVisible,
       avatarUrl: memberRow.avatarUrl,
       interests: memberRow.interests,
       name: memberRow.name,
@@ -76,6 +140,7 @@ export async function getPublicProfile(
       missionsCompleted: progress?.missionsCompleted ?? 0,
       streakDays: progress?.streakDays ?? 0,
       xp: progress?.xp ?? 0,
+      ...activityCounts,
     },
   };
 }

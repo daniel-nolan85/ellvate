@@ -11,7 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
@@ -29,6 +28,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
+import { useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -65,6 +65,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
+  const openProfile = useOpenProfile();
 
   const posts = useForumPosts('All');
   const post = useMemo(
@@ -203,14 +204,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
     if (!post) {
       return;
     }
-    if (userId === post.author.id) {
-      router.push('/profile');
-      return;
-    }
-    router.push({
-      params: { name: post.author.name, userId: post.author.id },
-      pathname: '/member/[userId]',
-    });
+    openProfile(post.author.id, post.author.name);
   };
 
   const commentList = comments.data?.comments ?? [];
@@ -394,6 +388,9 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                   comment={comment}
                   key={comment.id}
                   onActions={setActionsFor}
+                  onOpenAuthor={(authorId) =>
+                    openProfile(authorId, comment.author.name)
+                  }
                   onReply={handleReply}
                 />
               ))}

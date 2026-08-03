@@ -28,6 +28,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
+import { useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { MissionComposer } from './mission-composer';
@@ -97,6 +98,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
+  const openProfile = useOpenProfile();
 
   const missionsView = useMissionsView();
   const checkIn = useCheckIn();
@@ -231,7 +233,12 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               <MediaGallery media={mission.media} />
             )}
 
-            <HStack className='items-center gap-2'>
+            <Pressable
+              accessibilityLabel={`Created by ${mission.author.name}`}
+              accessibilityRole='button'
+              className='flex-row items-center gap-2'
+              onPress={() => openProfile(mission.author.id, mission.author.name)}
+            >
               <Avatar
                 name={mission.author.name}
                 size='sm'
@@ -243,7 +250,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
                   {mission.author.name}
                 </Text>
               </Text>
-            </HStack>
+            </Pressable>
 
             <HStack className='items-center gap-3'>
               <View
@@ -366,6 +373,9 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
                 comment={comment}
                 key={comment.id}
                 onActions={setActionsFor}
+                onOpenAuthor={(authorId) =>
+                  openProfile(authorId, comment.author.name)
+                }
                 onReply={handleReply}
               />
             ))}

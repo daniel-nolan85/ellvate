@@ -59,6 +59,7 @@ const emptyProfile = (): StoredProfile => ({
   aiComfort: null,
   notificationPrefs: defaultNotificationPrefs,
   onboardedAt: null,
+  activityVisible: false,
 });
 
 interface SeedUserInput {

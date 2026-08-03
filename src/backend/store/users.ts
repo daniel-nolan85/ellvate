@@ -16,6 +16,7 @@ export const defaultProfile = (): StoredProfile => ({
   aiComfort: null,
   notificationPrefs: defaultNotificationPrefs(),
   onboardedAt: null,
+  activityVisible: false,
 });
 
 // WHY: any authenticated identity that is not part of the seed (a real Clerk

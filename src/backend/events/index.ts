@@ -1,6 +1,7 @@
 export {
   createEvent,
   deleteEvent,
+  getEventAttendees,
   getEventsByIds,
   getEventsView,
   getMyEventsView,

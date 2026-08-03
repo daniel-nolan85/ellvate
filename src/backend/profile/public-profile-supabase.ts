@@ -2,9 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { PublicMemberRow } from './public-profile';
+import type { MemberActivityCounts, PublicMemberRow } from './public-profile';
 
-const MEMBER_SELECT = 'id,name,avatar_url,role,interests';
+const MEMBER_SELECT = 'id,name,avatar_url,role,interests,activity_visible';
 
 interface MemberRow {
   readonly id: string;
@@ -12,6 +12,7 @@ interface MemberRow {
   readonly avatar_url: string | null;
   readonly role: PublicMemberRow['role'];
   readonly interests: readonly string[];
+  readonly activity_visible: boolean;
 }
 
 // Read-only: app_users is publicly readable (see "read app_users" RLS policy),
@@ -32,10 +33,66 @@ export async function getMemberRowSupabase(
   }
   const row = data as unknown as MemberRow;
   return {
+    activityVisible: row.activity_visible,
     avatarUrl: row.avatar_url,
     id: row.id,
     interests: row.interests,
     name: row.name,
     role: row.role,
+  };
+}
+
+// Count-only (head) queries — cheaper than fetching full rows just to
+// measure how many a member has, and mirrors the read-only, ownership-blind
+// nature of getMemberRowSupabase above (app_users is publicly readable).
+export async function getMemberActivityCountsSupabase(
+  supabase: SupabaseClient,
+  memberUserId: string,
+): Promise<MemberActivityCounts> {
+  const [
+    postsRes,
+    missionsRes,
+    eventsCreatedRes,
+    eventsAttendedRes,
+    servicesListedRes,
+  ] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true })
+      .eq('author_id', memberUserId),
+    supabase
+      .from('missions')
+      .select('*', { count: 'exact', head: true })
+      .eq('created_by', memberUserId),
+    supabase
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('created_by', memberUserId),
+    supabase
+      .from('event_joins')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', memberUserId),
+    supabase
+      .from('service_listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('author_id', memberUserId),
+  ]);
+  throwIfSupabaseError(postsRes.error, 'count member posts');
+  throwIfSupabaseError(missionsRes.error, 'count member missions created');
+  throwIfSupabaseError(eventsCreatedRes.error, 'count member events created');
+  throwIfSupabaseError(
+    eventsAttendedRes.error,
+    'count member events attended',
+  );
+  throwIfSupabaseError(
+    servicesListedRes.error,
+    'count member services listed',
+  );
+  return {
+    eventsAttended: eventsAttendedRes.count ?? 0,
+    eventsCreated: eventsCreatedRes.count ?? 0,
+    missionsCreated: missionsRes.count ?? 0,
+    postsCount: postsRes.count ?? 0,
+    servicesListed: servicesListedRes.count ?? 0,
   };
 }

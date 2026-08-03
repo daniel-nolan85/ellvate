@@ -15,9 +15,10 @@ import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
 
 const PROFILE_SELECT =
-  'avatar_url,role,interests,ai_comfort,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at';
+  'name,avatar_url,role,interests,ai_comfort,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at,activity_visible';
 
 interface AppUserProfileRow {
+  readonly name: string;
   readonly avatar_url: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
@@ -27,6 +28,7 @@ interface AppUserProfileRow {
   readonly notif_missions: boolean;
   readonly notif_digest: boolean;
   readonly onboarded_at: string | null;
+  readonly activity_visible: boolean;
 }
 
 const toUserProfile = (
@@ -34,6 +36,7 @@ const toUserProfile = (
   row: AppUserProfileRow,
 ): UserProfile => ({
   userId,
+  name: row.name,
   avatarUrl: row.avatar_url,
   role: row.role,
   interests: row.interests,
@@ -45,6 +48,7 @@ const toUserProfile = (
     digest: row.notif_digest,
   },
   onboardedAt: row.onboarded_at,
+  activityVisible: row.activity_visible,
 });
 
 // A new Clerk user has no app_users row yet; create it before any owned write so
@@ -94,6 +98,10 @@ const mergedRow = (
   const interests = update.interests ?? current.interests;
   const aiComfort =
     update.aiComfort !== undefined ? update.aiComfort : current.ai_comfort;
+  const activityVisible =
+    update.activityVisible !== undefined
+      ? update.activityVisible
+      : current.activity_visible;
   const prefs = mergedPrefs(current, update.notificationPrefs);
   const complete =
     role !== null &&
@@ -104,6 +112,7 @@ const mergedRow = (
       ? new Date().toISOString()
       : current.onboarded_at;
   return {
+    name: current.name,
     avatar_url: current.avatar_url,
     role,
     interests,
@@ -113,6 +122,7 @@ const mergedRow = (
     notif_missions: prefs.missions,
     notif_digest: prefs.digest,
     onboarded_at: onboardedAt,
+    activity_visible: activityVisible,
   };
 };
 

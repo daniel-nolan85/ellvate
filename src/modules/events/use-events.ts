@@ -14,6 +14,7 @@ import type {
   CreateEventInput,
   EventsView,
   MyEventsPage,
+  PersonRef,
   ToggleJoinResult,
   UpdateEventInput,
 } from './events-types';
@@ -67,6 +68,26 @@ export function useMyEventsView() {
         signal,
       }),
     queryKey: myEventsViewKey(userId),
+  });
+}
+
+// The uncapped attendee roster for the "N going" list — unlike the preview
+// stack baked into `event.attendees`, which is capped. Only fetched when
+// the modal showing it is actually open (see `enabled`).
+export function useEventAttendees(eventId: string, enabled: boolean) {
+  const session = useSession();
+
+  return useQuery({
+    enabled,
+    meta: { persist: false, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<{ readonly attendees: readonly PersonRef[] }>({
+        getAccessToken: session.getToken,
+        path: `/api/events/${eventId}/attendees`,
+        signal,
+      }),
+    queryKey: ['events', 'attendees', eventId],
+    select: (data) => data.attendees,
   });
 }
 

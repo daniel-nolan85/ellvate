@@ -5,6 +5,7 @@ import {
   PUT as putProfileRoute,
 } from '../../app/api/me/profile+api';
 import { GET as getMemberProfileRoute } from '../../app/api/users/[userId]/profile+api';
+import { toggleJoin } from '../../src/backend/events';
 import {
   getProfile,
   getPublicProfile,
@@ -42,12 +43,14 @@ describe('getProfile', () => {
     expect(await getProfile(ctx())).toEqual({
       profile: {
         userId: DEMO_USER_ID,
+        name: 'You',
         avatarUrl: null,
         role: null,
         interests: [],
         aiComfort: null,
         notificationPrefs: defaultPrefs,
         onboardedAt: null,
+        activityVisible: false,
       },
     });
   });
@@ -61,12 +64,14 @@ describe('getProfile', () => {
 
     expect(profile).toEqual({
       userId: 'user-ghost',
+      name: 'You',
       avatarUrl: null,
       role: null,
       interests: [],
       aiComfort: null,
       notificationPrefs: defaultPrefs,
       onboardedAt: null,
+      activityVisible: false,
     });
     expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
       true,
@@ -97,6 +102,7 @@ describe('getPublicProfile (requester differs from member)', () => {
       avatarUrl: null,
       role: null,
       interests: [],
+      activityVisible: false,
     });
     expect(summary?.stats).toMatchObject({
       xp: 3820,
@@ -112,6 +118,27 @@ describe('getPublicProfile (requester differs from member)', () => {
     ).toHaveLength(1);
   });
 
+  test('reports activity counts: posts written, events/missions created, events attended', async () => {
+    // Seed: user-mia authored post-3 and event-2, created no missions, and
+    // hasn't joined anything yet (all seeded events start with joinedBy: []).
+    const before = await getPublicProfile(ctx(), 'user-mia');
+    expect(before?.stats).toMatchObject({
+      postsCount: 1,
+      eventsCreated: 1,
+      eventsAttended: 0,
+      missionsCreated: 0,
+    });
+
+    await toggleJoin(ctx('user-mia'), 'event-1');
+    const after = await getPublicProfile(ctx(), 'user-mia');
+    expect(after?.stats).toMatchObject({
+      postsCount: 1,
+      eventsCreated: 1,
+      eventsAttended: 1,
+      missionsCreated: 0,
+    });
+  });
+
   test('returns null for an unknown member and creates no ghost user', async () => {
     expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
       false,
@@ -122,6 +149,18 @@ describe('getPublicProfile (requester differs from member)', () => {
     expect(summary).toBeNull();
     expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
       false,
+    );
+  });
+
+  test('surfaces the member’s own activityVisible choice, not the requester’s', async () => {
+    expect((await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible).toBe(
+      false,
+    );
+
+    await updateProfile(ctx('user-mia'), { activityVisible: true });
+
+    expect((await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible).toBe(
+      true,
     );
   });
 });
@@ -177,6 +216,27 @@ describe('updateProfile', () => {
     ]);
   });
 
+  test('updates and round-trips the display name', async () => {
+    const result = await updateProfile(ctx(), { name: 'Danny' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.name).toBe('Danny');
+    }
+    expect((await getProfile(ctx())).profile.name).toBe('Danny');
+  });
+
+  test('leaves the name untouched when not included in the update', async () => {
+    await updateProfile(ctx(), { name: 'Danny' });
+
+    const result = await updateProfile(ctx(), { role: 'resident' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.name).toBe('Danny');
+    }
+  });
+
   test('merges partial notification prefs over existing values', async () => {
     const result = await updateProfile(ctx(), {
       notificationPrefs: { digest: true },
@@ -189,6 +249,30 @@ describe('updateProfile', () => {
         digest: true,
       });
     }
+  });
+
+  test('defaults activityVisible to false and round-trips it on update', async () => {
+    expect((await getProfile(ctx())).profile.activityVisible).toBe(false);
+
+    const shared = await updateProfile(ctx(), { activityVisible: true });
+    expect(shared.ok).toBe(true);
+    if (shared.ok) {
+      expect(shared.profile.activityVisible).toBe(true);
+    }
+    expect((await getProfile(ctx())).profile.activityVisible).toBe(true);
+
+    const hidden = await updateProfile(ctx(), { activityVisible: false });
+    expect(hidden.ok).toBe(true);
+    if (hidden.ok) {
+      expect(hidden.profile.activityVisible).toBe(false);
+    }
+  });
+
+  test('rejects a non-boolean activityVisible', async () => {
+    expectFailure(
+      await updateProfile(ctx(), { activityVisible: 'yes' }),
+      'invalid_activity_visible',
+    );
   });
 
   test('rejects a non-object body', async () => {
@@ -389,12 +473,14 @@ describe('GET /api/me/profile', () => {
     expect(await response.json()).toEqual({
       profile: {
         userId: DEMO_USER_ID,
+        name: 'You',
         avatarUrl: null,
         role: null,
         interests: [],
         aiComfort: null,
         notificationPrefs: defaultPrefs,
         onboardedAt: null,
+        activityVisible: false,
       },
     });
   });

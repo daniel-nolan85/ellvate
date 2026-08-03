@@ -14,28 +14,40 @@ export interface NotificationPrefs {
 
 export interface UserProfile {
   readonly userId: string;
+  readonly name: string;
   readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly aiComfort: 'new' | 'casual' | 'power' | null;
   readonly notificationPrefs: NotificationPrefs;
   readonly onboardedAt: string | null;
+  // Opt-in: whether other members can open this user's detailed activity
+  // list. Aggregate figures on the profile screen are always visible.
+  readonly activityVisible: boolean;
 }
 
 interface ProfileResponse {
   readonly profile: UserProfile;
 }
 
+export interface MemberActivityStats {
+  readonly level: number;
+  readonly xp: number;
+  readonly streakDays: number;
+  readonly missionsCompleted: number;
+  readonly missionsCreated: number;
+  readonly postsCount: number;
+  readonly eventsCreated: number;
+  readonly eventsAttended: number;
+  readonly servicesListed: number;
+}
+
 interface MemberProfileResponse {
-  readonly profile: Pick<UserProfile, 'userId' | 'role' | 'interests' | 'avatarUrl'> & {
-    readonly name: string;
-  };
-  readonly stats: {
-    readonly level: number;
-    readonly xp: number;
-    readonly streakDays: number;
-    readonly missionsCompleted: number;
-  };
+  readonly profile: Pick<
+    UserProfile,
+    'userId' | 'name' | 'role' | 'interests' | 'avatarUrl' | 'activityVisible'
+  >;
+  readonly stats: MemberActivityStats;
 }
 
 export interface ProfileStats {
@@ -61,6 +73,7 @@ export interface ProfileUpdateInput {
   readonly interests?: readonly string[];
   readonly notificationPrefs?: Partial<NotificationPrefs>;
   readonly avatar?: AvatarUploadInput;
+  readonly activityVisible?: boolean;
 }
 
 const profileKey = (userId: string | null) =>
@@ -134,5 +147,21 @@ export function useUpdateProfile() {
       void queryClient.invalidateQueries({ queryKey: ['forum'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
     },
+  });
+}
+
+// Irreversible: deletes every post/comment/review/bookmark/etc. the user
+// owns and, in Clerk mode, the Clerk account itself — see
+// src/backend/account for exactly what's removed vs. orphaned.
+export function useDeleteAccount() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: () =>
+      requestJson<{ readonly deleted: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'DELETE',
+        path: '/api/me/account',
+      }),
   });
 }
