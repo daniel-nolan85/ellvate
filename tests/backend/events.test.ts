@@ -5,11 +5,13 @@ import {
   DELETE as deleteEventRoute,
   PATCH as patchEventRoute,
 } from '../../app/api/events/[id]/index+api';
+import { GET as getAttendeesRoute } from '../../app/api/events/[id]/attendees+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
 import { createEventComment, listEventComments } from '../../src/backend/event-comments';
 import {
   createEvent,
   deleteEvent,
+  getEventAttendees,
   getEventsView,
   toggleJoin,
   updateEvent,
@@ -118,6 +120,37 @@ describe('toggleJoin', () => {
 
   test('returns null for an unknown event', async () => {
     expect(await toggleJoin(ctx(), 'event-999')).toBeNull();
+  });
+});
+
+describe('getEventAttendees', () => {
+  test('returns the full uncapped roster, including newly joined users', async () => {
+    const before = await getEventAttendees(ctx(), 'event-1');
+    expect(before).toEqual([
+      { avatarUrl: null, id: 'user-riley', name: 'Riley Kim' },
+      { avatarUrl: null, id: 'user-mia', name: 'Mia Lake' },
+      { avatarUrl: null, id: 'user-jordan', name: 'Jordan Diaz' },
+      { avatarUrl: null, id: 'user-andre', name: 'Andre King' },
+    ]);
+
+    await toggleJoin(ctx(), 'event-1');
+    const after = await getEventAttendees(ctx(), 'event-1');
+
+    expect(after).toHaveLength(5);
+    expect(after?.map((person) => person.id)).toContain(DEMO_USER_ID);
+  });
+
+  test('does not duplicate a seeded attendee who also joins', async () => {
+    await toggleJoin(ctx('user-mia'), 'event-1');
+    const attendees = await getEventAttendees(ctx(), 'event-1');
+
+    expect(
+      attendees?.filter((person) => person.id === 'user-mia'),
+    ).toHaveLength(1);
+  });
+
+  test('returns null for an unknown event', async () => {
+    expect(await getEventAttendees(ctx(), 'event-999')).toBeNull();
   });
 });
 
@@ -526,6 +559,34 @@ describe('POST /api/events/:id/join', () => {
   test('returns 404 with the ApiError envelope for an unknown event', async () => {
     const response = await postJoin(
       new Request('http://localhost/api/events/nope/join', { method: 'POST' }),
+      { id: 'nope' },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      code: 'event_not_found',
+      message: 'Event not found.',
+    });
+  });
+});
+
+describe('GET /api/events/:id/attendees', () => {
+  test('returns the full attendee roster', async () => {
+    const response = await getAttendeesRoute(
+      new Request('http://localhost/api/events/event-1/attendees'),
+      { id: 'event-1' },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      attendees: { id: string }[];
+    };
+    expect(body.attendees).toHaveLength(4);
+  });
+
+  test('returns 404 for an unknown event', async () => {
+    const response = await getAttendeesRoute(
+      new Request('http://localhost/api/events/nope/attendees'),
       { id: 'nope' },
     );
 

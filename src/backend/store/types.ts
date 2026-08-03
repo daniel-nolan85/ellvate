@@ -16,6 +16,10 @@ export interface StoredProfile {
   readonly aiComfort: AiComfortLevel | null;
   readonly notificationPrefs: NotificationPrefs;
   readonly onboardedAt: string | null;
+  // Opt-in: when false (the default), other members see only aggregate
+  // activity figures on this user's profile — no drill-down into their
+  // actual posts/events/missions/services.
+  readonly activityVisible: boolean;
 }
 
 export interface StoredUser {

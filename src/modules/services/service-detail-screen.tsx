@@ -24,6 +24,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useMuteUser } from '@/src/modules/forum';
+import { useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
@@ -106,6 +107,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
+  const openProfile = useOpenProfile();
 
   const servicesView = useServicesView();
   const updateListing = useUpdateServiceListing();
@@ -201,7 +203,12 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               <MediaGallery media={listing.media} />
             )}
 
-            <HStack className="items-center gap-2">
+            <Pressable
+              accessibilityLabel={`Listed by ${listing.author.name}`}
+              accessibilityRole="button"
+              className="flex-row items-center gap-2"
+              onPress={() => openProfile(listing.author.id, listing.author.name)}
+            >
               <Avatar
                 name={listing.author.name}
                 size="sm"
@@ -213,7 +220,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                   {listing.author.name}
                 </Text>
               </Text>
-            </HStack>
+            </Pressable>
 
             <HStack className="items-center gap-2">
               <Badge variant={serviceCategoryAccent(listing.category)}>
@@ -351,6 +358,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               <ServiceReviewItem
                 key={review.id}
                 onActions={setActionsFor}
+                onOpenAuthor={openProfile}
                 review={review}
               />
             ))}

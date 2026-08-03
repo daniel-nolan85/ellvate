@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { getMemberRowSupabase } from '../../src/backend/profile/public-profile-supabase';
+import {
+  getMemberActivityCountsSupabase,
+  getMemberRowSupabase,
+} from '../../src/backend/profile/public-profile-supabase';
 
 interface FakeMemberRow {
   readonly id: string;
@@ -10,6 +13,7 @@ interface FakeMemberRow {
   readonly avatar_url: string | null;
   readonly role: string | null;
   readonly interests: readonly string[];
+  readonly activity_visible: boolean;
 }
 
 // A minimal fake covering only the chain getMemberRowSupabase actually calls
@@ -59,6 +63,7 @@ describe('getMemberRowSupabase (requester differs from member)', () => {
   test('returns the member row for an existing member without writing anything', async () => {
     const { client, writes } = createFakeSupabase({
       'user-other': {
+        activity_visible: true,
         avatar_url: 'https://example.com/avatar.jpg',
         id: 'user-other',
         interests: ['Kayaking'],
@@ -70,6 +75,7 @@ describe('getMemberRowSupabase (requester differs from member)', () => {
     const row = await getMemberRowSupabase(client, 'user-other');
 
     expect(row).toEqual({
+      activityVisible: true,
       avatarUrl: 'https://example.com/avatar.jpg',
       id: 'user-other',
       interests: ['Kayaking'],
@@ -86,5 +92,38 @@ describe('getMemberRowSupabase (requester differs from member)', () => {
 
     expect(row).toBeNull();
     expect(writes.count).toBe(0);
+  });
+});
+
+describe('getMemberActivityCountsSupabase', () => {
+  test('runs a head-count query per activity table scoped to the member', async () => {
+    const calls: { table: string; column: string; value: string }[] = [];
+    const client = {
+      from: (table: string) => ({
+        select: () => ({
+          eq: (column: string, value: string) => {
+            calls.push({ column, table, value });
+            return Promise.resolve({ count: 3, error: null });
+          },
+        }),
+      }),
+    } as unknown as SupabaseClient;
+
+    const counts = await getMemberActivityCountsSupabase(client, 'user-other');
+
+    expect(counts).toEqual({
+      eventsAttended: 3,
+      eventsCreated: 3,
+      missionsCreated: 3,
+      postsCount: 3,
+      servicesListed: 3,
+    });
+    expect(calls).toEqual([
+      { column: 'author_id', table: 'posts', value: 'user-other' },
+      { column: 'created_by', table: 'missions', value: 'user-other' },
+      { column: 'created_by', table: 'events', value: 'user-other' },
+      { column: 'user_id', table: 'event_joins', value: 'user-other' },
+      { column: 'author_id', table: 'service_listings', value: 'user-other' },
+    ]);
   });
 });

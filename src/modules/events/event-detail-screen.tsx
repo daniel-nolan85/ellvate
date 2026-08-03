@@ -27,6 +27,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { BookmarkButton } from '@/src/modules/bookmarks';
+import { useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { EventComposer } from './event-composer';
@@ -37,7 +38,13 @@ import {
   useReportEventComment,
   type EventComment,
 } from './use-event-comments';
-import { useDeleteEvent, useEventsView, useToggleJoin, useUpdateEvent } from './use-events';
+import {
+  useDeleteEvent,
+  useEventAttendees,
+  useEventsView,
+  useToggleJoin,
+  useUpdateEvent,
+} from './use-events';
 
 interface EventDetailScreenProps {
   readonly eventId: string;
@@ -80,6 +87,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
+  const openProfile = useOpenProfile();
 
   const eventsView = useEventsView();
   const event = useMemo(
@@ -100,10 +108,13 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [actionsFor, setActionsFor] = useState<EventComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const attendees = useEventAttendees(eventId, attendeesOpen);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -195,7 +206,9 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
 
               <Pressable
                 accessibilityLabel={`Organised by ${event.author.name}`}
+                accessibilityRole='button'
                 className='flex-row items-center gap-2'
+                onPress={() => openProfile(event.author.id, event.author.name)}
               >
                 <Avatar name={event.author.name} size='sm' src={event.author.avatarUrl ?? undefined} />
                 <Text className='text-[13px] text-text-muted'>
@@ -231,17 +244,27 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               <HStack className='items-center' space='sm'>
                 <HStack>
                   {event.attendees.map((attendee, index) => (
-                    <View
+                    <Pressable
+                      accessibilityLabel={`Open ${attendee.name}'s profile`}
+                      accessibilityRole='button'
                       className={`rounded-full border-2 border-paper ${index > 0 ? '-ml-[9px]' : ''}`}
                       key={attendee.id}
+                      onPress={() => openProfile(attendee.id, attendee.name)}
                     >
                       <Avatar name={attendee.name} size='xs' src={attendee.avatarUrl ?? undefined} />
-                    </View>
+                    </Pressable>
                   ))}
                 </HStack>
-                <Text className='flex-1 text-text-muted' size='sm'>
-                  {event.going} going
-                </Text>
+                <Pressable
+                  accessibilityLabel={`See everyone going — ${event.going} people`}
+                  accessibilityRole='button'
+                  className='flex-1'
+                  onPress={() => setAttendeesOpen(true)}
+                >
+                  <Text className='text-text-muted underline' size='sm'>
+                    {event.going} going
+                  </Text>
+                </Pressable>
                 <Pressable
                   accessibilityRole='button'
                   className={`rounded-full px-5 py-2.5 ${
@@ -301,6 +324,9 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                   comment={comment}
                   key={comment.id}
                   onActions={setActionsFor}
+                  onOpenAuthor={(authorId) =>
+                    openProfile(authorId, comment.author.name)
+                  }
                   onReply={handleReply}
                 />
               ))}
@@ -381,6 +407,44 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Attendee list */}
+      <Sheet onClose={() => setAttendeesOpen(false)} visible={attendeesOpen}>
+        <VStack className='gap-1 px-[18px] pb-4' space='xs'>
+          <Text className='pb-2 font-inter-bold text-[17px] text-content'>
+            {event?.going ?? 0} going
+          </Text>
+          {attendees.isPending ? (
+            <View className='items-center py-8'>
+              <Spinner />
+            </View>
+          ) : attendees.data && attendees.data.length > 0 ? (
+            <ScrollView contentContainerClassName='gap-1' style={{ maxHeight: 420 }}>
+              {attendees.data.map((attendee) => (
+                <Pressable
+                  accessibilityLabel={`Open ${attendee.name}'s profile`}
+                  accessibilityRole='button'
+                  className='flex-row items-center gap-3 py-2.5'
+                  key={attendee.id}
+                  onPress={() => {
+                    setAttendeesOpen(false);
+                    openProfile(attendee.id, attendee.name);
+                  }}
+                >
+                  <Avatar name={attendee.name} size='sm' src={attendee.avatarUrl ?? undefined} />
+                  <Text className='font-inter-medium text-[14px] text-content'>
+                    {attendee.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text className='py-2 text-text-muted' size='sm'>
+              No one has joined yet.
+            </Text>
+          )}
+        </VStack>
+      </Sheet>
 
       {/* Edit event sheet */}
       {event && (

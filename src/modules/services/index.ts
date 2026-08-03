@@ -1,4 +1,5 @@
 export { ServiceListingCard } from './service-listing-card';
+export { SERVICE_CATEGORY_LABEL } from './service-category';
 export { ServiceComposer } from './service-composer';
 export type { ServiceComposerDraft } from './service-composer';
 export { ServiceDetailScreen } from './service-detail-screen';

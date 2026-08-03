@@ -31,6 +31,10 @@ export function resolveMissionStatus(
   return entry.stopsDone >= mission.stopsTotal ? 'done' : 'active';
 }
 
+// The fallback branch is reachable when the author's account has since been
+// deleted (missions.created_by is orphaned rather than cascade-deleted, to
+// keep the mission itself around) — "Former member" reads correctly for any
+// viewer, unlike a name implying the viewer is the author.
 export const toAuthorRef = (
   users: readonly StoredUser[],
   authorId: string,
@@ -38,7 +42,7 @@ export const toAuthorRef = (
   const user = users.find((candidate) => candidate.id === authorId);
   return user
     ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id: authorId, name: 'You' };
+    : { avatarUrl: null, id: authorId, name: 'Former member' };
 };
 
 export function toMissionView(

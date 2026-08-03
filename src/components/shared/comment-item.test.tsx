@@ -13,11 +13,13 @@ const comment = {
 describe('CommentItem', () => {
   test('renders a complete comment and exposes its actions', async () => {
     const onActions = jest.fn();
+    const onOpenAuthor = jest.fn();
     const onReply = jest.fn();
     const view = await render(
       <CommentItem
         comment={comment}
         onActions={onActions}
+        onOpenAuthor={onOpenAuthor}
         onReply={onReply}
       />,
     );
@@ -27,8 +29,10 @@ describe('CommentItem', () => {
 
     await fireEvent.press(view.getByText('Reply'));
     await fireEvent.press(view.getByTestId('comment-actions-comment-1'));
+    await fireEvent.press(view.getByText('Mia Lake'));
 
     expect(onReply).toHaveBeenCalledWith('Mia Lake');
     expect(onActions).toHaveBeenCalledWith(comment);
+    expect(onOpenAuthor).toHaveBeenCalledWith('user-mia');
   });
 });

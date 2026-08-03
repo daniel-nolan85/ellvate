@@ -1,63 +1,53 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { Heading } from '@/src/components/ui/heading';
+import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { HStack } from '@/src/components/ui/hstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
-import {
-  PostCard,
-  useMyComments,
-  useMyPosts,
-  useToggleLike,
-  type ForumPost,
-  type MyComment,
-} from '@/src/modules/forum';
 import {
   EventSummaryCard,
-  useMyEventsView,
   type CommunityEvent,
 } from '@/src/modules/events';
-import { MissionCard, useMyMissionsView, type Mission } from '@/src/modules/missions';
+import { PostCard, useToggleLike, type ForumPost } from '@/src/modules/forum';
+import { MissionCard, type Mission } from '@/src/modules/missions';
+import { useMemberProfile } from '@/src/modules/profile';
 import {
   SERVICE_CATEGORY_LABEL,
   ServiceListingCard,
-  useMyServiceListingsView,
   type ServiceListing,
 } from '@/src/modules/services';
-import { useSession } from '@/src/platform/session';
 
 import {
   ActivityRow,
   EmptyHint,
   FilterChips,
-  LoadMoreRow,
   SectionCard,
   SectionHeader,
   StatBox,
   isActivityFilter,
   type ActivityFilter,
 } from './activity-parts';
+import { useMemberActivity } from './use-member-activity';
 
 const KIND_LABEL = {
-  event: 'You created an event',
-  mission: 'You created a mission',
-  post: 'You created a post',
-  service: 'You listed a service',
+  event: 'Created an event',
+  mission: 'Created a mission',
+  post: 'Posted in the forum',
+  service: 'Listed a service',
 } as const;
 
-const COMMENT_LABEL = 'You commented on a post';
-const MISSION_COMPLETED_LABEL = 'You completed a mission';
-const EVENT_GOING_LABEL = 'You marked going to an event';
+const COMMENT_LABEL = 'Commented on a post';
+const MISSION_COMPLETED_LABEL = 'Completed a mission';
+const EVENT_GOING_LABEL = 'Marked going to an event';
 
 interface PostActivityItem {
   readonly key: string;
@@ -68,16 +58,16 @@ interface PostActivityItem {
   readonly onPress: () => void;
 }
 
-interface MissionActivityItem {
-  readonly key: string;
-  readonly mission: Mission;
-  readonly completed: boolean;
-}
-
 interface EventActivityItem {
   readonly key: string;
   readonly event: CommunityEvent;
   readonly going: boolean;
+}
+
+interface MissionActivityItem {
+  readonly key: string;
+  readonly mission: Mission;
+  readonly completed: boolean;
 }
 
 interface ServiceActivityItem {
@@ -85,34 +75,25 @@ interface ServiceActivityItem {
   readonly listing: ServiceListing;
 }
 
-interface SearchableActivityItem {
-  readonly key: string;
-  readonly title: string;
-  readonly subtitle: string;
-  readonly onSelect: () => void;
+interface MemberActivityScreenProps {
+  readonly userId: string;
+  readonly loadingName?: string;
+  readonly filter?: string;
+  readonly onClose: () => void;
 }
 
-export function ActivityScreen() {
+export function MemberActivityScreen({
+  filter: filterParam,
+  loadingName,
+  onClose,
+  userId,
+}: MemberActivityScreenProps) {
   const insets = useSafeAreaInsets();
-  const session = useSession();
-  const userId = session.userId ?? 'demo-user';
-  const { filter: filterParam } = useLocalSearchParams<{ filter?: string }>();
-
-  // Each of these is already scoped server-side to the caller's own posts /
-  // events / missions (created or joined/completed) and paginated — not the
-  // whole community's feed filtered client-side.
-  const posts = useMyPosts();
-  const comments = useMyComments();
-  const events = useMyEventsView();
-  const missions = useMyMissionsView();
-  const services = useMyServiceListingsView();
+  const member = useMemberProfile(userId);
+  const activity = useMemberActivity(userId);
   const toggleLike = useToggleLike();
+  const displayName = member.data?.profile.name ?? loadingName ?? 'Neighbour';
 
-  // Lets a link (e.g. a tappable stat on the profile screen) land directly
-  // on one section — /activity?filter=event — instead of always opening on
-  // "All". Only read once on mount: this screen owns `filter` afterward, so
-  // the chips stay responsive rather than snapping back if the param is
-  // still present on a later re-render.
   const [filter, setFilter] = useState<ActivityFilter>(() =>
     isActivityFilter(filterParam) ? filterParam : 'all',
   );
@@ -121,9 +102,6 @@ export function ActivityScreen() {
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
 
-  // Close the open sheet first and let it slide down, then navigate once
-  // the close animation finishes — navigating immediately would unmount the
-  // screen (and the sheet with it) mid-animation.
   const closeThenNavigate = (
     path:
       | `/post/${string}`
@@ -138,33 +116,8 @@ export function ActivityScreen() {
     setTimeout(() => router.push(path), CLOSE_DURATION);
   };
 
-  const myPosts = useMemo(
-    (): readonly ForumPost[] =>
-      posts.data?.pages.flatMap((page) => page.posts) ?? [],
-    [posts.data],
-  );
-  const myComments = useMemo(
-    (): readonly MyComment[] => comments.data ?? [],
-    [comments.data],
-  );
-  const myEvents = useMemo(
-    (): readonly CommunityEvent[] =>
-      events.data?.pages.flatMap((page) => page.events) ?? [],
-    [events.data],
-  );
-  const myMissions = useMemo(
-    (): readonly Mission[] =>
-      missions.data?.pages.flatMap((page) => page.missions) ?? [],
-    [missions.data],
-  );
-  const myServiceListings = useMemo(
-    (): readonly ServiceListing[] =>
-      services.data?.pages.flatMap((page) => page.listings) ?? [],
-    [services.data],
-  );
-
-  const myPostItems = useMemo((): readonly PostActivityItem[] => {
-    const created = myPosts.map(
+  const postItems = useMemo((): readonly PostActivityItem[] => {
+    const created = (activity.data?.posts ?? []).map(
       (post): PostActivityItem => ({
         createdAt: post.createdAt,
         key: `post-${post.id}`,
@@ -174,7 +127,7 @@ export function ActivityScreen() {
         title: post.title,
       }),
     );
-    const commented = myComments.map(
+    const commented = (activity.data?.comments ?? []).map(
       (comment): PostActivityItem => ({
         createdAt: comment.createdAt,
         key: `comment-${comment.id}`,
@@ -187,105 +140,75 @@ export function ActivityScreen() {
     return [...created, ...commented].sort(
       (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
     );
-  }, [myPosts, myComments]);
-  const myEventItems = useMemo(
+  }, [activity.data]);
+
+  const eventItems = useMemo(
     (): readonly EventActivityItem[] =>
-      myEvents.map(
+      (activity.data?.events ?? []).map(
         (event): EventActivityItem => ({
           event,
           going: event.author.id !== userId && event.joined,
           key: event.id,
         }),
       ),
-    [myEvents, userId],
+    [activity.data, userId],
   );
-  const myMissionItems = useMemo(
+
+  const missionItems = useMemo(
     (): readonly MissionActivityItem[] =>
-      myMissions.map(
+      (activity.data?.missions ?? []).map(
         (mission): MissionActivityItem => ({
           completed: mission.status === 'done',
           key: mission.id,
           mission,
         }),
       ),
-    [myMissions],
+    [activity.data],
   );
 
-  const myServiceItems = useMemo(
+  const serviceItems = useMemo(
     (): readonly ServiceActivityItem[] =>
-      myServiceListings.map(
+      (activity.data?.services ?? []).map(
         (listing): ServiceActivityItem => ({ key: listing.id, listing }),
       ),
-    [myServiceListings],
+    [activity.data],
   );
 
-  const isPending =
-    posts.isPending ||
-    comments.isPending ||
-    events.isPending ||
-    missions.isPending ||
-    services.isPending;
   const hasAnything =
-    myPostItems.length > 0 ||
-    myEventItems.length > 0 ||
-    myMissionItems.length > 0 ||
-    myServiceItems.length > 0;
+    postItems.length > 0 ||
+    eventItems.length > 0 ||
+    missionItems.length > 0 ||
+    serviceItems.length > 0;
 
   const showPosts = filter === 'all' || filter === 'post';
   const showEvents = filter === 'all' || filter === 'event';
   const showMissions = filter === 'all' || filter === 'mission';
   const showServices = filter === 'all' || filter === 'service';
 
-  const [isSearching, setIsSearching] = useState(false);
-  const searchItems = useMemo(
-    (): readonly SearchableActivityItem[] => [
-      ...myPostItems.map(
-        (item): SearchableActivityItem => ({
-          key: item.key,
-          onSelect: item.onPress,
-          subtitle: item.label,
-          title: item.title,
-        }),
-      ),
-      ...myEventItems.map(
-        ({ event, key }): SearchableActivityItem => ({
-          key,
-          onSelect: () => setOpenEvent(event),
-          subtitle: `${event.dayLabel} ${event.dateLabel}`,
-          title: event.title,
-        }),
-      ),
-      ...myMissionItems.map(
-        ({ key, mission }): SearchableActivityItem => ({
-          key,
-          onSelect: () => setOpenMission(mission),
-          subtitle: KIND_LABEL.mission,
-          title: mission.title,
-        }),
-      ),
-      ...myServiceItems.map(
-        ({ key, listing }): SearchableActivityItem => ({
-          key,
-          onSelect: () => setOpenService(listing),
-          subtitle: KIND_LABEL.service,
-          title: listing.businessName,
-        }),
-      ),
-    ],
-    [myPostItems, myEventItems, myMissionItems, myServiceItems],
-  );
-
   return (
     <View className="flex-1 bg-canvas">
-      <View style={{ paddingTop: insets.top }}>
-        <ScreenTitle
-          eyebrow="Your history"
-          onSearch={() => setIsSearching(true)}
-          title="My Activity"
-        />
-      </View>
+      <HStack
+        className="items-center justify-between px-5 pb-3"
+        style={{ paddingTop: insets.top + 12 }}
+      >
+        <VStack>
+          <Text className="text-text-muted" size="xs">
+            Activity
+          </Text>
+          <Heading className="font-inter-bold" size="xl">
+            {displayName}
+          </Heading>
+        </VStack>
+        <Pressable
+          accessibilityLabel="Close"
+          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
+          onPress={onClose}
+        >
+          <Icon name="Close" size={18} />
+        </Pressable>
+      </HStack>
 
-      {isPending ? (
+      {activity.isPending ? (
         <VStack className="items-center py-16">
           <Spinner size="large" />
         </VStack>
@@ -293,30 +216,30 @@ export function ActivityScreen() {
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
           <Icon name="Star" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
-            Nothing here yet — posts, events, missions, and services you
-            create will show up in one place.
+            {displayName} hasn&apos;t posted, joined an event, or listed
+            anything yet.
           </Text>
         </VStack>
       ) : (
         <>
           <HStack className="px-5 pb-3" space="sm">
-            <StatBox label="Posts" value={myPostItems.length} />
-            <StatBox label="Events" value={myEventItems.length} />
-            <StatBox label="Missions" value={myMissionItems.length} />
-            <StatBox label="Services" value={myServiceItems.length} />
+            <StatBox label="Posts" value={postItems.length} />
+            <StatBox label="Events" value={eventItems.length} />
+            <StatBox label="Missions" value={missionItems.length} />
+            <StatBox label="Services" value={serviceItems.length} />
           </HStack>
 
           <FilterChips active={filter} onSelect={setFilter} />
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
             {showPosts ? (
               <>
-                <SectionHeader count={myPostItems.length} title="Posts" />
-                {myPostItems.length === 0 ? (
-                  <EmptyHint label="You haven't posted or commented in the forum yet." />
+                <SectionHeader count={postItems.length} title="Posts" />
+                {postItems.length === 0 ? (
+                  <EmptyHint label="No posts or comments yet." />
                 ) : (
                   <SectionCard>
-                    {myPostItems.map((item) => (
+                    {postItems.map((item) => (
                       <ActivityRow
                         key={item.key}
                         kind="post"
@@ -326,12 +249,6 @@ export function ActivityScreen() {
                         title={item.title}
                       />
                     ))}
-                    {posts.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={posts.isFetchingNextPage}
-                        onPress={() => void posts.fetchNextPage()}
-                      />
-                    ) : null}
                   </SectionCard>
                 )}
               </>
@@ -339,12 +256,12 @@ export function ActivityScreen() {
 
             {showEvents ? (
               <>
-                <SectionHeader count={myEventItems.length} title="Events" />
-                {myEventItems.length === 0 ? (
-                  <EmptyHint label="You haven't created or gone to an event yet." />
+                <SectionHeader count={eventItems.length} title="Events" />
+                {eventItems.length === 0 ? (
+                  <EmptyHint label="No events created or joined yet." />
                 ) : (
                   <SectionCard>
-                    {myEventItems.map(({ event, going, key }) => (
+                    {eventItems.map(({ event, going, key }) => (
                       <ActivityRow
                         key={key}
                         kind="event"
@@ -354,12 +271,6 @@ export function ActivityScreen() {
                         title={event.title}
                       />
                     ))}
-                    {events.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={events.isFetchingNextPage}
-                        onPress={() => void events.fetchNextPage()}
-                      />
-                    ) : null}
                   </SectionCard>
                 )}
               </>
@@ -367,12 +278,12 @@ export function ActivityScreen() {
 
             {showMissions ? (
               <>
-                <SectionHeader count={myMissionItems.length} title="Missions" />
-                {myMissionItems.length === 0 ? (
-                  <EmptyHint label="You haven't created or completed a mission yet." />
+                <SectionHeader count={missionItems.length} title="Missions" />
+                {missionItems.length === 0 ? (
+                  <EmptyHint label="No missions created or completed yet." />
                 ) : (
                   <SectionCard>
-                    {myMissionItems.map(({ completed, key, mission }) => (
+                    {missionItems.map(({ completed, key, mission }) => (
                       <ActivityRow
                         key={key}
                         kind="mission"
@@ -386,12 +297,6 @@ export function ActivityScreen() {
                         title={mission.title}
                       />
                     ))}
-                    {missions.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={missions.isFetchingNextPage}
-                        onPress={() => void missions.fetchNextPage()}
-                      />
-                    ) : null}
                   </SectionCard>
                 )}
               </>
@@ -399,12 +304,12 @@ export function ActivityScreen() {
 
             {showServices ? (
               <>
-                <SectionHeader count={myServiceItems.length} title="Services" />
-                {myServiceItems.length === 0 ? (
-                  <EmptyHint label="You haven't listed a service yet." />
+                <SectionHeader count={serviceItems.length} title="Services" />
+                {serviceItems.length === 0 ? (
+                  <EmptyHint label="No services listed yet." />
                 ) : (
                   <SectionCard>
-                    {myServiceItems.map(({ key, listing }) => (
+                    {serviceItems.map(({ key, listing }) => (
                       <ActivityRow
                         key={key}
                         kind="service"
@@ -414,12 +319,6 @@ export function ActivityScreen() {
                         title={listing.businessName}
                       />
                     ))}
-                    {services.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={services.isFetchingNextPage}
-                        onPress={() => void services.fetchNextPage()}
-                      />
-                    ) : null}
                   </SectionCard>
                 )}
               </>
@@ -472,19 +371,6 @@ export function ActivityScreen() {
           </View>
         ) : null}
       </Sheet>
-
-      <SearchSheet
-        getKey={(item) => item.key}
-        getSubtitle={(item) => item.subtitle}
-        getTitle={(item) => item.title}
-        items={searchItems}
-        onClose={() => setIsSearching(false)}
-        onSelect={(item) => item.onSelect()}
-        placeholder="Search your activity"
-        visible={isSearching}
-      />
-
-      <CommunityNavBar />
     </View>
   );
 }

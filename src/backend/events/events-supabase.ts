@@ -380,6 +380,62 @@ export async function getEventsByIdsSupabase(
   );
 }
 
+// Uncapped roster for the "N going" attendee-list modal — unlike the
+// preview stack baked into toCommunityEvent (limited to ATTENDEE_LIMIT),
+// this returns everyone. Returns null when the event doesn't exist.
+export async function getEventAttendeesSupabase(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<readonly PersonRef[] | null> {
+  const { data: eventRow, error: eventError } = await supabase
+    .from('events')
+    .select('id,seed_attendee_ids')
+    .eq('id', eventId)
+    .maybeSingle();
+  throwIfSupabaseError(eventError, 'load event');
+  if (!eventRow) {
+    return null;
+  }
+
+  const { data: joinsData, error: joinsError } = await supabase
+    .from('event_joins')
+    .select('user_id')
+    .eq('event_id', eventId);
+  throwIfSupabaseError(joinsError, 'load event joins');
+  const joinedIds = ((joinsData ?? []) as { user_id: string }[]).map(
+    (row) => row.user_id,
+  );
+
+  const attendeeIds = uniqueIds([
+    ...(eventRow.seed_attendee_ids as readonly string[]),
+    ...joinedIds,
+  ]);
+  if (attendeeIds.length === 0) {
+    return [];
+  }
+
+  const { data: userData, error: userError } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .in('id', [...attendeeIds]);
+  throwIfSupabaseError(userError, 'load event attendee users');
+  const byId = new Map(
+    (userData ?? []).map((row) => [row.id as string, row]),
+  );
+  return attendeeIds.flatMap((id) => {
+    const row = byId.get(id);
+    return row
+      ? [
+          {
+            avatarUrl: (row.avatar_url as string | null) ?? null,
+            id,
+            name: row.name as string,
+          },
+        ]
+      : [];
+  });
+}
+
 export async function createEventSupabase(
   supabase: SupabaseClient,
   userId: string,

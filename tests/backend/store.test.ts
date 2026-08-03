@@ -184,6 +184,7 @@ describe('seed data', () => {
         digest: false,
       },
       onboardedAt: null,
+      activityVisible: false,
     });
   });
 });

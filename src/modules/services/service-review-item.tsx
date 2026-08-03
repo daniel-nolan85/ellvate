@@ -31,18 +31,34 @@ function StarRow({ rating }: { readonly rating: number }) {
 interface ServiceReviewItemProps {
   readonly review: ServiceReview;
   readonly onActions?: (review: ServiceReview) => void;
+  readonly onOpenAuthor: (authorId: string, name: string) => void;
 }
 
-export function ServiceReviewItem({ review, onActions }: ServiceReviewItemProps) {
+export function ServiceReviewItem({
+  onActions,
+  onOpenAuthor,
+  review,
+}: ServiceReviewItemProps) {
   return (
     <HStack className="gap-3" testID={`service-review-${review.id}`}>
-      <Avatar name={review.author.name} size="sm" src={review.author.avatarUrl ?? undefined} />
+      <Pressable
+        accessibilityLabel={`Open ${review.author.name}'s profile`}
+        accessibilityRole="button"
+        hitSlop={4}
+        onPress={() => onOpenAuthor(review.author.id, review.author.name)}
+      >
+        <Avatar name={review.author.name} size="sm" src={review.author.avatarUrl ?? undefined} />
+      </Pressable>
       <VStack className="flex-1 gap-1">
         <HStack className="items-center justify-between">
           <VStack className="gap-0.5">
-            <Text className="font-inter-semibold text-[13px] text-content">
-              {review.author.name}
-            </Text>
+            <Pressable
+              onPress={() => onOpenAuthor(review.author.id, review.author.name)}
+            >
+              <Text className="font-inter-semibold text-[13px] text-content">
+                {review.author.name}
+              </Text>
+            </Pressable>
             <StarRow rating={review.rating} />
           </VStack>
           <HStack className="items-center gap-2">

@@ -3,7 +3,6 @@ import { Modal, Pressable, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
@@ -18,6 +17,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
+import { useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -86,6 +86,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   const session = useSession();
   const currentUserId = session.userId ?? 'demo-user';
   const isOwnPost = currentUserId === post.author.id;
+  const openProfile = useOpenProfile();
 
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
@@ -117,17 +118,6 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   const handleShare = () => {
     void Share.share({
       message: `${post.title}\n\n${post.excerpt}`,
-    });
-  };
-
-  const openAuthorProfile = () => {
-    if (isOwnPost) {
-      router.push('/profile');
-      return;
-    }
-    router.push({
-      params: { name: post.author.name, userId: post.author.id },
-      pathname: '/member/[userId]',
     });
   };
 
@@ -229,7 +219,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
             hitSlop={4}
             onPress={(event) => {
               event.stopPropagation();
-              openAuthorProfile();
+              openProfile(post.author.id, post.author.name);
             }}
           >
             <Avatar name={post.author.name} size='sm' src={post.author.avatarUrl ?? undefined} />

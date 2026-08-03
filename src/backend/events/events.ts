@@ -7,6 +7,7 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import {
   createEventSupabase,
   deleteEventSupabase,
+  getEventAttendeesSupabase,
   getEventsByIdsSupabase,
   getEventsViewSupabase,
   getMyEventsViewSupabase,
@@ -39,6 +40,10 @@ const byFeaturedThenStartsAt = (a: StoredEvent, b: StoredEvent): number => {
   return Date.parse(a.startsAt) - Date.parse(b.startsAt);
 };
 
+const uniqueIds = (ids: readonly string[]): readonly string[] => [
+  ...new Set(ids),
+];
+
 const toPersonRefs = (
   attendeeIds: readonly string[],
   users: readonly StoredUser[],
@@ -50,6 +55,10 @@ const toPersonRefs = (
       : [];
   });
 
+// The fallback branch is reachable when the author's account has since been
+// deleted (events.created_by is orphaned rather than cascade-deleted, to
+// keep the event itself around) — "Former member" reads correctly for any
+// viewer, unlike a name implying the viewer is the author.
 const toAuthorRef = (
   users: readonly StoredUser[],
   authorId: string,
@@ -57,8 +66,13 @@ const toAuthorRef = (
   const user = users.find((candidate) => candidate.id === authorId);
   return user
     ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id: authorId, name: 'You' };
+    : { avatarUrl: null, id: authorId, name: 'Former member' };
 };
+
+// Mirrors events-supabase.ts's ATTENDEE_LIMIT — cap the avatar stack to a
+// few faces (seed attendees plus joined users); the full roster is
+// available uncapped via getEventAttendees.
+const ATTENDEE_LIMIT = 6;
 
 const toCommunityEvent = (
   event: StoredEvent,
@@ -78,7 +92,13 @@ const toCommunityEvent = (
   featured: event.featured,
   going: event.going,
   joined: event.joinedBy.includes(userId),
-  attendees: toPersonRefs(event.attendeeIds, users),
+  attendees: toPersonRefs(
+    uniqueIds([...event.attendeeIds, ...event.joinedBy]).slice(
+      0,
+      ATTENDEE_LIMIT,
+    ),
+    users,
+  ),
 });
 
 // Events from earlier calendar days are hidden from the main "Coming up"
@@ -104,6 +124,22 @@ function getEventsViewMemory(userId: string): EventsView {
       .sort(byFeaturedThenStartsAt)
       .map((event) => toCommunityEvent(event, userId, users)),
   };
+}
+
+// Uncapped roster for the "N going" attendee-list modal — unlike the
+// preview stack baked into toCommunityEvent, this returns everyone.
+function getEventAttendeesMemory(
+  eventId: string,
+): readonly PersonRef[] | null {
+  const { events, users } = getState();
+  const event = events.find((candidate) => candidate.id === eventId);
+  if (!event) {
+    return null;
+  }
+  return toPersonRefs(
+    uniqueIds([...event.attendeeIds, ...event.joinedBy]),
+    users,
+  );
 }
 
 // Fetches specific events by id — used to hydrate bookmarks, which can point
@@ -294,6 +330,15 @@ export async function getEventsView(ctx: RequestContext): Promise<EventsView> {
   return ctx.supabase
     ? getEventsViewSupabase(ctx.supabase, ctx.userId)
     : getEventsViewMemory(ctx.userId);
+}
+
+export async function getEventAttendees(
+  ctx: RequestContext,
+  eventId: string,
+): Promise<readonly PersonRef[] | null> {
+  return ctx.supabase
+    ? getEventAttendeesSupabase(ctx.supabase, eventId)
+    : getEventAttendeesMemory(eventId);
 }
 
 export async function getEventsByIds(

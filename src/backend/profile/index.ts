@@ -5,8 +5,9 @@ export type {
   UpdateProfileSuccess,
   UserProfile,
 } from './profile';
-export { getPublicProfile } from './public-profile';
+export { getMemberActivitySharing, getPublicProfile } from './public-profile';
 export type {
+  MemberActivitySharing,
   PublicMemberRow,
   PublicMemberStats,
   PublicMemberSummary,
