@@ -81,6 +81,7 @@ const toCommunityEvent = (
 ): CommunityEvent => ({
   id: event.id,
   author: toAuthorRef(users, event.authorId),
+  editedAt: event.editedAt,
   startsAt: event.startsAt,
   timeLabel: event.timeLabel,
   dayLabel: event.dayLabel,
@@ -191,6 +192,7 @@ function createEventMemory(userId: string, input: unknown): CreateEventResult {
     timeLabel: value.timeLabel,
     dayLabel: value.dayLabel,
     dateLabel: value.dateLabel,
+    editedAt: null,
     title: value.title,
     place: value.place,
     tag: value.tag,
@@ -252,6 +254,7 @@ function updateEventMemory(
             timeLabel: value.timeLabel,
             dayLabel: value.dayLabel,
             dateLabel: value.dateLabel,
+            editedAt: new Date().toISOString(),
             title: value.title,
             place: value.place,
             tag: value.tag,

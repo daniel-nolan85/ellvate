@@ -55,6 +55,27 @@ export function useCreateEventComment(eventId: string) {
   });
 }
 
+export function useUpdateEventComment(eventId: string) {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+      requestJson<CreateEventCommentResponse>({
+        body: { body },
+        getAccessToken: session.getToken,
+        method: 'PATCH',
+        path: `/api/event-comments/${commentId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['events', 'comments', userId, eventId],
+      });
+    },
+  });
+}
+
 export function useDeleteEventComment(eventId: string) {
   const session = useSession();
   const queryClient = useQueryClient();

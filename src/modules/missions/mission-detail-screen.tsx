@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
@@ -37,6 +38,7 @@ import {
   useDeleteMissionComment,
   useMissionComments,
   useReportMissionComment,
+  useUpdateMissionComment,
   type MissionComment,
 } from './use-mission-comments';
 import {
@@ -106,6 +108,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const deleteMission = useDeleteMission();
   const comments = useMissionComments(missionId);
   const createComment = useCreateMissionComment(missionId);
+  const updateComment = useUpdateMissionComment(missionId);
   const deleteComment = useDeleteMissionComment(missionId);
   const reportComment = useReportMissionComment();
 
@@ -115,7 +118,11 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [editingComment, setEditingComment] = useState<MissionComment | null>(null);
   const [actionsFor, setActionsFor] = useState<MissionComment | null>(null);
+  const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
+  const [commentPendingDelete, setCommentPendingDelete] =
+    useState<MissionComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const mission = useMemo(
@@ -162,6 +169,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   };
 
   const handleReply = (name: string) => {
+    setEditingComment(null);
     setReplyTo(name);
     setDraft((current) => (current.length === 0 ? `@${name} ` : current));
   };
@@ -171,6 +179,20 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
     if (!body) {
       return;
     }
+    if (editingComment) {
+      updateComment.mutate(
+        { body, commentId: editingComment.id },
+        {
+          onSuccess: () => {
+            setDraft('');
+            setEditingComment(null);
+            void Haptics.selectionAsync();
+          },
+          onError: () => showToast("Couldn't save your changes. Try again."),
+        },
+      );
+      return;
+    }
     createComment.mutate(body, {
       onSuccess: () => {
         setDraft('');
@@ -178,6 +200,44 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         void Haptics.selectionAsync();
       },
       onError: () => showToast('Couldn’t post your comment. Try again.'),
+    });
+  };
+
+  const openCommentActions = (comment: MissionComment) => {
+    setActionsFor(comment);
+    setActionsSheetOpen(true);
+  };
+
+  const closeCommentActions = () => setActionsSheetOpen(false);
+
+  const handleStartEditComment = (comment: MissionComment) => {
+    setActionsSheetOpen(false);
+    setReplyTo(null);
+    setEditingComment(comment);
+    setDraft(comment.body);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingComment(null);
+    setDraft('');
+  };
+
+  const handleRequestDeleteComment = () => {
+    const target = actionsFor;
+    setActionsSheetOpen(false);
+    if (target) {
+      setCommentPendingDelete(target);
+    }
+  };
+
+  const confirmDeleteComment = () => {
+    const target = commentPendingDelete;
+    setCommentPendingDelete(null);
+    if (!target) {
+      return;
+    }
+    deleteComment.mutate(target.id, {
+      onError: () => showToast('Couldn’t delete this comment. Try again.'),
     });
   };
 
@@ -267,9 +327,12 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               <Badge variant={badge.variant}>{badge.label}</Badge>
             </HStack>
 
-            <Heading className='font-inter-bold text-[22px]' size='lg'>
-              {mission.title}
-            </Heading>
+            <HStack className='items-center gap-1.5'>
+              <Heading className='font-inter-bold text-[22px]' size='lg'>
+                {mission.title}
+              </Heading>
+              <EditedMark editedAt={mission.editedAt} />
+            </HStack>
             <Text className='text-[15px] leading-[22px] text-muted-foreground'>
               {mission.description}
             </Text>
@@ -372,7 +435,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               <CommentItem
                 comment={comment}
                 key={comment.id}
-                onActions={setActionsFor}
+                onActions={openCommentActions}
                 onOpenAuthor={(authorId) =>
                   openProfile(authorId, comment.author.name)
                 }
@@ -384,7 +447,9 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         </ScrollView>
 
         <CommentComposer
-          isSending={createComment.isPending}
+          editing={editingComment !== null}
+          isSending={editingComment ? updateComment.isPending : createComment.isPending}
+          onCancelEdit={handleCancelEditComment}
           onChangeText={setDraft}
           onClearReply={() => setReplyTo(null)}
           onSend={handleSend}
@@ -493,13 +558,13 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
       {/* Comment actions */}
       <Modal
         animationType='fade'
-        onRequestClose={() => setActionsFor(null)}
+        onRequestClose={closeCommentActions}
         transparent
-        visible={actionsFor !== null}
+        visible={actionsSheetOpen}
       >
         <Pressable
           className='flex-1 bg-[rgba(0,0,0,0.4)]'
-          onPress={() => setActionsFor(null)}
+          onPress={closeCommentActions}
         />
         <View
           className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5'
@@ -507,16 +572,20 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         >
           <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />
           {actionsFor && actionsFor.author.id === userId ? (
-            <MissionMenuRow
-              destructive
-              icon='AlertCircle'
-              label='Delete comment'
-              onPress={() => {
-                const target = actionsFor;
-                setActionsFor(null);
-                deleteComment.mutate(target.id);
-              }}
-            />
+            <>
+              <MissionMenuRow
+                icon='Edit'
+                label='Edit comment'
+                onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+              />
+              <Divider />
+              <MissionMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Delete comment'
+                onPress={handleRequestDeleteComment}
+              />
+            </>
           ) : (
             <MissionMenuRow
               destructive
@@ -524,7 +593,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               label='Report comment'
               onPress={() => {
                 const target = actionsFor;
-                setActionsFor(null);
+                closeCommentActions();
                 if (!target) return;
                 reportComment.mutate(target.id, {
                   onError: () =>
@@ -536,6 +605,46 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
             />
           )}
         </View>
+      </Modal>
+
+      {/* Delete-comment confirmation */}
+      <Modal
+        animationType='fade'
+        onRequestClose={() => setCommentPendingDelete(null)}
+        transparent
+        visible={commentPendingDelete !== null}
+      >
+        <Pressable
+          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
+          onPress={() => setCommentPendingDelete(null)}
+        >
+          <Pressable
+            className='w-full gap-1 rounded-[20px] bg-paper p-5'
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text className='font-inter-bold text-[17px] text-content'>
+              Delete comment?
+            </Text>
+            <Text className='pb-3 text-text-muted' size='sm'>
+              This can’t be undone.
+            </Text>
+            <HStack className='justify-end gap-3'>
+              <Pressable onPress={() => setCommentPendingDelete(null)}>
+                <Text className='font-inter-semibold text-[15px] text-content'>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable onPress={confirmDeleteComment}>
+                <Text
+                  className='font-inter-semibold text-[15px]'
+                  style={{ color: 'rgb(231,0,11)' }}
+                >
+                  Delete
+                </Text>
+              </Pressable>
+            </HStack>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {toast ? (

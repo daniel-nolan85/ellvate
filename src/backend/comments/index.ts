@@ -4,6 +4,7 @@ export {
   listComments,
   listMyComments,
   reportComment,
+  updateComment,
 } from './comments';
 export type {
   Comment,
@@ -11,5 +12,6 @@ export type {
   MyComment,
   PersonRef,
   ReportCommentResult,
+  UpdateCommentResult,
 } from './types';
 export { validateCommentBody } from './validation';

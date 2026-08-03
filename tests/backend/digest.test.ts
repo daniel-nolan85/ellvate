@@ -26,6 +26,7 @@ function makePost(overrides: Partial<StoredPost> & { readonly id: string }): Sto
   return {
     authorId: 'user-jordan',
     createdAt: IN_WEEK,
+    editedAt: null,
     excerpt: 'x',
     forum: 'All',
     likedBy: [],
@@ -42,6 +43,7 @@ function makeEvent(overrides: Partial<StoredEvent> & { readonly id: string }): S
     authorId: 'user-hoa',
     dateLabel: 'Jan 7',
     dayLabel: 'WED',
+    editedAt: null,
     featured: false,
     going: 0,
     joinedBy: [],
@@ -60,6 +62,7 @@ function makeMission(
   return {
     authorId: 'user-hoa',
     description: 'x',
+    editedAt: null,
     icon: 'Star',
     progressByUser: {},
     scheduledFor: null,
@@ -161,6 +164,7 @@ describe('getWeeklyDigest', () => {
       authorId: 'user-riley',
       body: 'nice',
       createdAt: IN_WEEK,
+      editedAt: null,
       id: 'comment-1',
       postId: 'post-in',
     };

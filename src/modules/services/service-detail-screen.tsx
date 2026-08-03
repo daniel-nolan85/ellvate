@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
@@ -243,9 +244,12 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               )}
             </HStack>
 
-            <Heading className="font-inter-bold text-[22px]" size="lg">
-              {listing.businessName}
-            </Heading>
+            <HStack className="items-center gap-1.5">
+              <Heading className="font-inter-bold text-[22px]" size="lg">
+                {listing.businessName}
+              </Heading>
+              <EditedMark editedAt={listing.editedAt} />
+            </HStack>
             <Text className="text-[15px] leading-[22px] text-muted-foreground">
               {listing.description}
             </Text>

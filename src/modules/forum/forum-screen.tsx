@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
@@ -12,7 +12,9 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
+import { useProfile } from '@/src/modules/profile';
 
+import { subforumsForInterests } from './interest-subforum-map';
 import { PinExplainerModal } from './pin-explainer-modal';
 import { PostCard } from './post-card';
 import { PostComposer, type PostComposerDraft } from './post-composer';
@@ -27,6 +29,7 @@ import {
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 const FALLBACK_SUBFORUMS: readonly string[] = ['All'];
+const FOR_YOU = 'For You';
 
 interface ForumScreenProps {
   readonly onOpenPost?: (postId: string) => void;
@@ -37,16 +40,37 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   const [isComposing, setIsComposing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const subforums = useSubforums();
-  const posts = useForumPosts(activeForum);
+  const profile = useProfile();
+  // "For You" is a client-side filter over the same fetch as "All" — no
+  // backend query param, since it can match posts across several subforums
+  // at once (one per mapped interest) rather than a single forum name.
+  const posts = useForumPosts(activeForum === FOR_YOU ? 'All' : activeForum);
   const toggleLike = useToggleLike();
   const createPost = useCreatePost();
   const pinAction = usePinAction();
 
+  const interestSubforums = useMemo(
+    () => subforumsForInterests(profile.data?.profile.interests ?? []),
+    [profile.data],
+  );
+  // Show the chip whenever the user has picked any interests, even if none
+  // of them map to a subforum — the "no posts match" empty state already
+  // covers that case honestly, rather than hiding the tab with no explanation.
+  const showForYou = (profile.data?.profile.interests.length ?? 0) > 0;
+
   const subforumNames = subforums.data?.subforums ?? FALLBACK_SUBFORUMS;
+  const chipNames = showForYou ? [FOR_YOU, ...subforumNames] : subforumNames;
   const composerForum =
-    activeForum === 'All'
+    activeForum === 'All' || activeForum === FOR_YOU
       ? (subforumNames.find((name) => name !== 'All') ?? 'Announcements')
       : activeForum;
+
+  const displayedPosts = useMemo(() => {
+    const all = posts.data?.posts ?? [];
+    return activeForum === FOR_YOU
+      ? all.filter((post) => interestSubforums.has(post.forum))
+      : all;
+  }, [posts.data, activeForum, interestSubforums]);
 
   const handleCreatePost = (draft: PostComposerDraft) => {
     createPost.mutate(
@@ -98,7 +122,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         <SubforumChips
           active={activeForum}
           onSelect={setActiveForum}
-          subforums={subforumNames}
+          subforums={chipNames}
         />
         {posts.isPending ? (
           <VStack className="items-center py-16">
@@ -121,24 +145,26 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
               </ButtonText>
             </Button>
           </VStack>
-        ) : posts.data.posts.length === 0 ? (
+        ) : displayedPosts.length === 0 ? (
           <VStack className="items-center px-10 py-16" space="xs">
             <Icon color="rgb(169,156,139)" name="MessageCircle" size={28} />
             <Text className="text-center font-inter-semibold text-content" size="sm">
               No posts here yet
             </Text>
             <Text className="text-center text-text-muted" size="xs">
-              Be the first to start a conversation in {activeForum}.
+              {activeForum === FOR_YOU
+                ? 'No posts match your interests yet.'
+                : `Be the first to start a conversation in ${activeForum}.`}
             </Text>
           </VStack>
         ) : (
           <VStack className="px-5" space="sm">
-            {posts.data.posts.map((post) => (
+            {displayedPosts.map((post) => (
               <PostCard
                 key={post.id}
                 onOpen={() => onOpenPost?.(post.id)}
                 onToggleLike={() =>
-                  toggleLike.mutate({ forum: activeForum, postId: post.id })
+                  toggleLike.mutate({ forum: post.forum, postId: post.id })
                 }
                 pinAction={pinAction}
                 post={post}
@@ -169,7 +195,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         getKey={(post) => post.id}
         getSubtitle={(post) => post.forum}
         getTitle={(post) => post.title}
-        items={posts.data?.posts ?? []}
+        items={displayedPosts}
         onClose={() => setIsSearching(false)}
         onSelect={(post) => onOpenPost?.(post.id)}
         placeholder="Search posts"

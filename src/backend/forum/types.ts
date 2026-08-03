@@ -14,6 +14,7 @@ export interface ForumPost {
   readonly forum: string;
   readonly author: PersonRef;
   readonly createdAt: string;
+  readonly editedAt: string | null;
   readonly title: string;
   readonly excerpt: string;
   readonly media?: readonly Media[];

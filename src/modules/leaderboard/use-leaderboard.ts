@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
+export type LeaderboardRange = 'week' | 'month' | 'all';
+
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
@@ -22,7 +24,7 @@ interface LeaderboardResponse {
   readonly leaders: readonly LeaderboardEntry[];
 }
 
-export function useLeaderboard() {
+export function useLeaderboard(range: LeaderboardRange) {
   const session = useSession();
 
   return useQuery({
@@ -32,9 +34,9 @@ export function useLeaderboard() {
     },
     queryFn: ({ signal }) => requestJson<LeaderboardResponse>({
       getAccessToken: () => session.getToken(),
-      path: '/api/leaderboard',
+      path: `/api/leaderboard?range=${range}`,
       signal,
     }),
-    queryKey: ['leaderboard', 'list', session.userId ?? 'demo-user'],
+    queryKey: ['leaderboard', 'list', session.userId ?? 'demo-user', range],
   });
 }

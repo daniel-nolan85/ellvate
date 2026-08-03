@@ -59,6 +59,27 @@ export function useCreateComment(postId: string) {
   });
 }
 
+export function useUpdateComment(postId: string) {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+      requestJson<CreateCommentResponse>({
+        body: { body },
+        getAccessToken: session.getToken,
+        method: 'PATCH',
+        path: `/api/comments/${commentId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'comments', userId, postId],
+      });
+    },
+  });
+}
+
 export function useDeleteComment(postId: string) {
   const session = useSession();
   const queryClient = useQueryClient();

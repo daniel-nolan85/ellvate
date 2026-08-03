@@ -71,6 +71,7 @@ const toServiceReview = (
   author: authorRef(users, stored.authorId),
   body: stored.body,
   createdAt: stored.createdAt,
+  editedAt: stored.editedAt,
   id: stored.id,
   listingId: stored.listingId,
   rating: stored.rating,
@@ -142,6 +143,7 @@ function createServiceReviewMemory(
     authorId: userId,
     body: bodyValidation.body,
     createdAt: new Date().toISOString(),
+    editedAt: null,
     id: `svc-review-${crypto.randomUUID()}`,
     listingId,
     rating,
@@ -191,7 +193,12 @@ function updateServiceReviewMemory(
     ...current,
     serviceReviews: current.serviceReviews.map((review) =>
       review.id === reviewId
-        ? { ...review, body: bodyValidation.body, rating }
+        ? {
+            ...review,
+            body: bodyValidation.body,
+            rating,
+            editedAt: new Date().toISOString(),
+          }
         : review,
     ),
   }));

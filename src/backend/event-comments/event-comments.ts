@@ -13,12 +13,14 @@ import {
   deleteEventCommentSupabase,
   listEventCommentsSupabase,
   reportEventCommentSupabase,
+  updateEventCommentSupabase,
 } from './event-comments-supabase';
 import type {
   CreateEventCommentResult,
   EventComment,
   PersonRef,
   ReportEventCommentResult,
+  UpdateEventCommentResult,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -39,6 +41,7 @@ const toEventComment = (
   author: authorRef(users, stored.authorId),
   body: stored.body,
   createdAt: stored.createdAt,
+  editedAt: stored.editedAt,
   eventId: stored.eventId,
   id: stored.id,
 });
@@ -69,6 +72,7 @@ function createEventCommentMemory(
     authorId: userId,
     body: validation.body,
     createdAt: new Date().toISOString(),
+    editedAt: null,
     eventId,
     id: `event-comment-${crypto.randomUUID()}`,
   };
@@ -90,6 +94,48 @@ function createEventCommentMemory(
     );
   }
   return { comment: toEventComment(stored, next.users), ok: true };
+}
+
+function updateEventCommentMemory(
+  userId: string,
+  commentId: string,
+  input: unknown,
+): UpdateEventCommentResult {
+  const existing = getState().eventComments.find(
+    (comment) => comment.id === commentId,
+  );
+  if (!existing) {
+    return {
+      code: 'event_comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+  if (existing.authorId !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own comments.',
+      ok: false,
+    };
+  }
+  const validation = validateCommentBody(input);
+  if (!validation.ok) {
+    return { code: 'invalid_comment', message: validation.message, ok: false };
+  }
+  const editedAt = new Date().toISOString();
+  const next = setState((current) => ({
+    ...current,
+    eventComments: current.eventComments.map((comment) =>
+      comment.id === commentId
+        ? { ...comment, body: validation.body, editedAt }
+        : comment,
+    ),
+  }));
+  const updated = next.eventComments.find((comment) => comment.id === commentId);
+  if (!updated) {
+    throw new Error('update event comment: comment vanished after update.');
+  }
+  return { comment: toEventComment(updated, next.users), ok: true };
 }
 
 function deleteEventCommentMemory(userId: string, commentId: string): boolean {
@@ -166,6 +212,16 @@ export async function createEventComment(
   return ctx.supabase
     ? createEventCommentSupabase(ctx.supabase, ctx.userId, eventId, input)
     : createEventCommentMemory(ctx.userId, eventId, input);
+}
+
+export async function updateEventComment(
+  ctx: RequestContext,
+  commentId: string,
+  input: unknown,
+): Promise<UpdateEventCommentResult> {
+  return ctx.supabase
+    ? updateEventCommentSupabase(ctx.supabase, ctx.userId, commentId, input)
+    : updateEventCommentMemory(ctx.userId, commentId, input);
 }
 
 export async function deleteEventComment(

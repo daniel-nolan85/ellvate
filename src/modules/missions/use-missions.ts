@@ -35,6 +35,7 @@ export interface Mission {
   readonly stopsTotal: number;
   readonly icon: MissionIcon;
   readonly media?: readonly MissionMedia[];
+  readonly editedAt: string | null;
 }
 
 export interface UserProgress {

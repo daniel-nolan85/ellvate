@@ -54,6 +54,7 @@ function updateMissionMemory(
             stopsTotal: value.stopsTotal,
             icon: value.icon,
             media: media.length ? media : undefined,
+            editedAt: new Date().toISOString(),
           }
         : mission,
     ),

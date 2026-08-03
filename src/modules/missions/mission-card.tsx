@@ -3,6 +3,7 @@ import { useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { Pressable, View } from 'react-native';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -74,9 +75,12 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
           />
         </View>
         <VStack className="flex-1 gap-1">
-          <Text className="font-inter-bold text-[15px] leading-[20px] tracking-[-0.15px] text-content">
-            {mission.title}
-          </Text>
+          <HStack className="items-center gap-1">
+            <Text className="font-inter-bold text-[15px] leading-[20px] tracking-[-0.15px] text-content">
+              {mission.title}
+            </Text>
+            <EditedMark editedAt={mission.editedAt} />
+          </HStack>
           <Text className="text-muted-foreground" size="xs">
             {mission.description}
           </Text>

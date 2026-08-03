@@ -64,5 +64,6 @@ export function toMissionView(
     stopsTotal: mission.stopsTotal,
     icon: mission.icon,
     media: mission.media,
+    editedAt: mission.editedAt,
   };
 }

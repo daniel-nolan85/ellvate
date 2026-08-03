@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
@@ -232,6 +233,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
                 <Text className='text-text-muted' size='xs'>
                   · {formatRelativeTime(post.createdAt)}
                 </Text>
+                <EditedMark editedAt={post.editedAt} />
               </HStack>
             </VStack>
           </Pressable>

@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
@@ -36,6 +37,7 @@ import {
   useDeleteEventComment,
   useEventComments,
   useReportEventComment,
+  useUpdateEventComment,
   type EventComment,
 } from './use-event-comments';
 import {
@@ -102,6 +104,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
 
   const comments = useEventComments(eventId);
   const createComment = useCreateEventComment(eventId);
+  const updateComment = useUpdateEventComment(eventId);
   const deleteComment = useDeleteEventComment(eventId);
   const reportComment = useReportEventComment();
 
@@ -111,7 +114,11 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [editingComment, setEditingComment] = useState<EventComment | null>(null);
   const [actionsFor, setActionsFor] = useState<EventComment | null>(null);
+  const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
+  const [commentPendingDelete, setCommentPendingDelete] =
+    useState<EventComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const attendees = useEventAttendees(eventId, attendeesOpen);
@@ -122,6 +129,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   };
 
   const handleReply = (name: string) => {
+    setEditingComment(null);
     setReplyTo(name);
     setDraft((current) => (current.length === 0 ? `@${name} ` : current));
   };
@@ -131,6 +139,20 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
     if (!body) {
       return;
     }
+    if (editingComment) {
+      updateComment.mutate(
+        { body, commentId: editingComment.id },
+        {
+          onSuccess: () => {
+            setDraft('');
+            setEditingComment(null);
+            void Haptics.selectionAsync();
+          },
+          onError: () => showToast("Couldn't save your changes. Try again."),
+        },
+      );
+      return;
+    }
     createComment.mutate(body, {
       onSuccess: () => {
         setDraft('');
@@ -138,6 +160,44 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         void Haptics.selectionAsync();
       },
       onError: () => showToast('Couldn’t post your comment. Try again.'),
+    });
+  };
+
+  const openCommentActions = (comment: EventComment) => {
+    setActionsFor(comment);
+    setActionsSheetOpen(true);
+  };
+
+  const closeCommentActions = () => setActionsSheetOpen(false);
+
+  const handleStartEditComment = (comment: EventComment) => {
+    setActionsSheetOpen(false);
+    setReplyTo(null);
+    setEditingComment(comment);
+    setDraft(comment.body);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingComment(null);
+    setDraft('');
+  };
+
+  const handleRequestDeleteComment = () => {
+    const target = actionsFor;
+    setActionsSheetOpen(false);
+    if (target) {
+      setCommentPendingDelete(target);
+    }
+  };
+
+  const confirmDeleteComment = () => {
+    const target = commentPendingDelete;
+    setCommentPendingDelete(null);
+    if (!target) {
+      return;
+    }
+    deleteComment.mutate(target.id, {
+      onError: () => showToast('Couldn’t delete this comment. Try again.'),
     });
   };
 
@@ -233,6 +293,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                 <Text className='text-[14px] text-text-muted'>
                   {formatDayLabel(event.dayLabel)} {event.dateLabel} · {event.timeLabel}
                 </Text>
+                <EditedMark editedAt={event.editedAt} />
               </HStack>
               <HStack className='items-center gap-1.5'>
                 <Icon color='rgb(120,108,94)' name='Globe' size={16} />
@@ -323,7 +384,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                 <CommentItem
                   comment={comment}
                   key={comment.id}
-                  onActions={setActionsFor}
+                  onActions={openCommentActions}
                   onOpenAuthor={(authorId) =>
                     openProfile(authorId, comment.author.name)
                   }
@@ -335,7 +396,9 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         </ScrollView>
 
         <CommentComposer
-          isSending={createComment.isPending}
+          editing={editingComment !== null}
+          isSending={editingComment ? updateComment.isPending : createComment.isPending}
+          onCancelEdit={handleCancelEditComment}
           onChangeText={setDraft}
           onClearReply={() => setReplyTo(null)}
           onSend={handleSend}
@@ -480,13 +543,13 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
       {/* Comment actions */}
       <Modal
         animationType='fade'
-        onRequestClose={() => setActionsFor(null)}
+        onRequestClose={closeCommentActions}
         transparent
-        visible={actionsFor !== null}
+        visible={actionsSheetOpen}
       >
         <Pressable
           className='flex-1 bg-[rgba(0,0,0,0.4)]'
-          onPress={() => setActionsFor(null)}
+          onPress={closeCommentActions}
         />
         <View
           className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5'
@@ -494,16 +557,20 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         >
           <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />
           {actionsFor && actionsFor.author.id === userId ? (
-            <EventMenuRow
-              destructive
-              icon='AlertCircle'
-              label='Delete comment'
-              onPress={() => {
-                const target = actionsFor;
-                setActionsFor(null);
-                deleteComment.mutate(target.id);
-              }}
-            />
+            <>
+              <EventMenuRow
+                icon='Edit'
+                label='Edit comment'
+                onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+              />
+              <Divider />
+              <EventMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Delete comment'
+                onPress={handleRequestDeleteComment}
+              />
+            </>
           ) : (
             <EventMenuRow
               destructive
@@ -511,7 +578,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               label='Report comment'
               onPress={() => {
                 const target = actionsFor;
-                setActionsFor(null);
+                closeCommentActions();
                 if (!target) return;
                 reportComment.mutate(target.id, {
                   onError: () =>
@@ -523,6 +590,46 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
             />
           )}
         </View>
+      </Modal>
+
+      {/* Delete-comment confirmation */}
+      <Modal
+        animationType='fade'
+        onRequestClose={() => setCommentPendingDelete(null)}
+        transparent
+        visible={commentPendingDelete !== null}
+      >
+        <Pressable
+          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
+          onPress={() => setCommentPendingDelete(null)}
+        >
+          <Pressable
+            className='w-full gap-1 rounded-[20px] bg-paper p-5'
+            onPress={(pressEvent) => pressEvent.stopPropagation()}
+          >
+            <Text className='font-inter-bold text-[17px] text-content'>
+              Delete comment?
+            </Text>
+            <Text className='pb-3 text-text-muted' size='sm'>
+              This can’t be undone.
+            </Text>
+            <HStack className='justify-end gap-3'>
+              <Pressable onPress={() => setCommentPendingDelete(null)}>
+                <Text className='font-inter-semibold text-[15px] text-content'>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable onPress={confirmDeleteComment}>
+                <Text
+                  className='font-inter-semibold text-[15px]'
+                  style={{ color: 'rgb(231,0,11)' }}
+                >
+                  Delete
+                </Text>
+              </Pressable>
+            </HStack>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {toast ? (

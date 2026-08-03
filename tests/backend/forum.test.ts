@@ -76,6 +76,7 @@ describe('listPosts', () => {
       id: 'post-1',
       forum: 'Marina & Boating',
       author: { avatarUrl: null, id: 'user-jordan', name: 'Jordan Diaz' },
+      editedAt: null,
       title: 'Best spots to kayak at sunrise?',
       excerpt:
         'New to the lake — where do you all put in before the wind picks up? Looking for calm water near the village.',
@@ -326,6 +327,28 @@ describe('updatePost', () => {
       excerpt: 'Updated excerpt',
       forum: 'Dining',
     });
+  });
+
+  test('stamps editedAt on update, unset until then', async () => {
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Original title',
+      excerpt: 'Original excerpt',
+    });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+    expect(created.post.editedAt).toBeNull();
+
+    const result = await updatePost(ctx(), created.post.id, {
+      title: 'Updated title',
+      excerpt: 'Updated excerpt',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.post.editedAt).not.toBeNull();
   });
 
   test('rejects a missing title', async () => {

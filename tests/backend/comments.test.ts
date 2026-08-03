@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { DELETE as deleteRoute } from '../../app/api/comments/[id]/index+api';
+import {
+  DELETE as deleteRoute,
+  PATCH as patchRoute,
+} from '../../app/api/comments/[id]/index+api';
 import { POST as reportRoute } from '../../app/api/comments/[id]/report+api';
 import {
   GET as getComments,
@@ -11,6 +14,7 @@ import {
   deleteComment,
   listComments,
   reportComment,
+  updateComment,
 } from '../../src/backend/comments';
 import { memoryContext } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
@@ -91,6 +95,56 @@ describe('createComment', () => {
       body: 'Nice tip!',
     });
     expect(replyCount('post-1')).toBe(before + 1);
+  });
+});
+
+describe('updateComment', () => {
+  test('stamps editedAt on update, unset until then', async () => {
+    const created = await createComment(ctx(), 'post-1', { body: 'original' });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+    expect(created.comment.editedAt).toBeNull();
+
+    const updated = await updateComment(ctx(), created.comment.id, {
+      body: 'edited',
+    });
+    expect(updated).toMatchObject({ ok: true });
+    if (!updated.ok) {
+      return;
+    }
+    expect(updated.comment.body).toBe('edited');
+    expect(updated.comment.editedAt).not.toBeNull();
+  });
+
+  test('rejects editing someone else’s comment', async () => {
+    const created = await createComment(ctx(), 'post-1', { body: 'mine' });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    expect(
+      await updateComment(ctx('user-mia'), created.comment.id, {
+        body: 'hijacked',
+      }),
+    ).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('rejects an empty body', async () => {
+    const created = await createComment(ctx(), 'post-1', { body: 'mine' });
+    if (!created.ok) {
+      throw new Error('setup failed');
+    }
+
+    expect(
+      await updateComment(ctx(), created.comment.id, { body: '  ' }),
+    ).toMatchObject({ ok: false, code: 'invalid_comment' });
+  });
+
+  test('rejects an unknown comment', async () => {
+    expect(
+      await updateComment(ctx(), 'comment-nope', { body: 'hi' }),
+    ).toMatchObject({ ok: false, code: 'comment_not_found' });
   });
 });
 
@@ -187,6 +241,20 @@ describe('comment routes', () => {
       { id: comment.id },
     );
     expect(reported.status).toBe(200);
+
+    const patched = await patchRoute(
+      new Request(`http://localhost/api/comments/${comment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Actually, count me in' }),
+      }),
+      { id: comment.id },
+    );
+    expect(patched.status).toBe(200);
+    const { comment: patchedComment } = (await patched.json()) as {
+      comment: { body: string };
+    };
+    expect(patchedComment.body).toBe('Actually, count me in');
 
     const removed = await deleteRoute(
       new Request(`http://localhost/api/comments/${comment.id}`, {

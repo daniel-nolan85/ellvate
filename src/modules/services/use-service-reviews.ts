@@ -12,6 +12,7 @@ export interface ServiceReview {
   readonly rating: 1 | 2 | 3 | 4 | 5;
   readonly body: string | null;
   readonly createdAt: string;
+  readonly editedAt: string | null;
 }
 
 interface ServiceReviewsResponse {

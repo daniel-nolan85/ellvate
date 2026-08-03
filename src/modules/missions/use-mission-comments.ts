@@ -55,6 +55,27 @@ export function useCreateMissionComment(missionId: string) {
   });
 }
 
+export function useUpdateMissionComment(missionId: string) {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+
+  return useMutation({
+    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+      requestJson<CreateMissionCommentResponse>({
+        body: { body },
+        getAccessToken: session.getToken,
+        method: 'PATCH',
+        path: `/api/mission-comments/${commentId}`,
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['missions', 'comments', userId, missionId],
+      });
+    },
+  });
+}
+
 export function useDeleteMissionComment(missionId: string) {
   const session = useSession();
   const queryClient = useQueryClient();

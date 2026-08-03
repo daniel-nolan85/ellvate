@@ -11,6 +11,8 @@ interface CommentComposerProps {
   readonly replyTo: string | null;
   readonly onClearReply: () => void;
   readonly isSending: boolean;
+  readonly editing?: boolean;
+  readonly onCancelEdit?: () => void;
 }
 
 export function CommentComposer({
@@ -20,11 +22,23 @@ export function CommentComposer({
   replyTo,
   onClearReply,
   isSending,
+  editing = false,
+  onCancelEdit,
 }: CommentComposerProps) {
   const canSend = value.trim().length > 0 && !isSending;
   return (
     <View className="gap-2.5 border-t border-line px-[18px] pb-9 pt-2.5">
-      {replyTo ? (
+      {editing ? (
+        <View className="flex-row items-center gap-2 rounded-lg bg-accent-subtle px-3 py-2">
+          <Icon color="rgb(181,80,44)" name="Edit" size={16} />
+          <Text className="flex-1 text-[13px] text-text-muted">
+            Editing your comment
+          </Text>
+          <Pressable accessibilityLabel="Cancel edit" onPress={onCancelEdit}>
+            <Icon color="rgb(120,108,94)" name="Close" size={16} />
+          </Pressable>
+        </View>
+      ) : replyTo ? (
         <View className="flex-row items-center gap-2 rounded-lg bg-secondary px-3 py-2">
           <Icon color="rgb(120,108,94)" name="MessageCircle" size={16} />
           <Text className="flex-1 text-[13px] text-text-muted">
@@ -42,20 +56,20 @@ export function CommentComposer({
           maxHeight={120}
           onChangeText={onChangeText}
           onSubmitEditing={() => canSend && onSend()}
-          placeholder={replyTo ? 'Write a reply…' : 'Add a comment…'}
+          placeholder={editing ? 'Edit your comment…' : replyTo ? 'Write a reply…' : 'Add a comment…'}
           submitOnEnter
           testID="comment-input"
           value={value}
         />
         <Pressable
-          accessibilityLabel="Send comment"
+          accessibilityLabel={editing ? 'Save comment' : 'Send comment'}
           className="h-10 w-10 items-center justify-center rounded-full bg-primary"
           disabled={!canSend}
           onPress={onSend}
           style={{ opacity: canSend ? 1 : 0.5 }}
           testID="comment-send"
         >
-          <Icon color="rgb(250,250,250)" name="ArrowUp" size={18} />
+          <Icon color="rgb(250,250,250)" name={editing ? 'Check' : 'ArrowUp'} size={18} />
         </Pressable>
       </View>
     </View>

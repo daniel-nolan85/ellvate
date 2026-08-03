@@ -1,5 +1,6 @@
 import { Pressable, Text as RNText } from 'react-native';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Avatar } from '@/src/components/ui/avatar';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -36,6 +37,7 @@ export interface DisplayComment {
   };
   readonly body: string;
   readonly createdAt: string;
+  readonly editedAt?: string | null;
 }
 
 interface CommentItemProps<TComment extends DisplayComment> {
@@ -71,6 +73,7 @@ export function CommentItem<TComment extends DisplayComment>({
           <Text className="text-[12px] text-text-muted">
             {formatRelativeTime(comment.createdAt)}
           </Text>
+          <EditedMark editedAt={comment.editedAt ?? null} />
         </HStack>
         <CommentBody body={comment.body} />
         <HStack className="mt-0.5 items-center gap-4">

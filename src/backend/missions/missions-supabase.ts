@@ -20,7 +20,7 @@ import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
 
 const MISSION_SELECT =
-  'id,created_by,title,description,scheduled_for,xp,stops_total,icon,media,position,locked_by_default';
+  'id,created_by,title,description,scheduled_for,xp,stops_total,icon,media,position,locked_by_default,edited_at';
 
 interface MissionRow {
   readonly id: string;
@@ -34,6 +34,7 @@ interface MissionRow {
   readonly media: readonly MissionMedia[] | null;
   readonly position: number;
   readonly locked_by_default: boolean;
+  readonly edited_at: string | null;
 }
 
 interface ProgressRow {
@@ -100,6 +101,7 @@ const toMissionView = (
     stopsTotal: row.stops_total,
     icon: row.icon as MissionIcon,
     media: row.media ?? undefined,
+    editedAt: row.edited_at,
   };
 };
 
@@ -498,6 +500,7 @@ export async function updateMissionSupabase(
       stops_total: value.stopsTotal,
       icon: value.icon,
       media: media.length ? media : null,
+      edited_at: new Date().toISOString(),
     })
     .eq('id', missionId)
     .select(MISSION_SELECT)
@@ -670,6 +673,7 @@ export async function checkInSupabase(
     stopsTotal: mission.stops_total,
     icon: mission.icon as MissionIcon,
     media: mission.media ?? undefined,
+    editedAt: mission.edited_at,
   };
 
   return {

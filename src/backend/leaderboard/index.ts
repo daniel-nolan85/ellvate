@@ -4,3 +4,4 @@ export type {
   LeaderboardResult,
   PersonRef,
 } from './types';
+export type { LeaderboardRange } from './windowed-tally';

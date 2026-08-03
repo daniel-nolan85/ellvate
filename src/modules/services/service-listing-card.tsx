@@ -1,5 +1,6 @@
 import { Image, Pressable, View } from 'react-native';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -73,9 +74,12 @@ export function ServiceListingCard({ listing, onOpen }: ServiceListingCardProps)
           </View>
         )}
         <VStack className="flex-1 gap-1">
-          <Text className="font-inter-bold text-[15px] leading-[20px] tracking-[-0.15px] text-content">
-            {listing.businessName}
-          </Text>
+          <HStack className="items-center gap-1">
+            <Text className="font-inter-bold text-[15px] leading-[20px] tracking-[-0.15px] text-content">
+              {listing.businessName}
+            </Text>
+            <EditedMark editedAt={listing.editedAt} />
+          </HStack>
           <Text className="text-muted-foreground" numberOfLines={2} size="xs">
             {listing.description}
           </Text>

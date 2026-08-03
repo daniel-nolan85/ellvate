@@ -7,11 +7,12 @@ import type {
   CreateCommentResult,
   MyComment,
   ReportCommentResult,
+  UpdateCommentResult,
 } from './types';
 import { validateCommentBody } from './validation';
 
 const COMMENT_SELECT =
-  'id,post_id,author_id,body,created_at,author:app_users!comments_author_id_fkey(id,name,avatar_url)';
+  'id,post_id,author_id,body,created_at,edited_at,author:app_users!comments_author_id_fkey(id,name,avatar_url)';
 
 const MY_COMMENT_SELECT =
   'id,post_id,body,created_at,post:posts!comments_post_id_fkey(title)';
@@ -30,6 +31,7 @@ interface CommentRow {
   readonly author_id: string;
   readonly body: string;
   readonly created_at: string;
+  readonly edited_at: string | null;
   readonly author: {
     readonly id: string;
     readonly name: string;
@@ -45,6 +47,7 @@ const toComment = (row: CommentRow): Comment => ({
   },
   body: row.body,
   createdAt: row.created_at,
+  editedAt: row.edited_at,
   id: row.id,
   postId: row.post_id,
 });
@@ -122,6 +125,49 @@ export async function createCommentSupabase(
   throwIfSupabaseError(error, 'create comment');
   if (!data) {
     throw new Error('create comment: database returned no comment.');
+  }
+  return { comment: toComment(data as unknown as CommentRow), ok: true };
+}
+
+export async function updateCommentSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  commentId: string,
+  input: unknown,
+): Promise<UpdateCommentResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from('comments')
+    .select('id,author_id')
+    .eq('id', commentId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load comment for update');
+  if (!existing) {
+    return {
+      code: 'comment_not_found',
+      message: 'Comment not found.',
+      ok: false,
+    };
+  }
+  if (existing.author_id !== userId) {
+    return {
+      code: 'forbidden',
+      message: 'You can only edit your own comments.',
+      ok: false,
+    };
+  }
+  const validation = validateCommentBody(input);
+  if (!validation.ok) {
+    return { code: 'invalid_comment', message: validation.message, ok: false };
+  }
+  const { data, error } = await supabase
+    .from('comments')
+    .update({ body: validation.body, edited_at: new Date().toISOString() })
+    .eq('id', commentId)
+    .select(COMMENT_SELECT)
+    .single();
+  throwIfSupabaseError(error, 'update comment');
+  if (!data) {
+    throw new Error('update comment: database returned no comment.');
   }
   return { comment: toComment(data as unknown as CommentRow), ok: true };
 }

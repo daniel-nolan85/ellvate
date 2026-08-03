@@ -64,6 +64,7 @@ const toForumPost = (
 ): ForumPost => ({
   author: toAuthorRef(users, post.authorId),
   createdAt: post.createdAt,
+  editedAt: post.editedAt,
   excerpt: post.excerpt,
   forum: post.forum,
   id: post.id,
@@ -157,6 +158,7 @@ function createPostMemory(userId: string, input: unknown): CreatePostResult {
   const stored: StoredPost = {
     authorId: userId,
     createdAt: createdAtNow(),
+    editedAt: null,
     excerpt: validation.value.excerpt,
     forum: validation.value.forum,
     id: `post-${crypto.randomUUID()}`,
@@ -305,6 +307,7 @@ function updatePostMemory(
       post.id === postId
         ? {
             ...post,
+            editedAt: new Date().toISOString(),
             excerpt: validation.value.excerpt,
             forum: validation.value.forum,
             media: media.length ? media : undefined,

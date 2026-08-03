@@ -2,6 +2,7 @@ import { Pressable } from 'react-native';
 
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
+import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Box } from '@/src/components/ui/box';
@@ -76,6 +77,7 @@ export function FeaturedEventCard({
               <Text className="text-[rgba(250,250,250,0.75)]" size="xs">
                 {formatDayLabel(event.dayLabel)} {event.dateLabel} · {event.timeLabel}
               </Text>
+              <EditedMark color="rgba(250,250,250,0.75)" editedAt={event.editedAt} />
             </HStack>
             <HStack className="items-center" space="xs">
               <Icon color="rgba(250,250,250,0.6)" name="Globe" size={14} />
