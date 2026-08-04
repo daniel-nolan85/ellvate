@@ -192,9 +192,9 @@ describe('deleteMission cascade', () => {
   test('removes comments and comment reports belonging to the deleted mission', async () => {
     const created = await createMission(ctx(), {
       description: 'Rent a kayak and get on the water.',
-      icon: 'Sun',
+      theme: 'day',
       scheduledFor: '2026-07-18',
-      stopsTotal: 1,
+      stops: ['Stop 1'],
       title: 'Paddle the Lake',
       xp: 75,
     });

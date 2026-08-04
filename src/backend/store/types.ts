@@ -1,5 +1,5 @@
-export type MissionStatus = 'active' | 'done' | 'locked';
-export type MissionIcon = 'Sun' | 'ArrowUp' | 'Star' | 'Moon';
+export type MissionStatus = 'active' | 'done';
+export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
 export type AiComfortLevel = 'new' | 'casual' | 'power';
 
@@ -114,6 +114,22 @@ export interface StoredMissionCommentReport {
   readonly createdAt: string;
 }
 
+export interface StoredMissionCheckIn {
+  readonly id: string;
+  readonly missionId: string;
+  readonly userId: string;
+  readonly stopIndex: number;
+  readonly completedAt: string;
+  readonly photoUrl: string | null;
+}
+
+export interface StoredMissionCheckInReport {
+  readonly id: string;
+  readonly checkInId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
 export interface StoredEvent {
   readonly id: string;
   readonly authorId: string;
@@ -149,8 +165,12 @@ export interface StoredMission {
   readonly description: string;
   readonly scheduledFor: string | null;
   readonly xp: number;
+  // Always equal to stops.length — never picked directly, only derived at
+  // write time — but kept as its own field since it's read far more often
+  // than stops itself (progress bars, "X/Y stops" labels).
   readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
   readonly media?: readonly StoredMedia[];
   readonly progressByUser: Readonly<Record<string, MissionUserProgress>>;
   // Null until the author edits the mission at least once.
@@ -248,6 +268,8 @@ export interface StoreState {
   readonly missions: readonly StoredMission[];
   readonly missionComments: readonly StoredMissionComment[];
   readonly missionCommentReports: readonly StoredMissionCommentReport[];
+  readonly missionCheckIns: readonly StoredMissionCheckIn[];
+  readonly missionCheckInReports: readonly StoredMissionCheckInReport[];
   readonly serviceListings: readonly StoredServiceListing[];
   readonly serviceReviews: readonly StoredServiceReview[];
   readonly serviceReviewReports: readonly StoredServiceReviewReport[];

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import * as Haptics from 'expo-haptics';
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
@@ -12,8 +12,15 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
+import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 
-import { useCheckIn, type Mission, type MissionStatus } from './use-missions';
+import { missionThemeIcon } from './mission-theme';
+import {
+  useAcceptMission,
+  useCheckIn,
+  type Mission,
+  type MissionStatus,
+} from './use-missions';
 
 const ACCENT = 'rgb(181,80,44)';
 const AMBER = 'rgb(217,123,41)';
@@ -25,41 +32,65 @@ const STATUS_BADGE: Readonly<Record<
 >> = {
   active: { label: 'In progress', variant: 'accent' },
   done: { label: 'Complete', variant: 'success' },
-  locked: { label: 'Locked', variant: 'muted' },
 };
 
 interface MissionCardProps {
   readonly mission: Mission;
   readonly onOpen?: (missionId: string) => void;
+  readonly onMissionComplete?: (awardedXp: number) => void;
 }
 
-export function MissionCard({ mission, onOpen }: MissionCardProps) {
-  const checkIn = useCheckIn();
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+export function MissionCard({ mission, onMissionComplete, onOpen }: MissionCardProps) {
+  const acceptMission = useAcceptMission();
+  const checkIn = useCheckIn(onMissionComplete);
+  const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
 
   const done = mission.status === 'done';
-  const locked = mission.status === 'locked';
   const badge = STATUS_BADGE[mission.status];
+  const isFinalStop = mission.stopsDone + 1 >= mission.stopsTotal;
+
+  const handleAccept = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+    void Haptics.selectionAsync().catch(() => undefined);
+    acceptMission.mutate(mission.id);
+  };
+
+  const handleAttachPhoto = async (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+    const [picked] = await pickGalleryImages({ selectionLimit: 1 });
+    if (picked) {
+      setCheckInPhoto(picked);
+    }
+  };
 
   const handleCheckIn = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
+    if (isFinalStop && !checkInPhoto) {
+      // WHY: the completing check-in requires a photo — attach one right
+      // here instead of sending a check-in the server would just reject.
+      void handleAttachPhoto(event);
+      return;
+    }
     void Haptics.selectionAsync().catch(() => undefined);
-    checkIn.mutate(mission.id, {
-      onSuccess: (result) => {
-        if (result.awardedXp > 0) {
-          setAwardedXp(result.awardedXp);
-        }
+    checkIn.mutate(
+      {
+        missionId: mission.id,
+        photo: checkInPhoto
+          ? {
+              dataUrl: `data:${checkInPhoto.mimeType};base64,${checkInPhoto.base64}`,
+              filename: checkInPhoto.filename,
+            }
+          : undefined,
       },
-    });
+      { onSuccess: () => setCheckInPhoto(null) },
+    );
   };
 
   return (
     <Pressable
       accessibilityLabel={`Open mission: ${mission.title}`}
       accessibilityRole="button"
-      className={`gap-3 rounded-[20px] border border-surface-hairline bg-paper p-4 shadow-card ${
-        locked ? 'opacity-[0.55]' : ''
-      }`}
+      className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-4 shadow-card"
       onPress={() => onOpen?.(mission.id)}
     >
       <HStack className="items-center gap-3">
@@ -70,7 +101,7 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
         >
           <Icon
             color={done ? WHITE : ACCENT}
-            name={locked ? 'Lock' : done ? 'Check' : mission.icon}
+            name={done ? 'Check' : missionThemeIcon(mission.theme)}
             size={20}
           />
         </View>
@@ -116,23 +147,59 @@ export function MissionCard({ mission, onOpen }: MissionCardProps) {
           {mission.xp} XP
         </Badge>
       </HStack>
-      {mission.status === 'active' && awardedXp === null ? (
+      {mission.status === 'active' && !mission.accepted ? (
         <Button
           className="self-start rounded-full bg-accent"
-          isDisabled={checkIn.isPending}
-          onPress={handleCheckIn}
+          isDisabled={acceptMission.isPending}
+          onPress={handleAccept}
           size="sm"
         >
-          <Icon color={WHITE} name="CheckCircle" size={15} />
+          <Icon color={WHITE} name="Favourite" size={15} />
           <ButtonText className="font-inter-semibold text-accent-foreground">
-            Check in
+            Accept challenge
           </ButtonText>
         </Button>
       ) : null}
-      {awardedXp !== null ? (
-        <Text className="font-inter-bold text-success" size="xs">
-          Nice — +{awardedXp} XP
-        </Text>
+      {mission.status === 'active' && mission.accepted ? (
+        <VStack className="gap-2.5">
+          {checkInPhoto ? (
+            <HStack className="items-center gap-2.5">
+              <Image
+                source={{ uri: checkInPhoto.uri }}
+                style={{ borderRadius: 8, height: 36, width: 36 }}
+              />
+              <Text className="flex-1 text-muted-foreground" size="xs">
+                Photo attached
+              </Text>
+              <Pressable
+                accessibilityLabel="Remove photo"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setCheckInPhoto(null);
+                }}
+              >
+                <Icon color="rgb(120,108,94)" name="Close" size={16} />
+              </Pressable>
+            </HStack>
+          ) : null}
+          <Button
+            className="self-start rounded-full bg-accent"
+            isDisabled={checkIn.isPending}
+            onPress={handleCheckIn}
+            size="sm"
+          >
+            <Icon color={WHITE} name="CheckCircle" size={15} />
+            <ButtonText className="font-inter-semibold text-accent-foreground">
+              {isFinalStop
+                ? checkInPhoto
+                  ? 'Finish mission'
+                  : 'Add photo to finish'
+                : 'Check in'}
+            </ButtonText>
+          </Button>
+        </VStack>
       ) : null}
     </Pressable>
   );

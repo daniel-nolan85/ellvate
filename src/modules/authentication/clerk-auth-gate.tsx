@@ -14,7 +14,7 @@ export function ClerkAuthGate({ children }: PropsWithChildren) {
   if (session.status === 'loading') {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <Spinner />
+        <Spinner size="xlarge" />
       </View>
     );
   }

@@ -346,11 +346,11 @@ const seedMissions = (): readonly StoredMission[] => [
     scheduledFor: '2026-07-14',
     xp: 50,
     stopsTotal: 1,
-    icon: 'Sun',
+    stops: ['Check in at the Village Marina dock before 8 AM.'],
+    theme: 'water',
     editedAt: null,
-    progressByUser: {
-      [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 0 },
-    },
+    // No entry for DEMO_USER_ID — not yet accepted, shows in "Available".
+    progressByUser: {},
   },
   {
     id: 'mission-2',
@@ -360,7 +360,12 @@ const seedMissions = (): readonly StoredMission[] => [
     scheduledFor: '2026-07-15',
     xp: 120,
     stopsTotal: 3,
-    icon: 'ArrowUp',
+    stops: [
+      'Start at the trailhead by the marina and head south.',
+      'Rest at the overlook bench at the halfway point.',
+      'Finish the loop back at the promenade.',
+    ],
+    theme: 'trail',
     editedAt: null,
     progressByUser: {
       [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 2 },
@@ -374,7 +379,12 @@ const seedMissions = (): readonly StoredMission[] => [
     scheduledFor: '2026-07-16',
     xp: 90,
     stopsTotal: 3,
-    icon: 'Star',
+    stops: [
+      'Grab tacos at the marina taco stand.',
+      'Try the wood-fired pizza on the promenade.',
+      'Finish with gelato at the village square.',
+    ],
+    theme: 'village',
     editedAt: null,
     progressByUser: {
       [DEMO_USER_ID]: {
@@ -392,11 +402,11 @@ const seedMissions = (): readonly StoredMission[] => [
     scheduledFor: '2026-07-18',
     xp: 40,
     stopsTotal: 1,
-    icon: 'Moon',
+    stops: ['Watch the Friday night fountain show from the promenade.'],
+    theme: 'night',
     editedAt: null,
-    progressByUser: {
-      [DEMO_USER_ID]: { completedAt: null, status: 'locked', stopsDone: 0 },
-    },
+    // No entry for DEMO_USER_ID — not yet accepted, shows in "Available".
+    progressByUser: {},
   },
 ];
 
@@ -518,6 +528,8 @@ export const createSeedState = (): StoreState => {
     missions: seedMissions(),
     missionComments: [],
     missionCommentReports: [],
+    missionCheckIns: [],
+    missionCheckInReports: [],
     serviceListings: seedServiceListings(),
     serviceReviews: seedServiceReviews(),
     serviceReviewReports: [],

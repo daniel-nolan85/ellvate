@@ -15,7 +15,7 @@ import { formatRelativeTime } from '@/src/lib/relative-time';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
-import { MissionCard } from '@/src/modules/missions';
+import { MissionCard, MissionCelebrationModal } from '@/src/modules/missions';
 import { ServiceListingCard } from '@/src/modules/services';
 
 import { useBookmarks, type BookmarkedItem, type BookmarkTargetType } from './use-bookmarks';
@@ -188,6 +188,7 @@ export function BookmarksScreen() {
 
   const [openItem, setOpenItem] = useState<BookmarkedItem | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [awardedXp, setAwardedXp] = useState<number | null>(null);
 
   // Close the sheet first and let it slide down, then navigate once the
   // close animation finishes — navigating immediately would unmount the
@@ -223,7 +224,7 @@ export function BookmarksScreen() {
 
       {bookmarks.isPending ? (
         <VStack className="items-center py-16">
-          <Spinner size="large" />
+          <Spinner size="xlarge" />
         </VStack>
       ) : items.length === 0 ? (
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
@@ -278,6 +279,7 @@ export function BookmarksScreen() {
           <View className="px-1 pb-4">
             <MissionCard
               mission={openItem.mission}
+              onMissionComplete={setAwardedXp}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -304,6 +306,8 @@ export function BookmarksScreen() {
       />
 
       <CommunityNavBar />
+
+      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
     </View>
   );
 }

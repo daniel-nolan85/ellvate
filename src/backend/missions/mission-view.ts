@@ -24,10 +24,6 @@ export function resolveMissionStatus(
   mission: StoredMission,
   entry: MissionUserProgress,
 ): MissionStatus {
-  if (entry.status === 'locked') {
-    return 'locked';
-  }
-
   return entry.stopsDone >= mission.stopsTotal ? 'done' : 'active';
 }
 
@@ -60,9 +56,11 @@ export function toMissionView(
     scheduledFor: mission.scheduledFor,
     xp: mission.xp,
     status: resolveMissionStatus(mission, entry),
+    accepted: userId in mission.progressByUser,
     stopsDone: entry.stopsDone,
     stopsTotal: mission.stopsTotal,
-    icon: mission.icon,
+    stops: mission.stops,
+    theme: mission.theme,
     media: mission.media,
     editedAt: mission.editedAt,
   };

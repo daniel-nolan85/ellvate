@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,6 +20,7 @@ import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { ConfirmModal } from '@/src/components/ui/confirm-modal';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
@@ -30,9 +32,12 @@ import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useOpenProfile } from '@/src/modules/profile';
+import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
+import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
+import { missionThemeIcon } from './mission-theme';
 import {
   useCreateMissionComment,
   useDeleteMissionComment,
@@ -42,10 +47,14 @@ import {
   type MissionComment,
 } from './use-mission-comments';
 import {
+  useAcceptMission,
   useCheckIn,
   useDeleteMission,
+  useMissionCheckIns,
   useMissionsView,
+  useReportCheckIn,
   useUpdateMission,
+  type CheckInEntry,
   type MissionStatus,
 } from './use-missions';
 
@@ -64,7 +73,6 @@ const STATUS_BADGE: Readonly<Record<
 >> = {
   active: { label: 'In progress', variant: 'accent' },
   done: { label: 'Complete', variant: 'success' },
-  locked: { label: 'Locked', variant: 'muted' },
 };
 
 function MissionMenuRow({
@@ -102,8 +110,11 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
+  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+
   const missionsView = useMissionsView();
-  const checkIn = useCheckIn();
+  const acceptMission = useAcceptMission();
+  const checkIn = useCheckIn(setAwardedXp);
   const updateMission = useUpdateMission();
   const deleteMission = useDeleteMission();
   const comments = useMissionComments(missionId);
@@ -111,8 +122,10 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const updateComment = useUpdateMissionComment(missionId);
   const deleteComment = useDeleteMissionComment(missionId);
   const reportComment = useReportMissionComment();
+  const checkIns = useMissionCheckIns(missionId);
+  const reportCheckIn = useReportCheckIn();
 
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+  const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -124,6 +137,8 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const [commentPendingDelete, setCommentPendingDelete] =
     useState<MissionComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(null);
+  const [reportTarget, setReportTarget] = useState<CheckInEntry | null>(null);
 
   const mission = useMemo(
     () => missionsView.data?.missions.find((entry) => entry.id === missionId),
@@ -132,26 +147,59 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const isOwnMission = !!mission && mission.author.id === userId;
 
   const done = mission?.status === 'done';
-  const locked = mission?.status === 'locked';
   const badge = mission ? STATUS_BADGE[mission.status] : null;
+  const isFinalStop =
+    !!mission &&
+    mission.status === 'active' &&
+    mission.accepted &&
+    mission.stopsDone + 1 >= mission.stopsTotal;
 
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 2200);
   };
 
-  const handleCheckIn = () => {
+  const handleAccept = () => {
     if (!mission) {
       return;
     }
     void Haptics.selectionAsync().catch(() => undefined);
-    checkIn.mutate(mission.id, {
-      onSuccess: (result) => {
-        if (result.awardedXp > 0) {
-          setAwardedXp(result.awardedXp);
-        }
-      },
+    acceptMission.mutate(mission.id, {
+      onError: () => showToast('Couldn’t accept this mission. Try again.'),
     });
+  };
+
+  const handleAttachPhoto = async () => {
+    const [picked] = await pickGalleryImages({ selectionLimit: 1 });
+    if (picked) {
+      setCheckInPhoto(picked);
+    }
+  };
+
+  const handleCheckIn = () => {
+    if (!mission) {
+      return;
+    }
+    if (isFinalStop && !checkInPhoto) {
+      void handleAttachPhoto();
+      return;
+    }
+    void Haptics.selectionAsync().catch(() => undefined);
+    checkIn.mutate(
+      {
+        missionId: mission.id,
+        photo: checkInPhoto
+          ? {
+              dataUrl: `data:${checkInPhoto.mimeType};base64,${checkInPhoto.base64}`,
+              filename: checkInPhoto.filename,
+            }
+          : undefined,
+      },
+      {
+        onSuccess: () => setCheckInPhoto(null),
+        onError: () => showToast('Couldn’t check in. Try again.'),
+      },
+    );
   };
 
   const handleDeleteMission = () => {
@@ -165,6 +213,18 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         onBack();
       },
       onError: () => showToast('Couldn’t delete this mission. Try again.'),
+    });
+  };
+
+  const handleConfirmReportCheckIn = () => {
+    const target = reportTarget;
+    setReportTarget(null);
+    if (!target) {
+      return;
+    }
+    reportCheckIn.mutate(target.id, {
+      onError: () => showToast('Couldn’t report this check-in. Try again.'),
+      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
     });
   };
 
@@ -320,7 +380,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               >
                 <Icon
                   color={done ? WHITE : ACCENT}
-                  name={locked ? 'Lock' : done ? 'Check' : mission.icon}
+                  name={done ? 'Check' : missionThemeIcon(mission.theme)}
                   size={20}
                 />
               </View>
@@ -371,28 +431,127 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               </Badge>
             </HStack>
 
-            {mission.status === 'active' && awardedXp === null ? (
+            {mission.status === 'active' && mission.accepted && mission.stops[mission.stopsDone] ? (
+              <Text className='text-[13px] text-text-muted'>
+                <Text className='font-inter-semibold text-content' size='xs'>
+                  Next:{' '}
+                </Text>
+                {mission.stops[mission.stopsDone]}
+              </Text>
+            ) : null}
+
+            {mission.status === 'active' && !mission.accepted ? (
               <Button
                 className='self-start rounded-full bg-accent'
-                isDisabled={checkIn.isPending}
-                onPress={handleCheckIn}
+                isDisabled={acceptMission.isPending}
+                onPress={handleAccept}
                 size='sm'
               >
-                <Icon color={WHITE} name='CheckCircle' size={15} />
+                <Icon color={WHITE} name='Favourite' size={15} />
                 <ButtonText className='font-inter-semibold text-accent-foreground'>
-                  Check in
+                  Accept challenge
                 </ButtonText>
               </Button>
             ) : null}
-            {awardedXp !== null ? (
-              <Text className='font-inter-bold text-success' size='xs'>
-                Nice — +{awardedXp} XP
-              </Text>
+
+            {mission.status === 'active' && mission.accepted ? (
+              <VStack className='gap-2.5'>
+                {checkInPhoto ? (
+                  <HStack className='items-center gap-2.5'>
+                    <Image
+                      source={{ uri: checkInPhoto.uri }}
+                      style={{ borderRadius: 10, height: 44, width: 44 }}
+                    />
+                    <Text className='flex-1 text-text-muted' size='xs'>
+                      Photo attached
+                    </Text>
+                    <Pressable
+                      accessibilityLabel='Remove photo'
+                      accessibilityRole='button'
+                      hitSlop={8}
+                      onPress={() => setCheckInPhoto(null)}
+                    >
+                      <Icon color='rgb(120,108,94)' name='Close' size={16} />
+                    </Pressable>
+                  </HStack>
+                ) : null}
+                <HStack className='items-center gap-2.5'>
+                  <Button
+                    className='self-start rounded-full bg-accent'
+                    isDisabled={checkIn.isPending}
+                    onPress={handleCheckIn}
+                    size='sm'
+                  >
+                    <Icon color={WHITE} name='CheckCircle' size={15} />
+                    <ButtonText className='font-inter-semibold text-accent-foreground'>
+                      {isFinalStop
+                        ? checkInPhoto
+                          ? 'Finish mission'
+                          : 'Add photo to finish'
+                        : 'Check in'}
+                    </ButtonText>
+                  </Button>
+                  {!isFinalStop && !checkInPhoto ? (
+                    <Pressable
+                      accessibilityLabel='Attach a photo (optional)'
+                      accessibilityRole='button'
+                      className='h-9 w-9 items-center justify-center rounded-full bg-accent-subtle'
+                      hitSlop={8}
+                      onPress={() => void handleAttachPhoto()}
+                    >
+                      <Icon color={ACCENT} name='Image' size={16} />
+                    </Pressable>
+                  ) : null}
+                </HStack>
+              </VStack>
+            ) : null}
+
+            {checkIns.data && checkIns.data.some((entry) => entry.photoUrl) ? (
+              <>
+                <Divider />
+                <VStack className='gap-3'>
+                  <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
+                    Check-in photos
+                  </Text>
+                  {checkIns.data
+                    .filter((entry) => entry.photoUrl)
+                    .map((entry) => (
+                      <HStack className='items-center gap-2.5' key={entry.id}>
+                        <Pressable
+                          accessibilityLabel={`View ${entry.user.name}'s check-in photo`}
+                          accessibilityRole='button'
+                          onPress={() => setExpandedCheckIn(entry)}
+                        >
+                          <Image
+                            source={{ uri: entry.photoUrl ?? '' }}
+                            style={{ borderRadius: 10, height: 44, width: 44 }}
+                          />
+                        </Pressable>
+                        <VStack className='flex-1 gap-0.5'>
+                          <Text className='font-inter-semibold text-[13px] text-content'>
+                            {entry.user.name}
+                          </Text>
+                          <Text className='text-text-muted' size='xs'>
+                            Stop {entry.stopIndex + 1}
+                          </Text>
+                        </VStack>
+                        <Pressable
+                          accessibilityLabel='Report check-in'
+                          accessibilityRole='button'
+                          hitSlop={8}
+                          onPress={() => setReportTarget(entry)}
+                        >
+                          <Icon color='rgb(120,108,94)' name='Flag' size={16} />
+                        </Pressable>
+                      </HStack>
+                    ))}
+                </VStack>
+              </>
             ) : null}
           </VStack>
         ) : missionsView.isPending ? (
           <View className='items-center py-10'>
-            <Spinner />
+            <Spinner size='xlarge' />
           </View>
         ) : (
           <Text className='text-text-muted' size='sm'>
@@ -527,10 +686,10 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         <Sheet onClose={() => setIsEditing(false)} visible={isEditing}>
           <MissionComposer
             initialDescription={mission.description}
-            initialIcon={mission.icon}
+            initialTheme={mission.theme}
             initialMedia={mission.media}
             initialScheduledFor={mission.scheduledFor ?? undefined}
-            initialStopsTotal={mission.stopsTotal}
+            initialStops={mission.stops}
             initialTitle={mission.title}
             initialXp={mission.xp}
             isSubmitting={updateMission.isPending}
@@ -646,6 +805,45 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
           </Pressable>
         </Pressable>
       </Modal>
+
+      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
+
+      {/* Full-size check-in photo viewer */}
+      <Modal
+        animationType='fade'
+        onRequestClose={() => setExpandedCheckIn(null)}
+        transparent
+        visible={expandedCheckIn !== null}
+      >
+        <Pressable
+          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.85)] px-4'
+          onPress={() => setExpandedCheckIn(null)}
+        >
+          {expandedCheckIn ? (
+            <VStack className='w-full items-center gap-3'>
+              <Image
+                resizeMode='contain'
+                source={{ uri: expandedCheckIn.photoUrl ?? '' }}
+                style={{ aspectRatio: 1, borderRadius: 12, width: '100%' }}
+              />
+              <Text className='text-[13px]' style={{ color: 'rgb(255,255,255)' }}>
+                {expandedCheckIn.user.name} · Stop {expandedCheckIn.stopIndex + 1}
+              </Text>
+            </VStack>
+          ) : null}
+        </Pressable>
+      </Modal>
+
+      <ConfirmModal
+        cancelLabel='Cancel'
+        confirmLabel='Report'
+        destructive
+        message="Let our moderators know this check-in photo looks fake or doesn't match the mission."
+        onClose={() => setReportTarget(null)}
+        onConfirm={handleConfirmReportCheckIn}
+        title='Report this photo?'
+        visible={reportTarget !== null}
+      />
 
       {toast ? (
         <View

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
@@ -13,11 +13,74 @@ import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
 import { MissionCard } from './mission-card';
+import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
-import { useCreateMission, useMissionsView } from './use-missions';
+import { useCreateMission, useMissionsView, type Mission } from './use-missions';
 import { XpHero } from './xp-hero';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
+
+type MissionFilter = 'available' | 'in-progress' | 'completed';
+
+const MISSION_FILTERS: readonly { readonly key: MissionFilter; readonly label: string }[] = [
+  { key: 'available', label: 'Available' },
+  { key: 'in-progress', label: 'In progress' },
+  { key: 'completed', label: 'Completed' },
+];
+
+const matchesFilter = (mission: Mission, filter: MissionFilter): boolean => {
+  switch (filter) {
+    case 'available':
+      return !mission.accepted && mission.status === 'active';
+    case 'in-progress':
+      return mission.accepted && mission.status === 'active';
+    case 'completed':
+      return mission.status === 'done';
+  }
+};
+
+function MissionFilterChips({
+  active,
+  onSelect,
+}: {
+  readonly active: MissionFilter;
+  readonly onSelect: (filter: MissionFilter) => void;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 2,
+      }}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ flexGrow: 0 }}
+    >
+      {MISSION_FILTERS.map((filter) => {
+        const isActive = filter.key === active;
+        return (
+          <Pressable
+            className={`shrink-0 rounded-full px-3.5 py-[7px] ${
+              isActive ? 'bg-accent' : 'bg-secondary'
+            }`}
+            key={filter.key}
+            onPress={() => onSelect(filter.key)}
+          >
+            <Text
+              className={`font-inter-medium text-[13px] leading-[18px] ${
+                isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
+              }`}
+            >
+              {filter.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
 
 interface MissionsScreenProps {
   readonly onOpenMission?: (missionId: string) => void;
@@ -62,6 +125,8 @@ export function MissionsScreen({
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [filter, setFilter] = useState<MissionFilter>('available');
+  const [awardedXp, setAwardedXp] = useState<number | null>(null);
 
   return (
     <>
@@ -86,7 +151,7 @@ export function MissionsScreen({
 
           {missionsView.isPending ? (
           <VStack className="items-center justify-center py-24">
-            <Spinner size="small" />
+            <Spinner size="xlarge" />
           </VStack>
         ) : missionsView.isError ? (
           <VStack className="items-center gap-3 px-5 py-24">
@@ -106,26 +171,35 @@ export function MissionsScreen({
         ) : (
           <>
             <XpHero progress={missionsView.data.progress} />
+            <MissionFilterChips active={filter} onSelect={setFilter} />
             <VStack className="gap-2 px-5 pt-1">
               <Text className="py-0.5 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
                 Near you
               </Text>
-              {missionsView.data.missions.length === 0 ? (
-                <Text className="py-2 text-muted-foreground" size="sm">
-                  No missions yet. Tap + to create the first one.
-                </Text>
-              ) : (
-                <>
-                  {missionsView.data.missions.map((mission) => (
-                    <MissionCard
-                      key={mission.id}
-                      mission={mission}
-                      onOpen={onOpenMission}
-                    />
-                  ))}
-                  <AllCaughtUp />
-                </>
-              )}
+              {(() => {
+                const filtered = missionsView.data.missions.filter((mission) =>
+                  matchesFilter(mission, filter),
+                );
+                return filtered.length === 0 ? (
+                  <Text className="py-2 text-muted-foreground" size="sm">
+                    {missionsView.data.missions.length === 0
+                      ? 'No missions yet. Tap + to create the first one.'
+                      : 'No missions in this filter yet.'}
+                  </Text>
+                ) : (
+                  <>
+                    {filtered.map((mission) => (
+                      <MissionCard
+                        key={mission.id}
+                        mission={mission}
+                        onMissionComplete={setAwardedXp}
+                        onOpen={onOpenMission}
+                      />
+                    ))}
+                    <AllCaughtUp />
+                  </>
+                );
+              })()}
             </VStack>
           </>
         )}
@@ -140,10 +214,10 @@ export function MissionsScreen({
             createMission.mutate(
               {
                 description: draft.description,
-                icon: draft.icon,
+                theme: draft.theme,
                 newMedia: draft.newMedia,
                 scheduledFor: draft.scheduledFor,
-                stopsTotal: draft.stopsTotal,
+                stops: draft.stops,
                 title: draft.title,
                 xp: draft.xp,
               },
@@ -163,6 +237,8 @@ export function MissionsScreen({
         placeholder="Search missions"
         visible={isSearching}
       />
+
+      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
     </>
   );
 }

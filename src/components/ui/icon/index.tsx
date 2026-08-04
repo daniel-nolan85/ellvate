@@ -23,6 +23,8 @@ import {
   Ellipsis,
   Eye,
   EyeOff,
+  Flag,
+  Footprints,
   Globe,
   Heart,
   Image,
@@ -46,6 +48,7 @@ import {
   Store,
   Sun,
   Trophy,
+  Users,
   UtensilsCrossed,
   WavesHorizontal,
   Wrench,
@@ -93,6 +96,7 @@ export type AppIconName =
   | 'Link'
   | 'Eye'
   | 'EyeOff'
+  | 'Flag'
   | 'Image'
   | 'Bookmark'
   | 'Newspaper'
@@ -105,7 +109,9 @@ export type AppIconName =
   | 'Waves'
   | 'Sparkles'
   | 'Laptop'
-  | 'Utensils';
+  | 'Utensils'
+  | 'Footprints'
+  | 'Users';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -144,6 +150,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Link: Link2,
   Eye,
   EyeOff,
+  Flag,
   Image,
   Bookmark,
   Newspaper,
@@ -157,6 +164,8 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Sparkles,
   Laptop,
   Utensils: UtensilsCrossed,
+  Footprints,
+  Users,
 };
 
 Object.values(ICON_MAP).forEach((component) => {

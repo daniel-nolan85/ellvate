@@ -103,20 +103,22 @@ describe('seed data', () => {
     expect(missions).toHaveLength(4);
     expect(missions.map((mission) => mission.stopsTotal)).toEqual([1, 3, 3, 1]);
     expect(missions.map((mission) => mission.xp)).toEqual([50, 120, 90, 40]);
-    expect(missions.map((mission) => mission.icon)).toEqual([
-      'Sun',
-      'ArrowUp',
-      'Star',
-      'Moon',
+    expect(missions.map((mission) => mission.theme)).toEqual([
+      'water',
+      'trail',
+      'village',
+      'night',
     ]);
-    expect(
-      missions.map((mission) => mission.progressByUser[DEMO_USER_ID]?.status),
-    ).toEqual(['active', 'active', 'done', 'locked']);
-    expect(
-      missions.map(
-        (mission) => mission.progressByUser[DEMO_USER_ID]?.stopsDone,
-      ),
-    ).toEqual([0, 2, 3, 0]);
+    // mission-1 and mission-4 have no seeded entry for the demo user — not
+    // yet accepted, so they show in "Available" rather than "In progress".
+    const statuses: readonly (string | undefined)[] = missions.map(
+      (mission) => mission.progressByUser[DEMO_USER_ID]?.status,
+    );
+    expect(statuses).toEqual([undefined, 'active', 'done', undefined]);
+    const stopsDone: readonly (number | undefined)[] = missions.map(
+      (mission) => mission.progressByUser[DEMO_USER_ID]?.stopsDone,
+    );
+    expect(stopsDone).toEqual([undefined, 2, 3, undefined]);
   });
 
   test('seeds 6 ranked leaderboard users with You as demo-user', () => {

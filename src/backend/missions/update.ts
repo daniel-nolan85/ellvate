@@ -52,7 +52,8 @@ function updateMissionMemory(
             scheduledFor: value.scheduledFor,
             xp: value.xp,
             stopsTotal: value.stopsTotal,
-            icon: value.icon,
+            stops: value.stops,
+            theme: value.theme,
             media: media.length ? media : undefined,
             editedAt: new Date().toISOString(),
           }
