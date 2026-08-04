@@ -47,6 +47,13 @@ export async function markOnboardingComplete(): Promise<void> {
   await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
 }
 
+// Lets a signed-out (or deleted) session go through onboarding again next
+// time it lands on the index route, instead of the flag permanently sticking
+// from a previous session on the same device.
+export async function resetOnboardingComplete(): Promise<void> {
+  await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+}
+
 export function useOnboardingState() {
   const session = useSession();
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);

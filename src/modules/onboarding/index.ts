@@ -6,6 +6,7 @@ export { useOnboardingComplete } from './use-onboarding-complete';
 export {
   isOnboardingComplete,
   markOnboardingComplete,
+  resetOnboardingComplete,
   useOnboardingState,
   type AiComfortLevel,
   type CommunityRole,

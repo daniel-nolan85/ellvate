@@ -19,7 +19,13 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
-import { INTERESTS, MAX_PICKS, MIN_PICKS, ROLES } from '@/src/modules/onboarding';
+import {
+  INTERESTS,
+  MAX_PICKS,
+  MIN_PICKS,
+  resetOnboardingComplete,
+  ROLES,
+} from '@/src/modules/onboarding';
 import { getClerkConfiguration } from '@/src/platform/environment';
 import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
@@ -185,7 +191,7 @@ function StatCard({
   );
 }
 
-export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
+export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const profile = useProfile();
@@ -294,16 +300,29 @@ export function ProfileScreen({ onClose }: { readonly onClose: () => void }) {
     updateProfile.mutate({ notificationPrefs: { [key]: next } });
   };
 
+  // WHY: session.signOut() is a no-op with EXPO_PUBLIC_AUTH_MODE=disabled (no
+  // real session to end). Clearing the onboarding flag and replacing to the
+  // index route is what gives sign-out (and delete-account) a visible effect
+  // in that mode, and it still routes correctly once a real auth mode is wired up.
+  const finishSignOut = async () => {
+    try {
+      await session.signOut();
+    } finally {
+      await resetOnboardingComplete();
+      router.replace('/');
+    }
+  };
+
   const handleSignOut = () => {
     setSignOutOpen(false);
-    void session.signOut().finally(onClose);
+    void finishSignOut();
   };
 
   const handleDeleteAccount = () => {
     deleteAccount.mutate(undefined, {
       onSuccess: () => {
         setDeleteAccountOpen(false);
-        void session.signOut().finally(onClose);
+        void finishSignOut();
       },
       onError: () => {
         setDeleteAccountOpen(false);
