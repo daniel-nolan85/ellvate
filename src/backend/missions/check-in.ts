@@ -1,12 +1,22 @@
+import { extractCheckInPhoto } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
-import { ensureUser, getState, setState } from '@/src/backend/store';
+import {
+  ensureUser,
+  getState,
+  setState,
+  type StoredMissionCheckIn,
+} from '@/src/backend/store';
 
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
 import { checkInSupabase } from './missions-supabase';
 import type { CheckInResult, Mission } from './types';
 import { buildUserProgress } from './user-progress';
 
-function checkInMemory(userId: string, missionId: string): CheckInResult {
+function checkInMemory(
+  userId: string,
+  missionId: string,
+  input: unknown,
+): CheckInResult {
   ensureUser(userId);
   const mission = getState().missions.find((item) => item.id === missionId);
 
@@ -22,15 +32,6 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
   const entry = getUserMissionEntry(mission, userId);
   const status = resolveMissionStatus(mission, entry);
 
-  if (status === 'locked') {
-    return {
-      ok: false,
-      status: 409,
-      code: 'mission_locked',
-      message: 'Mission is locked.',
-    };
-  }
-
   if (status === 'done') {
     return {
       ok: false,
@@ -43,11 +44,35 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
   const stopsDone = entry.stopsDone + 1;
   const completed = stopsDone >= mission.stopsTotal;
   const awardedXp = completed ? mission.xp : 0;
+  const photo = extractCheckInPhoto(input);
+
+  // WHY: the check-in that completes the mission is the one that actually
+  // proves you did it — required there, optional on earlier stops so the
+  // deterrent lands where it matters without adding friction to every stop.
+  if (completed && !photo) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'photo_required',
+      message: 'A photo is required to complete this mission.',
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const checkInRow: StoredMissionCheckIn = {
+    id: `check-in-${crypto.randomUUID()}`,
+    missionId,
+    userId,
+    stopIndex: entry.stopsDone,
+    completedAt: nowIso,
+    photoUrl: photo ? photo.dataUrl : null,
+  };
 
   // WHY: streaks are intentionally naive for the demo store — +1 day per
   // completing check-in, no calendar tracking. Documented in the API contract.
   const next = setState((state) => ({
     ...state,
+    missionCheckIns: [...state.missionCheckIns, checkInRow],
     missions: state.missions.map((item) =>
       item.id === missionId
         ? {
@@ -55,9 +80,7 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
             progressByUser: {
               ...item.progressByUser,
               [userId]: {
-                completedAt: completed
-                  ? new Date().toISOString()
-                  : (entry.completedAt ?? null),
+                completedAt: completed ? nowIso : (entry.completedAt ?? null),
                 status: completed ? ('done' as const) : ('active' as const),
                 stopsDone,
               },
@@ -87,9 +110,11 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
     scheduledFor: mission.scheduledFor,
     xp: mission.xp,
     status: completed ? 'done' : 'active',
+    accepted: true,
     stopsDone,
     stopsTotal: mission.stopsTotal,
-    icon: mission.icon,
+    stops: mission.stops,
+    theme: mission.theme,
     media: mission.media,
     editedAt: mission.editedAt,
   };
@@ -109,8 +134,9 @@ function checkInMemory(userId: string, missionId: string): CheckInResult {
 export async function checkIn(
   ctx: RequestContext,
   missionId: string,
+  input: unknown = null,
 ): Promise<CheckInResult> {
   return ctx.supabase
-    ? checkInSupabase(ctx.supabase, ctx.userId, missionId)
-    : checkInMemory(ctx.userId, missionId);
+    ? checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
+    : checkInMemory(ctx.userId, missionId, input);
 }

@@ -1,18 +1,17 @@
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
-import { checkIn } from '@/src/backend/missions';
+import { acceptMission } from '@/src/backend/missions';
 
 export async function POST(
   request: Request,
   { id }: { id: string },
 ): Promise<Response> {
   return withRequestContext(request, async (ctx) => {
-    const body: unknown = await request.json().catch(() => null);
-    const result = await checkIn(ctx, id, body);
+    const result = await acceptMission(ctx, id);
 
     if (!result.ok) {
       return jsonError(result.status, result.code, result.message);
     }
 
-    return jsonOk(result.body);
+    return jsonOk({ mission: result.mission });
   });
 }

@@ -195,6 +195,29 @@ export function extractLogoUpload(input: unknown): RawMediaUpload | null {
   return { dataUrl, filename };
 }
 
+// WHY: a check-in photo is a single image like an avatar, not a gallery
+// — reads `raw.checkInPhoto` rather than the array field the gallery
+// uploads use. Mirrors extractAvatarUpload's permissive/strict split
+// (missing or malformed shape is "no photo attached"; a real data URL that
+// violates a limit rejects the request).
+export function extractCheckInPhoto(input: unknown): RawMediaUpload | null {
+  const raw = isRecord(input) ? input : {};
+  const photo = isRecord(raw.checkInPhoto) ? raw.checkInPhoto : null;
+  if (!photo) {
+    return null;
+  }
+  const dataUrl = typeof photo.dataUrl === 'string' ? photo.dataUrl : '';
+  if (!dataUrl.startsWith('data:')) {
+    return null;
+  }
+  const filename =
+    typeof photo.filename === 'string' ? photo.filename : 'check-in.jpg';
+  assertValidFilename(filename);
+  assertValidDataUrl(dataUrl);
+
+  return { dataUrl, filename };
+}
+
 // WHY: when editing, the client sends back the current logo (unchanged) as
 // `existingLogo`, or omits it entirely to remove the logo — mirrors
 // extractExistingMedia's kept-subset contract but for a single item.

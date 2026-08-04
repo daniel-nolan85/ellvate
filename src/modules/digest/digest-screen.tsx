@@ -280,7 +280,7 @@ export function DigestScreen({ onClose, weekStart }: DigestScreenProps) {
 
       {digest.isPending ? (
         <VStack className="items-center py-16">
-          <Spinner size="large" />
+          <Spinner size="xlarge" />
         </VStack>
       ) : !digest.data ? (
         <VStack className="items-center gap-2 px-8 py-16" space="sm">

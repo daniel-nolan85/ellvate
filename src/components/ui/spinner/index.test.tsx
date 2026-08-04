@@ -25,10 +25,10 @@ describe('Spinner', () => {
     expect(view.getByLabelText('submitting')).toBeTruthy();
   });
 
-  test('renders larger for the xlarge size used on comment-loading states', async () => {
+  test('renders larger for the xlarge size used on full-screen and comment-loading states', async () => {
     const view = await render(<Spinner size="xlarge" />);
 
     const root = view.toJSON();
-    expect(root?.props.style).toMatchObject({ height: 64, width: 64 });
+    expect(root?.props.style).toMatchObject({ height: 96, width: 96 });
   });
 });

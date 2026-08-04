@@ -28,9 +28,9 @@ const eventInput = {
 
 const missionInput = {
   description: 'Rent a kayak and get on the water.',
-  icon: 'Sun',
+  theme: 'day',
   scheduledFor: '2026-09-18',
-  stopsTotal: 3,
+  stops: ['Stop 1', 'Stop 2', 'Stop 3'],
   title: 'Kayak the marina',
   xp: 75,
 } as const;

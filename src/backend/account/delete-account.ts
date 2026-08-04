@@ -87,8 +87,21 @@ async function deleteAccountMemory(ctx: RequestContext): Promise<void> {
   // still finds it via ensureUser()/current.users lookups.
   setState((current) => {
     const remainingPostIds = new Set(current.posts.map((post) => post.id));
+    const removedCheckInIds = new Set(
+      current.missionCheckIns
+        .filter((checkIn) => checkIn.userId === userId)
+        .map((checkIn) => checkIn.id),
+    );
     return {
       ...current,
+      missionCheckInReports: current.missionCheckInReports.filter(
+        (report) =>
+          !removedCheckInIds.has(report.checkInId) &&
+          report.reporterId !== userId,
+      ),
+      missionCheckIns: current.missionCheckIns.filter(
+        (checkIn) => checkIn.userId !== userId,
+      ),
       events: current.events.map((event) =>
         event.attendeeIds.includes(userId)
           ? {

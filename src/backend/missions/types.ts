@@ -1,4 +1,4 @@
-import type { MissionIcon, MissionStatus } from '@/src/backend/store';
+import type { MissionStatus, MissionTheme } from '@/src/backend/store';
 
 export interface MissionMedia {
   readonly url: string;
@@ -19,9 +19,15 @@ export interface Mission {
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly status: MissionStatus;
+  // Whether the viewer has accepted this mission — i.e. a progress row
+  // exists for them, even before their first check-in. Distinguishes a
+  // fresh "Available" mission (not accepted) from one just accepted with
+  // 0/N stops done (both would otherwise look identical).
+  readonly accepted: boolean;
   readonly stopsDone: number;
   readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
 }
@@ -58,7 +64,8 @@ export interface ValidatedMission {
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
 }
 
 export type MissionValidation =
@@ -97,8 +104,8 @@ export interface CheckInResponse {
 
 export type CheckInErrorCode =
   | 'mission_not_found'
-  | 'mission_locked'
-  | 'mission_complete';
+  | 'mission_complete'
+  | 'photo_required';
 
 export interface CheckInFailure {
   readonly ok: false;
@@ -113,3 +120,34 @@ export interface CheckInSuccess {
 }
 
 export type CheckInResult = CheckInSuccess | CheckInFailure;
+
+// Unbounded otherwise — a long-running mission with many participants adds a
+// row per stop completion and nothing here is ever deleted. Capped to the
+// most recent N, still returned oldest-first within that window.
+export const CHECK_INS_LIST_LIMIT = 40;
+
+export interface CheckInEntry {
+  readonly id: string;
+  readonly missionId: string;
+  readonly user: PersonRef;
+  readonly stopIndex: number;
+  readonly completedAt: string;
+  readonly photoUrl: string | null;
+}
+
+export type ReportCheckInResult =
+  | { readonly ok: true; readonly reported: true }
+  | {
+      readonly ok: false;
+      readonly code: 'check_in_not_found';
+      readonly message: string;
+    };
+
+export type AcceptMissionResult =
+  | { readonly ok: true; readonly mission: Mission }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly code: 'mission_not_found';
+      readonly message: string;
+    };

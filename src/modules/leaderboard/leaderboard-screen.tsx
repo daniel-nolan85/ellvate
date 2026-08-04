@@ -70,7 +70,7 @@ export function LeaderboardScreen() {
         <RangeTabs active={range} onSelect={setRange} />
         {leaderboard.isPending ? (
           <Box className="items-center justify-center py-24">
-            <Spinner />
+            <Spinner size="xlarge" />
           </Box>
         ) : leaderboard.isError ? (
           <VStack className="items-center px-5 py-16" space="md">

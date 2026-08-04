@@ -9,8 +9,8 @@ import * as Haptics from 'expo-haptics';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
-export type MissionStatus = 'active' | 'done' | 'locked';
-export type MissionIcon = 'Sun' | 'ArrowUp' | 'Star' | 'Moon';
+export type MissionStatus = 'active' | 'done';
+export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 
 export interface MissionMedia {
   readonly url: string;
@@ -31,9 +31,11 @@ export interface Mission {
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly status: MissionStatus;
+  readonly accepted: boolean;
   readonly stopsDone: number;
   readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
 }
@@ -65,6 +67,20 @@ export interface CheckInResult {
   readonly progress: UserProgress;
 }
 
+export interface CheckInEntry {
+  readonly id: string;
+  readonly missionId: string;
+  readonly user: PersonRef;
+  readonly stopIndex: number;
+  readonly completedAt: string;
+  readonly photoUrl: string | null;
+}
+
+export interface CheckInPhotoInput {
+  readonly filename: string;
+  readonly dataUrl: string;
+}
+
 export interface NewMissionMediaInput {
   readonly filename: string;
   readonly dataUrl: string;
@@ -75,8 +91,8 @@ export interface CreateMissionInput {
   readonly description: string;
   readonly scheduledFor: string;
   readonly xp: number;
-  readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
   readonly newMedia?: readonly NewMissionMediaInput[];
 }
 
@@ -91,8 +107,8 @@ export interface UpdateMissionInput {
   readonly description: string;
   readonly scheduledFor: string;
   readonly xp: number;
-  readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
   readonly existingMedia?: readonly ExistingMissionMediaInput[];
   readonly newMedia?: readonly NewMissionMediaInput[];
 }
@@ -204,28 +220,78 @@ export function useDeleteMission() {
   });
 }
 
-interface CheckInContext {
+interface MissionMutationContext {
   readonly previous: MissionsView | undefined;
 }
 
-export function useCheckIn() {
+export function useAcceptMission() {
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.userId ?? 'demo-user';
   const viewKey = missionsViewKey(userId);
 
-  return useMutation<CheckInResult, Error, string, CheckInContext>({
-    mutationFn: (missionId) => requestJson<CheckInResult>({
-      getAccessToken: session.getToken,
-      method: 'POST',
-      path: `/api/missions/${missionId}/check-in`,
-    }),
+  return useMutation<
+    { readonly mission: Mission },
+    Error,
+    string,
+    MissionMutationContext
+  >({
+    mutationFn: (missionId) =>
+      requestJson<{ readonly mission: Mission }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/missions/${missionId}/accept`,
+      }),
     onError: (_error, _missionId, context) => {
       if (context?.previous) {
         queryClient.setQueryData(viewKey, context.previous);
       }
     },
     onMutate: async (missionId) => {
+      await queryClient.cancelQueries({ queryKey: viewKey });
+      const previous = queryClient.getQueryData<MissionsView>(viewKey);
+
+      if (previous) {
+        queryClient.setQueryData<MissionsView>(viewKey, {
+          ...previous,
+          missions: previous.missions.map((mission) =>
+            mission.id === missionId ? { ...mission, accepted: true } : mission,
+          ),
+        });
+      }
+
+      return { previous };
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['missions'] });
+    },
+  });
+}
+
+export interface CheckInInput {
+  readonly missionId: string;
+  readonly photo?: CheckInPhotoInput;
+}
+
+export function useCheckIn(onMissionComplete?: (awardedXp: number) => void) {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+  const viewKey = missionsViewKey(userId);
+
+  return useMutation<CheckInResult, Error, CheckInInput, MissionMutationContext>({
+    mutationFn: ({ missionId, photo }) => requestJson<CheckInResult>({
+      body: photo ? { checkInPhoto: photo } : {},
+      getAccessToken: session.getToken,
+      method: 'POST',
+      path: `/api/missions/${missionId}/check-in`,
+    }),
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(viewKey, context.previous);
+      }
+    },
+    onMutate: async ({ missionId }) => {
       await queryClient.cancelQueries({ queryKey: viewKey });
       const previous = queryClient.getQueryData<MissionsView>(viewKey);
 
@@ -249,7 +315,45 @@ export function useCheckIn() {
         void Haptics
           .notificationAsync(Haptics.NotificationFeedbackType.Success)
           .catch(() => undefined);
+        // WHY: config-level onSuccess runs unconditionally in TanStack Query's
+        // Mutation#execute(), unlike the per-call mutate(vars, {onSuccess})
+        // callback, which is gated on the observer still having listeners —
+        // and the calling MissionCard can unmount before this resolves (its
+        // mission gets optimistically filtered out of "In progress" first).
+        onMissionComplete?.(result.awardedXp);
       }
     },
+  });
+}
+
+const missionCheckInsPath = (missionId: string): `/${string}` =>
+  `/api/missions/${missionId}/check-ins`;
+
+export function useMissionCheckIns(missionId: string) {
+  const session = useSession();
+
+  return useQuery({
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<{ readonly checkIns: readonly CheckInEntry[] }>({
+        getAccessToken: session.getToken,
+        path: missionCheckInsPath(missionId),
+        signal,
+      }),
+    queryKey: ['missions', 'check-ins', session.userId ?? 'demo-user', missionId],
+    select: (data) => data.checkIns,
+  });
+}
+
+export function useReportCheckIn() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (checkInId: string) =>
+      requestJson<{ reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/mission-check-ins/${checkInId}/report`,
+      }),
   });
 }

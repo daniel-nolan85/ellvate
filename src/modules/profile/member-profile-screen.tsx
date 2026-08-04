@@ -99,7 +99,7 @@ export function MemberProfileScreen({
 
         {member.isPending ? (
           <View className='items-center py-10'>
-            <Spinner size='large' />
+            <Spinner size='xlarge' />
           </View>
         ) : member.isError ? (
           <Text className='px-5 text-center text-text-muted' size='sm'>

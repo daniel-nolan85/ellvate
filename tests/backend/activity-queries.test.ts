@@ -132,7 +132,7 @@ describe('getMyEventsView', () => {
 describe('getMyMissionsView', () => {
   test('returns missions the caller created or completed, not the whole community', async () => {
     // Seed: mission-3 is the only one DEMO_USER_ID has completed
-    // (status: 'done'); mission-1/2 are still active, mission-4 is locked.
+    // (status: 'done'); mission-1/2/4 are still active.
     // All four are authored by user-hoa.
     const demoPage = await getMyMissionsView(ctx(DEMO_USER_ID));
     expect(demoPage.missions.map((mission) => mission.id)).toEqual([
@@ -153,9 +153,9 @@ describe('getMyMissionsView', () => {
   test('paginates with a cursor rather than returning the whole community list', async () => {
     const validInput = {
       description: 'Rent a kayak and get on the water.',
-      icon: 'Sun',
+      theme: 'day',
       scheduledFor: '2026-07-18',
-      stopsTotal: 1,
+      stops: ['Stop 1'],
       title: 'One',
       xp: 75,
     };

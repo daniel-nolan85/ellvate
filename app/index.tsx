@@ -13,7 +13,7 @@ export default function IndexRoute() {
   if (isComplete === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <Spinner />
+        <Spinner size="xlarge" />
       </View>
     );
   }

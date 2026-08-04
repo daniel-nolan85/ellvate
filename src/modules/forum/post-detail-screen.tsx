@@ -405,7 +405,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             </VStack>
           ) : posts.isPending ? (
             <View className='items-center py-10'>
-              <Spinner />
+              <Spinner size='xlarge' />
             </View>
           ) : (
             <Text className='text-text-muted' size='sm'>

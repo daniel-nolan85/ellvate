@@ -1,13 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
+import {
+  extractCheckInPhoto,
+  extractExistingMedia,
+  extractMediaUploads,
+} from '@/src/backend/media';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
-import type { MissionIcon, MissionStatus } from '@/src/backend/store';
+import type { MissionStatus, MissionTheme } from '@/src/backend/store';
 
 import type {
+  AcceptMissionResult,
   CheckInResult,
   CreateMissionResult,
   Mission,
@@ -20,7 +25,7 @@ import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
 
 const MISSION_SELECT =
-  'id,created_by,title,description,scheduled_for,xp,stops_total,icon,media,position,locked_by_default,edited_at';
+  'id,created_by,title,description,scheduled_for,xp,stops_total,stops,theme,media,position,edited_at';
 
 interface MissionRow {
   readonly id: string;
@@ -30,10 +35,10 @@ interface MissionRow {
   readonly scheduled_for: string | null;
   readonly xp: number;
   readonly stops_total: number;
-  readonly icon: string;
+  readonly stops: readonly string[] | null;
+  readonly theme: string;
   readonly media: readonly MissionMedia[] | null;
   readonly position: number;
-  readonly locked_by_default: boolean;
   readonly edited_at: string | null;
 }
 
@@ -54,24 +59,8 @@ type UploadMissionMediaResult =
   | { readonly ok: true; readonly media: readonly MissionMedia[] }
   | { readonly ok: false; readonly uploaded: readonly MissionMedia[] };
 
-// Mirrors the in-memory resolver: a locked entry stays locked, otherwise the
-// status is derived from stop progress so completion is never ambiguous.
-const resolveStatus = (
-  storedStatus: MissionStatus,
-  stopsDone: number,
-  stopsTotal: number,
-): MissionStatus =>
-  storedStatus === 'locked'
-    ? 'locked'
-    : stopsDone >= stopsTotal
-      ? 'done'
-      : 'active';
-
-const storedStatusFor = (
-  row: MissionRow,
-  entry: ProgressRow | undefined,
-): MissionStatus =>
-  entry ? entry.status : row.locked_by_default ? 'locked' : 'active';
+const resolveStatus = (stopsDone: number, stopsTotal: number): MissionStatus =>
+  stopsDone >= stopsTotal ? 'done' : 'active';
 
 interface PersonLookup {
   readonly name: string;
@@ -96,10 +85,12 @@ const toMissionView = (
     description: row.description,
     scheduledFor: row.scheduled_for,
     xp: row.xp,
-    status: resolveStatus(storedStatusFor(row, entry), stopsDone, row.stops_total),
+    status: resolveStatus(stopsDone, row.stops_total),
+    accepted: entry !== undefined,
     stopsDone,
     stopsTotal: row.stops_total,
-    icon: row.icon as MissionIcon,
+    stops: row.stops ?? [],
+    theme: row.theme as MissionTheme,
     media: row.media ?? undefined,
     editedAt: row.edited_at,
   };
@@ -397,9 +388,9 @@ export async function createMissionSupabase(
       scheduled_for: value.scheduledFor,
       xp: value.xp,
       stops_total: value.stopsTotal,
-      icon: value.icon,
+      stops: value.stops,
+      theme: value.theme,
       position,
-      locked_by_default: false,
     })
     .select(MISSION_SELECT)
     .single();
@@ -498,7 +489,8 @@ export async function updateMissionSupabase(
       scheduled_for: value.scheduledFor,
       xp: value.xp,
       stops_total: value.stopsTotal,
-      icon: value.icon,
+      stops: value.stops,
+      theme: value.theme,
       media: media.length ? media : null,
       edited_at: new Date().toISOString(),
     })
@@ -566,6 +558,7 @@ export async function checkInSupabase(
   supabase: SupabaseClient,
   userId: string,
   missionId: string,
+  input: unknown,
 ): Promise<CheckInResult> {
   await ensureUser(supabase, userId);
 
@@ -595,20 +588,7 @@ export async function checkInSupabase(
   const entry = (entryData as ProgressRow | null) ?? undefined;
 
   const currentStopsDone = entry?.stops_done ?? 0;
-  const status = resolveStatus(
-    storedStatusFor(mission, entry),
-    currentStopsDone,
-    mission.stops_total,
-  );
-
-  if (status === 'locked') {
-    return {
-      ok: false,
-      status: 409,
-      code: 'mission_locked',
-      message: 'Mission is locked.',
-    };
-  }
+  const status = resolveStatus(currentStopsDone, mission.stops_total);
 
   if (status === 'done') {
     return {
@@ -622,6 +602,28 @@ export async function checkInSupabase(
   const stopsDone = currentStopsDone + 1;
   const completed = stopsDone >= mission.stops_total;
   const awardedXp = completed ? mission.xp : 0;
+  const photo = extractCheckInPhoto(input);
+
+  if (completed && !photo) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'photo_required',
+      message: 'A photo is required to complete this mission.',
+    };
+  }
+
+  const photoUrl = photo
+    ? await uploadDataUrl(supabase, photo.dataUrl, photo.filename, 'mission-checkins', userId)
+    : null;
+
+  const { error: checkInInsertError } = await supabase.from('mission_check_ins').insert({
+    mission_id: missionId,
+    user_id: userId,
+    stop_index: currentStopsDone,
+    photo_url: photoUrl,
+  });
+  throwIfSupabaseError(checkInInsertError, 'save mission check-in');
 
   const { error: progressWriteError } = await supabase.from('mission_progress').upsert(
     {
@@ -669,9 +671,11 @@ export async function checkInSupabase(
     scheduledFor: mission.scheduled_for,
     xp: mission.xp,
     status: completed ? 'done' : 'active',
+    accepted: true,
     stopsDone,
     stopsTotal: mission.stops_total,
-    icon: mission.icon as MissionIcon,
+    stops: mission.stops ?? [],
+    theme: mission.theme as MissionTheme,
     media: mission.media ?? undefined,
     editedAt: mission.edited_at,
   };
@@ -689,4 +693,55 @@ export async function checkInSupabase(
       }),
     },
   };
+}
+
+// Creates a 0-stops mission_progress row for the user if one doesn't already
+// exist — idempotent (ignoreDuplicates), since accepting twice or accepting
+// a mission already in progress must never reset real progress.
+export async function acceptMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+): Promise<AcceptMissionResult> {
+  await ensureUser(supabase, userId);
+
+  const { data: missionData, error: missionError } = await supabase
+    .from('missions')
+    .select(MISSION_SELECT)
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(missionError, 'load mission');
+  const mission = missionData as MissionRow | null;
+  if (!mission) {
+    return {
+      ok: false,
+      status: 404,
+      code: 'mission_not_found',
+      message: 'Mission not found.',
+    };
+  }
+
+  const { error: insertError } = await supabase.from('mission_progress').upsert(
+    {
+      completed_at: null,
+      mission_id: missionId,
+      user_id: userId,
+      stops_done: 0,
+      status: 'active',
+    },
+    { ignoreDuplicates: true, onConflict: 'mission_id,user_id' },
+  );
+  throwIfSupabaseError(insertError, 'accept mission');
+
+  const { data: entryData, error: entryError } = await supabase
+    .from('mission_progress')
+    .select('mission_id,stops_done,status')
+    .eq('mission_id', missionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(entryError, 'load mission progress after accept');
+  const entry = (entryData as ProgressRow | null) ?? undefined;
+
+  const nameById = await nameMapFor(supabase, mission.created_by);
+  return { ok: true, mission: toMissionView(mission, entry, nameById) };
 }

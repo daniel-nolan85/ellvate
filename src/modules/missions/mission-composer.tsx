@@ -12,15 +12,16 @@ import { VStack } from '@/src/components/ui/vstack';
 import { dateOnlyFromDate, dateOnlyToDate } from '@/src/lib/date-only';
 import { pickGalleryImages } from '@/src/platform/media-picker';
 
-import type { MissionIcon } from './use-missions';
+import { MISSION_THEME_LABEL, MISSION_THEMES, missionThemeIcon } from './mission-theme';
+import type { MissionTheme } from './use-missions';
 
 export interface MissionComposerDraft {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string;
   readonly xp: number;
-  readonly stopsTotal: number;
-  readonly icon: MissionIcon;
+  readonly stops: readonly string[];
+  readonly theme: MissionTheme;
   readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly newMedia?: readonly { readonly filename: string; readonly dataUrl: string }[];
 }
@@ -42,13 +43,7 @@ interface NewMissionMediaItem {
 type MissionMediaItem = ExistingMissionMediaItem | NewMissionMediaItem;
 
 const XP_OPTIONS = [25, 50, 75, 100, 150] as const;
-const STOP_OPTIONS = [1, 2, 3, 4, 5] as const;
-const ICON_OPTIONS: readonly { readonly icon: MissionIcon; readonly label: string }[] = [
-  { icon: 'Sun', label: 'Day' },
-  { icon: 'ArrowUp', label: 'Trail' },
-  { icon: 'Star', label: 'Star' },
-  { icon: 'Moon', label: 'Night' },
-];
+const MAX_STOPS = 10;
 
 interface ChipProps {
   readonly label: string;
@@ -94,8 +89,8 @@ interface MissionComposerProps {
   readonly initialDescription?: string;
   readonly initialScheduledFor?: string;
   readonly initialXp?: number | null;
-  readonly initialStopsTotal?: number | null;
-  readonly initialIcon?: MissionIcon | null;
+  readonly initialStops?: readonly string[];
+  readonly initialTheme?: MissionTheme | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
 }
@@ -114,10 +109,10 @@ const oneYearAfter = (date: Date): Date => {
 
 export function MissionComposer({
   initialDescription = '',
-  initialIcon = null,
   initialMedia,
   initialScheduledFor,
-  initialStopsTotal = null,
+  initialStops = [],
+  initialTheme = null,
   initialTitle = '',
   initialXp = null,
   isSubmitting,
@@ -128,8 +123,9 @@ export function MissionComposer({
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [xp, setXp] = useState<number | null>(initialXp);
-  const [stopsTotal, setStopsTotal] = useState<number | null>(initialStopsTotal);
-  const [icon, setIcon] = useState<MissionIcon | null>(initialIcon);
+  const [stops, setStops] = useState<readonly string[]>(initialStops);
+  const [stopDraft, setStopDraft] = useState('');
+  const [theme, setTheme] = useState<MissionTheme | null>(initialTheme);
   const [today] = useState(startOfToday);
   const [maxDate] = useState(() => oneYearAfter(today));
   const [scheduledFor, setScheduledFor] = useState(
@@ -150,13 +146,26 @@ export function MissionComposer({
     title.trim().length > 0 &&
     description.trim().length > 0 &&
     xp !== null &&
-    stopsTotal !== null &&
-    icon !== null &&
+    stops.length > 0 &&
+    theme !== null &&
     !isSubmitting;
 
   const showAlert = (nextTitle: string, message: string) => {
     setAlertTitle(nextTitle);
     setAlertMessage(message);
+  };
+
+  const addStop = () => {
+    const trimmed = stopDraft.trim();
+    if (!trimmed || stops.length >= MAX_STOPS) {
+      return;
+    }
+    setStops([...stops, trimmed]);
+    setStopDraft('');
+  };
+
+  const removeStop = (index: number) => {
+    setStops(stops.filter((_, i) => i !== index));
   };
 
   const pickImage = async () => {
@@ -201,14 +210,69 @@ export function MissionComposer({
         </Field>
 
         <Field label="What to do">
-          <GrowingTextInput
-            className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
-            maxHeight={200}
-            onChangeText={setDescription}
-            placeholder="Describe the challenge"
-            testID="mission-description"
-            value={description}
-          />
+          <VStack space="sm">
+            <GrowingTextInput
+              className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
+              maxHeight={200}
+              onChangeText={setDescription}
+              placeholder="Describe the challenge"
+              testID="mission-description"
+              value={description}
+            />
+            <Text className="text-[12px] text-text-muted">
+              Break it into stops — add one for each place or task along the way.
+            </Text>
+            {stops.length > 0 ? (
+              <VStack space="xs">
+                {stops.map((stop, index) => (
+                  <HStack
+                    className="items-center gap-2 rounded-xl bg-secondary px-3 py-2.5"
+                    key={`${index}-${stop}`}
+                  >
+                    <Text className="font-inter-semibold text-[12px] text-text-muted">
+                      {index + 1}
+                    </Text>
+                    <Text className="flex-1 text-[14px] text-content">
+                      {stop}
+                    </Text>
+                    <Pressable
+                      accessibilityLabel={`Remove stop ${index + 1}`}
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      onPress={() => removeStop(index)}
+                      testID={`mission-stop-remove-${index}`}
+                    >
+                      <Icon color="rgb(169,156,139)" name="Close" size={16} />
+                    </Pressable>
+                  </HStack>
+                ))}
+              </VStack>
+            ) : null}
+            {stops.length < MAX_STOPS ? (
+              <HStack className="items-center gap-2">
+                <Input className="flex-1" size="lg">
+                  <InputField
+                    onChangeText={setStopDraft}
+                    onSubmitEditing={addStop}
+                    placeholder="Describe the next stop"
+                    testID="mission-stop-input"
+                    value={stopDraft}
+                  />
+                </Input>
+                <Pressable
+                  accessibilityLabel="Add stop"
+                  accessibilityRole="button"
+                  className="h-11 w-11 items-center justify-center rounded-full bg-accent"
+                  disabled={stopDraft.trim().length === 0}
+                  onPress={addStop}
+                  style={{ opacity: stopDraft.trim().length === 0 ? 0.5 : 1 }}
+                  testID="mission-stop-add"
+                >
+                  <Icon color="#fff" name="Add" size={18} />
+                </Pressable>
+              </HStack>
+            ) : null}
+          </VStack>
         </Field>
 
         <Field label="Scheduled for">
@@ -235,39 +299,30 @@ export function MissionComposer({
           </HStack>
         </Field>
 
-        <Field label="Stops">
+        <Field label="Theme">
           <HStack className="flex-wrap gap-2">
-            {STOP_OPTIONS.map((option) => (
-              <Chip
-                key={option}
-                label={String(option)}
-                onPress={() => setStopsTotal(option)}
-                selected={stopsTotal === option}
-                testID={`mission-stops-${option}`}
-              />
-            ))}
-          </HStack>
-        </Field>
-
-        <Field label="Icon">
-          <HStack className="flex-wrap gap-2">
-            {ICON_OPTIONS.map((option) => {
-              const active = icon === option.icon;
+            {MISSION_THEMES.map((option) => {
+              const active = theme === option;
               return (
                 <Pressable
-                  accessibilityLabel={option.label}
+                  accessibilityLabel={MISSION_THEME_LABEL[option]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  className={`h-11 w-11 items-center justify-center rounded-full ${active ? 'bg-accent' : 'bg-secondary'}`}
-                  key={option.icon}
-                  onPress={() => setIcon(option.icon)}
-                  testID={`mission-icon-${option.icon.toLowerCase()}`}
+                  className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${active ? 'bg-accent' : 'bg-secondary'}`}
+                  key={option}
+                  onPress={() => setTheme(option)}
+                  testID={`mission-theme-${option}`}
                 >
                   <Icon
                     color={active ? '#fff' : 'rgb(37,30,23)'}
-                    name={option.icon}
-                    size={18}
+                    name={missionThemeIcon(option)}
+                    size={16}
                   />
+                  <Text
+                    className={`font-inter-medium text-[13px] ${active ? 'text-accent-foreground' : 'text-content'}`}
+                  >
+                    {MISSION_THEME_LABEL[option]}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -336,7 +391,7 @@ export function MissionComposer({
             className="rounded-full bg-accent px-5"
             isDisabled={!canSubmit}
             onPress={() => {
-              if (xp === null || stopsTotal === null || icon === null) {
+              if (xp === null || stops.length === 0 || theme === null) {
                 return;
               }
               onSubmit({
@@ -344,7 +399,7 @@ export function MissionComposer({
                 existingMedia: media
                   .filter((item): item is ExistingMissionMediaItem => item.kind === 'existing')
                   .map((item) => ({ filename: item.filename, url: item.url })),
-                icon,
+                theme,
                 newMedia: media
                   .filter((item): item is NewMissionMediaItem => item.kind === 'new')
                   .map((item) => ({
@@ -352,7 +407,7 @@ export function MissionComposer({
                     filename: item.filename,
                   })),
                 scheduledFor: dateOnlyFromDate(scheduledFor),
-                stopsTotal,
+                stops,
                 title: title.trim(),
                 xp,
               });

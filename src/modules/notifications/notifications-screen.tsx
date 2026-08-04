@@ -129,7 +129,7 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
 
       {notifications.isPending ? (
         <VStack className="items-center py-16">
-          <Spinner size="large" />
+          <Spinner size="xlarge" />
         </VStack>
       ) : items.length === 0 ? (
         <VStack className="items-center gap-2 px-8 py-16" space="sm">

@@ -22,7 +22,8 @@ function createMissionMemory(userId: string, input: unknown): CreateMissionResul
     scheduledFor: value.scheduledFor,
     xp: value.xp,
     stopsTotal: value.stopsTotal,
-    icon: value.icon,
+    stops: value.stops,
+    theme: value.theme,
     media: mediaUploads.length
       ? mediaUploads.map((upload) => ({
           filename: upload.filename,

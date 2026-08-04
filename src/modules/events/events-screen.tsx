@@ -128,7 +128,7 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
 
           {eventsView.isPending ? (
             <Box className="items-center justify-center py-24">
-              <Spinner />
+              <Spinner size="xlarge" />
             </Box>
           ) : eventsView.isError ? (
             <VStack className="items-center px-5 py-24" space="md">

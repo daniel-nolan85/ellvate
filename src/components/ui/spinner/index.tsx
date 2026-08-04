@@ -24,7 +24,7 @@ const SHADOW_COLOR = 'rgb(60,52,33)';
 const SIZE_PX: Readonly<Record<'small' | 'large' | 'xlarge', number>> = {
   large: 36,
   small: 20,
-  xlarge: 64,
+  xlarge: 96,
 };
 
 interface SpinnerProps {

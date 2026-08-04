@@ -27,7 +27,12 @@ import {
   useMyEventsView,
   type CommunityEvent,
 } from '@/src/modules/events';
-import { MissionCard, useMyMissionsView, type Mission } from '@/src/modules/missions';
+import {
+  MissionCard,
+  MissionCelebrationModal,
+  useMyMissionsView,
+  type Mission,
+} from '@/src/modules/missions';
 import {
   SERVICE_CATEGORY_LABEL,
   ServiceListingCard,
@@ -120,6 +125,7 @@ export function ActivityScreen() {
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
+  const [awardedXp, setAwardedXp] = useState<number | null>(null);
 
   // Close the open sheet first and let it slide down, then navigate once
   // the close animation finishes — navigating immediately would unmount the
@@ -287,7 +293,7 @@ export function ActivityScreen() {
 
       {isPending ? (
         <VStack className="items-center py-16">
-          <Spinner size="large" />
+          <Spinner size="xlarge" />
         </VStack>
       ) : !hasAnything ? (
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
@@ -456,6 +462,7 @@ export function ActivityScreen() {
           <View className="px-1 pb-4">
             <MissionCard
               mission={openMission}
+              onMissionComplete={setAwardedXp}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -485,6 +492,8 @@ export function ActivityScreen() {
       />
 
       <CommunityNavBar />
+
+      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
     </View>
   );
 }

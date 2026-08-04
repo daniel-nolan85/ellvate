@@ -76,6 +76,9 @@ export function useUpdateComment(postId: string) {
       void queryClient.invalidateQueries({
         queryKey: ['forum', 'comments', userId, postId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['forum', 'comments', 'mine', userId],
+      });
     },
   });
 }

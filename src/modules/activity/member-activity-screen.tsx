@@ -18,7 +18,7 @@ import {
   type CommunityEvent,
 } from '@/src/modules/events';
 import { PostCard, useToggleLike, type ForumPost } from '@/src/modules/forum';
-import { MissionCard, type Mission } from '@/src/modules/missions';
+import { MissionCard, MissionCelebrationModal, type Mission } from '@/src/modules/missions';
 import { useMemberProfile } from '@/src/modules/profile';
 import {
   SERVICE_CATEGORY_LABEL,
@@ -101,6 +101,7 @@ export function MemberActivityScreen({
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
+  const [awardedXp, setAwardedXp] = useState<number | null>(null);
 
   const closeThenNavigate = (
     path:
@@ -210,7 +211,7 @@ export function MemberActivityScreen({
 
       {activity.isPending ? (
         <VStack className="items-center py-16">
-          <Spinner size="large" />
+          <Spinner size="xlarge" />
         </VStack>
       ) : !hasAnything ? (
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
@@ -355,6 +356,7 @@ export function MemberActivityScreen({
           <View className="px-1 pb-4">
             <MissionCard
               mission={openMission}
+              onMissionComplete={setAwardedXp}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -371,6 +373,8 @@ export function MemberActivityScreen({
           </View>
         ) : null}
       </Sheet>
+
+      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
     </View>
   );
 }

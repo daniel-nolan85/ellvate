@@ -126,7 +126,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         />
         {posts.isPending ? (
           <VStack className="items-center py-16">
-            <Spinner size="large" />
+            <Spinner size="xlarge" />
           </VStack>
         ) : posts.isError ? (
           <VStack className="items-center py-16" space="sm">

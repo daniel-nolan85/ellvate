@@ -65,7 +65,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
           <ServiceCategoryChips active={activeCategory} onSelect={setActiveCategory} />
           {services.isPending ? (
             <VStack className="items-center py-16">
-              <Spinner size="large" />
+              <Spinner size="xlarge" />
             </VStack>
           ) : services.isError ? (
             <VStack className="items-center py-16" space="sm">
