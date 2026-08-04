@@ -46,7 +46,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
       <ObTitle
         eyebrow="Your feed"
         sub="This seeds your forum feed and event picks — like choosing your first three artists on a music app."
-        title="Pick 3 or more interests"
+        title={`Pick ${MIN_PICKS}-${MAX_PICKS} interests`}
       />
       <View className="flex-1 flex-row flex-wrap content-start gap-2 px-5 py-4">
         {INTERESTS.map((interest) => {
@@ -54,7 +54,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
           return (
             <Pressable
               accessibilityRole="button"
-              className={`rounded-full px-4 py-2.5 ${selected ? 'bg-primary' : 'bg-secondary'}`}
+              className={`rounded-full px-4 py-2.5 ${selected ? 'bg-accent' : 'bg-secondary'}`}
               key={interest}
               onPress={() => handleToggle(interest)}
               testID={`onboarding-interest-${interest.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
@@ -72,7 +72,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
             >
               <Text
                 className={`font-inter-medium text-[13px] ${
-                  selected ? 'text-primary-foreground' : 'text-content'
+                  selected ? 'text-accent-foreground' : 'text-content'
                 }`}
               >
                 {interest}
@@ -82,7 +82,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
         })}
       </View>
       <Text className="text-center text-muted-foreground" size="xs">
-        {picks.length}/3 minimum
+        {picks.length}/{MAX_PICKS} picked
       </Text>
       <ObCta
         disabled={picks.length < MIN_PICKS}

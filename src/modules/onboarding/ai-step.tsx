@@ -56,11 +56,11 @@ export function AiStep({ chrome, onNext, onPick, value }: AiStepProps) {
         sub="It can search events, forum posts and missions for you. How much help do you want?"
         title="Meet your AI concierge"
       />
-      <View className="mx-5 mt-3.5 flex-row items-center gap-3 rounded-[18px] bg-primary p-3.5">
-        <View className="h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-[rgba(250,250,250,0.12)]">
-          <AiMark color={ACCENT} size={18} />
+      <View className="mx-5 mt-3.5 flex-row items-center gap-3 rounded-[18px] bg-accent p-3.5">
+        <View className="h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-[rgba(255,255,255,0.18)]">
+          <AiMark color="#fff" size={18} />
         </View>
-        <Text className="flex-1 font-sans text-[13px] leading-[19px] text-[rgba(250,250,250,0.85)]">
+        <Text className="flex-1 font-sans text-[13px] leading-[19px] text-accent-foreground">
           &quot;Any networking events this weekend?&quot; — ask me things like that,
           anytime.
         </Text>

@@ -30,7 +30,7 @@ const initialDraft: OnboardingDraft = {
   interests: [],
   locationGranted: false,
   notificationPrefs: {
-    digest: false,
+    digest: true,
     events: true,
     missions: true,
     replies: true,

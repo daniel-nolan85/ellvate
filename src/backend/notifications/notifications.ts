@@ -1,5 +1,10 @@
 import type { RequestContext } from '@/src/backend/http';
-import { getState, setState, type StoredNotification } from '@/src/backend/store';
+import {
+  getState,
+  setState,
+  type NotificationPrefs,
+  type StoredNotification,
+} from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
@@ -31,6 +36,16 @@ const toNotification = (stored: StoredNotification): Notification => ({
   title: stored.title,
 });
 
+// Mirrors the Supabase-side notif_replies/notif_events/notif_missions gate
+// (see migration 0026) — 'like' shares 'replies' bucket by design, there is
+// no dedicated likes preference.
+const NOTIFICATION_PREF_BY_KIND: Readonly<Record<string, keyof NotificationPrefs>> = {
+  comment: 'replies',
+  event: 'events',
+  like: 'replies',
+  mission: 'missions',
+};
+
 // WHY: called directly by other memory-mode modules (comments, event-comments)
 // when a post/event author receives a reply — mirrors the Supabase
 // `notify_post_author`/`notify_event_author` triggers, which fire
@@ -42,6 +57,13 @@ export function createNotificationMemory(
   body: string,
   data: Readonly<Record<string, unknown>>,
 ): void {
+  const prefKey = NOTIFICATION_PREF_BY_KIND[kind];
+  if (prefKey) {
+    const recipient = getState().users.find((user) => user.id === userId);
+    if (recipient && !recipient.profile.notificationPrefs[prefKey]) {
+      return;
+    }
+  }
   setState((current) => ({
     ...current,
     notifications: [

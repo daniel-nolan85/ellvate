@@ -8,7 +8,7 @@ import { AiStep } from './ai-step';
 import { AuthStep } from './auth-step';
 import { ObHeader } from './chrome';
 import { CommitStep } from './commit-step';
-import { FeatureStep } from './feature-step';
+import { MomentStep, MOMENTS } from './feature-step';
 import { InterestsStep } from './interests-step';
 import { NotificationsStep } from './notifications-step';
 import { PasskeyStep } from './passkey-step';
@@ -28,7 +28,6 @@ interface OnboardingFlowProps {
 export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const session = useSession();
   const [step, setStep] = useState(0);
-  const [featureIndex, setFeatureIndex] = useState(0);
   const {
     completeOnboarding,
     completionError,
@@ -49,7 +48,9 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const isSignedIn = session.status === 'signed-in';
   const includePasskey =
     clerkUsable && process.env.EXPO_PUBLIC_ENABLE_PASSKEYS === 'true';
-  const stepCount = includePasskey ? 9 : 8;
+  // welcome, auth, role, interests, 5 feature moments, ai, notifications,
+  // [passkey], commit.
+  const stepCount = includePasskey ? 13 : 12;
 
   const goNext = useCallback(() => {
     setStep((current) => {
@@ -105,13 +106,21 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onToggle={toggleInterest}
       picks={draft.interests}
     />,
-    <FeatureStep
+    <MomentStep chrome={chrome(true)} key="moment-forum" moment={MOMENTS[0]} onNext={goNext} />,
+    <MomentStep chrome={chrome(true)} key="moment-events" moment={MOMENTS[1]} onNext={goNext} />,
+    <MomentStep
       chrome={chrome(true)}
-      index={featureIndex}
-      key="features"
+      key="moment-missions"
       locationGranted={draft.locationGranted}
-      onIndexChange={setFeatureIndex}
+      moment={MOMENTS[2]}
       onLocationToggle={toggleLocation}
+      onNext={goNext}
+    />,
+    <MomentStep chrome={chrome(true)} key="moment-services" moment={MOMENTS[3]} onNext={goNext} />,
+    <MomentStep
+      chrome={chrome(true)}
+      key="moment-leaderboard"
+      moment={MOMENTS[4]}
       onNext={goNext}
     />,
     <AiStep

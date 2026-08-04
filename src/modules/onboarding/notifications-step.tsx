@@ -57,7 +57,7 @@ function NotifSwitch({ on }: { readonly on: boolean }) {
   return (
     <View
       className={`h-[26px] w-[44px] rounded-full p-[3px] ${
-        on ? 'bg-primary' : 'bg-muted'
+        on ? 'bg-accent' : 'bg-muted'
       }`}
     >
       <Animated.View
@@ -94,9 +94,9 @@ export function NotificationsStep({
     <View className="flex-1 bg-canvas">
       {chrome}
       <ObTitle
-        eyebrow="Stay in the loop"
-        sub="Only what you pick — never marketing spam."
-        title="What's worth a ping?"
+        eyebrow="Notifications"
+        sub="Choose what you'd like to be notified about — never marketing spam, and you can change these anytime in your profile."
+        title="What should we let you know about?"
       />
       <View className="flex-1 gap-2.5 px-5 py-4">
         {NOTIF_OPTS.map((option) => {
