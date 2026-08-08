@@ -129,28 +129,14 @@ export function EmptyHint({ label }: { readonly label: string }) {
   );
 }
 
-export function LoadMoreRow({
-  isLoading,
-  onPress,
-}: {
-  readonly isLoading: boolean;
-  readonly onPress: () => void;
-}) {
+export function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
   return (
-    <Pressable
-      accessibilityRole="button"
-      className="items-center border-t border-surface-hairline py-3"
-      disabled={isLoading}
-      onPress={onPress}
-    >
-      {isLoading ? (
-        <Spinner size="small" />
-      ) : (
-        <Text className="font-inter-semibold text-[13px] text-accent">
-          Load more
-        </Text>
-      )}
-    </Pressable>
+    <View className="items-center border-t border-surface-hairline py-3">
+      <Spinner size="small" />
+    </View>
   );
 }
 

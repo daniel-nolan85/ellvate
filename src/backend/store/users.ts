@@ -13,7 +13,6 @@ const defaultNotificationPrefs = (): NotificationPrefs => ({
 export const defaultProfile = (): StoredProfile => ({
   role: null,
   interests: [],
-  aiComfort: null,
   notificationPrefs: defaultNotificationPrefs(),
   onboardedAt: null,
   activityVisible: false,

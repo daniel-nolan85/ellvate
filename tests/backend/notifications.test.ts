@@ -7,13 +7,15 @@ import { GET as getUnreadCount } from '../../app/api/notifications/unread-count+
 import { createComment } from '../../src/backend/comments';
 import { createEventComment } from '../../src/backend/event-comments';
 import { createPost, toggleLike } from '../../src/backend/forum';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
+import { createMissionComment } from '../../src/backend/mission-comments';
 import {
   countUnreadNotifications,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../src/backend/notifications';
+import { updateProfile } from '../../src/backend/profile';
 import { DEMO_USER_ID, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -26,6 +28,7 @@ const list = async (userId: string) =>
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('createComment notifies the post author', () => {
@@ -55,6 +58,19 @@ describe('createComment notifies the post author', () => {
 
     expect(await list('user-jordan')).toEqual([]);
   });
+
+  test('does not notify when the recipient has replies notifications off', async () => {
+    await updateProfile(ctx('user-jordan'), {
+      notificationPrefs: { replies: false },
+    });
+
+    const result = await createComment(ctx('user-mia'), 'post-1', {
+      body: 'Nice find!',
+    });
+    expect(result.ok).toBe(true);
+
+    expect(await list('user-jordan')).toEqual([]);
+  });
 });
 
 describe('createEventComment notifies the event author', () => {
@@ -78,6 +94,19 @@ describe('createEventComment notifies the event author', () => {
   test('does not notify yourself when you comment on your own event', async () => {
     const result = await createEventComment(ctx('user-hoa'), 'event-1', {
       body: 'Reminder: bring sunscreen',
+    });
+    expect(result.ok).toBe(true);
+
+    expect(await list('user-hoa')).toEqual([]);
+  });
+
+  test('does not notify when the recipient has event notifications off', async () => {
+    await updateProfile(ctx('user-hoa'), {
+      notificationPrefs: { events: false },
+    });
+
+    const result = await createEventComment(ctx('user-riley'), 'event-1', {
+      body: 'See you there!',
     });
     expect(result.ok).toBe(true);
 
@@ -115,6 +144,51 @@ describe('toggleLike notifies the post author', () => {
     expect(result?.liked).toBe(true);
 
     expect(await list('user-jordan')).toEqual([]);
+  });
+
+  test('does not notify a like when the recipient has replies notifications off', async () => {
+    // Likes share the 'replies' preference bucket by design — there is no
+    // dedicated likes toggle.
+    await updateProfile(ctx('user-jordan'), {
+      notificationPrefs: { replies: false },
+    });
+
+    const result = await toggleLike(ctx('user-mia'), 'post-1');
+    expect(result?.liked).toBe(true);
+
+    expect(await list('user-jordan')).toEqual([]);
+  });
+});
+
+describe('createMissionComment notifies the mission author', () => {
+  test('creates a notification when someone else comments on your mission', async () => {
+    // mission-1 is authored by user-hoa (seeded)
+    const result = await createMissionComment(ctx('user-mia'), 'mission-1', {
+      body: 'Great mission!',
+    });
+    expect(result.ok).toBe(true);
+
+    const notifications = await list('user-hoa');
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      kind: 'mission',
+      title: 'New comment on your mission',
+      readAt: null,
+    });
+    expect(notifications[0]?.data).toMatchObject({ missionId: 'mission-1' });
+  });
+
+  test('does not notify when the recipient has mission notifications off', async () => {
+    await updateProfile(ctx('user-hoa'), {
+      notificationPrefs: { missions: false },
+    });
+
+    const result = await createMissionComment(ctx('user-mia'), 'mission-1', {
+      body: 'Great mission!',
+    });
+    expect(result.ok).toBe(true);
+
+    expect(await list('user-hoa')).toEqual([]);
   });
 });
 

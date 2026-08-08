@@ -14,6 +14,7 @@ import {
   deletePostSupabase,
   getMyPostsSupabase,
   getPostsByIdsSupabase,
+  listPostsPageSupabase,
   listPostsSupabase,
   toggleLikeSupabase,
   togglePinSupabase,
@@ -22,7 +23,9 @@ import {
 import type {
   CreatePostResult,
   ForumPost,
+  ForumPostsPage,
   LikeResult,
+  ListPostsOptions,
   MyPostsOptions,
   MyPostsPage,
   PersonRef,
@@ -38,6 +41,8 @@ import {
 
 export const DEFAULT_MY_POSTS_PAGE_SIZE = 20;
 export const MAX_MY_POSTS_PAGE_SIZE = 50;
+export const DEFAULT_FORUM_PAGE_SIZE = 20;
+export const MAX_FORUM_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -98,6 +103,51 @@ function listPostsMemory(userId: string, forum?: string): readonly ForumPost[] {
   return [...filtered]
     .sort(byPinnedThenNewest(viewerPinnedPostId))
     .map((post) => toForumPost(post, state.users, userId, viewerPinnedPostId));
+}
+
+// The paginated counterpart to listPostsMemory, used by the public browse
+// feed (listPostsMemory itself stays unbounded for internal callers like the
+// assistant's local search, which needs to scan every post). The viewer's
+// pinned post always leads the very first page (cursor === null), independent
+// of recency; it's excluded from the keyset-ordered remainder so cursor math
+// stays well-defined past page 1, where a pin can't be expressed as a stable
+// sort key.
+function listPostsPageMemory(
+  userId: string,
+  forum: string | undefined,
+  limit: number,
+  cursor: string | null,
+): ForumPostsPage {
+  const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
+  const viewerPinnedPostId = viewer?.pinnedPostId ?? null;
+  const filtered = state.posts
+    .filter((post) => !forum || forum === 'All' || post.forum === forum)
+    .filter((post) => !mutedUserIds.has(post.authorId));
+
+  const pinnedPost =
+    cursor === null
+      ? (filtered.find((post) => post.id === viewerPinnedPostId) ?? null)
+      : null;
+  const rest = filtered.filter((post) => post.id !== viewerPinnedPostId);
+  // Reserve one slot for the pinned post on page 1 so the total item count
+  // still respects `limit` in the common case; at limit=1 with a pin present
+  // this returns 2 items rather than dropping the pin or the requested item.
+  const pageLimit = pinnedPost ? Math.max(1, limit - 1) : limit;
+  const items = rest.map((post) => ({ id: post.id, post, sortKey: post.createdAt }));
+  const page = paginateInMemory(items, pageLimit, cursor);
+
+  const orderedPosts = pinnedPost
+    ? [pinnedPost, ...page.items.map((item) => item.post)]
+    : page.items.map((item) => item.post);
+
+  return {
+    nextCursor: page.nextCursor,
+    posts: orderedPosts.map((post) =>
+      toForumPost(post, state.users, userId, viewerPinnedPostId),
+    ),
+  };
 }
 
 // Scoped to posts the caller authored — bounded by one user's own activity
@@ -336,6 +386,22 @@ export async function listPosts(
   return ctx.supabase
     ? listPostsSupabase(ctx.supabase, ctx.userId, forum)
     : listPostsMemory(ctx.userId, forum);
+}
+
+// The paginated, public-facing counterpart to listPosts (see
+// listPostsPageMemory for why the two are kept separate).
+export async function listPostsPage(
+  ctx: RequestContext,
+  options?: ListPostsOptions,
+): Promise<ForumPostsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_FORUM_PAGE_SIZE),
+    MAX_FORUM_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? listPostsPageSupabase(ctx.supabase, ctx.userId, options?.forum, limit, cursor)
+    : listPostsPageMemory(ctx.userId, options?.forum, limit, cursor);
 }
 
 export async function getMyPosts(

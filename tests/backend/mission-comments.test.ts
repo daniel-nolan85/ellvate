@@ -16,7 +16,7 @@ import {
   reportMissionComment,
   updateMissionComment,
 } from '../../src/backend/mission-comments';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMission, deleteMission } from '../../src/backend/missions';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -24,6 +24,7 @@ const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('listMissionComments', () => {

@@ -10,7 +10,7 @@ import {
 } from '../../app/api/missions/[id]/index+api';
 import { POST as postAccept } from '../../app/api/missions/[id]/accept+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import {
   acceptMission,
   checkIn,
@@ -26,6 +26,7 @@ const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('getMissionsView', () => {

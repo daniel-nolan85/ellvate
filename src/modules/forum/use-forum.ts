@@ -3,6 +3,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
 } from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
@@ -67,8 +68,8 @@ interface SubforumsResponse {
   readonly subforums: readonly string[];
 }
 
-interface PostsResponse {
-  readonly posts: readonly ForumPost[];
+interface PostResponse {
+  readonly post: ForumPost;
 }
 
 export interface MyPostsPage {
@@ -76,7 +77,13 @@ export interface MyPostsPage {
   readonly nextCursor: string | null;
 }
 
+export interface ForumPostsPage {
+  readonly posts: readonly ForumPost[];
+  readonly nextCursor: string | null;
+}
+
 const MY_POSTS_PAGE_SIZE = 20;
+const FORUM_POSTS_PAGE_SIZE = 20;
 
 interface ToggleLikeResponse {
   readonly id: string;
@@ -90,10 +97,17 @@ interface CreatePostResponse {
 
 const queryMeta = { persist: true, sensitive: false } as const;
 
-const postsPath = (forum: string): `/${string}` =>
-  forum === 'All'
-    ? '/api/forum/posts'
-    : `/api/forum/posts?forum=${encodeURIComponent(forum)}`;
+const postsPath = (forum: string, cursor: string | null): `/${string}` => {
+  const params = new URLSearchParams();
+  if (forum !== 'All') {
+    params.set('forum', forum);
+  }
+  params.set('limit', String(FORUM_POSTS_PAGE_SIZE));
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+  return `/api/forum/posts?${params.toString()}`;
+};
 
 export function useSubforums() {
   const session = useSession();
@@ -110,18 +124,45 @@ export function useSubforums() {
   });
 }
 
+// The main browse feed. Bounded and cursor-paginated on the server (see
+// /api/forum/posts) rather than loading every post in one shot -- callers
+// that need a flat list should flatten `data.pages` themselves.
 export function useForumPosts(forum: string) {
   const session = useSession();
 
-  return useQuery({
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: ForumPostsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     meta: queryMeta,
-    queryFn: ({ signal }) =>
-      requestJson<PostsResponse>({
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<ForumPostsPage>({
         getAccessToken: session.getToken,
-        path: postsPath(forum),
+        path: postsPath(forum, pageParam),
         signal,
       }),
     queryKey: ['forum', 'posts', session.userId ?? 'demo-user', forum],
+  });
+}
+
+// A single post by id, used by the post detail screen -- the paginated main
+// feed no longer guarantees a given post is already sitting in some cached
+// page, so the detail screen can't just scan useForumPosts's cache anymore.
+// Shares the ['forum','posts',userId,...] key prefix so the existing post
+// mutations' broad invalidation keeps this in sync too.
+export function usePost(postId: string) {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useQuery({
+    enabled: Boolean(postId),
+    meta: queryMeta,
+    queryFn: ({ signal }) =>
+      requestJson<PostResponse>({
+        getAccessToken: session.getToken,
+        path: `/api/forum/posts/${postId}`,
+        signal,
+      }),
+    queryKey: ['forum', 'posts', userId, 'detail', postId],
   });
 }
 
@@ -164,20 +205,25 @@ export function useToggleLike() {
     onMutate: async ({ forum, postId }) => {
       const queryKey = ['forum', 'posts', userId, forum];
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<PostsResponse>(queryKey);
-      queryClient.setQueryData<PostsResponse>(queryKey, (current) =>
+      const previous =
+        queryClient.getQueryData<InfiniteData<ForumPostsPage>>(queryKey);
+      const patchPost = (post: ForumPost): ForumPost =>
+        post.id === postId
+          ? {
+              ...post,
+              liked: !post.liked,
+              likes: post.likes + (post.liked ? -1 : 1),
+            }
+          : post;
+      queryClient.setQueryData<InfiniteData<ForumPostsPage>>(queryKey, (current) =>
         current === undefined
           ? current
           : {
-              posts: current.posts.map((post) =>
-                post.id === postId
-                  ? {
-                      ...post,
-                      liked: !post.liked,
-                      likes: post.likes + (post.liked ? -1 : 1),
-                    }
-                  : post,
-              ),
+              ...current,
+              pages: current.pages.map((page) => ({
+                ...page,
+                posts: page.posts.map(patchPost),
+              })),
             },
       );
       return { previous, queryKey };

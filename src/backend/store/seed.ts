@@ -56,7 +56,6 @@ const defaultNotificationPrefs: NotificationPrefs = {
 const emptyProfile = (): StoredProfile => ({
   role: null,
   interests: [],
-  aiComfort: null,
   notificationPrefs: defaultNotificationPrefs,
   onboardedAt: null,
   activityVisible: false,

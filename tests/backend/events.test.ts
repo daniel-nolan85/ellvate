@@ -16,7 +16,7 @@ import {
   toggleJoin,
   updateEvent,
 } from '../../src/backend/events';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -35,6 +35,7 @@ const dayLabelFor = (date: string): string =>
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('getEventsView', () => {

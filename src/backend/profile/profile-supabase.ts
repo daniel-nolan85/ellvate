@@ -1,11 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractAvatarUpload } from '@/src/backend/media';
-import type {
-  AiComfortLevel,
-  CommunityRole,
-  NotificationPrefs,
-} from '@/src/backend/store';
+import type { CommunityRole, NotificationPrefs } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
@@ -15,14 +11,13 @@ import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
 
 const PROFILE_SELECT =
-  'name,avatar_url,role,interests,ai_comfort,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at,activity_visible';
+  'name,avatar_url,role,interests,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at,activity_visible';
 
 interface AppUserProfileRow {
   readonly name: string;
   readonly avatar_url: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
-  readonly ai_comfort: AiComfortLevel | null;
   readonly notif_events: boolean;
   readonly notif_replies: boolean;
   readonly notif_missions: boolean;
@@ -40,7 +35,6 @@ const toUserProfile = (
   avatarUrl: row.avatar_url,
   role: row.role,
   interests: row.interests,
-  aiComfort: row.ai_comfort,
   notificationPrefs: {
     events: row.notif_events,
     replies: row.notif_replies,
@@ -96,17 +90,13 @@ const mergedRow = (
 ): AppUserProfileRow => {
   const role = update.role !== undefined ? update.role : current.role;
   const interests = update.interests ?? current.interests;
-  const aiComfort =
-    update.aiComfort !== undefined ? update.aiComfort : current.ai_comfort;
   const activityVisible =
     update.activityVisible !== undefined
       ? update.activityVisible
       : current.activity_visible;
   const prefs = mergedPrefs(current, update.notificationPrefs);
   const complete =
-    role !== null &&
-    aiComfort !== null &&
-    interests.length >= ONBOARDING_MIN_INTERESTS;
+    role !== null && interests.length >= ONBOARDING_MIN_INTERESTS;
   const onboardedAt =
     current.onboarded_at === null && complete
       ? new Date().toISOString()
@@ -116,7 +106,6 @@ const mergedRow = (
     avatar_url: current.avatar_url,
     role,
     interests,
-    ai_comfort: aiComfort,
     notif_events: prefs.events,
     notif_replies: prefs.replies,
     notif_missions: prefs.missions,

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, type Href } from 'expo-router';
 
 import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
@@ -95,28 +96,14 @@ function FilterChips({
   );
 }
 
-function LoadMoreRow({
-  isLoading,
-  onPress,
-}: {
-  readonly isLoading: boolean;
-  readonly onPress: () => void;
-}) {
+function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
   return (
-    <Pressable
-      accessibilityRole="button"
-      className="items-center border-t border-surface-hairline py-3"
-      disabled={isLoading}
-      onPress={onPress}
-    >
-      {isLoading ? (
-        <Spinner size="small" />
-      ) : (
-        <Text className="font-inter-semibold text-[13px] text-accent">
-          Load more
-        </Text>
-      )}
-    </Pressable>
+    <View className="items-center border-t border-surface-hairline py-3">
+      <Spinner size="small" />
+    </View>
   );
 }
 
@@ -210,6 +197,14 @@ export function BookmarksScreen() {
     [bookmarks.data],
   );
 
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: bookmarks.fetchNextPage,
+      hasNextPage: bookmarks.hasNextPage,
+      isFetchingNextPage: bookmarks.isFetchingNextPage,
+    },
+  ]);
+
   return (
     <View className="flex-1 bg-canvas">
       <View style={{ paddingTop: insets.top }}>
@@ -235,7 +230,11 @@ export function BookmarksScreen() {
           </Text>
         </VStack>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 130 }}
+          onScroll={onScroll}
+          scrollEventThrottle={100}
+        >
           <VStack className="mx-5 mt-2 overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
             {items.map((item) => (
               <BookmarkRow
@@ -244,12 +243,7 @@ export function BookmarksScreen() {
                 onPress={() => setOpenItem(item)}
               />
             ))}
-            {bookmarks.hasNextPage ? (
-              <LoadMoreRow
-                isLoading={bookmarks.isFetchingNextPage}
-                onPress={() => void bookmarks.fetchNextPage()}
-              />
-            ) : null}
+            <LoadMoreFooter isLoading={bookmarks.isFetchingNextPage} />
           </VStack>
         </ScrollView>
       )}

@@ -49,6 +49,34 @@ authenticated writes are denied (public reads still work).
 
 ## Migrations
 
-`supabase/migrations/*.sql` are the version-controlled copies of what was applied
-to the project via the Supabase MCP (`0001` schema, `0002` seed, `0003` RLS +
-triggers).
+`supabase/migrations/*.sql` are the source of truth for the project's schema,
+numbered sequentially (`0001`, `0002`, ...). The earliest few (`0001` schema,
+`0002` seed, `0003` RLS + triggers) were originally applied ad hoc via the
+Supabase MCP; every migration since is deployed with the Supabase CLI.
+
+**One-time setup:**
+
+1. Install the Supabase CLI. It isn't published on npm for Windows, so install
+   it per platform:
+   - Windows: `scoop bucket add supabase https://github.com/supabase/scoop-bucket.git`
+     then `scoop install supabase` (see https://scoop.sh if Scoop itself isn't
+     installed yet).
+   - macOS: `brew install supabase/tap/supabase`.
+   - Linux/CI: `npm install -g supabase` or the install script from
+     https://github.com/supabase/cli#install-the-cli.
+2. `supabase login` (opens a browser to authenticate the CLI once).
+3. `bun run db:link` — links this checkout to the `llv-community-app` project
+   (`xwtkfednponwvqafkeqj`) using `supabase/config.toml`.
+
+**Deploying a migration:**
+
+1. Add a new `supabase/migrations/NNNN_description.sql` file, continuing the
+   existing sequential numbering (check the highest existing number first).
+2. `bun run db:push` — applies any migrations not yet recorded against the
+   linked project's `supabase_migrations.schema_migrations` table, in order.
+3. `bun run db:diff` — optional sanity check afterward; diffs the linked
+   project's live schema against the local migration history and should come
+   back empty.
+
+Never hand-edit an already-pushed migration file — add a new one instead, the
+same convention already used throughout `supabase/migrations/`.

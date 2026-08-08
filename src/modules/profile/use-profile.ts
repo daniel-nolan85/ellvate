@@ -18,7 +18,6 @@ export interface UserProfile {
   readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
-  readonly aiComfort: 'new' | 'casual' | 'power' | null;
   readonly notificationPrefs: NotificationPrefs;
   readonly onboardedAt: string | null;
   // Opt-in: whether other members can open this user's detailed activity
@@ -95,7 +94,7 @@ export function useProfile() {
 }
 
 // A different user's public profile — role, interests, and public stats only,
-// never notification prefs or AI comfort, which stay private to the owner.
+// never notification prefs, which stay private to the owner.
 export function useMemberProfile(userId: string) {
   const session = useSession();
 

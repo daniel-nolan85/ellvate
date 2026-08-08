@@ -22,6 +22,9 @@
     "check:architecture": "python3 scripts/check-saos-structure.py . --fail-on-warning",
     "check:production": "bun scripts/validate-production-env.ts",
     "test:supabase": "bun scripts/run-supabase-integration.ts",
+    "db:link": "supabase link --project-ref xwtkfednponwvqafkeqj",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff --linked",
     "check": "bun run typecheck && bun run lint && bun run test && bun run check:architecture"
   },
   "dependencies": {
@@ -39,6 +42,7 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "@sentry/react-native": "8.21.0",
     "@supabase/supabase-js": "2.110.0",
     "@tanstack/query-async-storage-persister": "5.101.0",
     "@tanstack/react-query": "5.101.0",

@@ -1,5 +1,4 @@
 export type {
-  AiComfortLevel,
   BookmarkTargetType,
   CommunityRole,
   MissionTheme,

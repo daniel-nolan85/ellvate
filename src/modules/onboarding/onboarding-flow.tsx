@@ -4,12 +4,12 @@ import { View } from 'react-native';
 
 import { useSession } from '@/src/platform/session';
 
-import { AiStep } from './ai-step';
 import { AuthStep } from './auth-step';
 import { ObHeader } from './chrome';
 import { CommitStep } from './commit-step';
 import { MomentStep, MOMENTS } from './feature-step';
 import { InterestsStep } from './interests-step';
+import { NameStep } from './name-step';
 import { NotificationsStep } from './notifications-step';
 import { PasskeyStep } from './passkey-step';
 import { RoleStep } from './role-step';
@@ -20,6 +20,10 @@ import { WelcomeStep } from './welcome-step';
 // session is active it is skipped by navigation (not by the step itself), so
 // back and next never bounce off a self-advancing screen.
 const AUTH_INDEX = 1;
+
+// role is the first step that renders ObHeader; notifications is the last.
+const CHROME_FIRST_INDEX = 2;
+const CHROME_STEP_COUNT = 10;
 
 interface OnboardingFlowProps {
   readonly onFinished: () => void;
@@ -32,10 +36,9 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     completeOnboarding,
     completionError,
     draft,
-    setAiComfort,
+    setName,
     setRole,
     toggleInterest,
-    toggleLocation,
     toggleNotification,
   } = useOnboardingState();
 
@@ -48,9 +51,9 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const isSignedIn = session.status === 'signed-in';
   const includePasskey =
     clerkUsable && process.env.EXPO_PUBLIC_ENABLE_PASSKEYS === 'true';
-  // welcome, auth, role, interests, 5 feature moments, ai, notifications,
+  // welcome, auth, role, name, interests, 6 feature moments, notifications,
   // [passkey], commit.
-  const stepCount = includePasskey ? 13 : 12;
+  const stepCount = includePasskey ? 14 : 13;
 
   const goNext = useCallback(() => {
     setStep((current) => {
@@ -79,13 +82,18 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     }
   }, [completeOnboarding, onFinished]);
 
+  // Progress dots should only count the steps that actually render this
+  // shared header (role, name, interests, the 6 moments, notifications) --
+  // welcome, auth, passkey, and commit each render their own full-screen UI
+  // with no header, so counting them would make the dots jump straight to
+  // "3rd of 13" the very first time a user sees them.
   const chrome = (skippable: boolean): ReactNode => (
     <ObHeader
       onBack={goBack}
       onSkip={goNext}
       skippable={skippable}
-      step={step}
-      total={stepCount}
+      step={step - CHROME_FIRST_INDEX}
+      total={CHROME_STEP_COUNT}
     />
   );
 
@@ -99,6 +107,13 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onPick={setRole}
       value={draft.role}
     />,
+    <NameStep
+      chrome={chrome(true)}
+      key="name"
+      onChange={setName}
+      onNext={goNext}
+      value={draft.name}
+    />,
     <InterestsStep
       chrome={chrome(true)}
       key="interests"
@@ -106,29 +121,31 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onToggle={toggleInterest}
       picks={draft.interests}
     />,
-    <MomentStep chrome={chrome(true)} key="moment-forum" moment={MOMENTS[0]} onNext={goNext} />,
-    <MomentStep chrome={chrome(true)} key="moment-events" moment={MOMENTS[1]} onNext={goNext} />,
+    <MomentStep chrome={chrome(false)} key="moment-forum" moment={MOMENTS[0]} onNext={goNext} />,
+    <MomentStep chrome={chrome(false)} key="moment-events" moment={MOMENTS[1]} onNext={goNext} />,
     <MomentStep
-      chrome={chrome(true)}
+      chrome={chrome(false)}
       key="moment-missions"
-      locationGranted={draft.locationGranted}
       moment={MOMENTS[2]}
-      onLocationToggle={toggleLocation}
       onNext={goNext}
     />,
-    <MomentStep chrome={chrome(true)} key="moment-services" moment={MOMENTS[3]} onNext={goNext} />,
     <MomentStep
-      chrome={chrome(true)}
+      chrome={chrome(false)}
+      key="moment-services"
+      moment={MOMENTS[3]}
+      onNext={goNext}
+    />,
+    <MomentStep
+      chrome={chrome(false)}
       key="moment-leaderboard"
       moment={MOMENTS[4]}
       onNext={goNext}
     />,
-    <AiStep
-      chrome={chrome(true)}
-      key="ai"
+    <MomentStep
+      chrome={chrome(false)}
+      key="moment-assistant"
+      moment={MOMENTS[5]}
       onNext={goNext}
-      onPick={setAiComfort}
-      value={draft.aiComfort}
     />,
     <NotificationsStep
       chrome={chrome(true)}

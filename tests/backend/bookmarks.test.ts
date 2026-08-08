@@ -6,7 +6,7 @@ import { POST as postToggleBookmark } from '../../app/api/bookmarks/toggle+api';
 import { listBookmarkIds, listBookmarks, toggleBookmark } from '../../src/backend/bookmarks';
 import { deleteEvent } from '../../src/backend/events';
 import { createPost, deletePost } from '../../src/backend/forum';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { deleteMission } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
 import { deleteServiceListing } from '../../src/backend/services';
@@ -21,6 +21,7 @@ const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('toggleBookmark', () => {

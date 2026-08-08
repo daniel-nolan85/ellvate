@@ -1,0 +1,18 @@
+# Supabase CLI project config. This repo doesn't run the local Docker stack
+# (`supabase start`) -- development targets the real hosted project directly
+# (see .env.local's SUPABASE_URL). This file exists so `supabase link` and
+# `supabase db push` have a project to target, applying supabase/migrations/*.sql
+# to the linked remote database. See docs/supabase-clerk.md for the workflow.
+
+project_id = "llv-community-app"
+
+[db]
+major_version = 15
+
+# Mirrors the Clerk third-party auth connection configured in the Supabase
+# dashboard (Authentication -> Third-Party Auth -> Clerk). Keeping this in
+# source lets `supabase db push`/`db pull` reflect it instead of only living
+# as a manual dashboard setting.
+[auth.third_party.clerk]
+enabled = true
+domain = "picked-shiner-93.clerk.accounts.dev"

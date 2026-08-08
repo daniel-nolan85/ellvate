@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Icon } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
@@ -45,7 +46,7 @@ import {
   ActivityRow,
   EmptyHint,
   FilterChips,
-  LoadMoreRow,
+  LoadMoreFooter,
   SectionCard,
   SectionHeader,
   StatBox,
@@ -242,6 +243,24 @@ export function ActivityScreen() {
   const showMissions = filter === 'all' || filter === 'mission';
   const showServices = filter === 'all' || filter === 'service';
 
+  // Reaching the bottom of the shared ScrollView loads the next page of
+  // every currently-visible section at once, rather than trying to detect
+  // which individual section the user scrolled past.
+  const onScroll = useLoadMoreOnScroll([
+    ...(showPosts
+      ? [{ fetchNextPage: posts.fetchNextPage, hasNextPage: posts.hasNextPage, isFetchingNextPage: posts.isFetchingNextPage }]
+      : []),
+    ...(showEvents
+      ? [{ fetchNextPage: events.fetchNextPage, hasNextPage: events.hasNextPage, isFetchingNextPage: events.isFetchingNextPage }]
+      : []),
+    ...(showMissions
+      ? [{ fetchNextPage: missions.fetchNextPage, hasNextPage: missions.hasNextPage, isFetchingNextPage: missions.isFetchingNextPage }]
+      : []),
+    ...(showServices
+      ? [{ fetchNextPage: services.fetchNextPage, hasNextPage: services.hasNextPage, isFetchingNextPage: services.isFetchingNextPage }]
+      : []),
+  ]);
+
   const [isSearching, setIsSearching] = useState(false);
   const searchItems = useMemo(
     (): readonly SearchableActivityItem[] => [
@@ -314,7 +333,11 @@ export function ActivityScreen() {
 
           <FilterChips active={filter} onSelect={setFilter} />
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 130 }}
+            onScroll={onScroll}
+            scrollEventThrottle={100}
+          >
             {showPosts ? (
               <>
                 <SectionHeader count={myPostItems.length} title="Posts" />
@@ -332,12 +355,7 @@ export function ActivityScreen() {
                         title={item.title}
                       />
                     ))}
-                    {posts.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={posts.isFetchingNextPage}
-                        onPress={() => void posts.fetchNextPage()}
-                      />
-                    ) : null}
+                    <LoadMoreFooter isLoading={posts.isFetchingNextPage} />
                   </SectionCard>
                 )}
               </>
@@ -360,12 +378,7 @@ export function ActivityScreen() {
                         title={event.title}
                       />
                     ))}
-                    {events.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={events.isFetchingNextPage}
-                        onPress={() => void events.fetchNextPage()}
-                      />
-                    ) : null}
+                    <LoadMoreFooter isLoading={events.isFetchingNextPage} />
                   </SectionCard>
                 )}
               </>
@@ -392,12 +405,7 @@ export function ActivityScreen() {
                         title={mission.title}
                       />
                     ))}
-                    {missions.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={missions.isFetchingNextPage}
-                        onPress={() => void missions.fetchNextPage()}
-                      />
-                    ) : null}
+                    <LoadMoreFooter isLoading={missions.isFetchingNextPage} />
                   </SectionCard>
                 )}
               </>
@@ -420,12 +428,7 @@ export function ActivityScreen() {
                         title={listing.businessName}
                       />
                     ))}
-                    {services.hasNextPage ? (
-                      <LoadMoreRow
-                        isLoading={services.isFetchingNextPage}
-                        onPress={() => void services.fetchNextPage()}
-                      />
-                    ) : null}
+                    <LoadMoreFooter isLoading={services.isFetchingNextPage} />
                   </SectionCard>
                 )}
               </>

@@ -164,8 +164,14 @@ export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
               </Text>
             </View>
             <Pressable
+              // A 750ms hold makes it easy for the pointer to drift a few
+              // pixels off the circle mid-press — without generous retention,
+              // Pressable's default cancel-on-leave behavior reads onPressOut
+              // as an early release and resets the ring, which is why the
+              // gesture can seem to fail on the first couple of attempts.
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
+              pressRetentionOffset={{ bottom: 60, left: 60, right: 60, top: 60 }}
               testID="onboarding-commit-hold"
             >
               <View className="absolute inset-[4px] rounded-full bg-[rgba(250,250,250,0.06)]" />

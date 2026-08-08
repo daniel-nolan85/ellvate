@@ -5,7 +5,7 @@ import { GET as getMyPostsRoute } from '../../app/api/forum/posts/mine+api';
 import { GET as getMyMissionsRoute } from '../../app/api/missions/mine+api';
 import { createEvent, getMyEventsView, toggleJoin } from '../../src/backend/events';
 import { createPost, getMyPosts } from '../../src/backend/forum';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMission, getMyMissionsView } from '../../src/backend/missions';
 import { DEMO_USER_ID, resetStore } from '../../src/backend/store';
 
@@ -13,6 +13,7 @@ const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('getMyPosts', () => {

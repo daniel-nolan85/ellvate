@@ -46,3 +46,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Supabase CLI local link/session state
+/supabase/.temp
+/supabase/.branches

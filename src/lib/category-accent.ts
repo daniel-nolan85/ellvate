@@ -62,3 +62,13 @@ export const CATEGORY_CHIP_ACTIVE_TREATMENT: Readonly<
   palm: { bg: 'bg-palm-subtle', text: 'text-palm' },
   plum: { bg: 'bg-[rgb(241,232,238)]', text: 'text-[rgb(139,90,120)]' },
 };
+
+// Raw rgb() values for the same five accents, for callers (e.g. the Icon
+// component) that take a literal color prop rather than a className.
+export const CATEGORY_ACCENT_ICON_COLOR: Readonly<Record<CategoryAccent, string>> = {
+  accent: 'rgb(181,80,44)',
+  amber: 'rgb(217,123,41)',
+  lake: 'rgb(47,110,114)',
+  palm: 'rgb(110,127,74)',
+  plum: 'rgb(139,90,120)',
+};

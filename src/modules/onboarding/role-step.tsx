@@ -40,7 +40,7 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
       {chrome}
       <ObTitle
         eyebrow="About you"
-        sub="Shown on your profile so neighbours know who they're talking to."
+        sub="Shown on your profile so neighbours know who they're talking to. You can change this anytime."
         title="Who are you here as?"
       />
       <View className="gap-2.5 px-5 py-3.5">

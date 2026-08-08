@@ -4,6 +4,7 @@ export {
   getMyPosts,
   getPostsByIds,
   listPosts,
+  listPostsPage,
   toggleLike,
   togglePin,
   updatePost,
@@ -12,7 +13,9 @@ export { listSubforums } from './subforums';
 export type {
   CreatePostResult,
   ForumPost,
+  ForumPostsPage,
   LikeResult,
+  ListPostsOptions,
   Media,
   MyPostsOptions,
   MyPostsPage,

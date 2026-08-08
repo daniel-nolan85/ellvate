@@ -90,6 +90,7 @@ function SectionCard({ children }: { readonly children: ReactNode }) {
 
 function Row({
   danger,
+  description,
   icon,
   label,
   onPress,
@@ -99,36 +100,48 @@ function Row({
   readonly icon: AppIconName;
   readonly label: string;
   readonly value?: string;
+  // A longer explanation of what the row/toggle does, shown on its own line
+  // below the icon+label instead of squeezed into the same row as `right` —
+  // use this instead of `value` when there's also a `right` control such as
+  // a Switch, so the description text doesn't compete for horizontal space.
+  readonly description?: string;
   readonly right?: ReactNode;
   readonly onPress?: () => void;
   readonly danger?: boolean;
 }) {
   return (
     <Pressable
-      className="flex-row items-center gap-3 border-b border-surface-hairline px-4 py-3.5"
+      className="gap-1 border-b border-surface-hairline px-4 py-3.5"
       disabled={!onPress}
       onPress={onPress}
     >
-      <View className="h-8 w-8 items-center justify-center rounded-full bg-secondary">
-        <Icon
-          color={danger ? 'rgb(231,0,11)' : 'rgb(181,80,44)'}
-          name={icon}
-          size={16}
-        />
-      </View>
-      <Text
-        className={`flex-1 font-inter-medium text-[15px] ${danger ? 'text-destructive' : 'text-content'}`}
-      >
-        {label}
-      </Text>
-      {value ? (
-        <Text className="text-text-muted" size="sm">
-          {value}
+      <View className="flex-row items-center gap-3">
+        <View className="h-8 w-8 items-center justify-center rounded-full bg-secondary">
+          <Icon
+            color={danger ? 'rgb(231,0,11)' : 'rgb(181,80,44)'}
+            name={icon}
+            size={16}
+          />
+        </View>
+        <Text
+          className={`flex-1 font-inter-medium text-[15px] ${danger ? 'text-destructive' : 'text-content'}`}
+        >
+          {label}
         </Text>
-      ) : null}
-      {right}
-      {onPress && !right ? (
-        <Icon color="rgb(169,156,139)" name="ChevronLeft" size={16} />
+        {value ? (
+          <Text className="text-text-muted" size="sm">
+            {value}
+          </Text>
+        ) : null}
+        {right}
+        {onPress && !right ? (
+          <Icon color="rgb(169,156,139)" name="ChevronLeft" size={16} />
+        ) : null}
+      </View>
+      {description ? (
+        <Text className="pl-11 text-text-muted" size="xs">
+          {description}
+        </Text>
       ) : null}
     </Pressable>
   );
@@ -302,9 +315,11 @@ export function ProfileScreen() {
 
   // WHY: session.signOut() is a no-op with EXPO_PUBLIC_AUTH_MODE=disabled (no
   // real session to end). Clearing the onboarding flag and replacing to the
-  // index route is what gives sign-out (and delete-account) a visible effect
-  // in that mode, and it still routes correctly once a real auth mode is wired up.
-  const finishSignOut = async () => {
+  // index route is what gives delete-account a visible effect in that mode
+  // (the account, and everything it picked during onboarding, is genuinely
+  // gone either way, so re-running the wizard is always correct here) — and
+  // it still routes correctly once a real auth mode is wired up.
+  const finishDeleteAccount = async () => {
     try {
       await session.signOut();
     } finally {
@@ -315,14 +330,32 @@ export function ProfileScreen() {
 
   const handleSignOut = () => {
     setSignOutOpen(false);
-    void finishSignOut();
+    // A plain sign-out (not delete) leaves the account and its onboarding
+    // choices intact server-side, so a real session shouldn't be forced back
+    // through the whole onboarding wizard to get back in -- /auth renders the
+    // real sign-in screen directly. Demo mode has no real session to sign
+    // back into, so it keeps the onboarding-reset behavior that's the only
+    // thing giving "Sign out" a visible effect there.
+    const wasDemoMode = session.status === 'disabled';
+    void (async () => {
+      try {
+        await session.signOut();
+      } finally {
+        if (wasDemoMode) {
+          await resetOnboardingComplete();
+          router.replace('/');
+        } else {
+          router.replace('/auth');
+        }
+      }
+    })();
   };
 
   const handleDeleteAccount = () => {
     deleteAccount.mutate(undefined, {
       onSuccess: () => {
         setDeleteAccountOpen(false);
-        void finishSignOut();
+        void finishDeleteAccount();
       },
       onError: () => {
         setDeleteAccountOpen(false);
@@ -460,6 +493,7 @@ export function ProfileScreen() {
         <SectionTitle>Privacy</SectionTitle>
         <SectionCard>
           <Row
+            description="Visible to others"
             icon="Eye"
             label="Share activity"
             right={
@@ -470,7 +504,6 @@ export function ProfileScreen() {
                 value={profile.data?.profile.activityVisible ?? false}
               />
             }
-            value="Visible to others"
           />
         </SectionCard>
 
@@ -483,6 +516,7 @@ export function ProfileScreen() {
           <SectionCard>
             {NOTIFICATION_ROWS.map((row) => (
               <Row
+                description={row.hint}
                 icon={row.icon}
                 key={row.key}
                 label={row.label}
@@ -492,7 +526,6 @@ export function ProfileScreen() {
                     value={prefs[row.key]}
                   />
                 }
-                value={row.hint}
               />
             ))}
           </SectionCard>

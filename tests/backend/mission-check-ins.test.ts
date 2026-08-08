@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import { POST as reportRoute } from '../../app/api/mission-check-ins/[id]/report+api';
 import { GET as getCheckIns } from '../../app/api/missions/[id]/check-ins+api';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import {
   checkIn,
   CHECK_INS_LIST_LIMIT,
@@ -21,6 +21,7 @@ const PHOTO = {
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('listMissionCheckIns', () => {

@@ -1,7 +1,6 @@
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
-export type AiComfortLevel = 'new' | 'casual' | 'power';
 
 export interface NotificationPrefs {
   readonly events: boolean;
@@ -13,7 +12,6 @@ export interface NotificationPrefs {
 export interface StoredProfile {
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
-  readonly aiComfort: AiComfortLevel | null;
   readonly notificationPrefs: NotificationPrefs;
   readonly onboardedAt: string | null;
   // Opt-in: when false (the default), other members see only aggregate

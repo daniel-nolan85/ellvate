@@ -1,8 +1,9 @@
 import React, { type ReactNode } from 'react';
 
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { AiMark } from '@/src/components/ui/ai-mark';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Heading } from '@/src/components/ui/heading';
@@ -16,7 +17,6 @@ import { ObCta } from './chrome';
 
 const ACCENT = 'rgb(181,80,44)';
 const AMBER = 'rgb(217,123,41)';
-const WHITE = 'rgb(255,255,255)';
 const CONTENT = 'rgb(37,30,23)';
 
 // Each preview below is a static, non-interactive stand-in for the real
@@ -181,42 +181,27 @@ function LeaderboardArt() {
       {LEADERBOARD_PREVIEW.map((entry) => (
         <LeaderRow entry={entry} key={entry.user.id} />
       ))}
+      <HStack className="items-center gap-1.5 self-start rounded-full bg-amber-subtle px-3 py-[7px]">
+        <Icon color={AMBER} fill={AMBER} name="Star" size={12} />
+        <Text className="font-inter-semibold text-[12px] leading-[16px] text-amber">
+          Earn XP, level up, climb the board
+        </Text>
+      </HStack>
     </VStack>
   );
 }
 
-interface LocationCardProps {
-  readonly granted: boolean;
-  readonly onToggle: () => void;
-}
-
-function LocationCard({ granted, onToggle }: LocationCardProps) {
+function AssistantArt() {
   return (
-    <Pressable
-      className={`flex-row items-center gap-3 rounded-[16px] px-[15px] py-[13px] ${
-        granted ? 'bg-success' : 'bg-secondary'
-      }`}
-      onPress={onToggle}
-    >
-      <Icon color={granted ? WHITE : CONTENT} name="Globe" size={18} />
-      <View className="flex-1">
-        <Text
-          className={`font-inter-semibold text-[13px] ${
-            granted ? 'text-white' : 'text-content'
-          }`}
-        >
-          {granted
-            ? 'Location on — check-ins are automatic'
-            : 'Allow location for auto check-ins'}
-        </Text>
-        {granted ? null : (
-          <Text className="mt-0.5 font-sans text-[11px] text-text-muted">
-            Only while using the app. You can change this anytime.
-          </Text>
-        )}
+    <View className="flex-row items-center gap-3 rounded-[18px] bg-accent p-3.5 shadow-card">
+      <View className="h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-[rgba(255,255,255,0.18)]">
+        <AiMark color="#fff" size={18} />
       </View>
-      {granted ? <Icon color={WHITE} name="CheckCircle" size={18} /> : null}
-    </Pressable>
+      <Text className="flex-1 font-sans text-[13px] leading-[19px] text-accent-foreground">
+        &quot;Any networking events this weekend?&quot; — ask me things like that,
+        anytime.
+      </Text>
+    </View>
   );
 }
 
@@ -225,8 +210,6 @@ export interface Moment {
   readonly eyebrow: string;
   readonly title: string;
   readonly sub: string;
-  readonly proof: string;
-  readonly locationAsk: boolean;
   readonly art: () => ReactNode;
 }
 
@@ -235,8 +218,6 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <ForumArt />,
     eyebrow: 'FORUM',
     id: 'forum',
-    locationAsk: false,
-    proof: '31 posts answered in the last 24h',
     sub: 'Ask anything, share finds, and get answers from people who actually live here.',
     title: 'Never feel like a stranger at the lake',
   },
@@ -244,8 +225,6 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <EventsArt />,
     eyebrow: 'EVENTS',
     id: 'events',
-    locationAsk: false,
-    proof: '48 neighbours joined events this week',
     sub: 'Every mixer, market and fountain show — one calendar, one tap to join.',
     title: 'Never miss what’s happening',
   },
@@ -253,8 +232,6 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <MissionsArt />,
     eyebrow: 'MISSIONS',
     id: 'missions',
-    locationAsk: true,
-    proof: 'Top explorer logged 41 missions this month',
     sub: 'Check in at real places around the lake, earn XP, keep a streak — moving feels better with a scoreboard.',
     title: 'Turn your walks into wins',
   },
@@ -262,8 +239,6 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <ServicesArt />,
     eyebrow: 'SERVICES',
     id: 'services',
-    locationAsk: false,
-    proof: '60+ local businesses listed by neighbours',
     sub: 'Find (and recommend) the restaurants, shops and services locals actually trust.',
     title: 'Skip the search, ask the lake',
   },
@@ -271,10 +246,15 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <LeaderboardArt />,
     eyebrow: 'LEADERBOARD',
     id: 'leaderboard',
-    locationAsk: false,
-    proof: 'Ranked by missions completed this month',
-    sub: 'Every mission you finish moves you up the board — see how you stack up against your neighbours.',
+    sub: 'Every mission earns XP, levels you up, and moves you up the board — see how you stack up against your neighbours.',
     title: 'Climb the ranks',
+  },
+  {
+    art: () => <AssistantArt />,
+    eyebrow: 'LAKE ASSISTANT',
+    id: 'assistant',
+    sub: 'It searches live events, forum posts, missions and services to answer — available to everyone, anytime.',
+    title: 'Or just ask',
   },
 ];
 
@@ -282,23 +262,15 @@ interface MomentStepProps {
   readonly moment: Moment;
   readonly onNext: () => void;
   readonly chrome: ReactNode;
-  readonly locationGranted?: boolean;
-  readonly onLocationToggle?: () => void;
 }
 
-export function MomentStep({
-  chrome,
-  locationGranted,
-  moment,
-  onLocationToggle,
-  onNext,
-}: MomentStepProps) {
+export function MomentStep({ chrome, moment, onNext }: MomentStepProps) {
   return (
     <View className="flex-1 bg-canvas">
       {chrome}
       <View className="flex-1 justify-center px-6">
         <Animated.View className="gap-5" entering={FadeIn.duration(250)} key={moment.id}>
-          {moment.art()}
+          <View className="pb-2">{moment.art()}</View>
           <View>
             <Text className="font-inter-bold text-[11px] tracking-[1.5px] text-accent">
               {moment.eyebrow}
@@ -310,13 +282,6 @@ export function MomentStep({
               {moment.sub}
             </Text>
           </View>
-          <View className="flex-row items-center gap-2 self-start rounded-full bg-accent-subtle px-3.5 py-2">
-            <View className="h-1.5 w-1.5 rounded-full bg-accent" />
-            <Text className="font-inter-medium text-[12px] text-accent">{moment.proof}</Text>
-          </View>
-          {moment.locationAsk && onLocationToggle ? (
-            <LocationCard granted={locationGranted ?? false} onToggle={onLocationToggle} />
-          ) : null}
         </Animated.View>
       </View>
       <ObCta label="Next" onPress={onNext} />

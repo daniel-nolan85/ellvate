@@ -16,7 +16,7 @@ import {
   reportComment,
   updateComment,
 } from '../../src/backend/comments';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -25,6 +25,7 @@ const replyCount = (postId: string): number =>
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('listComments', () => {

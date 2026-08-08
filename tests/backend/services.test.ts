@@ -18,7 +18,7 @@ import {
   PATCH as patchReviewRoute,
 } from '../../app/api/service-reviews/[id]/index+api';
 import { POST as reportReviewRoute } from '../../app/api/service-reviews/[id]/report+api';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { toggleMute } from '../../src/backend/mutes';
 import {
   createServiceReview,
@@ -40,6 +40,7 @@ const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 const validListingInput = {

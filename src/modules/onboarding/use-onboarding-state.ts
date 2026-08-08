@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
-export type AiComfortLevel = 'new' | 'casual' | 'power';
 
 export interface NotificationPrefs {
   readonly events: boolean;
@@ -16,19 +17,17 @@ export interface NotificationPrefs {
 }
 
 export interface OnboardingDraft {
+  readonly name: string;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
-  readonly aiComfort: AiComfortLevel | null;
-  readonly locationGranted: boolean;
   readonly notificationPrefs: NotificationPrefs;
 }
 
 const ONBOARDING_COMPLETE_KEY = '@llv:onboarding-complete-v1';
 
 const initialDraft: OnboardingDraft = {
-  aiComfort: null,
   interests: [],
-  locationGranted: false,
+  name: '',
   notificationPrefs: {
     digest: true,
     events: true,
@@ -56,9 +55,14 @@ export async function resetOnboardingComplete(): Promise<void> {
 
 export function useOnboardingState() {
   const session = useSession();
+  const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
   const [completionError, setCompletionError] = useState<string | null>(null);
   const maestroProfileSyncFailure = useRef(false);
+
+  const setName = useCallback((name: string) => {
+    setDraft((current) => ({ ...current, name }));
+  }, []);
 
   const setRole = useCallback((role: CommunityRole) => {
     setDraft((current) => ({ ...current, role }));
@@ -70,17 +74,6 @@ export function useOnboardingState() {
       interests: current.interests.includes(interest)
         ? current.interests.filter((item) => item !== interest)
         : [...current.interests, interest],
-    }));
-  }, []);
-
-  const setAiComfort = useCallback((aiComfort: AiComfortLevel) => {
-    setDraft((current) => ({ ...current, aiComfort }));
-  }, []);
-
-  const toggleLocation = useCallback(() => {
-    setDraft((current) => ({
-      ...current,
-      locationGranted: !current.locationGranted,
     }));
   }, []);
 
@@ -109,7 +102,11 @@ export function useOnboardingState() {
       }
       await requestJson({
         body: {
-          aiComfort: draft.aiComfort,
+          // Omitted (not sent as an empty string) when the name step was
+          // skipped -- the backend rejects an empty name, and skipping should
+          // leave whatever name already exists (Clerk-provided or seeded)
+          // untouched rather than blanking it out.
+          ...(draft.name.trim() ? { name: draft.name.trim() } : {}),
           interests: draft.interests,
           notificationPrefs: draft.notificationPrefs,
           role: draft.role,
@@ -119,6 +116,14 @@ export function useOnboardingState() {
         path: '/api/me/profile',
       });
       await markOnboardingComplete();
+      // This PUT bypasses useUpdateProfile's mutation (onboarding runs before
+      // any profile screen mounts), so nothing else invalidates the cached
+      // profile/forum/leaderboard queries — without this, a profile screen
+      // visited earlier in the same session (e.g. before a demo-mode sign
+      // out + re-onboard) keeps showing the pre-onboarding data forever.
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      await queryClient.invalidateQueries({ queryKey: ['forum'] });
+      await queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       return true;
     } catch (error) {
       setCompletionError(
@@ -128,16 +133,15 @@ export function useOnboardingState() {
       );
       return false;
     }
-  }, [draft, session]);
+  }, [draft, queryClient, session]);
 
   return {
     completeOnboarding,
     completionError,
     draft,
-    setAiComfort,
+    setName,
     setRole,
     toggleInterest,
-    toggleLocation,
     toggleNotification,
   };
 }
