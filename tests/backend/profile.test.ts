@@ -47,7 +47,6 @@ describe('getProfile', () => {
         avatarUrl: null,
         role: null,
         interests: [],
-        aiComfort: null,
         notificationPrefs: defaultPrefs,
         onboardedAt: null,
         activityVisible: false,
@@ -68,7 +67,6 @@ describe('getProfile', () => {
       avatarUrl: null,
       role: null,
       interests: [],
-      aiComfort: null,
       notificationPrefs: defaultPrefs,
       onboardedAt: null,
       activityVisible: false,
@@ -201,7 +199,6 @@ describe('updateProfile', () => {
     if (result.ok) {
       expect(result.profile.role).toBe('resident');
       expect(result.profile.interests).toEqual([]);
-      expect(result.profile.aiComfort).toBeNull();
       expect(result.profile.notificationPrefs).toEqual(defaultPrefs);
       expect(result.profile.onboardedAt).toBeNull();
     }
@@ -326,13 +323,6 @@ describe('updateProfile', () => {
     expect((await updateProfile(ctx(), { interests })).ok).toBe(true);
   });
 
-  test('rejects an unknown aiComfort level', async () => {
-    expectFailure(
-      await updateProfile(ctx(), { aiComfort: 'expert' }),
-      'invalid_ai_comfort',
-    );
-  });
-
   test('rejects non-boolean notification prefs', async () => {
     expectFailure(
       await updateProfile(ctx(), { notificationPrefs: { digest: 'yes' } }),
@@ -354,7 +344,6 @@ describe('updateProfile', () => {
     const result = await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining'],
-      aiComfort: 'casual',
     });
 
     expect(result.ok).toBe(true);
@@ -363,13 +352,12 @@ describe('updateProfile', () => {
     }
   });
 
-  test('stamps onboardedAt when role, 3+ interests, and aiComfort are set', async () => {
+  test('stamps onboardedAt when role and 3+ interests are set', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
 
     const result = await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining', 'Trails'],
-      aiComfort: 'casual',
     });
 
     expect(result.ok).toBe(true);
@@ -381,7 +369,6 @@ describe('updateProfile', () => {
   test('stamps onboardedAt across incremental updates', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
     await updateProfile(ctx(), { role: 'new' });
-    await updateProfile(ctx(), { aiComfort: 'power' });
     expect((await getProfile(ctx())).profile.onboardedAt).toBeNull();
 
     await updateProfile(ctx(), { interests: ['A', 'B', 'C'] });
@@ -396,7 +383,6 @@ describe('updateProfile', () => {
     await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining', 'Trails'],
-      aiComfort: 'casual',
     });
 
     setSystemTime(new Date('2026-07-13T09:00:00.000Z'));
@@ -477,7 +463,6 @@ describe('GET /api/me/profile', () => {
         avatarUrl: null,
         role: null,
         interests: [],
-        aiComfort: null,
         notificationPrefs: defaultPrefs,
         onboardedAt: null,
         activityVisible: false,

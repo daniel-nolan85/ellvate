@@ -30,8 +30,14 @@ export function AuthStep({ onBack, onNext }: AuthStepProps) {
             without creating an account.
           </Text>
         </View>
-        <Button testID="auth-demo-continue" onPress={onNext}>
-          <ButtonText>Continue</ButtonText>
+        <Button
+          className="bg-accent data-[hover=true]:bg-accent data-[active=true]:bg-accent"
+          onPress={onNext}
+          testID="auth-demo-continue"
+        >
+          <ButtonText className="text-accent-foreground data-[hover=true]:text-accent-foreground data-[active=true]:text-accent-foreground">
+            Continue
+          </ButtonText>
         </Button>
       </View>
     );

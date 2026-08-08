@@ -104,13 +104,13 @@ export function ObCta({ label, onPress, disabled }: ObCtaProps) {
   return (
     <View className="mt-auto px-5 pb-2 pt-3">
       <Button
-        className="h-[52px] w-full rounded-full bg-primary data-[hover=true]:bg-primary data-[active=true]:bg-primary"
+        className="h-[52px] w-full rounded-full bg-accent data-[hover=true]:bg-accent data-[active=true]:bg-accent"
         isDisabled={disabled}
         onPress={onPress}
         testID={`onboarding-cta-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
         size="lg"
       >
-        <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground data-[hover=true]:text-primary-foreground data-[active=true]:text-primary-foreground">
+        <ButtonText className="font-inter-semibold text-[15px] text-accent-foreground data-[hover=true]:text-accent-foreground data-[active=true]:text-accent-foreground">
           {label}
         </ButtonText>
       </Button>

@@ -1,8 +1,4 @@
-import type {
-  AiComfortLevel,
-  CommunityRole,
-  NotificationPrefs,
-} from '@/src/backend/store';
+import type { CommunityRole, NotificationPrefs } from '@/src/backend/store';
 
 export const MAX_INTERESTS = 12;
 export const MAX_INTEREST_LENGTH = 40;
@@ -13,8 +9,6 @@ const ROLES: readonly CommunityRole[] = [
   'business',
   'visitor',
 ];
-
-const AI_COMFORT_LEVELS: readonly AiComfortLevel[] = ['new', 'casual', 'power'];
 
 const NOTIFICATION_KEYS: readonly (keyof NotificationPrefs)[] = [
   'events',
@@ -29,7 +23,6 @@ export interface ProfileUpdate {
   readonly name?: string;
   readonly role?: CommunityRole | null;
   readonly interests?: readonly string[];
-  readonly aiComfort?: AiComfortLevel | null;
   readonly notificationPrefs?: Partial<NotificationPrefs>;
   readonly activityVisible?: boolean;
 }
@@ -61,10 +54,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isCommunityRole = (value: unknown): value is CommunityRole =>
   typeof value === 'string' &&
   (ROLES as readonly string[]).includes(value);
-
-const isAiComfortLevel = (value: unknown): value is AiComfortLevel =>
-  typeof value === 'string' &&
-  (AI_COMFORT_LEVELS as readonly string[]).includes(value);
 
 const isInterestList = (value: unknown): value is readonly string[] =>
   Array.isArray(value) &&
@@ -113,17 +102,6 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
   }
 
   if (
-    'aiComfort' in input &&
-    input.aiComfort !== null &&
-    !isAiComfortLevel(input.aiComfort)
-  ) {
-    return failure(
-      'invalid_ai_comfort',
-      `aiComfort must be null or one of: ${AI_COMFORT_LEVELS.join(', ')}.`,
-    );
-  }
-
-  if (
     'notificationPrefs' in input &&
     !isNotificationPrefsUpdate(input.notificationPrefs)
   ) {
@@ -152,9 +130,6 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
         : {}),
       ...('interests' in input
         ? { interests: [...(input.interests as readonly string[])] }
-        : {}),
-      ...('aiComfort' in input
-        ? { aiComfort: input.aiComfort as AiComfortLevel | null }
         : {}),
       ...('notificationPrefs' in input
         ? {

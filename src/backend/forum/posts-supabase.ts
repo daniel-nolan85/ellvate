@@ -8,6 +8,7 @@ import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 import type {
   CreatePostResult,
   ForumPost,
+  ForumPostsPage,
   LikeResult,
   Media,
   MyPostsPage,
@@ -22,6 +23,32 @@ import {
 
 const POST_SELECT =
   'id,forum,author_id,title,excerpt,media,like_count,reply_count,created_at,edited_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
+
+// The cursor's sortKey/id (a created_at timestamp and a post id) are
+// client-supplied and get spliced into a raw PostgREST `.or()` filter string
+// below -- PostgREST's filter syntax treats `,`, `(`, and `)` as structural
+// delimiters, so an unvalidated value could inject extra conditions or
+// grouping. Reject anything that doesn't look like the shapes we actually
+// produce (an ISO timestamp, a plain id) rather than trust it verbatim.
+const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const SAFE_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+// Exported for a direct unit test -- the Supabase code paths that call this
+// aren't otherwise exercised outside a live Supabase project.
+export function safeCursorOrFilter(
+  parsedCursor: { readonly sortKey: string; readonly id: string } | null,
+): string | null {
+  if (!parsedCursor) {
+    return null;
+  }
+  if (
+    !ISO_TIMESTAMP_PATTERN.test(parsedCursor.sortKey) ||
+    !SAFE_ID_PATTERN.test(parsedCursor.id)
+  ) {
+    return null;
+  }
+  return `created_at.lt.${parsedCursor.sortKey},and(created_at.eq.${parsedCursor.sortKey},id.lt.${parsedCursor.id})`;
+}
 
 interface PostRow {
   readonly id: string;
@@ -200,6 +227,76 @@ export async function listPostsSupabase(
     .map((row) => toForumPost(row, likedIds, viewerPinnedPostId));
 }
 
+// The paginated counterpart to listPostsSupabase (see listPostsPageMemory in
+// posts.ts for why the two stay separate). The viewer's pinned post is
+// fetched via its own indexed id lookup and prepended only on page 1 --
+// looking it up separately (rather than hoping it falls inside the current
+// keyset window) is what keeps this correct regardless of how old the pin is.
+export async function listPostsPageSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  forum: string | undefined,
+  limit: number,
+  cursor: string | null,
+): Promise<ForumPostsPage> {
+  const [mutedUserIds, viewerPinnedPostId] = await Promise.all([
+    getMutedUserIdsSupabase(supabase, userId),
+    getPinnedPostId(supabase, userId),
+  ]);
+  const mutedSet = new Set(mutedUserIds);
+
+  let pinnedRow: PostRow | null = null;
+  if (!cursor && viewerPinnedPostId) {
+    const { data: pinnedData, error: pinnedError } = await supabase
+      .from('posts')
+      .select(POST_SELECT)
+      .eq('id', viewerPinnedPostId)
+      .maybeSingle();
+    throwIfSupabaseError(pinnedError, 'load pinned post');
+    pinnedRow = pinnedData as unknown as PostRow | null;
+  }
+
+  let query = supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit + 1);
+  if (forum && forum !== 'All') {
+    query = query.eq('forum', forum);
+  }
+  if (viewerPinnedPostId) {
+    query = query.neq('id', viewerPinnedPostId);
+  }
+  const cursorFilter = safeCursorOrFilter(cursor ? decodeCursor(cursor) : null);
+  if (cursorFilter) {
+    query = query.or(cursorFilter);
+  }
+
+  const { data, error } = await query;
+  throwIfSupabaseError(error, 'load posts');
+  const rows = data as unknown as PostRow[];
+  const hasMore = rows.length > limit;
+  const fetchedPage = hasMore ? rows.slice(0, limit) : rows;
+  const visibleRows = fetchedPage.filter((row) => !mutedSet.has(row.author_id));
+
+  const likedIds = await likedPostIds(supabase, userId);
+
+  const last = fetchedPage[fetchedPage.length - 1];
+  const nextCursor =
+    hasMore && last ? encodeCursor({ id: last.id, sortKey: last.created_at }) : null;
+
+  const orderedRows =
+    pinnedRow && !mutedSet.has(pinnedRow.author_id)
+      ? [pinnedRow, ...visibleRows]
+      : visibleRows;
+
+  return {
+    nextCursor,
+    posts: orderedRows.map((row) => toForumPost(row, likedIds, viewerPinnedPostId)),
+  };
+}
+
 // Scoped to posts the caller authored — bounded by one user's own activity
 // rather than the whole forum feed (unlike listPostsSupabase, which every
 // screen but the activity hub needs). A single `author_id` filter, so this
@@ -218,11 +315,9 @@ export async function getMyPostsSupabase(
     .order('id', { ascending: false })
     .limit(limit + 1);
 
-  const parsedCursor = cursor ? decodeCursor(cursor) : null;
-  if (parsedCursor) {
-    query = query.or(
-      `created_at.lt.${parsedCursor.sortKey},and(created_at.eq.${parsedCursor.sortKey},id.lt.${parsedCursor.id})`,
-    );
+  const cursorFilter = safeCursorOrFilter(cursor ? decodeCursor(cursor) : null);
+  if (cursorFilter) {
+    query = query.or(cursorFilter);
   }
 
   const { data, error } = await query;

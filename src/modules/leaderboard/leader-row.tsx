@@ -18,22 +18,22 @@ export function LeaderRow({ entry }: LeaderRowProps) {
 
   return (
     <HStack
-      className={`items-center gap-3 rounded-[16px] px-3.5 py-3 shadow-card ${me ? 'bg-primary' : 'border border-surface-hairline bg-paper'}`}
+      className={`items-center gap-3 rounded-[16px] px-3.5 py-3 shadow-card ${me ? 'bg-accent' : 'border border-surface-hairline bg-paper'}`}
     >
       <Text
-        className={`w-5 text-center font-inter-bold text-[14px] leading-[18px] ${me ? 'text-primary-foreground' : 'text-text-muted'}`}
+        className={`w-5 text-center font-inter-bold text-[14px] leading-[18px] ${me ? 'text-accent-foreground' : 'text-text-muted'}`}
       >
         {entry.rank}
       </Text>
       <Avatar name={entry.user.name} size="sm" src={entry.user.avatarUrl ?? undefined} />
       <VStack className="flex-1" space="xs">
         <Text
-          className={`font-inter-semibold text-[14px] leading-[18px] ${me ? 'text-primary-foreground' : 'text-content'}`}
+          className={`font-inter-semibold text-[14px] leading-[18px] ${me ? 'text-accent-foreground' : 'text-content'}`}
         >
           {me ? 'You' : entry.user.name}
         </Text>
         <Text
-          className={`text-[11px] leading-[14px] ${me ? 'text-[rgba(250,250,250,0.6)]' : 'text-text-subtle'}`}
+          className={`text-[11px] leading-[14px] ${me ? 'text-[rgba(255,255,255,0.75)]' : 'text-text-subtle'}`}
         >
           {`${entry.xp.toLocaleString()} XP`}
         </Text>
@@ -46,7 +46,7 @@ export function LeaderRow({ entry }: LeaderRowProps) {
         />
       ) : null}
       <Text
-        className={`font-inter-bold text-[15px] leading-[19px] ${me ? 'text-primary-foreground' : 'text-content'}`}
+        className={`font-inter-bold text-[15px] leading-[19px] ${me ? 'text-accent-foreground' : 'text-content'}`}
       >
         {entry.missionsCompleted}
       </Text>

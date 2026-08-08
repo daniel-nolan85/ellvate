@@ -40,7 +40,7 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
       {chrome}
       <ObTitle
         eyebrow="About you"
-        sub="We tailor the feed, events and missions to you."
+        sub="Shown on your profile so neighbours know who they're talking to. You can change this anytime."
         title="Who are you here as?"
       />
       <View className="gap-2.5 px-5 py-3.5">
@@ -51,7 +51,7 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
               accessibilityRole="button"
               className={`flex-row items-center gap-3.5 rounded-[18px] px-4 py-[15px] ${
                 selected
-                  ? 'border border-primary bg-primary shadow-card'
+                  ? 'border border-accent bg-accent shadow-card'
                   : 'border border-surface-hairline bg-paper shadow-card'
               }`}
               key={role.id}
@@ -72,7 +72,7 @@ export function RoleStep({ value, onPick, onNext, chrome }: RoleStepProps) {
               <View className="flex-1">
                 <Text
                   className={`font-inter-semibold text-[15px] ${
-                    selected ? 'text-primary-foreground' : 'text-content'
+                    selected ? 'text-accent-foreground' : 'text-content'
                   }`}
                 >
                   {role.title}

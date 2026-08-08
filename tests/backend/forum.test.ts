@@ -6,6 +6,7 @@ import {
 } from '../../app/api/forum/posts+api';
 import {
   DELETE as deletePostRoute,
+  GET as getPost,
   PATCH as patchPost,
 } from '../../app/api/forum/posts/[id]/index+api';
 import { POST as postLike } from '../../app/api/forum/posts/[id]/like+api';
@@ -15,13 +16,14 @@ import {
   createPost,
   deletePost,
   listPosts,
+  listPostsPage,
   listSubforums,
   toggleLike,
   togglePin,
   updatePost,
 } from '../../src/backend/forum';
 import { listComments } from '../../src/backend/comments';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { getMutedUserIds, toggleMute } from '../../src/backend/mutes';
 import { updateProfile } from '../../src/backend/profile';
 import { reportPost } from '../../src/backend/reports';
@@ -31,6 +33,7 @@ const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('listSubforums', () => {
@@ -609,6 +612,95 @@ describe('GET /api/forum/posts', () => {
       posts: readonly { id: string }[];
     };
     expect(body.posts.map((post) => post.id)).toEqual(['post-4']);
+  });
+
+  test('paginates with ?limit= and ?cursor=, without ever repeating or dropping a post', async () => {
+    const firstPage = await getPosts(
+      new Request('http://localhost/api/forum/posts?limit=2'),
+    );
+    const firstBody = (await firstPage.json()) as {
+      posts: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+    // post-2 is the demo user's pinned post — it always leads page 1.
+    expect(firstBody.posts.map((post) => post.id)).toEqual(['post-2', 'post-1']);
+    expect(firstBody.nextCursor).not.toBeNull();
+
+    const secondPage = await getPosts(
+      new Request(
+        `http://localhost/api/forum/posts?limit=2&cursor=${encodeURIComponent(firstBody.nextCursor!)}`,
+      ),
+    );
+    const secondBody = (await secondPage.json()) as {
+      posts: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+    expect(secondBody.posts.map((post) => post.id)).toEqual(['post-3', 'post-4']);
+    expect(secondBody.nextCursor).toBeNull();
+  });
+});
+
+describe('GET /api/forum/posts/:id', () => {
+  test('returns a single post by id', async () => {
+    const response = await getPost(
+      new Request('http://localhost/api/forum/posts/post-1'),
+      { id: 'post-1' },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { post: { id: string } };
+    expect(body.post.id).toBe('post-1');
+  });
+
+  test('returns 404 for an unknown post', async () => {
+    const response = await getPost(
+      new Request('http://localhost/api/forum/posts/nope'),
+      { id: 'nope' },
+    );
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('listPostsPage', () => {
+  test('the viewer pinned post leads page 1 and does not reappear on page 2', async () => {
+    const page1 = await listPostsPage(ctx(), { limit: 2 });
+    expect(page1.posts.map((post) => post.id)).toEqual(['post-2', 'post-1']);
+    expect(page1.nextCursor).not.toBeNull();
+
+    const page2 = await listPostsPage(ctx(), {
+      cursor: page1.nextCursor,
+      limit: 2,
+    });
+    expect(page2.posts.map((post) => post.id)).toEqual(['post-3', 'post-4']);
+    expect(page2.nextCursor).toBeNull();
+  });
+
+  test('a viewer with no pinned post gets pure recency pagination', async () => {
+    const page1 = await listPostsPage(ctx('user-mia'), { limit: 2 });
+    expect(page1.posts.map((post) => post.id)).toEqual(['post-1', 'post-2']);
+    expect(page1.nextCursor).not.toBeNull();
+  });
+
+  test('respects the forum filter across pages', async () => {
+    const page = await listPostsPage(ctx(), { forum: 'Trails', limit: 20 });
+    expect(page.posts.map((post) => post.id)).toEqual(['post-4']);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  test('excludes a muted author\'s posts, including a pinned post', async () => {
+    // post-2 (user-hoa) is the demo user's pinned post -- muting its author
+    // should drop it from the pinned slot too, not just filter it out of the
+    // regular feed.
+    await toggleMute(ctx(), 'user-hoa');
+
+    const page = await listPostsPage(ctx(), { limit: 20 });
+    expect(page.posts.map((post) => post.id)).not.toContain('post-2');
+    expect(page.posts.map((post) => post.id)).toEqual([
+      'post-1',
+      'post-3',
+      'post-4',
+    ]);
   });
 });
 

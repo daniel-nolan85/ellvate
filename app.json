@@ -44,6 +44,14 @@
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "microphonePermission": false,
+          "photosPermission": "Let LLV Community access your photos so you can set a profile picture, add mission check-in photos, and upload service listing photos."
+        }
+      ],
+      [
         "@clerk/expo",
         {
           "appleSignIn": false
@@ -54,7 +62,8 @@
         {
           "color": "#6366F1"
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "typedRoutes": true,

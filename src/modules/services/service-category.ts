@@ -1,5 +1,5 @@
 import type { AppIconName } from '@/src/components/ui/icon';
-import type { CategoryAccent } from '@/src/lib/category-accent';
+import { CATEGORY_ACCENT_ICON_COLOR, type CategoryAccent } from '@/src/lib/category-accent';
 
 import type { ServiceCategory } from './use-services';
 
@@ -63,17 +63,6 @@ export function serviceCategoryIcon(category: ServiceCategory): AppIconName {
   return SERVICE_CATEGORY_ICON[category];
 }
 
-// Matches each accent's Badge/chip text color (see tailwind.config.js and
-// CATEGORY_CHIP_ACTIVE_TREATMENT) so the default icon's tint always agrees
-// with the category badge sitting right below it on the same card.
-const CATEGORY_ACCENT_COLOR: Readonly<Record<CategoryAccent, string>> = {
-  accent: 'rgb(181,80,44)',
-  amber: 'rgb(217,123,41)',
-  lake: 'rgb(47,110,114)',
-  palm: 'rgb(110,127,74)',
-  plum: 'rgb(139,90,120)',
-};
-
 export function serviceCategoryIconColor(category: ServiceCategory): string {
-  return CATEGORY_ACCENT_COLOR[serviceCategoryAccent(category)];
+  return CATEGORY_ACCENT_ICON_COLOR[serviceCategoryAccent(category)];
 }

@@ -2,7 +2,6 @@ import { extractAvatarUpload } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, setState } from '@/src/backend/store';
 import type {
-  AiComfortLevel,
   CommunityRole,
   NotificationPrefs,
   StoredProfile,
@@ -24,7 +23,6 @@ export interface UserProfile {
   readonly avatarUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
-  readonly aiComfort: AiComfortLevel | null;
   readonly notificationPrefs: NotificationPrefs;
   readonly onboardedAt: string | null;
   readonly activityVisible: boolean;
@@ -52,7 +50,6 @@ const toUserProfile = (
   avatarUrl,
   role: profile.role,
   interests: profile.interests,
-  aiComfort: profile.aiComfort,
   notificationPrefs: profile.notificationPrefs,
   onboardedAt: profile.onboardedAt,
   activityVisible: profile.activityVisible,
@@ -74,8 +71,6 @@ const applyUpdate = (
 ): StoredProfile => ({
   role: update.role !== undefined ? update.role : profile.role,
   interests: update.interests ?? profile.interests,
-  aiComfort:
-    update.aiComfort !== undefined ? update.aiComfort : profile.aiComfort,
   notificationPrefs: update.notificationPrefs
     ? mergePrefs(profile.notificationPrefs, update.notificationPrefs)
     : profile.notificationPrefs,
@@ -88,7 +83,6 @@ const applyUpdate = (
 
 const isOnboardingComplete = (profile: StoredProfile): boolean =>
   profile.role !== null &&
-  profile.aiComfort !== null &&
   profile.interests.length >= ONBOARDING_MIN_INTERESTS;
 
 function getProfileMemory(userId: string): ProfileResult {

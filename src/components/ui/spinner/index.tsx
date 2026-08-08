@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
+  ReduceMotion,
   useAnimatedProps,
   useSharedValue,
   withRepeat,
@@ -121,10 +122,20 @@ function Spinner({
   const progress = useSharedValue(-1);
 
   useEffect(() => {
+    // Reanimated's default reduceMotion is ReduceMotion.System, which jumps
+    // straight to the end value (and freezes) when the OS/browser has
+    // reduced-motion enabled. That reads as "broken" for a loading indicator
+    // -- the motion here IS the content, not decoration -- so it opts out.
     progress.value = withRepeat(
-      withTiming(1, { duration: 450, easing: Easing.inOut(Easing.sin) }),
+      withTiming(1, {
+        duration: 450,
+        easing: Easing.inOut(Easing.sin),
+        reduceMotion: ReduceMotion.Never,
+      }),
       -1,
       true,
+      undefined,
+      ReduceMotion.Never,
     );
   }, [progress]);
 

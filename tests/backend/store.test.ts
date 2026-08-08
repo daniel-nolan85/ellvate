@@ -178,7 +178,6 @@ describe('seed data', () => {
     expect(me?.profile).toEqual({
       role: null,
       interests: [],
-      aiComfort: null,
       notificationPrefs: {
         events: true,
         replies: true,

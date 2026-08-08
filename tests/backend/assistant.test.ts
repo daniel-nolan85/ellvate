@@ -12,7 +12,7 @@ import {
   validateChatMessages,
 } from '../../src/backend/assistant';
 import { createPost } from '../../src/backend/forum';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { resetStore } from '../../src/backend/store';
 
 const ctx = memoryContext('demo-user');
@@ -34,6 +34,7 @@ afterAll(() => {
 afterEach(() => {
   resetStore();
   resetAssistantRateLimit();
+  resetWriteRateLimits();
 });
 
 const chatRequest = (body: unknown): Request =>

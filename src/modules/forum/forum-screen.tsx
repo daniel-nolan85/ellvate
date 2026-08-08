@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -30,6 +31,17 @@ import {
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 const FALLBACK_SUBFORUMS: readonly string[] = ['All'];
 const FOR_YOU = 'For You';
+
+function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
+  return (
+    <View className="items-center py-3" testID="forum-load-more">
+      <Spinner size="small" />
+    </View>
+  );
+}
 
 interface ForumScreenProps {
   readonly onOpenPost?: (postId: string) => void;
@@ -66,11 +78,19 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       : activeForum;
 
   const displayedPosts = useMemo(() => {
-    const all = posts.data?.posts ?? [];
+    const all = posts.data?.pages.flatMap((page) => page.posts) ?? [];
     return activeForum === FOR_YOU
       ? all.filter((post) => interestSubforums.has(post.forum))
       : all;
   }, [posts.data, activeForum, interestSubforums]);
+
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: posts.fetchNextPage,
+      hasNextPage: posts.hasNextPage,
+      isFetchingNextPage: posts.isFetchingNextPage,
+    },
+  ]);
 
   const handleCreatePost = (draft: PostComposerDraft) => {
     createPost.mutate(
@@ -99,6 +119,8 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       <ScrollView
       className="flex-1 bg-canvas"
       contentContainerStyle={{ paddingBottom: 130 }}
+      onScroll={onScroll}
+      scrollEventThrottle={100}
     >
       <VStack space="md">
         <ScreenTitle
@@ -170,7 +192,11 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
                 post={post}
               />
             ))}
-            <AllCaughtUp />
+            {posts.hasNextPage ? (
+              <LoadMoreFooter isLoading={posts.isFetchingNextPage} />
+            ) : (
+              <AllCaughtUp />
+            )}
           </VStack>
         )}
       </VStack>

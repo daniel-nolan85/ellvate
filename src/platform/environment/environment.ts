@@ -13,6 +13,7 @@ export interface PublicEnvironment {
   readonly apiUrl: string | null;
   readonly authMode: AuthMode;
   readonly clerkPublishableKey: string | null;
+  readonly sentryDsn: string | null;
   readonly issues: readonly string[];
 }
 
@@ -35,6 +36,7 @@ const rawAuthMode =
   process.env.EXPO_PUBLIC_AUTH_MODE?.trim();
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const rawClerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+const rawSentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 
 const issues: string[] = [];
 
@@ -62,6 +64,7 @@ const apiUrl =
 
 const authMode: AuthMode = rawAuthMode === 'clerk' ? 'clerk' : 'disabled';
 const clerkPublishableKey = rawClerkPublishableKey || null;
+const sentryDsn = rawSentryDsn || null;
 
 if (
   authMode === 'clerk'
@@ -76,6 +79,7 @@ export const publicEnvironment: PublicEnvironment = Object.freeze({
   apiUrl,
   authMode,
   clerkPublishableKey,
+  sentryDsn,
   issues: Object.freeze(issues),
 });
 

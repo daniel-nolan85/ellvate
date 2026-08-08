@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 
-import { InterestsStep, RoleStep } from '@/src/modules/onboarding';
+import { InterestsStep, NameStep, RoleStep } from '@/src/modules/onboarding';
 
 const chrome = <View testID="test-chrome" />;
 
@@ -41,5 +41,25 @@ describe('onboarding controls', () => {
     await fireEvent.press(view.getByTestId('onboarding-interest-trails-fitness'));
     await fireEvent.press(view.getByTestId('onboarding-interest-dining-out'));
     expect(onToggle).toHaveBeenCalledTimes(3);
+  });
+
+  test('name step disables continue until a name is entered', async () => {
+    const onNext = jest.fn();
+    const onChange = jest.fn();
+    const view = await render(
+      <NameStep chrome={chrome} onChange={onChange} onNext={onNext} value="" />,
+    );
+
+    await fireEvent.press(view.getByTestId('onboarding-cta-continue'));
+    expect(onNext).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(view.getByTestId('onboarding-name-input'), 'Daniel');
+    expect(onChange).toHaveBeenCalledWith('Daniel');
+
+    await view.rerender(
+      <NameStep chrome={chrome} onChange={onChange} onNext={onNext} value="Daniel" />,
+    );
+    await fireEvent.press(view.getByTestId('onboarding-cta-continue'));
+    expect(onNext).toHaveBeenCalledTimes(1);
   });
 });

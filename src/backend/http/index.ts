@@ -13,3 +13,9 @@ export {
 } from './context';
 export { jsonError, jsonOk } from './responses';
 export type { ApiErrorBody } from './responses';
+export {
+  checkWriteRateLimit,
+  resetWriteRateLimits,
+  WRITE_RATE_LIMIT_POLICIES,
+  type RateLimitPolicy,
+} from './rate-limit';

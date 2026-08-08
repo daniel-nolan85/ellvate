@@ -1,10 +1,6 @@
 import React, { type ReactNode } from 'react';
 
-import { Pressable, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import { Switch, View } from 'react-native';
 
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
@@ -49,34 +45,6 @@ const NOTIF_OPTS: readonly NotifOption[] = [
   },
 ];
 
-function NotifSwitch({ on }: { readonly on: boolean }) {
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: withTiming(on ? 18 : 0, { duration: 180 }) }],
-  }));
-
-  return (
-    <View
-      className={`h-[26px] w-[44px] rounded-full p-[3px] ${
-        on ? 'bg-primary' : 'bg-muted'
-      }`}
-    >
-      <Animated.View
-        className="h-5 w-5 rounded-full bg-white"
-        style={[
-          thumbStyle,
-          {
-            elevation: 2,
-            shadowColor: '#000',
-            shadowOffset: { height: 1, width: 0 },
-            shadowOpacity: 0.2,
-            shadowRadius: 3,
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
 interface NotificationsStepProps {
   readonly prefs: NotificationPrefs;
   readonly onToggle: (key: keyof NotificationPrefs) => void;
@@ -94,18 +62,17 @@ export function NotificationsStep({
     <View className="flex-1 bg-canvas">
       {chrome}
       <ObTitle
-        eyebrow="Stay in the loop"
-        sub="Only what you pick — never marketing spam."
-        title="What's worth a ping?"
+        eyebrow="Notifications"
+        sub="Choose what you'd like to be notified about — never marketing spam, and you can change these anytime in your profile."
+        title="What should we let you know about?"
       />
       <View className="flex-1 gap-2.5 px-5 py-4">
         {NOTIF_OPTS.map((option) => {
           const on = prefs[option.id];
           return (
-            <Pressable
+            <View
               className="flex-row items-center gap-3.5 rounded-[18px] border border-surface-hairline bg-paper px-4 py-[13px] shadow-card"
               key={option.id}
-              onPress={() => onToggle(option.id)}
             >
               <Icon
                 color={on ? ACCENT : TEXT_SUBTLE}
@@ -120,8 +87,12 @@ export function NotificationsStep({
                   {option.sub}
                 </Text>
               </View>
-              <NotifSwitch on={on} />
-            </Pressable>
+              <Switch
+                onValueChange={() => onToggle(option.id)}
+                testID={`onboarding-notif-${option.id}`}
+                value={on}
+              />
+            </View>
           );
         })}
       </View>

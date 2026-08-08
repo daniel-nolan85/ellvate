@@ -1,5 +1,21 @@
-import { deletePost, updatePost } from '@/src/backend/forum';
+import { deletePost, getPostsByIds, updatePost } from '@/src/backend/forum';
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
+
+// The paginated main feed (see /api/forum/posts) no longer guarantees every
+// post is in the client's cache -- the post detail screen needs its own
+// direct-by-id fetch rather than scanning whatever page happens to be loaded.
+export async function GET(
+  request: Request,
+  { id }: { id: string },
+): Promise<Response> {
+  return withRequestContext(request, async (ctx) => {
+    const [post] = await getPostsByIds(ctx, [id]);
+    if (!post) {
+      return jsonError(404, 'post_not_found', 'Post not found.');
+    }
+    return jsonOk({ post });
+  });
+}
 
 export async function PATCH(
   request: Request,

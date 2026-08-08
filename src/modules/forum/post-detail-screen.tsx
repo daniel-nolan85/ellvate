@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -44,8 +44,8 @@ import {
 } from './use-comments';
 import {
   useDeletePost,
-  useForumPosts,
   useMuteUser,
+  usePost,
   useReportPost,
   useSubforums,
   useTogglePin,
@@ -69,11 +69,8 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
-  const posts = useForumPosts('All');
-  const post = useMemo(
-    () => posts.data?.posts.find((entry) => entry.id === postId),
-    [posts.data, postId],
-  );
+  const postQuery = usePost(postId);
+  const post = postQuery.data?.post;
   const comments = usePostComments(postId);
   const createComment = useCreateComment(postId);
   const updateComment = useUpdateComment(postId);
@@ -403,7 +400,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                 </HStack>
               </HStack>
             </VStack>
-          ) : posts.isPending ? (
+          ) : postQuery.isPending ? (
             <View className='items-center py-10'>
               <Spinner size='xlarge' />
             </View>

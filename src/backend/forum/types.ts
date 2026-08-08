@@ -67,3 +67,14 @@ export interface MyPostsOptions {
   readonly limit?: number;
   readonly cursor?: string | null;
 }
+
+export interface ForumPostsPage {
+  readonly posts: readonly ForumPost[];
+  readonly nextCursor: string | null;
+}
+
+export interface ListPostsOptions {
+  readonly forum?: string;
+  readonly limit?: number;
+  readonly cursor?: string | null;
+}

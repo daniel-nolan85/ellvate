@@ -5,7 +5,9 @@ export {
   useForumPosts,
   useMuteUser,
   useMyPosts,
+  usePost,
   useToggleLike,
   type ForumPost,
+  type ForumPostsPage,
 } from './use-forum';
 export { useMyComments, type MyComment } from './use-comments';

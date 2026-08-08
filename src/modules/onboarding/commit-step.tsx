@@ -58,7 +58,7 @@ function Celebration() {
       <View className="flex-row items-center gap-2 rounded-full bg-[rgba(250,250,250,0.1)] px-[18px] py-[9px]">
         <Icon color={ACCENT} name="Star" size={14} />
         <Text className="font-inter-semibold text-[13px] text-primary-foreground">
-          +50 XP · First mission complete
+          +50 XP · Welcome bonus
         </Text>
       </View>
       <Text className="text-[rgba(250,250,250,0.6)]" size="sm">
@@ -154,18 +154,24 @@ export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
                 ONE LAST THING
               </Text>
               <Text className="mt-2.5 text-center font-inter-bold text-[30px] leading-[34px] tracking-[-0.9px] text-primary-foreground">
-                Set your first goal
+                Ready to join in?
               </Text>
               <Text
                 className="mt-2.5 text-center text-[rgba(250,250,250,0.65)]"
                 size="md"
               >
-                Attend one event this month. Hold the circle to commit.
+                Hold the circle to finish setup and claim your welcome bonus.
               </Text>
             </View>
             <Pressable
+              // A 750ms hold makes it easy for the pointer to drift a few
+              // pixels off the circle mid-press — without generous retention,
+              // Pressable's default cancel-on-leave behavior reads onPressOut
+              // as an early release and resets the ring, which is why the
+              // gesture can seem to fail on the first couple of attempts.
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
+              pressRetentionOffset={{ bottom: 60, left: 60, right: 60, top: 60 }}
               testID="onboarding-commit-hold"
             >
               <View className="absolute inset-[4px] rounded-full bg-[rgba(250,250,250,0.06)]" />

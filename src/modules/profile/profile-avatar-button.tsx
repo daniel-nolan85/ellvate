@@ -12,7 +12,9 @@ import { useProfile } from './use-profile';
 export function ProfileAvatarButton() {
   const session = useSession();
   const profile = useProfile();
-  const name = session.status === 'signed-in' ? 'You' : 'Demo member';
+  const name =
+    profile.data?.profile.name ??
+    (session.status === 'signed-in' ? 'You' : 'Demo member');
 
   return (
     <Pressable

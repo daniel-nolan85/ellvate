@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
@@ -85,6 +86,14 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
     notifications.data?.pages.flatMap((page) => page.notifications) ?? [];
   const hasUnread = items.some((notification) => notification.readAt === null);
 
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: notifications.fetchNextPage,
+      hasNextPage: notifications.hasNextPage,
+      isFetchingNextPage: notifications.isFetchingNextPage,
+    },
+  ]);
+
   const handlePress = (notification: Notification) => {
     if (notification.readAt === null) {
       markRead.mutate(notification.id);
@@ -139,28 +148,21 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
           </Text>
         </VStack>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          onScroll={onScroll}
+          scrollEventThrottle={100}
+        >
           {items.map((notification, index) => (
             <View key={notification.id}>
               <NotificationRow notification={notification} onPress={handlePress} />
               {index < items.length - 1 ? <Divider /> : null}
             </View>
           ))}
-          {notifications.hasNextPage ? (
-            <Pressable
-              accessibilityRole="button"
-              className="items-center py-4"
-              disabled={notifications.isFetchingNextPage}
-              onPress={() => void notifications.fetchNextPage()}
-            >
-              {notifications.isFetchingNextPage ? (
-                <Spinner size="small" />
-              ) : (
-                <Text className="font-inter-semibold text-[13px] text-accent">
-                  Load more
-                </Text>
-              )}
-            </Pressable>
+          {notifications.isFetchingNextPage ? (
+            <View className="items-center py-4">
+              <Spinner size="small" />
+            </View>
           ) : null}
         </ScrollView>
       )}

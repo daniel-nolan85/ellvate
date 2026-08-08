@@ -7,7 +7,7 @@ import { createComment, listComments } from '../../src/backend/comments';
 import { createEventComment, listEventComments } from '../../src/backend/event-comments';
 import { createEvent, getEventsView, toggleJoin } from '../../src/backend/events';
 import { createPost, togglePin, toggleLike } from '../../src/backend/forum';
-import { memoryContext } from '../../src/backend/http';
+import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMissionComment, listMissionComments } from '../../src/backend/mission-comments';
 import { checkIn, createMission, getMissionsView } from '../../src/backend/missions';
 import { getMutedUserIds, toggleMute } from '../../src/backend/mutes';
@@ -47,6 +47,7 @@ const listingInput = {
 
 afterEach(() => {
   resetStore();
+  resetWriteRateLimits();
 });
 
 describe('deleteAccount (memory)', () => {
