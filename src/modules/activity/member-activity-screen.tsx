@@ -18,7 +18,13 @@ import {
   type CommunityEvent,
 } from '@/src/modules/events';
 import { PostCard, useToggleLike, type ForumPost } from '@/src/modules/forum';
-import { MissionCard, MissionCelebrationModal, type Mission } from '@/src/modules/missions';
+import {
+  LevelUpCelebrationModal,
+  MissionCard,
+  MissionCelebrationModal,
+  type CheckInCelebration,
+  type Mission,
+} from '@/src/modules/missions';
 import { useMemberProfile } from '@/src/modules/profile';
 import {
   SERVICE_CATEGORY_LABEL,
@@ -101,7 +107,7 @@ export function MemberActivityScreen({
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   const closeThenNavigate = (
     path:
@@ -356,7 +362,7 @@ export function MemberActivityScreen({
           <View className="px-1 pb-4">
             <MissionCard
               mission={openMission}
-              onMissionComplete={setAwardedXp}
+              onMissionComplete={setCelebration}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -374,7 +380,14 @@ export function MemberActivityScreen({
         ) : null}
       </Sheet>
 
-      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
+      <MissionCelebrationModal
+        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
+        onClose={() => setCelebration(null)}
+      />
+      <LevelUpCelebrationModal
+        newLevel={celebration?.leveledUpTo ?? null}
+        onClose={() => setCelebration(null)}
+      />
     </View>
   );
 }

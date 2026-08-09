@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractAvatarUpload } from '@/src/backend/media';
+import { defaultDisplayName } from '@/src/backend/store';
 import type { CommunityRole, NotificationPrefs } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
@@ -50,7 +51,7 @@ const toUserProfile = (
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')

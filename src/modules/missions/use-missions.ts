@@ -9,6 +9,8 @@ import * as Haptics from 'expo-haptics';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
+import { computeLeveledUpTo } from './level-up';
+
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 
@@ -273,7 +275,14 @@ export interface CheckInInput {
   readonly photo?: CheckInPhotoInput;
 }
 
-export function useCheckIn(onMissionComplete?: (awardedXp: number) => void) {
+export interface CheckInCelebration {
+  readonly awardedXp: number;
+  // Set only when this check-in's XP crossed a level boundary -- the level
+  // reached, for a bigger/rarer celebration than the routine XP toast.
+  readonly leveledUpTo: number | null;
+}
+
+export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration) => void) {
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.userId ?? 'demo-user';
@@ -310,7 +319,7 @@ export function useCheckIn(onMissionComplete?: (awardedXp: number) => void) {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
     },
-    onSuccess: (result) => {
+    onSuccess: (result, _input, context) => {
       if (result.awardedXp > 0) {
         void Haptics
           .notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -320,7 +329,13 @@ export function useCheckIn(onMissionComplete?: (awardedXp: number) => void) {
         // callback, which is gated on the observer still having listeners —
         // and the calling MissionCard can unmount before this resolves (its
         // mission gets optimistically filtered out of "In progress" first).
-        onMissionComplete?.(result.awardedXp);
+        onMissionComplete?.({
+          awardedXp: result.awardedXp,
+          leveledUpTo: computeLeveledUpTo(
+            context?.previous?.progress.level,
+            result.progress.level,
+          ),
+        });
       }
     },
   });

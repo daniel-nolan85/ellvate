@@ -29,9 +29,11 @@ import {
   type CommunityEvent,
 } from '@/src/modules/events';
 import {
+  LevelUpCelebrationModal,
   MissionCard,
   MissionCelebrationModal,
   useMyMissionsView,
+  type CheckInCelebration,
   type Mission,
 } from '@/src/modules/missions';
 import {
@@ -126,7 +128,7 @@ export function ActivityScreen() {
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   // Close the open sheet first and let it slide down, then navigate once
   // the close animation finishes — navigating immediately would unmount the
@@ -465,7 +467,7 @@ export function ActivityScreen() {
           <View className="px-1 pb-4">
             <MissionCard
               mission={openMission}
-              onMissionComplete={setAwardedXp}
+              onMissionComplete={setCelebration}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -496,7 +498,14 @@ export function ActivityScreen() {
 
       <CommunityNavBar />
 
-      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
+      <MissionCelebrationModal
+        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
+        onClose={() => setCelebration(null)}
+      />
+      <LevelUpCelebrationModal
+        newLevel={celebration?.leveledUpTo ?? null}
+        onClose={() => setCelebration(null)}
+      />
     </View>
   );
 }

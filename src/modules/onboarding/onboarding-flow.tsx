@@ -148,7 +148,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       onNext={goNext}
     />,
     <NotificationsStep
-      chrome={chrome(true)}
+      chrome={chrome(false)}
       key="notifications"
       onNext={goNext}
       onToggle={toggleNotification}

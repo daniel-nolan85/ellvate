@@ -12,7 +12,12 @@ import {
   updateProfile,
 } from '../../src/backend/profile';
 import { memoryContext } from '../../src/backend/http';
-import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import {
+  defaultDisplayName,
+  DEMO_USER_ID,
+  getState,
+  resetStore,
+} from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -63,7 +68,7 @@ describe('getProfile', () => {
 
     expect(profile).toEqual({
       userId: 'user-ghost',
-      name: 'You',
+      name: defaultDisplayName('user-ghost'),
       avatarUrl: null,
       role: null,
       interests: [],

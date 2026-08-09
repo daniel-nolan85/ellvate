@@ -2,11 +2,14 @@ import { afterEach, describe, expect, test } from 'bun:test';
 
 import {
   createSeedState,
+  defaultDisplayName,
   DEMO_USER_ID,
+  ensureUser,
   getState,
   resetStore,
   SEED_NOW_ISO,
   setState,
+  type StoredUser,
 } from '../../src/backend/store';
 
 afterEach(() => {
@@ -210,5 +213,48 @@ describe('store', () => {
 
     resetStore();
     expect(getState()).toEqual(createSeedState());
+  });
+});
+
+describe('defaultDisplayName', () => {
+  test('is deterministic for the same userId', () => {
+    expect(defaultDisplayName('clerk-user-abc123')).toBe(
+      defaultDisplayName('clerk-user-abc123'),
+    );
+  });
+
+  test('matches the "Neighbor 1234" shape', () => {
+    expect(defaultDisplayName('clerk-user-abc123')).toMatch(/^Neighbor \d{4}$/);
+  });
+
+  test('gives different users different codes', () => {
+    expect(defaultDisplayName('user-alpha')).not.toBe(defaultDisplayName('user-beta'));
+  });
+});
+
+describe('ensureUser', () => {
+  test('returns the existing user unchanged rather than re-provisioning them', () => {
+    const before = getState().users.find((user) => user.id === DEMO_USER_ID);
+    expect(before).toBeDefined();
+
+    const user = ensureUser(DEMO_USER_ID);
+
+    expect(user).toEqual(before as StoredUser);
+    expect(user.name).toBe('You');
+  });
+
+  test('provisions a brand-new user with a distinguishable fallback name, not a shared placeholder', () => {
+    const user = ensureUser('clerk-user-new-1');
+
+    expect(user.name).toBe(defaultDisplayName('clerk-user-new-1'));
+    expect(user.name).toMatch(/^Neighbor \d{4}$/);
+    expect(getState().users.some((entry) => entry.id === 'clerk-user-new-1')).toBe(true);
+  });
+
+  test('two different new users get two different fallback names', () => {
+    const first = ensureUser('clerk-user-new-2');
+    const second = ensureUser('clerk-user-new-3');
+
+    expect(first.name).not.toBe(second.name);
   });
 });

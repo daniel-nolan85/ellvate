@@ -16,7 +16,12 @@ import { formatRelativeTime } from '@/src/lib/relative-time';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
-import { MissionCard, MissionCelebrationModal } from '@/src/modules/missions';
+import {
+  LevelUpCelebrationModal,
+  MissionCard,
+  MissionCelebrationModal,
+  type CheckInCelebration,
+} from '@/src/modules/missions';
 import { ServiceListingCard } from '@/src/modules/services';
 
 import { useBookmarks, type BookmarkedItem, type BookmarkTargetType } from './use-bookmarks';
@@ -175,7 +180,7 @@ export function BookmarksScreen() {
 
   const [openItem, setOpenItem] = useState<BookmarkedItem | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   // Close the sheet first and let it slide down, then navigate once the
   // close animation finishes — navigating immediately would unmount the
@@ -273,7 +278,7 @@ export function BookmarksScreen() {
           <View className="px-1 pb-4">
             <MissionCard
               mission={openItem.mission}
-              onMissionComplete={setAwardedXp}
+              onMissionComplete={setCelebration}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -301,7 +306,14 @@ export function BookmarksScreen() {
 
       <CommunityNavBar />
 
-      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
+      <MissionCelebrationModal
+        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
+        onClose={() => setCelebration(null)}
+      />
+      <LevelUpCelebrationModal
+        newLevel={celebration?.leveledUpTo ?? null}
+        onClose={() => setCelebration(null)}
+      />
     </View>
   );
 }
