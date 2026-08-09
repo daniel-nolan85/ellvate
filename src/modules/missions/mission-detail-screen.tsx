@@ -35,6 +35,7 @@ import { useOpenProfile } from '@/src/modules/profile';
 import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
+import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
 import { missionThemeIcon } from './mission-theme';
@@ -54,6 +55,7 @@ import {
   useMissionsView,
   useReportCheckIn,
   useUpdateMission,
+  type CheckInCelebration,
   type CheckInEntry,
   type MissionStatus,
 } from './use-missions';
@@ -110,11 +112,11 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   const missionsView = useMissionsView();
   const acceptMission = useAcceptMission();
-  const checkIn = useCheckIn(setAwardedXp);
+  const checkIn = useCheckIn(setCelebration);
   const updateMission = useUpdateMission();
   const deleteMission = useDeleteMission();
   const comments = useMissionComments(missionId);
@@ -806,7 +808,14 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         </Pressable>
       </Modal>
 
-      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
+      <MissionCelebrationModal
+        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
+        onClose={() => setCelebration(null)}
+      />
+      <LevelUpCelebrationModal
+        newLevel={celebration?.leveledUpTo ?? null}
+        onClose={() => setCelebration(null)}
+      />
 
       {/* Full-size check-in photo viewer */}
       <Modal

@@ -70,8 +70,8 @@ describe('getMissionsView', () => {
       missionsCompleted: 21,
       title: 'LAKE EXPLORER',
     });
-    expect(progress.level).toBe(7);
-    expect(progress.xpToNextLevel).toBe(120);
+    expect(progress.level).toBe(6);
+    expect(progress.xpToNextLevel).toBe(61);
   });
 
   test('users without a stored entry default to active with 0 stops', async () => {
@@ -204,7 +204,7 @@ describe('checkIn', () => {
       missionsCompleted: 22,
       title: 'LAKE EXPLORER',
     });
-    expect(result.body.progress.level).toBe(8);
+    expect(result.body.progress.level).toBe(7);
   });
 
   test('single-stop mission completes and awards full XP on one check-in', async () => {
@@ -729,7 +729,7 @@ describe('GET /api/missions', () => {
     ]);
     expect(body.progress).toMatchObject({
       xp: 1980,
-      level: 7,
+      level: 6,
       title: 'LAKE EXPLORER',
     });
   });

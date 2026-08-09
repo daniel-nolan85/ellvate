@@ -52,6 +52,9 @@ interface MemberProfileResponse {
 export interface ProfileStats {
   readonly level: number;
   readonly xp: number;
+  readonly xpIntoLevel: number;
+  readonly xpForNextLevel: number;
+  readonly xpToNextLevel: number;
   readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly title: string;

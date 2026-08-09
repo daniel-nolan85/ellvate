@@ -33,6 +33,7 @@ export { createSeedState, DEMO_USER_ID, SEED_NOW_ISO } from './seed';
 export { getState, resetStore, setState } from './store';
 export {
   DEFAULT_PROGRESS_TITLE,
+  defaultDisplayName,
   defaultProfile,
   ensureUser,
 } from './users';

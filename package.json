@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test": "bun test tests/backend/*.test.ts tests/contracts/*.test.ts tests/platform/*.test.ts src/lib/*.test.ts src/modules/forum/*.test.ts src/modules/notifications/*.test.ts src/modules/authentication/sign-in/auth-errors.test.ts",
+    "test": "bun test tests/backend/*.test.ts tests/contracts/*.test.ts tests/platform/*.test.ts src/lib/*.test.ts src/modules/forum/*.test.ts src/modules/notifications/*.test.ts src/modules/missions/*.test.ts src/modules/authentication/sign-in/auth-errors.test.ts",
     "test:components": "jest --runInBand",
     "test:maestro": "maestro test maestro/flows/smoke/cold-launch.yaml",
     "test:maestro:disabled": "bash scripts/run-maestro.sh disabled maestro/flows/smoke/disabled-auth.yaml",

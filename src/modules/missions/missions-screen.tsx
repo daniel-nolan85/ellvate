@@ -12,10 +12,16 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
+import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCard } from './mission-card';
 import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
-import { useCreateMission, useMissionsView, type Mission } from './use-missions';
+import {
+  useCreateMission,
+  useMissionsView,
+  type CheckInCelebration,
+  type Mission,
+} from './use-missions';
 import { XpHero } from './xp-hero';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
@@ -126,7 +132,7 @@ export function MissionsScreen({
   const [composing, setComposing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [filter, setFilter] = useState<MissionFilter>('available');
-  const [awardedXp, setAwardedXp] = useState<number | null>(null);
+  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   return (
     <>
@@ -192,7 +198,7 @@ export function MissionsScreen({
                       <MissionCard
                         key={mission.id}
                         mission={mission}
-                        onMissionComplete={setAwardedXp}
+                        onMissionComplete={setCelebration}
                         onOpen={onOpenMission}
                       />
                     ))}
@@ -238,7 +244,14 @@ export function MissionsScreen({
         visible={isSearching}
       />
 
-      <MissionCelebrationModal awardedXp={awardedXp} onClose={() => setAwardedXp(null)} />
+      <MissionCelebrationModal
+        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
+        onClose={() => setCelebration(null)}
+      />
+      <LevelUpCelebrationModal
+        newLevel={celebration?.leveledUpTo ?? null}
+        onClose={() => setCelebration(null)}
+      />
     </>
   );
 }

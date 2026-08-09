@@ -204,6 +204,38 @@ function StatCard({
   );
 }
 
+function LevelProgress({
+  level,
+  xpForNextLevel,
+  xpIntoLevel,
+  xpToNextLevel,
+}: {
+  readonly level: number;
+  readonly xpIntoLevel: number;
+  readonly xpForNextLevel: number;
+  readonly xpToNextLevel: number;
+}) {
+  const pct = xpForNextLevel > 0
+    ? Math.min(100, Math.max(0, (xpIntoLevel / xpForNextLevel) * 100))
+    : 0;
+
+  return (
+    <VStack className="mx-5 mt-3 gap-2 rounded-2xl border border-surface-hairline bg-paper px-4 py-3.5 shadow-card">
+      <HStack className="items-center justify-between">
+        <Text className="font-inter-semibold text-content" size="sm">
+          Level {level}
+        </Text>
+        <Text className="text-text-muted" size="xs">
+          {xpToNextLevel} XP to Level {level + 1}
+        </Text>
+      </HStack>
+      <View className="h-2 overflow-hidden rounded-full bg-muted">
+        <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+      </View>
+    </VStack>
+  );
+}
+
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
@@ -213,9 +245,7 @@ export function ProfileScreen() {
   const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
 
-  const [activeSheet, setActiveSheet] = useState<
-    'name' | 'role' | 'interests' | null
-  >(null);
+  const [activeSheet, setActiveSheet] = useState<'edit' | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftRole, setDraftRole] = useState<CommunityRole | null>(null);
   const [draftInterests, setDraftInterests] = useState<readonly string[]>([]);
@@ -231,26 +261,21 @@ export function ProfileScreen() {
   const displayName =
     profile.data?.profile.name ??
     (session.status === 'signed-in' ? 'You' : 'Demo member');
-  const subtitle = 'Lake Las Vegas neighbour';
   const prefs = profile.data?.profile.notificationPrefs;
   const currentRole = profile.data?.profile.role ?? null;
-  const roleLabel = currentRole
-    ? (ROLES.find((role) => role.id === currentRole)?.title ?? '—')
-    : '—';
+  const currentRoleOption = currentRole
+    ? ROLES.find((role) => role.id === currentRole)
+    : undefined;
+  // Falls back to the generic tagline until a role is picked -- the role
+  // options themselves are phrased in the first person ("I live here"), so
+  // they read naturally as a caption under your own name.
+  const subtitle = currentRoleOption?.title ?? 'Lake Las Vegas neighbour';
 
-  const openNameEdit = () => {
+  const openEditProfile = () => {
     setDraftName(profile.data?.profile.name ?? '');
-    setActiveSheet('name');
-  };
-
-  const openRoleEdit = () => {
     setDraftRole(profile.data?.profile.role ?? null);
-    setActiveSheet('role');
-  };
-
-  const openInterestsEdit = () => {
     setDraftInterests(profile.data?.profile.interests ?? []);
-    setActiveSheet('interests');
+    setActiveSheet('edit');
   };
 
   const pickAvatar = async () => {
@@ -266,27 +291,6 @@ export function ProfileScreen() {
     });
   };
 
-  const saveName = () => {
-    const name = draftName.trim();
-    if (!name) {
-      return;
-    }
-    updateProfile.mutate(
-      { name },
-      { onSuccess: () => setActiveSheet(null) },
-    );
-  };
-
-  const saveRole = () => {
-    if (!draftRole) {
-      return;
-    }
-    updateProfile.mutate(
-      { role: draftRole },
-      { onSuccess: () => setActiveSheet(null) },
-    );
-  };
-
   const toggleDraftInterest = (interest: string) => {
     setDraftInterests((current) => {
       if (current.includes(interest)) {
@@ -299,12 +303,21 @@ export function ProfileScreen() {
     });
   };
 
-  const saveInterests = () => {
-    if (draftInterests.length < MIN_PICKS) {
+  // Name is the only field required to save -- role and interests are
+  // included only when they're individually in a valid state, so fixing
+  // just your name doesn't get blocked by an unset role or a still-partial
+  // interests pick.
+  const saveProfile = () => {
+    const name = draftName.trim();
+    if (!name) {
       return;
     }
     updateProfile.mutate(
-      { interests: draftInterests },
+      {
+        name,
+        ...(draftRole ? { role: draftRole } : {}),
+        ...(draftInterests.length >= MIN_PICKS ? { interests: draftInterests } : {}),
+      },
       { onSuccess: () => setActiveSheet(null) },
     );
   };
@@ -403,7 +416,7 @@ export function ProfileScreen() {
           <Button
             action="secondary"
             className="rounded-full bg-secondary px-5"
-            onPress={openNameEdit}
+            onPress={openEditProfile}
             size="sm"
           >
             <ButtonText className="font-inter-semibold text-[13px] text-content">
@@ -422,20 +435,17 @@ export function ProfileScreen() {
           <StatCard label="Streak" value={String(stats.data?.streakDays ?? 0)} />
         </HStack>
 
-        <SectionTitle>Your profile</SectionTitle>
+        {stats.data ? (
+          <LevelProgress
+            level={stats.data.level}
+            xpForNextLevel={stats.data.xpForNextLevel}
+            xpIntoLevel={stats.data.xpIntoLevel}
+            xpToNextLevel={stats.data.xpToNextLevel}
+          />
+        ) : null}
+
+        <SectionTitle>Shortcuts</SectionTitle>
         <SectionCard>
-          <Row
-            icon="Globe"
-            label="Community role"
-            onPress={openRoleEdit}
-            value={roleLabel}
-          />
-          <Row
-            icon="Star"
-            label="Interests"
-            onPress={openInterestsEdit}
-            value={`${profile.data?.profile.interests.length ?? 0} picked`}
-          />
           <Row
             icon="Edit"
             label="My Activity"
@@ -451,7 +461,7 @@ export function ProfileScreen() {
         {profile.data && profile.data.profile.interests.length > 0 ? (
           <>
             <SectionTitle>Interests</SectionTitle>
-            <Pressable onPress={openInterestsEdit}>
+            <Pressable onPress={openEditProfile}>
               <HStack className="mx-5 flex-wrap gap-2">
                 {profile.data.profile.interests.map((interest) => (
                   <Badge key={interest} variant="accent">
@@ -545,141 +555,122 @@ export function ProfileScreen() {
       </ScrollView>
 
       <Sheet onClose={() => setActiveSheet(null)} visible={activeSheet !== null}>
-        {activeSheet === 'name' ? (
+        {activeSheet === 'edit' ? (
           <VStack className="px-5 pb-2 pt-1" space="md">
             <Text className="font-inter-bold text-[17px] text-content">
-              Your name
+              Edit profile
             </Text>
-            <Text className="text-text-muted" size="sm">
-              This is how neighbours see you on posts and the leaderboard.
-            </Text>
-            <Input size="lg">
-              <InputField
-                autoFocus
-                onChangeText={setDraftName}
-                onSubmitEditing={saveName}
-                placeholder="First name"
-                value={draftName}
-              />
-            </Input>
-            <Button
-              className="h-[52px] rounded-2xl bg-accent"
-              isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
-              onPress={saveName}
-              size="lg"
-            >
-              <ButtonText className="font-inter-semibold text-accent-foreground">
-                {updateProfile.isPending ? 'Saving…' : 'Save'}
-              </ButtonText>
-            </Button>
-          </VStack>
-        ) : null}
-
-        {activeSheet === 'role' ? (
-          <VStack className="px-5 pb-2 pt-1" space="md">
-            <Text className="font-inter-bold text-[17px] text-content">
-              Community role
-            </Text>
-            <VStack space="xs">
-              {ROLES.map((role) => {
-                const selected = draftRole === role.id;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    className={`flex-row items-center gap-3 rounded-2xl px-4 py-3 ${
-                      selected
-                        ? 'border border-primary bg-primary'
-                        : 'border border-surface-hairline bg-canvas'
-                    }`}
-                    key={role.id}
-                    onPress={() => setDraftRole(role.id)}
-                    testID={`profile-role-${role.id}`}
-                  >
-                    <Icon
-                      color={selected ? '#fff' : 'rgb(181,80,44)'}
-                      name={role.icon}
-                      size={18}
+            <ScrollView style={{ maxHeight: 440 }}>
+              <VStack space="lg">
+                <VStack space="xs">
+                  <Text className="font-inter-semibold text-content" size="sm">
+                    Name
+                  </Text>
+                  <Text className="text-text-muted" size="xs">
+                    This is how neighbours see you on posts and the leaderboard.
+                  </Text>
+                  <Input size="lg">
+                    <InputField
+                      autoFocus
+                      onChangeText={setDraftName}
+                      onSubmitEditing={saveProfile}
+                      placeholder="First name"
+                      value={draftName}
                     />
-                    <View className="flex-1">
-                      <Text
-                        className={`font-inter-semibold text-[14px] ${
-                          selected ? 'text-primary-foreground' : 'text-content'
-                        }`}
-                      >
-                        {role.title}
-                      </Text>
-                      <Text
-                        className={`text-[12px] ${
-                          selected ? 'text-[rgba(250,250,250,0.6)]' : 'text-text-muted'
-                        }`}
-                      >
-                        {role.sub}
-                      </Text>
-                    </View>
-                    {selected ? (
-                      <Icon color="#fff" name="CheckCircle" size={18} />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </VStack>
-            <Button
-              className="h-[52px] rounded-2xl bg-accent"
-              isDisabled={!draftRole || updateProfile.isPending}
-              onPress={saveRole}
-              size="lg"
-            >
-              <ButtonText className="font-inter-semibold text-accent-foreground">
-                {updateProfile.isPending ? 'Saving…' : 'Save'}
-              </ButtonText>
-            </Button>
-          </VStack>
-        ) : null}
+                  </Input>
+                </VStack>
 
-        {activeSheet === 'interests' ? (
-          <VStack className="px-5 pb-2 pt-1" space="md">
-            <Text className="font-inter-bold text-[17px] text-content">
-              Interests
-            </Text>
-            <Text className="text-text-muted" size="sm">
-              Pick {MIN_PICKS}–{MAX_PICKS} things you&apos;re into.
-            </Text>
-            <ScrollView style={{ maxHeight: 320 }}>
-              <View className="flex-row flex-wrap gap-2 pb-1">
-                {INTERESTS.map((interest) => {
-                  const selected = draftInterests.includes(interest);
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      className={`rounded-full px-4 py-2.5 ${
-                        selected ? 'bg-primary' : 'bg-secondary'
-                      }`}
-                      key={interest}
-                      onPress={() => toggleDraftInterest(interest)}
-                      testID={`profile-interest-${interest.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                    >
-                      <Text
-                        className={`font-inter-medium text-[13px] ${
-                          selected ? 'text-primary-foreground' : 'text-content'
-                        }`}
-                      >
-                        {interest}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                <VStack space="xs">
+                  <Text className="font-inter-semibold text-content" size="sm">
+                    Community role
+                  </Text>
+                  <VStack space="xs">
+                    {ROLES.map((role) => {
+                      const selected = draftRole === role.id;
+                      return (
+                        <Pressable
+                          accessibilityRole="button"
+                          className={`flex-row items-center gap-3 rounded-2xl px-4 py-3 ${
+                            selected
+                              ? 'border border-primary bg-primary'
+                              : 'border border-surface-hairline bg-canvas'
+                          }`}
+                          key={role.id}
+                          onPress={() => setDraftRole(role.id)}
+                          testID={`profile-role-${role.id}`}
+                        >
+                          <Icon
+                            color={selected ? '#fff' : 'rgb(181,80,44)'}
+                            name={role.icon}
+                            size={18}
+                          />
+                          <View className="flex-1">
+                            <Text
+                              className={`font-inter-semibold text-[14px] ${
+                                selected ? 'text-primary-foreground' : 'text-content'
+                              }`}
+                            >
+                              {role.title}
+                            </Text>
+                            <Text
+                              className={`text-[12px] ${
+                                selected ? 'text-[rgba(250,250,250,0.6)]' : 'text-text-muted'
+                              }`}
+                            >
+                              {role.sub}
+                            </Text>
+                          </View>
+                          {selected ? (
+                            <Icon color="#fff" name="CheckCircle" size={18} />
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </VStack>
+                </VStack>
+
+                <VStack className="pb-1" space="xs">
+                  <Text className="font-inter-semibold text-content" size="sm">
+                    Interests
+                  </Text>
+                  <Text className="text-text-muted" size="xs">
+                    Pick {MIN_PICKS}–{MAX_PICKS} things you&apos;re into.
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2 pb-1">
+                    {INTERESTS.map((interest) => {
+                      const selected = draftInterests.includes(interest);
+                      return (
+                        <Pressable
+                          accessibilityRole="button"
+                          className={`rounded-full px-4 py-2.5 ${
+                            selected ? 'bg-primary' : 'bg-secondary'
+                          }`}
+                          key={interest}
+                          onPress={() => toggleDraftInterest(interest)}
+                          testID={`profile-interest-${interest.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                        >
+                          <Text
+                            className={`font-inter-medium text-[13px] ${
+                              selected ? 'text-primary-foreground' : 'text-content'
+                            }`}
+                          >
+                            {interest}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </VStack>
+              </VStack>
             </ScrollView>
             <Button
               className="h-[52px] rounded-2xl bg-accent"
-              isDisabled={draftInterests.length < MIN_PICKS || updateProfile.isPending}
-              onPress={saveInterests}
+              isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
+              onPress={saveProfile}
               size="lg"
             >
               <ButtonText className="font-inter-semibold text-accent-foreground">
-                {updateProfile.isPending
-                  ? 'Saving…'
-                  : `Save (${draftInterests.length}/${MAX_PICKS})`}
+                {updateProfile.isPending ? 'Saving…' : 'Save'}
               </ButtonText>
             </Button>
           </VStack>

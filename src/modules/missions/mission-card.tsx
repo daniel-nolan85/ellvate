@@ -18,6 +18,7 @@ import { missionThemeIcon } from './mission-theme';
 import {
   useAcceptMission,
   useCheckIn,
+  type CheckInCelebration,
   type Mission,
   type MissionStatus,
 } from './use-missions';
@@ -37,7 +38,7 @@ const STATUS_BADGE: Readonly<Record<
 interface MissionCardProps {
   readonly mission: Mission;
   readonly onOpen?: (missionId: string) => void;
-  readonly onMissionComplete?: (awardedXp: number) => void;
+  readonly onMissionComplete?: (celebration: CheckInCelebration) => void;
 }
 
 export function MissionCard({ mission, onMissionComplete, onOpen }: MissionCardProps) {
