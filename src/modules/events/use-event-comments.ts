@@ -1,11 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
 import {
-  parseEventCommentsResponse,
+  parseEventCommentsPageResponse,
   type EventComment,
+  type EventCommentsPageResponse,
 } from './event-comment-contract';
 
 export type { EventComment } from './event-comment-contract';
@@ -15,22 +20,34 @@ interface CreateEventCommentResponse {
 }
 
 const queryMeta = { persist: true, sensitive: false } as const;
+const EVENT_COMMENTS_PAGE_SIZE = 20;
 const eventCommentsPath = (eventId: string): `/${string}` =>
   `/api/events/${eventId}/comments`;
+const eventCommentsPagePath = (
+  eventId: string,
+  cursor: string | null,
+): `/${string}` =>
+  `${eventCommentsPath(eventId)}?limit=${EVENT_COMMENTS_PAGE_SIZE}${
+    cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+  }`;
 
+// Bounded and cursor-paginated on the server, same as usePostComments --
+// oldest-first, so scrolling down through the detail screen loads later
+// comments.
 export function useEventComments(eventId: string) {
   const session = useSession();
 
-  return useQuery({
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: EventCommentsPageResponse) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     meta: queryMeta,
-    queryFn: ({ signal }) =>
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
       requestJson<unknown>({
         getAccessToken: session.getToken,
-        path: eventCommentsPath(eventId),
+        path: eventCommentsPagePath(eventId, pageParam),
         signal,
-      }),
+      }).then(parseEventCommentsPageResponse),
     queryKey: ['events', 'comments', session.userId ?? 'demo-user', eventId],
-    select: parseEventCommentsResponse,
   });
 }
 

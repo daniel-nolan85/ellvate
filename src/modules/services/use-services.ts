@@ -52,6 +52,11 @@ export interface ServicesView {
   readonly listings: readonly ServiceListing[];
 }
 
+export interface ServicesPage {
+  readonly listings: readonly ServiceListing[];
+  readonly nextCursor: string | null;
+}
+
 export interface MyServiceListingsPage {
   readonly listings: readonly ServiceListing[];
   readonly nextCursor: string | null;
@@ -96,23 +101,58 @@ export interface UpdateServiceListingInput {
   readonly newMedia?: readonly NewServiceMediaInput[];
 }
 
+const SERVICES_PAGE_SIZE = 20;
+
 const servicesViewKey = (category: ServiceCategory | 'all') =>
   ['services', 'view', category] as const;
+const serviceDetailKey = (listingId: string) =>
+  ['services', 'view', 'detail', listingId] as const;
 
+const servicesPagePath = (
+  category: ServiceCategory | undefined,
+  cursor: string | null,
+): `/${string}` =>
+  `/api/services?limit=${SERVICES_PAGE_SIZE}${
+    category ? `&category=${encodeURIComponent(category)}` : ''
+  }${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+
+// The main directory. Bounded and cursor-paginated on the server (see
+// /api/services) rather than loading every listing in one shot -- callers
+// that need a flat list should flatten `data.pages` themselves. Switching
+// `category` re-keys the query and starts a fresh fetch.
 export function useServicesView(category?: ServiceCategory) {
   const session = useSession();
 
-  return useQuery({
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: ServicesPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     meta: { persist: true, sensitive: false },
-    queryFn: ({ signal }) =>
-      requestJson<ServicesView>({
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<ServicesPage>({
         getAccessToken: session.getToken,
-        path: category
-          ? `/api/services?category=${encodeURIComponent(category)}`
-          : '/api/services',
+        path: servicesPagePath(category, pageParam),
         signal,
       }),
     queryKey: servicesViewKey(category ?? 'all'),
+  });
+}
+
+// A single listing by id, used by the listing detail screen -- the paginated
+// directory no longer guarantees a given listing is already sitting in some
+// cached page (or was ever fetched at all, for a deep link).
+export function useServiceListing(listingId: string) {
+  const session = useSession();
+
+  return useQuery({
+    enabled: Boolean(listingId),
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<{ readonly listing: ServiceListing }>({
+        getAccessToken: session.getToken,
+        path: `/api/services/${listingId}`,
+        signal,
+      }),
+    queryKey: serviceDetailKey(listingId),
   });
 }
 

@@ -2,6 +2,7 @@ export {
   createServiceReview,
   deleteServiceReview,
   listServiceReviews,
+  listServiceReviewsPage,
   reportServiceReview,
   updateServiceReview,
 } from './service-reviews';
@@ -10,5 +11,6 @@ export type {
   PersonRef,
   ReportServiceReviewResult,
   ServiceReview,
+  ServiceReviewsPage,
   UpdateServiceReviewResult,
 } from './types';

@@ -1,4 +1,4 @@
-import { createMissionComment, listMissionComments } from '@/src/backend/mission-comments';
+import { createMissionComment, listMissionCommentsPage } from '@/src/backend/mission-comments';
 import {
   checkWriteRateLimit,
   jsonError,
@@ -11,9 +11,16 @@ export async function GET(
   request: Request,
   { id }: { id: string },
 ): Promise<Response> {
-  return withRequestContext(request, async (ctx) =>
-    jsonOk({ comments: await listMissionComments(ctx, id) }),
-  );
+  return withRequestContext(request, async (ctx) => {
+    const url = new URL(request.url);
+    const limitParam = url.searchParams.get('limit');
+    const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
+    const page = await listMissionCommentsPage(ctx, id, {
+      cursor: url.searchParams.get('cursor'),
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+    return jsonOk(page);
+  });
 }
 
 export async function POST(

@@ -1,5 +1,18 @@
-import { deleteMission, updateMission } from '@/src/backend/missions';
+import { deleteMission, getMissionsByIds, updateMission } from '@/src/backend/missions';
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
+
+export async function GET(
+  request: Request,
+  { id }: { id: string },
+): Promise<Response> {
+  return withRequestContext(request, async (ctx) => {
+    const [mission] = await getMissionsByIds(ctx, [id]);
+    if (!mission) {
+      return jsonError(404, 'mission_not_found', 'Mission not found.');
+    }
+    return jsonOk({ mission });
+  });
+}
 
 export async function PATCH(
   request: Request,

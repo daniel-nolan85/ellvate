@@ -13,6 +13,7 @@ import {
   createComment,
   deleteComment,
   listComments,
+  listCommentsPage,
   reportComment,
   updateComment,
 } from '../../src/backend/comments';
@@ -58,6 +59,27 @@ describe('listComments', () => {
       id: 'user-mia',
       name: 'Mia Lake',
     });
+  });
+});
+
+describe('listCommentsPage', () => {
+  test('paginates oldest-first and preserves that order across pages', async () => {
+    const first = await listCommentsPage(ctx(), 'post-1', { limit: 1 });
+    expect(first.comments.map((comment) => comment.id)).toEqual(['comment-1']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listCommentsPage(ctx(), 'post-1', {
+      cursor: first.nextCursor,
+      limit: 1,
+    });
+    expect(second.comments.map((comment) => comment.id)).toEqual(['comment-2']);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('returns an empty page for a post with no comments', async () => {
+    const page = await listCommentsPage(ctx(), 'post-without-comments');
+    expect(page.comments).toEqual([]);
+    expect(page.nextCursor).toBeNull();
   });
 });
 
@@ -276,5 +298,31 @@ describe('comment routes', () => {
       { id: 'post-nope' },
     );
     expect(response.status).toBe(404);
+  });
+
+  test('GET honors ?limit and ?cursor for pagination', async () => {
+    const firstResponse = await getComments(
+      new Request('http://localhost/api/forum/posts/post-1/comments?limit=1'),
+      { id: 'post-1' },
+    );
+    const first = (await firstResponse.json()) as {
+      comments: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+    expect(first.comments.map((comment) => comment.id)).toEqual(['comment-1']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getComments(
+      new Request(
+        `http://localhost/api/forum/posts/post-1/comments?limit=1&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+      { id: 'post-1' },
+    );
+    const second = (await secondResponse.json()) as {
+      comments: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+    expect(second.comments.map((comment) => comment.id)).toEqual(['comment-2']);
+    expect(second.nextCursor).toBeNull();
   });
 });

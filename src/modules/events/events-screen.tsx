@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -16,67 +17,23 @@ import { EventComposer } from './event-composer';
 import { EventRow } from './event-row';
 import { EventsCalendar } from './events-calendar';
 import { FeaturedEventCard } from './featured-event-card';
-import { useCreateEvent, useEventsView, useToggleJoin } from './use-events';
-
-import type { EventsView } from './events-types';
+import {
+  useCreateEvent,
+  useEventDates,
+  useEventsView,
+  useToggleJoin,
+} from './use-events';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 
-function EventsBody({
-  onOpenEvent,
-  onToggleJoin,
-  view,
-}: {
-  readonly onOpenEvent?: (eventId: string) => void;
-  readonly onToggleJoin: (eventId: string) => void;
-  readonly view: EventsView;
-}) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const visibleEvents = selectedDate
-    ? view.events.filter((event) => event.startsAt.slice(0, 10) === selectedDate)
-    : view.events;
-  const featured = visibleEvents.find((event) => event.featured);
-  const rest = visibleEvents.filter((event) => event !== featured);
-
+function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
   return (
-    <>
-      <EventsCalendar
-        events={view.events}
-        onSelectedDateChange={setSelectedDate}
-        selectedDate={selectedDate}
-      />
-      {featured ? (
-        <FeaturedEventCard
-          event={featured}
-          onOpen={onOpenEvent}
-          onToggleJoin={onToggleJoin}
-        />
-      ) : null}
-      <VStack className="px-5 pt-1" space="xs">
-        <Text className="py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-          Coming up
-        </Text>
-        {visibleEvents.length === 0 ? (
-          <Text className="py-2 text-muted-foreground" size="sm">
-            {selectedDate
-              ? 'Nothing scheduled for this day.'
-              : 'Nothing on the calendar yet. Tap + to add the first one.'}
-          </Text>
-        ) : (
-          <VStack space="sm">
-            {rest.map((event) => (
-              <EventRow
-                event={event}
-                key={event.id}
-                onOpen={onOpenEvent}
-                onToggleJoin={onToggleJoin}
-              />
-            ))}
-            <AllCaughtUp />
-          </VStack>
-        )}
-      </VStack>
-    </>
+    <View className="items-center py-3" testID="events-load-more">
+      <Spinner size="small" />
+    </View>
   );
 }
 
@@ -101,21 +58,39 @@ interface EventsScreenProps {
 }
 
 export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
-  const eventsView = useEventsView();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const dates = useEventDates();
+  const eventsView = useEventsView(selectedDate);
   const toggleJoin = useToggleJoin();
   const createEvent = useCreateEvent();
   const [composing, setComposing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  const events = eventsView.data?.pages.flatMap((page) => page.events) ?? [];
+  // Sorted featured-first server-side, so the very first item (if featured)
+  // is always the one to pull out for the hero card.
+  const featured = events[0]?.featured ? events[0] : undefined;
+  const rest = featured ? events.slice(1) : events;
+
   const handleToggleJoin = (eventId: string) => {
     toggleJoin.mutate(eventId);
   };
+
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: eventsView.fetchNextPage,
+      hasNextPage: eventsView.hasNextPage,
+      isFetchingNextPage: eventsView.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <>
       <ScrollView
         className="flex-1 bg-canvas"
         contentContainerClassName="pb-[130px]"
+        onScroll={onScroll}
+        scrollEventThrottle={100}
         showsVerticalScrollIndicator={false}
       >
         <VStack space="md">
@@ -124,6 +99,12 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
             onSearch={() => setIsSearching(true)}
             right={<CreateButton onPress={() => setComposing(true)} />}
             title="Events"
+          />
+
+          <EventsCalendar
+            dates={dates.data ?? []}
+            onSelectedDateChange={setSelectedDate}
+            selectedDate={selectedDate}
           />
 
           {eventsView.isPending ? (
@@ -145,42 +126,72 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
               </Button>
             </VStack>
           ) : (
-            <EventsBody
-              onOpenEvent={onOpenEvent}
-              onToggleJoin={handleToggleJoin}
-              view={eventsView.data}
-            />
+            <>
+              {featured ? (
+                <FeaturedEventCard
+                  event={featured}
+                  onOpen={onOpenEvent}
+                  onToggleJoin={handleToggleJoin}
+                />
+              ) : null}
+              <VStack className="px-5 pt-1" space="xs">
+                <Text className="py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                  Coming up
+                </Text>
+                {events.length === 0 ? (
+                  <Text className="py-2 text-muted-foreground" size="sm">
+                    {selectedDate
+                      ? 'Nothing scheduled for this day.'
+                      : 'Nothing on the calendar yet. Tap + to add the first one.'}
+                  </Text>
+                ) : (
+                  <VStack space="sm">
+                    {rest.map((event) => (
+                      <EventRow
+                        event={event}
+                        key={event.id}
+                        onOpen={onOpenEvent}
+                        onToggleJoin={handleToggleJoin}
+                      />
+                    ))}
+                    {eventsView.hasNextPage ? (
+                      <LoadMoreFooter isLoading={eventsView.isFetchingNextPage} />
+                    ) : (
+                      <AllCaughtUp />
+                    )}
+                  </VStack>
+                )}
+              </VStack>
+            </>
           )}
         </VStack>
       </ScrollView>
 
       <Sheet onClose={() => setComposing(false)} visible={composing}>
-        {eventsView.data ? (
-          <EventComposer
-            isSubmitting={createEvent.isPending}
-            onDismiss={() => setComposing(false)}
-            onSubmit={(draft) =>
-              createEvent.mutate(
-                {
-                  date: draft.date,
-                  newMedia: draft.newMedia,
-                  place: draft.place,
-                  tag: draft.tag,
-                  time: draft.time,
-                  title: draft.title,
-                },
-                { onSuccess: () => setComposing(false) },
-              )
-            }
-          />
-        ) : null}
+        <EventComposer
+          isSubmitting={createEvent.isPending}
+          onDismiss={() => setComposing(false)}
+          onSubmit={(draft) =>
+            createEvent.mutate(
+              {
+                date: draft.date,
+                newMedia: draft.newMedia,
+                place: draft.place,
+                tag: draft.tag,
+                time: draft.time,
+                title: draft.title,
+              },
+              { onSuccess: () => setComposing(false) },
+            )
+          }
+        />
       </Sheet>
 
       <SearchSheet
         getKey={(event) => event.id}
         getSubtitle={(event) => event.place}
         getTitle={(event) => event.title}
-        items={eventsView.data?.events ?? []}
+        items={events}
         onClose={() => setIsSearching(false)}
         onSelect={(event) => onOpenEvent?.(event.id)}
         placeholder="Search events"

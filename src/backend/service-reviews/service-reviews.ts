@@ -5,10 +5,12 @@ import {
   type StoredServiceReview,
   type StoredUser,
 } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
   createServiceReviewSupabase,
   deleteServiceReviewSupabase,
+  listServiceReviewsPageSupabase,
   listServiceReviewsSupabase,
   reportServiceReviewSupabase,
   updateServiceReviewSupabase,
@@ -18,8 +20,12 @@ import type {
   PersonRef,
   ReportServiceReviewResult,
   ServiceReview,
+  ServiceReviewsPage,
   UpdateServiceReviewResult,
 } from './types';
+
+export const DEFAULT_SERVICE_REVIEWS_PAGE_SIZE = 20;
+export const MAX_SERVICE_REVIEWS_PAGE_SIZE = 50;
 
 const VALID_RATINGS = new Set([1, 2, 3, 4, 5]);
 const MAX_REVIEW_BODY_LENGTH = 2000;
@@ -92,6 +98,39 @@ function listServiceReviewsMemory(
     .slice()
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .map((review) => toServiceReview(review, state.users));
+}
+
+// The paginated counterpart to listServiceReviewsMemory (used by the public
+// review list; the unbounded function stays available for internal
+// callers). Newest-first, matching the existing order -- unlike
+// missions/events/comments, no sortKey inversion is needed here since
+// paginateInMemory already sorts descending and createdAt-descending is
+// already the desired newest-first order (same as services listings).
+function listServiceReviewsPageMemory(
+  userId: string,
+  listingId: string,
+  limit: number,
+  cursor: string | null,
+): ServiceReviewsPage {
+  const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
+  const filtered = state.serviceReviews
+    .filter(
+      (review) =>
+        review.listingId === listingId && !mutedUserIds.has(review.authorId),
+    )
+    .map((review) => ({
+      id: review.id,
+      review,
+      sortKey: review.createdAt,
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    nextCursor: page.nextCursor,
+    reviews: page.items.map((item) => toServiceReview(item.review, state.users)),
+  };
 }
 
 function createServiceReviewMemory(
@@ -277,6 +316,22 @@ export async function listServiceReviews(
   return ctx.supabase
     ? listServiceReviewsSupabase(ctx.supabase, ctx.userId, listingId)
     : listServiceReviewsMemory(ctx.userId, listingId);
+}
+
+// The paginated, public-facing counterpart to listServiceReviews.
+export async function listServiceReviewsPage(
+  ctx: RequestContext,
+  listingId: string,
+  options?: { readonly limit?: number; readonly cursor?: string | null },
+): Promise<ServiceReviewsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_SERVICE_REVIEWS_PAGE_SIZE),
+    MAX_SERVICE_REVIEWS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? listServiceReviewsPageSupabase(ctx.supabase, ctx.userId, listingId, limit, cursor)
+    : listServiceReviewsPageMemory(ctx.userId, listingId, limit, cursor);
 }
 
 export async function createServiceReview(

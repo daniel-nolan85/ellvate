@@ -6,8 +6,10 @@ import {
 } from '../../app/api/missions+api';
 import {
   DELETE as deleteMissionRoute,
+  GET as getMissionRoute,
   PATCH as patchMissionRoute,
 } from '../../app/api/missions/[id]/index+api';
+import { GET as getMissionsProgress } from '../../app/api/missions/progress+api';
 import { POST as postAccept } from '../../app/api/missions/[id]/accept+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
@@ -17,6 +19,8 @@ import {
   createMission,
   deleteMission,
   getMissionsView,
+  getUserProgress,
+  listMissionsPage,
   updateMission,
 } from '../../src/backend/missions';
 import { computeProgress } from '../../src/backend/progress';
@@ -710,28 +714,135 @@ describe('POST /api/missions', () => {
 });
 
 describe('GET /api/missions', () => {
-  test('returns missions and progress for demo-user', async () => {
+  test('defaults to the available filter when no filter param is given', async () => {
     const response = await getMissions(
       new Request('http://localhost/api/missions'),
     );
     const body = (await response.json()) as {
       missions: readonly { id: string; status: string }[];
+      nextCursor: string | null;
+    };
+
+    expect(response.status).toBe(200);
+    // mission-1 and mission-4 have no seeded progress entry for demo-user --
+    // not yet accepted, so only those two are "available".
+    expect(body.missions.map((mission) => mission.id)).toEqual([
+      'mission-1',
+      'mission-4',
+    ]);
+    expect(body.nextCursor).toBeNull();
+  });
+
+  test('filter=in-progress returns only accepted, not-yet-done missions', async () => {
+    const response = await getMissions(
+      new Request('http://localhost/api/missions?filter=in-progress'),
+    );
+    const body = (await response.json()) as {
+      missions: readonly { id: string }[];
+    };
+
+    expect(body.missions.map((mission) => mission.id)).toEqual(['mission-2']);
+  });
+
+  test('filter=completed returns only done missions', async () => {
+    const response = await getMissions(
+      new Request('http://localhost/api/missions?filter=completed'),
+    );
+    const body = (await response.json()) as {
+      missions: readonly { id: string }[];
+    };
+
+    expect(body.missions.map((mission) => mission.id)).toEqual(['mission-3']);
+  });
+
+  test('an unrecognized filter value falls back to available', async () => {
+    const response = await getMissions(
+      new Request('http://localhost/api/missions?filter=bogus'),
+    );
+    const body = (await response.json()) as {
+      missions: readonly { id: string }[];
+    };
+
+    expect(body.missions.map((mission) => mission.id)).toEqual([
+      'mission-1',
+      'mission-4',
+    ]);
+  });
+
+  test('paginates within a filter bucket and preserves the existing browse order', async () => {
+    const first = await listMissionsPage(ctx(), { filter: 'available', limit: 1 });
+    expect(first.missions.map((mission) => mission.id)).toEqual(['mission-1']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listMissionsPage(ctx(), {
+      cursor: first.nextCursor,
+      filter: 'available',
+      limit: 1,
+    });
+    expect(second.missions.map((mission) => mission.id)).toEqual(['mission-4']);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('returns an empty page for a filter bucket with no matches', async () => {
+    const page = await listMissionsPage(ctx('user-mia'), { filter: 'completed' });
+    expect(page.missions).toEqual([]);
+    expect(page.nextCursor).toBeNull();
+  });
+});
+
+describe('getUserProgress / GET /api/missions/progress', () => {
+  test('matches computeProgress for the seed demo-user', async () => {
+    const progress = await getUserProgress(ctx());
+    const breakdown = computeProgress(1980);
+
+    expect(progress).toEqual({
+      level: breakdown.level,
+      xp: 1980,
+      xpIntoLevel: breakdown.xpIntoLevel,
+      xpForNextLevel: breakdown.xpForNextLevel,
+      xpToNextLevel: breakdown.xpToNextLevel,
+      streakDays: 12,
+      missionsCompleted: 21,
+      title: 'LAKE EXPLORER',
+    });
+  });
+
+  test('GET /api/missions/progress returns the same shape', async () => {
+    const response = await getMissionsProgress(
+      new Request('http://localhost/api/missions/progress'),
+    );
+    const body = (await response.json()) as {
       progress: { xp: number; level: number; title: string };
     };
 
     expect(response.status).toBe(200);
-    expect(body.missions).toHaveLength(4);
-    expect(body.missions.map((mission) => mission.status)).toEqual([
-      'active',
-      'active',
-      'done',
-      'active',
-    ]);
     expect(body.progress).toMatchObject({
       xp: 1980,
       level: 6,
       title: 'LAKE EXPLORER',
     });
+  });
+});
+
+describe('GET /api/missions/:id', () => {
+  test('returns the mission when it exists', async () => {
+    const response = await getMissionRoute(
+      new Request('http://localhost/api/missions/mission-1'),
+      { id: 'mission-1' },
+    );
+    const body = (await response.json()) as { mission: { id: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.mission.id).toBe('mission-1');
+  });
+
+  test('returns 404 for an unknown mission id', async () => {
+    const response = await getMissionRoute(
+      new Request('http://localhost/api/missions/does-not-exist'),
+      { id: 'does-not-exist' },
+    );
+
+    expect(response.status).toBe(404);
   });
 });
 

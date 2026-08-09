@@ -14,6 +14,11 @@ export interface ServiceReview {
   readonly editedAt: string | null;
 }
 
+export interface ServiceReviewsPage {
+  readonly reviews: readonly ServiceReview[];
+  readonly nextCursor: string | null;
+}
+
 export type CreateServiceReviewResult =
   | { readonly ok: true; readonly review: ServiceReview }
   | {

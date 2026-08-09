@@ -114,7 +114,10 @@ export function useMemberProfile(userId: string) {
   });
 }
 
-// Shares the missions query cache so stats stay in sync with the Missions tab.
+// Shares the missions module's progress query cache so stats stay in sync
+// with the Missions tab's XpHero -- fetched independently rather than
+// imported across the module boundary (missions/use-missions.ts's
+// useMissionsProgress hits the same endpoint and key shape).
 export function useProfileStats() {
   const session = useSession();
 
@@ -123,10 +126,10 @@ export function useProfileStats() {
     queryFn: ({ signal }) =>
       requestJson<MissionsResponse>({
         getAccessToken: session.getToken,
-        path: '/api/missions',
+        path: '/api/missions/progress',
         signal,
       }),
-    queryKey: ['missions', 'view', session.userId ?? 'demo-user'],
+    queryKey: ['missions', 'progress', session.userId ?? 'demo-user'],
     select: (data) => data.progress,
   });
 }

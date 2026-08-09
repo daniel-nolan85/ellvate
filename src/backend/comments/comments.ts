@@ -6,10 +6,12 @@ import {
   type StoredComment,
   type StoredUser,
 } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
   createCommentSupabase,
   deleteCommentSupabase,
+  listCommentsPageSupabase,
   listCommentsSupabase,
   listMyCommentsSupabase,
   reportCommentSupabase,
@@ -17,6 +19,7 @@ import {
 } from './comments-supabase';
 import type {
   Comment,
+  CommentsPage,
   CreateCommentResult,
   MyComment,
   PersonRef,
@@ -24,6 +27,9 @@ import type {
   UpdateCommentResult,
 } from './types';
 import { validateCommentBody } from './validation';
+
+export const DEFAULT_COMMENTS_PAGE_SIZE = 20;
+export const MAX_COMMENTS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -55,6 +61,37 @@ function listCommentsMemory(postId: string): readonly Comment[] {
     .slice()
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
     .map((comment) => toComment(comment, state.users));
+}
+
+// The paginated counterpart to listCommentsMemory (used by the public thread
+// view; listCommentsMemory itself stays unbounded, e.g. for delete-account's
+// cleanup scan). Oldest-first, matching the thread's natural reading order --
+// paginateInMemory always sorts descending by sortKey, so the sortKey
+// inverts the timestamp to preserve that ascending order (same trick used
+// for missions' position and events' startsAt).
+const MAX_COMMENT_TIMESTAMP = 9_999_999_999_999;
+
+function listCommentsPageMemory(
+  postId: string,
+  limit: number,
+  cursor: string | null,
+): CommentsPage {
+  const state = getState();
+  const filtered = state.comments
+    .filter((comment) => comment.postId === postId)
+    .map((comment) => ({
+      comment,
+      id: comment.id,
+      sortKey: String(
+        MAX_COMMENT_TIMESTAMP - Date.parse(comment.createdAt),
+      ).padStart(13, '0'),
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    comments: page.items.map((item) => toComment(item.comment, state.users)),
+    nextCursor: page.nextCursor,
+  };
 }
 
 function listMyCommentsMemory(userId: string): readonly MyComment[] {
@@ -222,6 +259,23 @@ export async function listComments(
   return ctx.supabase
     ? listCommentsSupabase(ctx.supabase, postId)
     : listCommentsMemory(postId);
+}
+
+// The paginated, public-facing counterpart to listComments (see
+// listCommentsPageMemory for why the two are kept separate).
+export async function listCommentsPage(
+  ctx: RequestContext,
+  postId: string,
+  options?: { readonly limit?: number; readonly cursor?: string | null },
+): Promise<CommentsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_COMMENTS_PAGE_SIZE),
+    MAX_COMMENTS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? listCommentsPageSupabase(ctx.supabase, postId, limit, cursor)
+    : listCommentsPageMemory(postId, limit, cursor);
 }
 
 export async function listMyComments(

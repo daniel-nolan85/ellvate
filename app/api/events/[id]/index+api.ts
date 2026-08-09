@@ -1,5 +1,18 @@
-import { deleteEvent, updateEvent } from '@/src/backend/events';
+import { deleteEvent, getEventsByIds, updateEvent } from '@/src/backend/events';
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
+
+export async function GET(
+  request: Request,
+  { id }: { id: string },
+): Promise<Response> {
+  return withRequestContext(request, async (ctx) => {
+    const [event] = await getEventsByIds(ctx, [id]);
+    if (!event) {
+      return jsonError(404, 'event_not_found', 'Event not found.');
+    }
+    return jsonOk({ event });
+  });
+}
 
 export async function PATCH(
   request: Request,

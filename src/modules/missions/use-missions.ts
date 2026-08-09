@@ -58,6 +58,13 @@ export interface MissionsView {
   readonly progress: UserProgress;
 }
 
+export type MissionFilter = 'available' | 'in-progress' | 'completed';
+
+export interface MissionsPage {
+  readonly missions: readonly Mission[];
+  readonly nextCursor: string | null;
+}
+
 export interface MyMissionsPage {
   readonly missions: readonly Mission[];
   readonly nextCursor: string | null;
@@ -115,8 +122,19 @@ export interface UpdateMissionInput {
   readonly newMedia?: readonly NewMissionMediaInput[];
 }
 
-const missionsViewKey = (userId: string) =>
-  ['missions', 'view', userId] as const;
+const missionsViewKey = (userId: string, filter: MissionFilter) =>
+  ['missions', 'view', userId, filter] as const;
+
+const missionsProgressKey = (userId: string) =>
+  ['missions', 'progress', userId] as const;
+
+const missionDetailKey = (userId: string, missionId: string) =>
+  ['missions', 'view', userId, 'detail', missionId] as const;
+
+const missionsPagePath = (filter: MissionFilter, cursor: string | null): `/${string}` =>
+  `/api/missions?filter=${filter}&limit=${DEFAULT_MISSIONS_PAGE_SIZE}${
+    cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+  }`;
 
 const advanceMission = (mission: Mission): Mission => {
   const stopsDone = Math.min(mission.stopsDone + 1, mission.stopsTotal);
@@ -127,21 +145,72 @@ const advanceMission = (mission: Mission): Mission => {
   };
 };
 
-export function useMissionsView() {
+const DEFAULT_MISSIONS_PAGE_SIZE = 20;
+
+// The main browse feed. Bounded and cursor-paginated on the server (see
+// /api/missions) rather than loading every mission in one shot -- callers
+// that need a flat list should flatten `data.pages` themselves. Switching
+// `filter` re-keys the query and starts a fresh paginated fetch, same as
+// useForumPosts switching `forum`.
+export function useMissionsView(filter: MissionFilter) {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MissionsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<MissionsPage>({
+        getAccessToken: session.getToken,
+        path: missionsPagePath(filter, pageParam),
+        signal,
+      }),
+    queryKey: missionsViewKey(userId, filter),
+  });
+}
+
+// The viewer's own level/XP/streak stats, decoupled from the (now paginated
+// and filtered) missions list -- profile's useProfileStats hits the same
+// backend endpoint independently, mirroring how it already duplicated this
+// fetch rather than importing across the module boundary.
+export function useMissionsProgress() {
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
 
   return useQuery({
-    meta: {
-      persist: true,
-      sensitive: false,
-    },
-    queryFn: ({ signal }) => requestJson<MissionsView>({
-      getAccessToken: session.getToken,
-      path: '/api/missions',
-      signal,
-    }),
-    queryKey: missionsViewKey(userId),
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<{ readonly progress: UserProgress }>({
+        getAccessToken: session.getToken,
+        path: '/api/missions/progress',
+        signal,
+      }),
+    queryKey: missionsProgressKey(userId),
+    select: (data) => data.progress,
+  });
+}
+
+// A single mission by id, used by the mission detail screen -- the paginated
+// main feed no longer guarantees a given mission is already sitting in some
+// cached page (or was ever fetched at all, for a deep link), so the detail
+// screen can't just scan useMissionsView's cache anymore. Shares the
+// ['missions','view',userId,...] key prefix so the existing mission
+// mutations' broad invalidation keeps this in sync too.
+export function useMission(missionId: string) {
+  const session = useSession();
+  const userId = session.userId ?? 'demo-user';
+
+  return useQuery({
+    enabled: Boolean(missionId),
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ signal }) =>
+      requestJson<{ readonly mission: Mission }>({
+        getAccessToken: session.getToken,
+        path: `/api/missions/${missionId}`,
+        signal,
+      }),
+    queryKey: missionDetailKey(userId, missionId),
   });
 }
 
@@ -222,21 +291,27 @@ export function useDeleteMission() {
   });
 }
 
-interface MissionMutationContext {
-  readonly previous: MissionsView | undefined;
+// Optimistic updates target only the single-mission detail query -- once the
+// list is split into three separately-cached, server-filtered pages, an
+// accept/check-in can move a mission from one filter bucket to another
+// (e.g. available -> in-progress), which isn't a safe in-place page patch the
+// way a simple like-count bump would be. The list falls back to onSettled's
+// broad ['missions'] invalidation for correctness instead.
+interface MissionDetailMutationContext {
+  readonly previous: Mission | undefined;
+  readonly previousLevel: number | undefined;
 }
 
 export function useAcceptMission() {
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.userId ?? 'demo-user';
-  const viewKey = missionsViewKey(userId);
 
   return useMutation<
     { readonly mission: Mission },
     Error,
     string,
-    MissionMutationContext
+    MissionDetailMutationContext
   >({
     mutationFn: (missionId) =>
       requestJson<{ readonly mission: Mission }>({
@@ -244,25 +319,30 @@ export function useAcceptMission() {
         method: 'POST',
         path: `/api/missions/${missionId}/accept`,
       }),
-    onError: (_error, _missionId, context) => {
+    onError: (_error, missionId, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(viewKey, context.previous);
+        queryClient.setQueryData(missionDetailKey(userId, missionId), {
+          mission: context.previous,
+        });
       }
     },
     onMutate: async (missionId) => {
-      await queryClient.cancelQueries({ queryKey: viewKey });
-      const previous = queryClient.getQueryData<MissionsView>(viewKey);
+      const detailKey = missionDetailKey(userId, missionId);
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previous = queryClient.getQueryData<{ readonly mission: Mission }>(
+        detailKey,
+      )?.mission;
+      const previousLevel = queryClient.getQueryData<{
+        readonly progress: UserProgress;
+      }>(missionsProgressKey(userId))?.progress.level;
 
       if (previous) {
-        queryClient.setQueryData<MissionsView>(viewKey, {
-          ...previous,
-          missions: previous.missions.map((mission) =>
-            mission.id === missionId ? { ...mission, accepted: true } : mission,
-          ),
+        queryClient.setQueryData(detailKey, {
+          mission: { ...previous, accepted: true },
         });
       }
 
-      return { previous };
+      return { previous, previousLevel };
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
@@ -286,34 +366,36 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.userId ?? 'demo-user';
-  const viewKey = missionsViewKey(userId);
 
-  return useMutation<CheckInResult, Error, CheckInInput, MissionMutationContext>({
+  return useMutation<CheckInResult, Error, CheckInInput, MissionDetailMutationContext>({
     mutationFn: ({ missionId, photo }) => requestJson<CheckInResult>({
       body: photo ? { checkInPhoto: photo } : {},
       getAccessToken: session.getToken,
       method: 'POST',
       path: `/api/missions/${missionId}/check-in`,
     }),
-    onError: (_error, _input, context) => {
+    onError: (_error, { missionId }, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(viewKey, context.previous);
+        queryClient.setQueryData(missionDetailKey(userId, missionId), {
+          mission: context.previous,
+        });
       }
     },
     onMutate: async ({ missionId }) => {
-      await queryClient.cancelQueries({ queryKey: viewKey });
-      const previous = queryClient.getQueryData<MissionsView>(viewKey);
+      const detailKey = missionDetailKey(userId, missionId);
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previous = queryClient.getQueryData<{ readonly mission: Mission }>(
+        detailKey,
+      )?.mission;
+      const previousLevel = queryClient.getQueryData<{
+        readonly progress: UserProgress;
+      }>(missionsProgressKey(userId))?.progress.level;
 
       if (previous) {
-        queryClient.setQueryData<MissionsView>(viewKey, {
-          ...previous,
-          missions: previous.missions.map((mission) => (
-            mission.id === missionId ? advanceMission(mission) : mission
-          )),
-        });
+        queryClient.setQueryData(detailKey, { mission: advanceMission(previous) });
       }
 
-      return { previous };
+      return { previous, previousLevel };
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
@@ -332,7 +414,7 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
         onMissionComplete?.({
           awardedXp: result.awardedXp,
           leveledUpTo: computeLeveledUpTo(
-            context?.previous?.progress.level,
+            context?.previousLevel,
             result.progress.level,
           ),
         });

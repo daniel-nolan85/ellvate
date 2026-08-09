@@ -16,10 +16,13 @@ import type {
   CheckInResult,
   CreateMissionResult,
   Mission,
+  MissionFilter,
   MissionMedia,
+  MissionsPage,
   MissionsView,
   MyMissionsPage,
   UpdateMissionResult,
+  UserProgress,
 } from './types';
 import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
@@ -238,6 +241,101 @@ export async function getMissionsViewSupabase(
       title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
     }),
   };
+}
+
+const matchesMissionFilter = (mission: Mission, filter: MissionFilter): boolean => {
+  switch (filter) {
+    case 'available':
+      return !mission.accepted && mission.status === 'active';
+    case 'in-progress':
+      return mission.accepted && mission.status === 'active';
+    case 'completed':
+      return mission.status === 'done';
+  }
+};
+
+// The paginated, filtered counterpart to getMissionsViewSupabase, mirroring
+// getMyMissionsViewSupabase's precedent below: "created by me OR completed by
+// me" (and here, the status-bucket filter) can't be expressed as a single
+// keyset-limited SQL query since it depends on a computed join against
+// mission_progress, so this fetches the same 3 queries getMissionsViewSupabase
+// already runs, filters/maps in application code, then paginates the result.
+// The browse order has always been oldest-first (array/position order); since
+// paginateInMemory always sorts descending by sortKey, the sortKey is
+// inverted here to preserve that instead of silently flipping to newest-first.
+const MAX_MISSION_POSITION = 9_999_999;
+
+export async function listMissionsPageSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  filter: MissionFilter,
+  limit: number,
+  cursor: string | null,
+): Promise<MissionsPage> {
+  const { data, error } = await supabase
+    .from('missions')
+    .select(MISSION_SELECT)
+    .order('position', { ascending: true });
+  throwIfSupabaseError(error, 'load missions');
+  const missionRows = (data ?? []) as unknown as MissionRow[];
+
+  const { data: progressData, error: progressError } = await supabase
+    .from('mission_progress')
+    .select('mission_id,stops_done,status')
+    .eq('user_id', userId);
+  throwIfSupabaseError(progressError, 'load mission progress');
+  const progressByMission = new Map(
+    ((progressData ?? []) as unknown as ProgressRow[]).map((row) => [
+      row.mission_id,
+      row,
+    ]),
+  );
+
+  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
+  const { data: authorRows, error: authorError } = authorIds.length
+    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    : { data: [], error: null };
+  throwIfSupabaseError(authorError, 'load mission authors');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (authorRows ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  const filtered = missionRows
+    .map((row, index) => ({
+      index,
+      view: toMissionView(row, progressByMission.get(row.id), nameById),
+    }))
+    .filter(({ view }) => matchesMissionFilter(view, filter))
+    .map(({ index, view }) => ({
+      id: view.id,
+      sortKey: String(MAX_MISSION_POSITION - index).padStart(7, '0'),
+      view,
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    missions: page.items.map((item) => item.view),
+    nextCursor: page.nextCursor,
+  };
+}
+
+export async function getUserProgressSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserProgress> {
+  const userRow = await loadUserRow(supabase, userId);
+  return buildProgress({
+    xp: userRow?.xp ?? 0,
+    streakDays: userRow?.streak_days ?? 0,
+    missionsCompleted: userRow?.missions_completed ?? 0,
+    title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
+  });
 }
 
 // Scoped to missions the caller created or completed — bounded by one user's

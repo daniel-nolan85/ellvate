@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -18,15 +19,14 @@ import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
 import {
   useCreateMission,
+  useMissionsProgress,
   useMissionsView,
   type CheckInCelebration,
-  type Mission,
+  type MissionFilter,
 } from './use-missions';
 import { XpHero } from './xp-hero';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
-
-type MissionFilter = 'available' | 'in-progress' | 'completed';
 
 const MISSION_FILTERS: readonly { readonly key: MissionFilter; readonly label: string }[] = [
   { key: 'available', label: 'Available' },
@@ -34,16 +34,16 @@ const MISSION_FILTERS: readonly { readonly key: MissionFilter; readonly label: s
   { key: 'completed', label: 'Completed' },
 ];
 
-const matchesFilter = (mission: Mission, filter: MissionFilter): boolean => {
-  switch (filter) {
-    case 'available':
-      return !mission.accepted && mission.status === 'active';
-    case 'in-progress':
-      return mission.accepted && mission.status === 'active';
-    case 'completed':
-      return mission.status === 'done';
+function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
   }
-};
+  return (
+    <View className="items-center py-3" testID="missions-load-more">
+      <Spinner size="small" />
+    </View>
+  );
+}
 
 function MissionFilterChips({
   active,
@@ -127,18 +127,31 @@ export function MissionsScreen({
   onOpenLeaderboard,
   onOpenMission,
 }: MissionsScreenProps) {
-  const missionsView = useMissionsView();
+  const [filter, setFilter] = useState<MissionFilter>('available');
+  const missionsView = useMissionsView(filter);
+  const progress = useMissionsProgress();
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [filter, setFilter] = useState<MissionFilter>('available');
   const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
+
+  const missions = missionsView.data?.pages.flatMap((page) => page.missions) ?? [];
+
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: missionsView.fetchNextPage,
+      hasNextPage: missionsView.hasNextPage,
+      isFetchingNextPage: missionsView.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <>
       <ScrollView
         className="flex-1 bg-canvas"
         contentContainerStyle={{ paddingBottom: 130 }}
+        onScroll={onScroll}
+        scrollEventThrottle={100}
       >
         <VStack className="gap-4">
           <ScreenTitle
@@ -154,6 +167,9 @@ export function MissionsScreen({
             }
             title="Missions"
           />
+
+          {progress.data ? <XpHero progress={progress.data} /> : null}
+          <MissionFilterChips active={filter} onSelect={setFilter} />
 
           {missionsView.isPending ? (
           <VStack className="items-center justify-center py-24">
@@ -175,39 +191,32 @@ export function MissionsScreen({
             </Button>
           </VStack>
         ) : (
-          <>
-            <XpHero progress={missionsView.data.progress} />
-            <MissionFilterChips active={filter} onSelect={setFilter} />
             <VStack className="gap-2 px-5 pt-1">
               <Text className="py-0.5 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
                 Near you
               </Text>
-              {(() => {
-                const filtered = missionsView.data.missions.filter((mission) =>
-                  matchesFilter(mission, filter),
-                );
-                return filtered.length === 0 ? (
-                  <Text className="py-2 text-muted-foreground" size="sm">
-                    {missionsView.data.missions.length === 0
-                      ? 'No missions yet. Tap + to create the first one.'
-                      : 'No missions in this filter yet.'}
-                  </Text>
-                ) : (
-                  <>
-                    {filtered.map((mission) => (
-                      <MissionCard
-                        key={mission.id}
-                        mission={mission}
-                        onMissionComplete={setCelebration}
-                        onOpen={onOpenMission}
-                      />
-                    ))}
+              {missions.length === 0 ? (
+                <Text className="py-2 text-muted-foreground" size="sm">
+                  No missions in this filter yet.
+                </Text>
+              ) : (
+                <>
+                  {missions.map((mission) => (
+                    <MissionCard
+                      key={mission.id}
+                      mission={mission}
+                      onMissionComplete={setCelebration}
+                      onOpen={onOpenMission}
+                    />
+                  ))}
+                  {missionsView.hasNextPage ? (
+                    <LoadMoreFooter isLoading={missionsView.isFetchingNextPage} />
+                  ) : (
                     <AllCaughtUp />
-                  </>
-                );
-              })()}
+                  )}
+                </>
+              )}
             </VStack>
-          </>
         )}
         </VStack>
       </ScrollView>
@@ -237,7 +246,7 @@ export function MissionsScreen({
         getKey={(mission) => mission.id}
         getSubtitle={(mission) => mission.description}
         getTitle={(mission) => mission.title}
-        items={missionsView.data?.missions ?? []}
+        items={missions}
         onClose={() => setIsSearching(false)}
         onSelect={(mission) => onOpenMission?.(mission.id)}
         placeholder="Search missions"

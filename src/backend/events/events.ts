@@ -7,18 +7,24 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import {
   createEventSupabase,
   deleteEventSupabase,
+  getEventAttendeesPageSupabase,
   getEventAttendeesSupabase,
+  getEventDatesSupabase,
   getEventsByIdsSupabase,
   getEventsViewSupabase,
   getMyEventsViewSupabase,
+  listEventsPageSupabase,
   toggleJoinSupabase,
   updateEventSupabase,
 } from './events-supabase';
 import type {
   CommunityEvent,
   CreateEventResult,
+  EventAttendeesPage,
+  EventsPage,
   EventsView,
   JoinResult,
+  ListEventsOptions,
   MyEventsOptions,
   MyEventsPage,
   PersonRef,
@@ -28,6 +34,10 @@ import { validateEventInput } from './validation';
 
 export const DEFAULT_MY_EVENTS_PAGE_SIZE = 20;
 export const MAX_MY_EVENTS_PAGE_SIZE = 50;
+export const DEFAULT_EVENTS_PAGE_SIZE = 20;
+export const MAX_EVENTS_PAGE_SIZE = 50;
+export const DEFAULT_EVENT_ATTENDEES_PAGE_SIZE = 30;
+export const MAX_EVENT_ATTENDEES_PAGE_SIZE = 60;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -127,6 +137,50 @@ function getEventsViewMemory(userId: string): EventsView {
   };
 }
 
+// Just the calendar day (YYYY-MM-DD) of every upcoming event -- cheap enough
+// to fetch unbounded, unlike the full event list, since the calendar needs
+// to place a marker on every day with an event even before that day's page
+// of the paginated list below has been scrolled into view.
+function getEventDatesMemory(): readonly string[] {
+  return getState()
+    .events.filter((event) => isUpcoming(event.startsAt))
+    .map((event) => event.startsAt.slice(0, 10));
+}
+
+// The paginated, optionally date-filtered counterpart to getEventsViewMemory
+// (used by the public "Coming up" feed; getEventsViewMemory itself stays
+// unbounded for internal callers like the assistant's local search, which
+// needs to scan every event). Sorted featured-first then soonest-first, same
+// as the unbounded view -- paginateInMemory always sorts descending by
+// sortKey, so the sortKey encodes "featured" as a leading digit and inverts
+// the timestamp to preserve ascending chronological order within each group.
+const MAX_EVENT_TIMESTAMP = 9_999_999_999_999;
+
+function listEventsPageMemory(
+  userId: string,
+  date: string | null,
+  limit: number,
+  cursor: string | null,
+): EventsPage {
+  const { events, users } = getState();
+  const filtered = events
+    .filter((event) => isUpcoming(event.startsAt))
+    .filter((event) => !date || event.startsAt.slice(0, 10) === date)
+    .map((event) => ({
+      event,
+      id: event.id,
+      sortKey: `${event.featured ? '1' : '0'}${String(
+        MAX_EVENT_TIMESTAMP - Date.parse(event.startsAt),
+      ).padStart(13, '0')}`,
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    events: page.items.map((item) => toCommunityEvent(item.event, userId, users)),
+    nextCursor: page.nextCursor,
+  };
+}
+
 // Uncapped roster for the "N going" attendee-list modal — unlike the
 // preview stack baked into toCommunityEvent, this returns everyone.
 function getEventAttendeesMemory(
@@ -141,6 +195,39 @@ function getEventAttendeesMemory(
     uniqueIds([...event.attendeeIds, ...event.joinedBy]),
     users,
   );
+}
+
+// The paginated counterpart to getEventAttendeesMemory (used by the
+// attendee-list modal; the unbounded function stays available for callers
+// that need everyone at once). Attendees have no natural timestamp, so the
+// sortKey inverts array position (seed attendees then joiners, in that
+// order) to preserve that existing order -- paginateInMemory always sorts
+// descending by sortKey (same trick used for missions' position).
+const MAX_ATTENDEE_POSITION = 100_000;
+
+function getEventAttendeesPageMemory(
+  eventId: string,
+  limit: number,
+  cursor: string | null,
+): EventAttendeesPage | null {
+  const { events, users } = getState();
+  const event = events.find((candidate) => candidate.id === eventId);
+  if (!event) {
+    return null;
+  }
+  const ids = uniqueIds([...event.attendeeIds, ...event.joinedBy]);
+  const refs = toPersonRefs(ids, users);
+  const wrapped = refs.map((ref, index) => ({
+    id: ref.id,
+    ref,
+    sortKey: String(MAX_ATTENDEE_POSITION - index).padStart(6, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    attendees: page.items.map((item) => item.ref),
+    nextCursor: page.nextCursor,
+  };
 }
 
 // Fetches specific events by id — used to hydrate bookmarks, which can point
@@ -335,6 +422,29 @@ export async function getEventsView(ctx: RequestContext): Promise<EventsView> {
     : getEventsViewMemory(ctx.userId);
 }
 
+export async function getEventDates(ctx: RequestContext): Promise<readonly string[]> {
+  return ctx.supabase
+    ? getEventDatesSupabase(ctx.supabase)
+    : getEventDatesMemory();
+}
+
+// The paginated, filtered counterpart to getEventsView, used by the public
+// "Coming up" feed (see listEventsPageMemory for why the two are kept separate).
+export async function listEventsPage(
+  ctx: RequestContext,
+  options?: ListEventsOptions,
+): Promise<EventsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_EVENTS_PAGE_SIZE),
+    MAX_EVENTS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  const date = options?.date ?? null;
+  return ctx.supabase
+    ? listEventsPageSupabase(ctx.supabase, ctx.userId, date, limit, cursor)
+    : listEventsPageMemory(ctx.userId, date, limit, cursor);
+}
+
 export async function getEventAttendees(
   ctx: RequestContext,
   eventId: string,
@@ -342,6 +452,22 @@ export async function getEventAttendees(
   return ctx.supabase
     ? getEventAttendeesSupabase(ctx.supabase, eventId)
     : getEventAttendeesMemory(eventId);
+}
+
+// The paginated, public-facing counterpart to getEventAttendees.
+export async function getEventAttendeesPage(
+  ctx: RequestContext,
+  eventId: string,
+  options?: { readonly limit?: number; readonly cursor?: string | null },
+): Promise<EventAttendeesPage | null> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_EVENT_ATTENDEES_PAGE_SIZE),
+    MAX_EVENT_ATTENDEES_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? getEventAttendeesPageSupabase(ctx.supabase, eventId, limit, cursor)
+    : getEventAttendeesPageMemory(eventId, limit, cursor);
 }
 
 export async function getEventsByIds(

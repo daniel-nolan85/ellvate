@@ -48,6 +48,19 @@ export interface MissionsView {
   readonly progress: UserProgress;
 }
 
+export type MissionFilter = 'available' | 'in-progress' | 'completed';
+
+export interface MissionsPage {
+  readonly missions: readonly Mission[];
+  readonly nextCursor: string | null;
+}
+
+export interface ListMissionsOptions {
+  readonly filter: MissionFilter;
+  readonly limit?: number;
+  readonly cursor?: string | null;
+}
+
 export interface MyMissionsPage {
   readonly missions: readonly Mission[];
   readonly nextCursor: string | null;

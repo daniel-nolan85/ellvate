@@ -1,10 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
 import {
-  parseCommentsResponse,
+  parseCommentsPageResponse,
+  type CommentsPageResponse,
   type ForumComment,
 } from './comment-contract';
 
@@ -15,22 +21,33 @@ interface CreateCommentResponse {
 }
 
 const queryMeta = { persist: true, sensitive: false } as const;
+const COMMENTS_PAGE_SIZE = 20;
 const commentsPath = (postId: string): `/${string}` =>
   `/api/forum/posts/${postId}/comments`;
+const commentsPagePath = (postId: string, cursor: string | null): `/${string}` =>
+  `${commentsPath(postId)}?limit=${COMMENTS_PAGE_SIZE}${
+    cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+  }`;
 
+// Bounded and cursor-paginated on the server rather than loading a post's
+// entire comment thread in one shot -- callers that need a flat list should
+// flatten `data.pages` themselves. Oldest-first, matching the thread's
+// natural reading order, so scrolling down through the detail screen loads
+// later comments, same direction as every other feed's auto-scroll.
 export function usePostComments(postId: string) {
   const session = useSession();
 
-  return useQuery({
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: CommentsPageResponse) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     meta: queryMeta,
-    queryFn: ({ signal }) =>
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
       requestJson<unknown>({
         getAccessToken: session.getToken,
-        path: commentsPath(postId),
+        path: commentsPagePath(postId, pageParam),
         signal,
-      }),
+      }).then(parseCommentsPageResponse),
     queryKey: ['forum', 'comments', session.userId ?? 'demo-user', postId],
-    select: parseCommentsResponse,
   });
 }
 

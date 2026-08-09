@@ -1,9 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type {
   Comment,
+  CommentsPage,
   CreateCommentResult,
   MyComment,
   ReportCommentResult,
@@ -76,6 +78,42 @@ export async function listCommentsSupabase(
     .order('created_at', { ascending: true });
   throwIfSupabaseError(error, 'load comments');
   return (data as unknown as CommentRow[]).map(toComment);
+}
+
+// The paginated counterpart to listCommentsSupabase, mirroring the
+// fetch-then-paginate-in-application-code precedent used across this
+// codebase's Supabase backends. Oldest-first, matching the thread's natural
+// reading order -- the sortKey inverts the timestamp since paginateInMemory
+// always sorts descending (same trick used for missions/events).
+const MAX_COMMENT_TIMESTAMP = 9_999_999_999_999;
+
+export async function listCommentsPageSupabase(
+  supabase: SupabaseClient,
+  postId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<CommentsPage> {
+  const { data, error } = await supabase
+    .from('comments')
+    .select(COMMENT_SELECT)
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  throwIfSupabaseError(error, 'load comments');
+  const rows = (data as unknown as CommentRow[]) ?? [];
+
+  const wrapped = rows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: String(
+      MAX_COMMENT_TIMESTAMP - Date.parse(row.created_at),
+    ).padStart(13, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    comments: page.items.map((item) => toComment(item.row)),
+    nextCursor: page.nextCursor,
+  };
 }
 
 export async function listMyCommentsSupabase(

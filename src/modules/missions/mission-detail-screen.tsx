@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -13,10 +13,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -51,8 +53,8 @@ import {
   useAcceptMission,
   useCheckIn,
   useDeleteMission,
+  useMission,
   useMissionCheckIns,
-  useMissionsView,
   useReportCheckIn,
   useUpdateMission,
   type CheckInCelebration,
@@ -114,7 +116,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
 
   const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
-  const missionsView = useMissionsView();
+  const missionQuery = useMission(missionId);
   const acceptMission = useAcceptMission();
   const checkIn = useCheckIn(setCelebration);
   const updateMission = useUpdateMission();
@@ -142,10 +144,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(null);
   const [reportTarget, setReportTarget] = useState<CheckInEntry | null>(null);
 
-  const mission = useMemo(
-    () => missionsView.data?.missions.find((entry) => entry.id === missionId),
-    [missionsView.data, missionId],
-  );
+  const mission = missionQuery.data?.mission;
   const isOwnMission = !!mission && mission.author.id === userId;
 
   const done = mission?.status === 'done';
@@ -303,7 +302,14 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
     });
   };
 
-  const commentList = comments.data?.comments ?? [];
+  const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: comments.fetchNextPage,
+      hasNextPage: comments.hasNextPage,
+      isFetchingNextPage: comments.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <View className='flex-1 bg-canvas'>
@@ -348,7 +354,12 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className='flex-1'
       >
-        <ScrollView className='flex-1' contentContainerClassName='gap-4 px-[18px] py-4'>
+        <ScrollView
+          className='flex-1'
+          contentContainerClassName='gap-4 px-[18px] py-4'
+          onScroll={onScroll}
+          scrollEventThrottle={100}
+        >
         {mission && badge ? (
           <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
             {mission.media && mission.media.length > 0 && (
@@ -551,7 +562,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               </>
             ) : null}
           </VStack>
-        ) : missionsView.isPending ? (
+        ) : missionQuery.isPending ? (
           <View className='items-center py-10'>
             <Spinner size='xlarge' />
           </View>
@@ -603,6 +614,15 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
                 onReply={handleReply}
               />
             ))}
+            {comments.hasNextPage ? (
+              comments.isFetchingNextPage ? (
+                <View className='items-center py-3' testID='mission-comments-load-more'>
+                  <Spinner size='small' />
+                </View>
+              ) : null
+            ) : (
+              <AllCaughtUp />
+            )}
           </VStack>
         )}
         </ScrollView>

@@ -6,6 +6,7 @@ import {
 } from '../../app/api/services+api';
 import {
   DELETE as deleteServiceRoute,
+  GET as getServiceRoute,
   PATCH as patchServiceRoute,
 } from '../../app/api/services/[id]/index+api';
 import {
@@ -24,6 +25,7 @@ import {
   createServiceReview,
   deleteServiceReview,
   listServiceReviews,
+  listServiceReviewsPage,
   reportServiceReview,
   updateServiceReview,
 } from '../../src/backend/service-reviews';
@@ -32,6 +34,7 @@ import {
   deleteServiceListing,
   getMyServiceListingsView,
   getServicesView,
+  listServicesPage,
   updateServiceListing,
 } from '../../src/backend/services';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
@@ -85,6 +88,69 @@ describe('getServicesView', () => {
 
     const { listings } = await getServicesView(ctx());
     expect(listings[0]?.id).toBe(created.listing.id);
+  });
+});
+
+describe('listServicesPage', () => {
+  test('paginates the full directory, newest first', async () => {
+    const first = await listServicesPage(ctx(), { limit: 2 });
+    expect(first.listings.map((listing) => listing.id)).toEqual([
+      'service-4',
+      'service-3',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listServicesPage(ctx(), {
+      cursor: first.nextCursor,
+      limit: 2,
+    });
+    expect(second.listings.map((listing) => listing.id)).toEqual([
+      'service-2',
+      'service-1',
+    ]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('paginates within a category filter', async () => {
+    const page = await listServicesPage(ctx(), { category: 'pool-spa', limit: 20 });
+    expect(page.listings.map((listing) => listing.id)).toEqual(['service-3']);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  test('GET /api/services respects limit and category together', async () => {
+    const response = await getServices(
+      new Request('http://localhost/api/services?limit=1&category=pool-spa'),
+    );
+    const body = (await response.json()) as {
+      listings: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.listings).toEqual([expect.objectContaining({ id: 'service-3' })]);
+    expect(body.nextCursor).toBeNull();
+  });
+});
+
+describe('GET /api/services/:id', () => {
+  test('returns the listing when it exists', async () => {
+    const response = await getServiceRoute(
+      new Request('http://localhost/api/services/service-1'),
+      { id: 'service-1' },
+    );
+    const body = (await response.json()) as { listing: { id: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.listing.id).toBe('service-1');
+  });
+
+  test('returns 404 for an unknown listing id', async () => {
+    const response = await getServiceRoute(
+      new Request('http://localhost/api/services/does-not-exist'),
+      { id: 'does-not-exist' },
+    );
+
+    expect(response.status).toBe(404);
   });
 });
 
@@ -487,6 +553,50 @@ describe('listServiceReviews', () => {
   });
 });
 
+describe('listServiceReviewsPage', () => {
+  test('paginates newest-first and preserves that order across pages', async () => {
+    await createServiceReview(ctx('user-andre'), 'service-1', {
+      body: 'Second opinion',
+      rating: 4,
+    });
+
+    const first = await listServiceReviewsPage(ctx(), 'service-1', { limit: 1 });
+    expect(first.reviews.map((review) => review.body)).toEqual([
+      'Second opinion',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listServiceReviewsPage(ctx(), 'service-1', {
+      cursor: first.nextCursor,
+      limit: 1,
+    });
+    expect(second.reviews.map((review) => review.body)).toEqual([
+      'Riley has been walking our lab for months — always on time and sends photos!',
+    ]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('hides reviews from an author the viewer has muted', async () => {
+    await createServiceReview(ctx('user-andre'), 'service-1', {
+      body: 'Second opinion',
+      rating: 4,
+    });
+
+    await toggleMute(ctx(), 'user-andre');
+
+    const page = await listServiceReviewsPage(ctx(), 'service-1');
+    expect(
+      page.reviews.some((review) => review.author.id === 'user-andre'),
+    ).toBe(false);
+  });
+
+  test('returns an empty page for a listing with no reviews', async () => {
+    const page = await listServiceReviewsPage(ctx(), 'service-4');
+    expect(page.reviews).toEqual([]);
+    expect(page.nextCursor).toBeNull();
+  });
+});
+
 describe('createServiceReview', () => {
   test('allows a rating with no body — text is optional, unlike a comment', async () => {
     const result = await createServiceReview(ctx(), 'service-1', {
@@ -823,6 +933,45 @@ describe('service routes', () => {
       { id: review.id },
     );
     expect(removed.status).toBe(200);
+  });
+
+  test('GET honors ?limit and ?cursor for pagination', async () => {
+    await postServiceReview(
+      new Request('http://localhost/api/services/service-1/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Second opinion', rating: 4 }),
+      }),
+      { id: 'service-1' },
+    );
+
+    const firstResponse = await getServiceReviews(
+      new Request('http://localhost/api/services/service-1/reviews?limit=1'),
+      { id: 'service-1' },
+    );
+    const first = (await firstResponse.json()) as {
+      reviews: readonly { body: string | null }[];
+      nextCursor: string | null;
+    };
+    expect(first.reviews.map((review) => review.body)).toEqual([
+      'Second opinion',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getServiceReviews(
+      new Request(
+        `http://localhost/api/services/service-1/reviews?limit=1&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+      { id: 'service-1' },
+    );
+    const second = (await secondResponse.json()) as {
+      reviews: readonly { body: string | null }[];
+      nextCursor: string | null;
+    };
+    expect(second.reviews.map((review) => review.body)).toEqual([
+      'Riley has been walking our lab for months — always on time and sends photos!',
+    ]);
+    expect(second.nextCursor).toBeNull();
   });
 
   test('POST review returns 404 for an unknown listing', async () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { GET as getLeaderboardRoute } from '../../app/api/leaderboard+api';
-import { getLeaderboard } from '../../src/backend/leaderboard';
+import { getLeaderboard, getLeaderboardPage } from '../../src/backend/leaderboard';
 import { memoryContext } from '../../src/backend/http';
 import {
   DEMO_USER_ID,
@@ -101,6 +101,40 @@ describe('getLeaderboard', () => {
   });
 });
 
+describe('getLeaderboardPage', () => {
+  test('paginates by rank and preserves that order across pages', async () => {
+    const first = await getLeaderboardPage(ctx(), 'all', { limit: 2 });
+    expect(first.leaders.map((entry) => entry.rank)).toEqual([1, 2]);
+    expect(first.leaders.map((entry) => entry.user.name)).toEqual([
+      'Mia Lake',
+      'Andre King',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await getLeaderboardPage(ctx(), 'all', {
+      cursor: first.nextCursor,
+      limit: 2,
+    });
+    expect(second.leaders.map((entry) => entry.rank)).toEqual([3, 4]);
+    expect(second.nextCursor).not.toBeNull();
+
+    const third = await getLeaderboardPage(ctx(), 'all', {
+      cursor: second.nextCursor,
+      limit: 2,
+    });
+    expect(third.leaders.map((entry) => entry.rank)).toEqual([5, 6]);
+    expect(third.nextCursor).toBeNull();
+  });
+
+  test('a single-leader range (week) is fully exhausted on the first page', async () => {
+    // Seed: mission-3 was completed 48h ago by DEMO_USER_ID -- the only
+    // completion anywhere in the seed data, so week has exactly one leader.
+    const page = await getLeaderboardPage(ctx(), 'week', { limit: 20 });
+    expect(page.leaders).toHaveLength(1);
+    expect(page.nextCursor).toBeNull();
+  });
+});
+
 describe('GET /api/leaderboard', () => {
   test('returns the leaders envelope with isMe on the demo-user row', async () => {
     const response = await getLeaderboardRoute(
@@ -126,6 +160,29 @@ describe('GET /api/leaderboard', () => {
       xp: 1980,
       rankDelta: 1,
     });
+  });
+
+  test('honors ?limit and ?cursor for pagination', async () => {
+    const firstResponse = await getLeaderboardRoute(
+      new Request('http://localhost/api/leaderboard?limit=2'),
+    );
+    const first = (await firstResponse.json()) as {
+      leaders: readonly { rank: number }[];
+      nextCursor: string | null;
+    };
+    expect(first.leaders.map((entry) => entry.rank)).toEqual([1, 2]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getLeaderboardRoute(
+      new Request(
+        `http://localhost/api/leaderboard?limit=2&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+    );
+    const second = (await secondResponse.json()) as {
+      leaders: readonly { rank: number }[];
+      nextCursor: string | null;
+    };
+    expect(second.leaders.map((entry) => entry.rank)).toEqual([3, 4]);
   });
 
   test('falls back to all-time for an unrecognized range value', async () => {

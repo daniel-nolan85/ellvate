@@ -13,6 +13,11 @@ export interface EventComment {
   readonly editedAt: string | null;
 }
 
+export interface EventCommentsPage {
+  readonly comments: readonly EventComment[];
+  readonly nextCursor: string | null;
+}
+
 export type CreateEventCommentResult =
   | { readonly ok: true; readonly comment: EventComment }
   | {

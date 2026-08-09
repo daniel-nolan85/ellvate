@@ -1,4 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -15,8 +19,9 @@ export interface ServiceReview {
   readonly editedAt: string | null;
 }
 
-interface ServiceReviewsResponse {
+interface ServiceReviewsPageResponse {
   readonly reviews: readonly ServiceReview[];
+  readonly nextCursor: string | null;
 }
 
 interface CreateServiceReviewResponse {
@@ -29,22 +34,31 @@ export interface CreateServiceReviewInput {
 }
 
 const queryMeta = { persist: true, sensitive: false } as const;
+const SERVICE_REVIEWS_PAGE_SIZE = 20;
 const serviceReviewsPath = (listingId: string): `/${string}` =>
   `/api/services/${listingId}/reviews`;
+const serviceReviewsPagePath = (
+  listingId: string,
+  cursor: string | null,
+): `/${string}` =>
+  `${serviceReviewsPath(listingId)}?limit=${SERVICE_REVIEWS_PAGE_SIZE}${
+    cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+  }`;
 
 export function useServiceReviews(listingId: string) {
   const session = useSession();
 
-  return useQuery({
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: ServiceReviewsPageResponse) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     meta: queryMeta,
-    queryFn: ({ signal }) =>
-      requestJson<ServiceReviewsResponse>({
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<ServiceReviewsPageResponse>({
         getAccessToken: session.getToken,
-        path: serviceReviewsPath(listingId),
+        path: serviceReviewsPagePath(listingId, pageParam),
         signal,
       }),
     queryKey: ['services', 'reviews', session.userId ?? 'demo-user', listingId],
-    select: (response) => response.reviews,
   });
 }
 

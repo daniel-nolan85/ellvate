@@ -13,18 +13,18 @@ import {
   formatDateOnly,
 } from '@/src/lib/date-only';
 
-import type { CommunityEvent } from './events-types';
-
 const EVENT_MARKER_COLOR = 'rgb(181,80,44)';
 
 interface EventsCalendarProps {
-  readonly events: readonly CommunityEvent[];
+  // Calendar day (YYYY-MM-DD) of every upcoming event -- just dates, not
+  // full events, since the calendar only ever needs to place a marker.
+  readonly dates: readonly string[];
   readonly onSelectedDateChange: (value: string | null) => void;
   readonly selectedDate: string | null;
 }
 
 export function EventsCalendar({
-  events,
+  dates,
   onSelectedDateChange,
   selectedDate,
 }: EventsCalendarProps) {
@@ -32,18 +32,18 @@ export function EventsCalendar({
 
   const markers = useMemo<CalendarMarkers>(() => {
     const result: CalendarMarkers = {};
-    for (const event of events) {
-      result[event.startsAt.slice(0, 10)] = {
+    for (const date of dates) {
+      result[date] = {
         color: EVENT_MARKER_COLOR,
         type: 'dot',
       };
     }
     return result;
-  }, [events]);
+  }, [dates]);
 
   const selectedValue = selectedDate ? dateOnlyToDate(selectedDate) : undefined;
   const initialMonth = selectedValue ??
-    dateOnlyToDate(events[0]?.startsAt.slice(0, 10) ?? '') ??
+    dateOnlyToDate(dates[0] ?? '') ??
     new Date();
   const monthLabel = formatDateOnly(dateOnlyFromDate(initialMonth), {
     month: 'long',

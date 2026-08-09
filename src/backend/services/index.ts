@@ -4,6 +4,7 @@ export {
   getMyServiceListingsView,
   getServicesByIds,
   getServicesView,
+  listServicesPage,
 } from './services-view';
 export { updateServiceListing } from './update';
 export type {
@@ -14,6 +15,7 @@ export type {
   PersonRef,
   ServiceListing,
   ServiceMedia,
+  ServicesPage,
   ServicesView,
   UpdateServiceListingResult,
 } from './types';

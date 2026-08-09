@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { validateCommentBody } from '@/src/backend/comments';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type {
   CreateEventCommentResult,
   EventComment,
+  EventCommentsPage,
   ReportEventCommentResult,
   UpdateEventCommentResult,
 } from './types';
@@ -64,6 +66,39 @@ export async function listEventCommentsSupabase(
     .order('created_at', { ascending: true });
   throwIfSupabaseError(error, 'load event comments');
   return (data as unknown as EventCommentRow[]).map(toEventComment);
+}
+
+// The paginated counterpart to listEventCommentsSupabase (see forum
+// comments' listCommentsPageSupabase for the full rationale).
+const MAX_EVENT_COMMENT_TIMESTAMP = 9_999_999_999_999;
+
+export async function listEventCommentsPageSupabase(
+  supabase: SupabaseClient,
+  eventId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<EventCommentsPage> {
+  const { data, error } = await supabase
+    .from('event_comments')
+    .select(EVENT_COMMENT_SELECT)
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: true });
+  throwIfSupabaseError(error, 'load event comments');
+  const rows = (data as unknown as EventCommentRow[]) ?? [];
+
+  const wrapped = rows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: String(
+      MAX_EVENT_COMMENT_TIMESTAMP - Date.parse(row.created_at),
+    ).padStart(13, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    comments: page.items.map((item) => toEventComment(item.row)),
+    nextCursor: page.nextCursor,
+  };
 }
 
 export async function createEventCommentSupabase(
