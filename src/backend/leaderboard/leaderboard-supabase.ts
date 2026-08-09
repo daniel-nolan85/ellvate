@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { LeaderboardEntry, LeaderboardResult } from './types';
+import type { LeaderboardEntry, LeaderboardPage, LeaderboardResult } from './types';
 import {
   addToTally,
   DAY_MS,
@@ -165,4 +166,32 @@ export async function getLeaderboardSupabase(
   return range === 'all'
     ? getAllTimeLeaderboardSupabase(supabase, userId)
     : getWindowedLeaderboardSupabase(supabase, userId, range);
+}
+
+// The paginated counterpart to getLeaderboardSupabase, mirroring the
+// fetch-then-paginate-in-application-code precedent used across this
+// codebase's Supabase backends. Rank must be computed over the FULL ranked
+// set before slicing, so this fetches the full leaderboard and slices --
+// the sortKey inverts rank since paginateInMemory always sorts descending.
+const MAX_LEADERBOARD_RANK = 1_000_000;
+
+export async function getLeaderboardPageSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  range: LeaderboardRange,
+  limit: number,
+  cursor: string | null,
+): Promise<LeaderboardPage> {
+  const full = await getLeaderboardSupabase(supabase, userId, range);
+  const wrapped = full.leaders.map((entry) => ({
+    entry,
+    id: entry.user.id,
+    sortKey: String(MAX_LEADERBOARD_RANK - entry.rank).padStart(7, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    leaders: page.items.map((item) => item.entry),
+    nextCursor: page.nextCursor,
+  };
 }

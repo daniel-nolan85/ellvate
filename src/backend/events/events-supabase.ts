@@ -8,7 +8,9 @@ import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 import type {
   CommunityEvent,
   CreateEventResult,
+  EventAttendeesPage,
   EventMedia,
+  EventsPage,
   EventsView,
   JoinResult,
   MyEventsPage,
@@ -257,6 +259,94 @@ export async function getEventsViewSupabase(
   };
 }
 
+// Just the calendar day of every upcoming event, for the calendar's markers
+// -- cheap enough to fetch unbounded (a single narrow column, no joins)
+// unlike the full event list.
+export async function getEventDatesSupabase(
+  supabase: SupabaseClient,
+): Promise<readonly string[]> {
+  const { data, error } = await supabase.from('events').select('starts_at');
+  throwIfSupabaseError(error, 'load event dates');
+  const rows = (data ?? []) as unknown as { starts_at: string }[];
+  return rows
+    .filter((row) => isUpcoming(row.starts_at))
+    .map((row) => row.starts_at.slice(0, 10));
+}
+
+const matchesEventDate = (event: CommunityEvent, date: string | null): boolean =>
+  !date || event.startsAt.slice(0, 10) === date;
+
+// The paginated, optionally date-filtered counterpart to
+// getEventsViewSupabase, mirroring getMyEventsViewSupabase's precedent
+// below: fetches the same rows getEventsViewSupabase already does, maps and
+// filters in application code, then paginates the result -- no new SQL. The
+// sortKey preserves the existing featured-first-then-soonest order (see
+// listEventsPageMemory for the inversion rationale).
+const MAX_EVENT_TIMESTAMP = 9_999_999_999_999;
+
+export async function listEventsPageSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  date: string | null,
+  limit: number,
+  cursor: string | null,
+): Promise<EventsPage> {
+  const [eventsRes, joinsRes] = await Promise.all([
+    supabase
+      .from('events')
+      .select(EVENT_SELECT)
+      .order('featured', { ascending: false })
+      .order('starts_at', { ascending: true }),
+    supabase.from('event_joins').select('event_id,user_id'),
+  ]);
+  throwIfSupabaseError(eventsRes.error, 'load events');
+  throwIfSupabaseError(joinsRes.error, 'load event joins');
+
+  const allEventRows = (eventsRes.data ?? []) as unknown as EventRow[];
+  const eventRows = allEventRows.filter((row) => isUpcoming(row.starts_at));
+  const joinRows = (joinsRes.data ?? []) as unknown as JoinRow[];
+
+  const joinedByEvent = (eventId: string): readonly string[] =>
+    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+
+  const neededIds = uniqueIds([
+    ...eventRows.map((row) => row.created_by),
+    ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
+    ...joinRows.map((row) => row.user_id),
+  ]);
+  const { data: userData, error: userError } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .in('id', [...neededIds]);
+  throwIfSupabaseError(userError, 'load event attendees');
+  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
+    (userData ?? []).map((row) => [
+      row.id as string,
+      {
+        avatarUrl: (row.avatar_url as string | null) ?? null,
+        name: row.name as string,
+      },
+    ]),
+  );
+
+  const filtered = eventRows
+    .map((row) => toCommunityEvent(row, joinedByEvent(row.id), userId, nameById))
+    .filter((event) => matchesEventDate(event, date))
+    .map((event) => ({
+      event,
+      id: event.id,
+      sortKey: `${event.featured ? '1' : '0'}${String(
+        MAX_EVENT_TIMESTAMP - Date.parse(event.startsAt),
+      ).padStart(13, '0')}`,
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    events: page.items.map((item) => item.event),
+    nextCursor: page.nextCursor,
+  };
+}
+
 // Scoped to events the caller created or joined — bounded by one user's own
 // activity rather than the whole community's event list (unlike
 // getEventsViewSupabase, which every screen but the activity hub needs).
@@ -436,6 +526,36 @@ export async function getEventAttendeesSupabase(
         ]
       : [];
   });
+}
+
+// The paginated counterpart to getEventAttendeesSupabase, mirroring the
+// fetch-then-paginate-in-application-code precedent used across this
+// codebase's Supabase backends. Attendees have no natural timestamp, so the
+// sortKey inverts array position (same trick used in the memory backend and
+// for missions' position) to preserve the existing seed-then-joiner order.
+const MAX_ATTENDEE_POSITION = 100_000;
+
+export async function getEventAttendeesPageSupabase(
+  supabase: SupabaseClient,
+  eventId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<EventAttendeesPage | null> {
+  const full = await getEventAttendeesSupabase(supabase, eventId);
+  if (full === null) {
+    return null;
+  }
+  const wrapped = full.map((ref, index) => ({
+    id: ref.id,
+    ref,
+    sortKey: String(MAX_ATTENDEE_POSITION - index).padStart(6, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    attendees: page.items.map((item) => item.ref),
+    nextCursor: page.nextCursor,
+  };
 }
 
 export async function createEventSupabase(

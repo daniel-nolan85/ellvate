@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Linking,
   Modal,
@@ -11,8 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -43,7 +45,7 @@ import {
 } from './use-service-reviews';
 import {
   useDeleteServiceListing,
-  useServicesView,
+  useServiceListing,
   useUpdateServiceListing,
 } from './use-services';
 
@@ -110,7 +112,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
-  const servicesView = useServicesView();
+  const listingQuery = useServiceListing(listingId);
   const updateListing = useUpdateServiceListing();
   const deleteListing = useDeleteServiceListing();
   const reviews = useServiceReviews(listingId);
@@ -131,10 +133,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   // ServiceReviewComposer for why clearing can't happen on submit itself.
   const [reviewComposerKey, setReviewComposerKey] = useState(0);
 
-  const listing = useMemo(
-    () => servicesView.data?.listings.find((entry) => entry.id === listingId),
-    [servicesView.data, listingId],
-  );
+  const listing = listingQuery.data?.listing;
   const isOwnListing = !!listing && listing.author.id === userId;
 
   const showToast = (message: string) => {
@@ -156,7 +155,14 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
     });
   };
 
-  const reviewList = reviews.data ?? [];
+  const reviewList = reviews.data?.pages.flatMap((page) => page.reviews) ?? [];
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: reviews.fetchNextPage,
+      hasNextPage: reviews.hasNextPage,
+      isFetchingNextPage: reviews.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <View className="flex-1 bg-canvas">
@@ -197,7 +203,12 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
         )}
       </HStack>
 
-      <ScrollView className="flex-1" contentContainerClassName="gap-4 px-[18px] py-4">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-4 px-[18px] py-4"
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+      >
         {listing ? (
           <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
             {listing.media && listing.media.length > 0 && (
@@ -298,7 +309,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               ) : null}
             </VStack>
           </VStack>
-        ) : servicesView.isPending ? (
+        ) : listingQuery.isPending ? (
           <View className="items-center py-10">
             <Spinner size="xlarge" />
           </View>
@@ -366,6 +377,15 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                 review={review}
               />
             ))}
+            {reviews.hasNextPage ? (
+              reviews.isFetchingNextPage ? (
+                <View className="items-center py-3" testID="service-reviews-load-more">
+                  <Spinner size="small" />
+                </View>
+              ) : null
+            ) : (
+              <AllCaughtUp />
+            )}
           </VStack>
         )}
       </ScrollView>

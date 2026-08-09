@@ -13,6 +13,11 @@ export interface MissionComment {
   readonly editedAt: string | null;
 }
 
+export interface MissionCommentsPage {
+  readonly comments: readonly MissionComment[];
+  readonly nextCursor: string | null;
+}
+
 export type CreateMissionCommentResult =
   | { readonly ok: true; readonly comment: MissionComment }
   | {

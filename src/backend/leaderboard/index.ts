@@ -1,6 +1,7 @@
-export { getLeaderboard } from './leaderboard';
+export { getLeaderboard, getLeaderboardPage } from './leaderboard';
 export type {
   LeaderboardEntry,
+  LeaderboardPage,
   LeaderboardResult,
   PersonRef,
 } from './types';

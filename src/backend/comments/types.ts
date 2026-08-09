@@ -13,6 +13,11 @@ export interface Comment {
   readonly editedAt: string | null;
 }
 
+export interface CommentsPage {
+  readonly comments: readonly Comment[];
+  readonly nextCursor: string | null;
+}
+
 export interface MyComment {
   readonly id: string;
   readonly postId: string;

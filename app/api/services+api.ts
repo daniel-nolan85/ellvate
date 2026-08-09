@@ -1,16 +1,19 @@
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
-import { createServiceListing, getServicesView } from '@/src/backend/services';
+import { createServiceListing, listServicesPage } from '@/src/backend/services';
 import type { ServiceCategory } from '@/src/backend/store';
 
 export async function GET(request: Request): Promise<Response> {
   return withRequestContext(request, async (ctx) => {
     const url = new URL(request.url);
     const category = url.searchParams.get('category');
-    return jsonOk(
-      await getServicesView(ctx, {
-        category: category ? (category as ServiceCategory) : undefined,
-      }),
-    );
+    const limitParam = url.searchParams.get('limit');
+    const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
+    const page = await listServicesPage(ctx, {
+      category: category ? (category as ServiceCategory) : undefined,
+      cursor: url.searchParams.get('cursor'),
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+    return jsonOk(page);
   });
 }
 

@@ -1,5 +1,22 @@
-import { deleteServiceListing, updateServiceListing } from '@/src/backend/services';
+import {
+  deleteServiceListing,
+  getServicesByIds,
+  updateServiceListing,
+} from '@/src/backend/services';
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
+
+export async function GET(
+  request: Request,
+  { id }: { id: string },
+): Promise<Response> {
+  return withRequestContext(request, async (ctx) => {
+    const [listing] = await getServicesByIds(ctx, [id]);
+    if (!listing) {
+      return jsonError(404, 'service_listing_not_found', 'Listing not found.');
+    }
+    return jsonOk({ listing });
+  });
+}
 
 export async function PATCH(
   request: Request,

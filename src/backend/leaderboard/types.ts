@@ -16,3 +16,8 @@ export interface LeaderboardEntry {
 export interface LeaderboardResult {
   readonly leaders: readonly LeaderboardEntry[];
 }
+
+export interface LeaderboardPage {
+  readonly leaders: readonly LeaderboardEntry[];
+  readonly nextCursor: string | null;
+}

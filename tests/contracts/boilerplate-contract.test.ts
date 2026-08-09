@@ -87,7 +87,15 @@ describe('Expo starter contract', () => {
       'utf8',
     );
 
-    expect(queryConstants).toContain("QUERY_CACHE_BUSTER = 'expo-starter-query-cache-v2'");
+    // Matches on the literal-string pattern rather than a pinned version
+    // number -- QUERY_CACHE_BUSTER is expected to be bumped (e.g. v2 -> v3)
+    // whenever persisted query shapes change, per its own doc comment, so
+    // pinning an exact version here would make every legitimate bump a
+    // contract failure. What this asserts is the *mechanism*: a manually
+    // versioned literal, not something derived from EAS Updates.updateId.
+    expect(queryConstants).toMatch(
+      /QUERY_CACHE_BUSTER = 'expo-starter-query-cache-v\d+'/,
+    );
     expect(queryConstants).not.toContain('Updates.updateId');
   });
 });

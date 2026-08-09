@@ -1,12 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type {
   CreateServiceReviewResult,
   ReportServiceReviewResult,
   ServiceReview,
+  ServiceReviewsPage,
   UpdateServiceReviewResult,
 } from './types';
 
@@ -105,6 +107,46 @@ export async function listServiceReviewsSupabase(
   return (data as unknown as ServiceReviewRow[])
     .filter((row) => !mutedSet.has(row.author_id))
     .map(toServiceReview);
+}
+
+// The paginated counterpart to listServiceReviewsSupabase, mirroring the
+// fetch-then-paginate-in-application-code precedent used across this
+// codebase's Supabase backends. Newest-first, matching the existing order --
+// no sortKey inversion needed since paginateInMemory already sorts
+// descending and createdAt-descending is the desired order (same as
+// services listings' Supabase backend).
+export async function listServiceReviewsPageSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  listingId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<ServiceReviewsPage> {
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    supabase
+      .from('service_reviews')
+      .select(SERVICE_REVIEW_SELECT)
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false }),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
+  throwIfSupabaseError(error, 'load service reviews');
+  const mutedSet = new Set(mutedUserIds);
+  const rows = (data as unknown as ServiceReviewRow[]).filter(
+    (row) => !mutedSet.has(row.author_id),
+  );
+
+  const wrapped = rows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: row.created_at,
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    nextCursor: page.nextCursor,
+    reviews: page.items.map((item) => toServiceReview(item.row)),
+  };
 }
 
 export async function createServiceReviewSupabase(

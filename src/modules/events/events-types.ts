@@ -39,6 +39,11 @@ export interface EventsView {
   readonly events: readonly CommunityEvent[];
 }
 
+export interface EventsPage {
+  readonly events: readonly CommunityEvent[];
+  readonly nextCursor: string | null;
+}
+
 export interface MyEventsPage {
   readonly events: readonly CommunityEvent[];
   readonly nextCursor: string | null;

@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { GET as getEvents, POST as postEvent } from '../../app/api/events+api';
+import { GET as getEventDatesRoute } from '../../app/api/events/dates+api';
 import {
   DELETE as deleteEventRoute,
+  GET as getEventRoute,
   PATCH as patchEventRoute,
 } from '../../app/api/events/[id]/index+api';
 import { GET as getAttendeesRoute } from '../../app/api/events/[id]/attendees+api';
@@ -12,7 +14,10 @@ import {
   createEvent,
   deleteEvent,
   getEventAttendees,
+  getEventAttendeesPage,
+  getEventDates,
   getEventsView,
+  listEventsPage,
   toggleJoin,
   updateEvent,
 } from '../../src/backend/events';
@@ -155,6 +160,43 @@ describe('getEventAttendees', () => {
   });
 });
 
+describe('getEventAttendeesPage', () => {
+  test('paginates and preserves the existing seed-then-joiner order', async () => {
+    const first = await getEventAttendeesPage(ctx(), 'event-1', { limit: 2 });
+    expect(first?.attendees.map((person) => person.id)).toEqual([
+      'user-riley',
+      'user-mia',
+    ]);
+    expect(first?.nextCursor).not.toBeNull();
+
+    const second = await getEventAttendeesPage(ctx(), 'event-1', {
+      cursor: first?.nextCursor ?? null,
+      limit: 2,
+    });
+    expect(second?.attendees.map((person) => person.id)).toEqual([
+      'user-jordan',
+      'user-andre',
+    ]);
+    expect(second?.nextCursor).toBeNull();
+  });
+
+  test('a newly joined user appears on a later page without duplicating a seeded one', async () => {
+    await toggleJoin(ctx(), 'event-1');
+    await toggleJoin(ctx('user-mia'), 'event-1');
+
+    const page = await getEventAttendeesPage(ctx(), 'event-1', { limit: 20 });
+    expect(page?.attendees).toHaveLength(5);
+    expect(
+      page?.attendees.filter((person) => person.id === 'user-mia'),
+    ).toHaveLength(1);
+    expect(page?.attendees.map((person) => person.id)).toContain(DEMO_USER_ID);
+  });
+
+  test('returns null for an unknown event', async () => {
+    expect(await getEventAttendeesPage(ctx(), 'event-999')).toBeNull();
+  });
+});
+
 describe('createEvent', () => {
   const eventDate = futureDate(30);
   const validInput = {
@@ -276,17 +318,110 @@ describe('POST /api/events', () => {
 });
 
 describe('GET /api/events', () => {
-  test('returns the { week, events } view', async () => {
+  test('returns a paginated page of upcoming events, featured first', async () => {
     const response = await getEvents(new Request('http://localhost/api/events'));
     const body = (await response.json()) as {
-      week: readonly { isToday: boolean }[];
       events: readonly { id: string; featured: boolean; joined: boolean }[];
+      nextCursor: string | null;
     };
 
     expect(response.status).toBe(200);
-    expect(body.week).toHaveLength(7);
     expect(body.events).toHaveLength(4);
     expect(body.events[0]).toMatchObject({ id: 'event-1', featured: true });
+    expect(body.nextCursor).toBeNull();
+  });
+
+  test('respects a limit smaller than the total and returns a cursor', async () => {
+    const response = await getEvents(
+      new Request('http://localhost/api/events?limit=2'),
+    );
+    const body = (await response.json()) as {
+      events: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+
+    expect(body.events).toHaveLength(2);
+    expect(body.nextCursor).not.toBeNull();
+  });
+
+  test('date param scopes the page to a single calendar day', async () => {
+    const eventDate = futureDate(60);
+    const created = await createEvent(ctx(), {
+      date: eventDate,
+      place: 'Village Marina',
+      tag: 'Outdoors',
+      time: '18:00',
+      title: 'Single-day fixture',
+    });
+    expect(created.ok).toBe(true);
+
+    const response = await getEvents(
+      new Request(`http://localhost/api/events?date=${eventDate}`),
+    );
+    const body = (await response.json()) as {
+      events: readonly { id: string; title: string }[];
+    };
+
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0]?.title).toBe('Single-day fixture');
+  });
+});
+
+describe('getEventDates / GET /api/events/dates', () => {
+  test('includes the seeded upcoming events and nothing past', async () => {
+    const dates = await getEventDates(ctx());
+    expect(dates).toHaveLength(4);
+  });
+
+  test('GET /api/events/dates matches getEventDates', async () => {
+    const response = await getEventDatesRoute(
+      new Request('http://localhost/api/events/dates'),
+    );
+    const body = (await response.json()) as { dates: readonly string[] };
+
+    expect(response.status).toBe(200);
+    expect(body.dates).toHaveLength(4);
+  });
+});
+
+describe('listEventsPage', () => {
+  test('paginates within a date filter and preserves featured-first order', async () => {
+    const first = await listEventsPage(ctx(), { limit: 1 });
+    expect(first.events).toHaveLength(1);
+    expect(first.events[0]?.id).toBe('event-1');
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listEventsPage(ctx(), { cursor: first.nextCursor, limit: 1 });
+    expect(second.events).toHaveLength(1);
+    expect(second.events[0]?.id).not.toBe('event-1');
+  });
+
+  test('returns an empty page for a date with no events', async () => {
+    const page = await listEventsPage(ctx(), { date: futureDate(9999) });
+    expect(page.events).toEqual([]);
+    expect(page.nextCursor).toBeNull();
+  });
+});
+
+describe('GET /api/events/:id', () => {
+  test('returns the event when it exists', async () => {
+    const response = await getEventRoute(
+      new Request('http://localhost/api/events/event-1'),
+      { id: 'event-1' },
+    );
+    const body = (await response.json()) as { event: { id: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.event.id).toBe('event-1');
+  });
+
+  test('returns 404 for an unknown event id', async () => {
+    const response = await getEventRoute(
+      new Request('http://localhost/api/events/does-not-exist'),
+      { id: 'does-not-exist' },
+    );
+
+    expect(response.status).toBe(404);
   });
 });
 
@@ -596,6 +731,38 @@ describe('GET /api/events/:id/attendees', () => {
       attendees: { id: string }[];
     };
     expect(body.attendees).toHaveLength(4);
+  });
+
+  test('honors ?limit and ?cursor for pagination', async () => {
+    const firstResponse = await getAttendeesRoute(
+      new Request('http://localhost/api/events/event-1/attendees?limit=2'),
+      { id: 'event-1' },
+    );
+    const first = (await firstResponse.json()) as {
+      attendees: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+    expect(first.attendees.map((person) => person.id)).toEqual([
+      'user-riley',
+      'user-mia',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getAttendeesRoute(
+      new Request(
+        `http://localhost/api/events/event-1/attendees?limit=2&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+      { id: 'event-1' },
+    );
+    const second = (await secondResponse.json()) as {
+      attendees: readonly { id: string }[];
+      nextCursor: string | null;
+    };
+    expect(second.attendees.map((person) => person.id)).toEqual([
+      'user-jordan',
+      'user-andre',
+    ]);
+    expect(second.nextCursor).toBeNull();
   });
 
   test('returns 404 for an unknown event', async () => {

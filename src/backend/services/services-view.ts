@@ -6,6 +6,7 @@ import {
   getMyServiceListingsViewSupabase,
   getServicesByIdsSupabase,
   getServicesViewSupabase,
+  listServicesPageSupabase,
 } from './services-supabase';
 import { toServiceListingView } from './service-view';
 import type {
@@ -13,11 +14,14 @@ import type {
   MyServiceListingsOptions,
   MyServiceListingsPage,
   ServiceListing,
+  ServicesPage,
   ServicesView,
 } from './types';
 
 export const DEFAULT_MY_SERVICES_PAGE_SIZE = 20;
 export const MAX_MY_SERVICES_PAGE_SIZE = 50;
+export const DEFAULT_SERVICES_PAGE_SIZE = 20;
+export const MAX_SERVICES_PAGE_SIZE = 50;
 
 function getServicesViewMemory(
   category: ServiceCategory | undefined,
@@ -31,6 +35,30 @@ function getServicesViewMemory(
       toServiceListingView(listing, state.users, state.serviceReviews),
     );
   return { listings };
+}
+
+// The paginated counterpart to getServicesViewMemory (used by the public
+// directory; getServicesViewMemory itself stays unbounded for internal
+// callers like the assistant's local search). createdAt already sorts
+// newest-first via paginateInMemory's descending sort, unlike missions'
+// position or events' startsAt -- no sortKey inversion needed here.
+function listServicesPageMemory(
+  category: ServiceCategory | undefined,
+  limit: number,
+  cursor: string | null,
+): ServicesPage {
+  const state = getState();
+  const filtered = state.serviceListings
+    .filter((listing) => !category || listing.category === category)
+    .map((listing) => ({ id: listing.id, listing, sortKey: listing.createdAt }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    listings: page.items.map((item) =>
+      toServiceListingView(item.listing, state.users, state.serviceReviews),
+    ),
+    nextCursor: page.nextCursor,
+  };
 }
 
 // Scoped to listings the caller created — used by a "my listings" management
@@ -78,6 +106,22 @@ export async function getServicesView(
   return ctx.supabase
     ? getServicesViewSupabase(ctx.supabase, options?.category)
     : getServicesViewMemory(options?.category);
+}
+
+// The paginated, filtered counterpart to getServicesView, used by the public
+// directory (see listServicesPageMemory for why the two are kept separate).
+export async function listServicesPage(
+  ctx: RequestContext,
+  options?: ListServicesOptions,
+): Promise<ServicesPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_SERVICES_PAGE_SIZE),
+    MAX_SERVICES_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? listServicesPageSupabase(ctx.supabase, options?.category, limit, cursor)
+    : listServicesPageMemory(options?.category, limit, cursor);
 }
 
 export async function getServicesByIds(

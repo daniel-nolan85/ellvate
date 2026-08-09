@@ -1,11 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
 import {
-  parseMissionCommentsResponse,
+  parseMissionCommentsPageResponse,
   type MissionComment,
+  type MissionCommentsPageResponse,
 } from './mission-comment-contract';
 
 export type { MissionComment } from './mission-comment-contract';
@@ -15,22 +20,34 @@ interface CreateMissionCommentResponse {
 }
 
 const queryMeta = { persist: true, sensitive: false } as const;
+const MISSION_COMMENTS_PAGE_SIZE = 20;
 const missionCommentsPath = (missionId: string): `/${string}` =>
   `/api/missions/${missionId}/comments`;
+const missionCommentsPagePath = (
+  missionId: string,
+  cursor: string | null,
+): `/${string}` =>
+  `${missionCommentsPath(missionId)}?limit=${MISSION_COMMENTS_PAGE_SIZE}${
+    cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+  }`;
 
+// Bounded and cursor-paginated on the server, same as usePostComments --
+// oldest-first, so scrolling down through the detail screen loads later
+// comments.
 export function useMissionComments(missionId: string) {
   const session = useSession();
 
-  return useQuery({
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MissionCommentsPageResponse) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     meta: queryMeta,
-    queryFn: ({ signal }) =>
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
       requestJson<unknown>({
         getAccessToken: session.getToken,
-        path: missionCommentsPath(missionId),
+        path: missionCommentsPagePath(missionId, pageParam),
         signal,
-      }),
+      }).then(parseMissionCommentsPageResponse),
     queryKey: ['missions', 'comments', session.userId ?? 'demo-user', missionId],
-    select: parseMissionCommentsResponse,
   });
 }
 

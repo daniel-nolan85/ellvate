@@ -13,12 +13,18 @@ import {
   createMissionComment,
   deleteMissionComment,
   listMissionComments,
+  listMissionCommentsPage,
   reportMissionComment,
   updateMissionComment,
 } from '../../src/backend/mission-comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMission, deleteMission } from '../../src/backend/missions';
-import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import {
+  DEMO_USER_ID,
+  getState,
+  resetStore,
+  setState,
+} from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -43,6 +49,53 @@ describe('listMissionComments', () => {
       id: 'user-mia',
       name: 'Mia Lake',
     });
+  });
+});
+
+describe('listMissionCommentsPage', () => {
+  test('paginates oldest-first and preserves that order across pages', async () => {
+    // Distinct createdAt timestamps (not two real-time creates, which can
+    // land in the same millisecond and make ordering depend on the id
+    // tiebreak) so ordering is deterministic.
+    setState((current) => ({
+      ...current,
+      missionComments: [
+        ...current.missionComments,
+        {
+          authorId: DEMO_USER_ID,
+          body: 'first',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          editedAt: null,
+          id: 'mission-comment-page-1',
+          missionId: 'mission-1',
+        },
+        {
+          authorId: 'user-mia',
+          body: 'second',
+          createdAt: '2026-01-01T00:00:01.000Z',
+          editedAt: null,
+          id: 'mission-comment-page-2',
+          missionId: 'mission-1',
+        },
+      ],
+    }));
+
+    const first = await listMissionCommentsPage(ctx(), 'mission-1', { limit: 1 });
+    expect(first.comments.map((comment) => comment.body)).toEqual(['first']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listMissionCommentsPage(ctx(), 'mission-1', {
+      cursor: first.nextCursor,
+      limit: 1,
+    });
+    expect(second.comments.map((comment) => comment.body)).toEqual(['second']);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('returns an empty page for a mission with no comments', async () => {
+    const page = await listMissionCommentsPage(ctx(), 'mission-1');
+    expect(page.comments).toEqual([]);
+    expect(page.nextCursor).toBeNull();
   });
 });
 
@@ -283,5 +336,57 @@ describe('mission comment routes', () => {
       { id: 'mission-nope' },
     );
     expect(response.status).toBe(404);
+  });
+
+  test('GET honors ?limit and ?cursor for pagination', async () => {
+    // Distinct createdAt timestamps (not two real-time POSTs, which can land
+    // in the same millisecond and make ordering depend on the id tiebreak)
+    // so ordering is deterministic.
+    setState((current) => ({
+      ...current,
+      missionComments: [
+        ...current.missionComments,
+        {
+          authorId: DEMO_USER_ID,
+          body: 'first',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          editedAt: null,
+          id: 'mission-comment-route-1',
+          missionId: 'mission-4',
+        },
+        {
+          authorId: 'user-mia',
+          body: 'second',
+          createdAt: '2026-01-01T00:00:01.000Z',
+          editedAt: null,
+          id: 'mission-comment-route-2',
+          missionId: 'mission-4',
+        },
+      ],
+    }));
+
+    const firstResponse = await getMissionComments(
+      new Request('http://localhost/api/missions/mission-4/comments?limit=1'),
+      { id: 'mission-4' },
+    );
+    const first = (await firstResponse.json()) as {
+      comments: readonly { body: string }[];
+      nextCursor: string | null;
+    };
+    expect(first.comments.map((comment) => comment.body)).toEqual(['first']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getMissionComments(
+      new Request(
+        `http://localhost/api/missions/mission-4/comments?limit=1&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+      { id: 'mission-4' },
+    );
+    const second = (await secondResponse.json()) as {
+      comments: readonly { body: string }[];
+      nextCursor: string | null;
+    };
+    expect(second.comments.map((comment) => comment.body)).toEqual(['second']);
+    expect(second.nextCursor).toBeNull();
   });
 });

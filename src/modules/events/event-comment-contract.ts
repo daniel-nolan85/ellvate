@@ -17,6 +17,11 @@ export interface EventCommentsResponse {
   readonly comments: readonly EventComment[];
 }
 
+export interface EventCommentsPageResponse {
+  readonly comments: readonly EventComment[];
+  readonly nextCursor: string | null;
+}
+
 type UnknownRecord = Readonly<Record<string, unknown>>;
 
 const asRecord = (value: unknown): UnknownRecord | null =>
@@ -72,4 +77,22 @@ export function parseEventCommentsResponse(value: unknown): EventCommentsRespons
   }
 
   return { comments: response.comments.map(parseComment) };
+}
+
+export function parseEventCommentsPageResponse(
+  value: unknown,
+): EventCommentsPageResponse {
+  const response = asRecord(value);
+  if (!response || !Array.isArray(response.comments)) {
+    throw new Error('Invalid comments response: comments must be an array.');
+  }
+  const nextCursor = response.nextCursor;
+  if (nextCursor !== null && typeof nextCursor !== 'string') {
+    throw new Error('Invalid comments response: nextCursor must be a string or null.');
+  }
+
+  return {
+    comments: response.comments.map(parseComment),
+    nextCursor,
+  };
 }

@@ -34,8 +34,15 @@ export interface ServicesView {
   readonly listings: readonly ServiceListing[];
 }
 
+export interface ServicesPage {
+  readonly listings: readonly ServiceListing[];
+  readonly nextCursor: string | null;
+}
+
 export interface ListServicesOptions {
   readonly category?: ServiceCategory;
+  readonly limit?: number;
+  readonly cursor?: string | null;
 }
 
 export interface MyServiceListingsPage {

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -18,6 +19,17 @@ import { useCreateServiceListing, useServicesView } from './use-services';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 
+function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
+  if (!isLoading) {
+    return null;
+  }
+  return (
+    <View className="items-center py-3" testID="services-load-more">
+      <Spinner size="small" />
+    </View>
+  );
+}
+
 interface ServicesScreenProps {
   readonly onOpenListing?: (listingId: string) => void;
 }
@@ -31,6 +43,16 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
   );
   const createListing = useCreateServiceListing();
 
+  const listings = services.data?.pages.flatMap((page) => page.listings) ?? [];
+
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: services.fetchNextPage,
+      hasNextPage: services.hasNextPage,
+      isFetchingNextPage: services.isFetchingNextPage,
+    },
+  ]);
+
   const handleCreate = (draft: ServiceComposerDraft) => {
     createListing.mutate(draft, {
       onSuccess: () => setIsComposing(false),
@@ -42,6 +64,8 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
       <ScrollView
         className="flex-1 bg-canvas"
         contentContainerStyle={{ paddingBottom: 130 }}
+        onScroll={onScroll}
+        scrollEventThrottle={100}
       >
         <VStack space="md">
           <ScreenTitle
@@ -84,7 +108,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
                 </ButtonText>
               </Button>
             </VStack>
-          ) : services.data.listings.length === 0 ? (
+          ) : listings.length === 0 ? (
             <VStack className="items-center px-10 py-16" space="xs">
               <Icon color="rgb(169,156,139)" name="Store" size={28} />
               <Text className="text-center font-inter-semibold text-content" size="sm">
@@ -96,14 +120,18 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
             </VStack>
           ) : (
             <VStack className="px-5" space="sm">
-              {services.data.listings.map((listing) => (
+              {listings.map((listing) => (
                 <ServiceListingCard
                   key={listing.id}
                   listing={listing}
                   onOpen={onOpenListing}
                 />
               ))}
-              <AllCaughtUp />
+              {services.hasNextPage ? (
+                <LoadMoreFooter isLoading={services.isFetchingNextPage} />
+              ) : (
+                <AllCaughtUp />
+              )}
             </VStack>
           )}
         </VStack>
@@ -126,7 +154,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
         getKey={(listing) => listing.id}
         getSubtitle={(listing) => listing.description}
         getTitle={(listing) => listing.businessName}
-        items={services.data?.listings ?? []}
+        items={listings}
         onClose={() => setIsSearching(false)}
         onSelect={(listing) => onOpenListing?.(listing.id)}
         placeholder="Search services"

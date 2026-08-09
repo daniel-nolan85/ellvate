@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,10 +12,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -42,8 +44,8 @@ import {
 } from './use-event-comments';
 import {
   useDeleteEvent,
+  useEvent,
   useEventAttendees,
-  useEventsView,
   useToggleJoin,
   useUpdateEvent,
 } from './use-events';
@@ -91,11 +93,8 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
-  const eventsView = useEventsView();
-  const event = useMemo(
-    () => eventsView.data?.events.find((entry) => entry.id === eventId),
-    [eventsView.data, eventId],
-  );
+  const eventQuery = useEvent(eventId);
+  const event = eventQuery.data?.event;
   const isOwnEvent = !!event && event.author.id === userId;
 
   const toggleJoin = useToggleJoin();
@@ -122,6 +121,14 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const [toast, setToast] = useState<string | null>(null);
 
   const attendees = useEventAttendees(eventId, attendeesOpen);
+  const attendeeList = attendees.data?.pages.flatMap((page) => page.attendees) ?? [];
+  const onAttendeesScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: attendees.fetchNextPage,
+      hasNextPage: attendees.hasNextPage,
+      isFetchingNextPage: attendees.isFetchingNextPage,
+    },
+  ]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -212,7 +219,14 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
     });
   };
 
-  const commentList = comments.data?.comments ?? [];
+  const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: comments.fetchNextPage,
+      hasNextPage: comments.hasNextPage,
+      isFetchingNextPage: comments.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <View className='flex-1 bg-canvas'>
@@ -257,7 +271,12 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className='flex-1'
       >
-        <ScrollView className='flex-1' contentContainerClassName='gap-4 px-[18px] py-4'>
+        <ScrollView
+          className='flex-1'
+          contentContainerClassName='gap-4 px-[18px] py-4'
+          onScroll={onScroll}
+          scrollEventThrottle={100}
+        >
           {event ? (
             <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
               {event.media && event.media.length > 0 && (
@@ -339,7 +358,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                 </Pressable>
               </HStack>
             </VStack>
-          ) : eventsView.isPending ? (
+          ) : eventQuery.isPending ? (
             <View className='items-center py-10'>
               <Spinner size='xlarge' />
             </View>
@@ -391,6 +410,15 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                   onReply={handleReply}
                 />
               ))}
+              {comments.hasNextPage ? (
+                comments.isFetchingNextPage ? (
+                  <View className='items-center py-3' testID='event-comments-load-more'>
+                    <Spinner size='small' />
+                  </View>
+                ) : null
+              ) : (
+                <AllCaughtUp />
+              )}
             </VStack>
           )}
         </ScrollView>
@@ -481,9 +509,14 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
             <View className='items-center py-8'>
               <Spinner />
             </View>
-          ) : attendees.data && attendees.data.length > 0 ? (
-            <ScrollView contentContainerClassName='gap-1' style={{ maxHeight: 420 }}>
-              {attendees.data.map((attendee) => (
+          ) : attendeeList.length > 0 ? (
+            <ScrollView
+              contentContainerClassName='gap-1'
+              onScroll={onAttendeesScroll}
+              scrollEventThrottle={100}
+              style={{ maxHeight: 420 }}
+            >
+              {attendeeList.map((attendee) => (
                 <Pressable
                   accessibilityLabel={`Open ${attendee.name}'s profile`}
                   accessibilityRole='button'
@@ -500,6 +533,11 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                   </Text>
                 </Pressable>
               ))}
+              {attendees.isFetchingNextPage && (
+                <View className='items-center py-3' testID='attendees-load-more'>
+                  <Spinner size='small' />
+                </View>
+              )}
             </ScrollView>
           ) : (
             <Text className='py-2 text-text-muted' size='sm'>

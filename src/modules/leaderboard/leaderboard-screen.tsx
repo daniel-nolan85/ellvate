@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -55,12 +57,22 @@ function RangeTabs({
 export function LeaderboardScreen() {
   const [range, setRange] = useState<LeaderboardRange>('all');
   const leaderboard = useLeaderboard(range);
+  const leaders = leaderboard.data?.pages.flatMap((page) => page.leaders) ?? [];
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: leaderboard.fetchNextPage,
+      hasNextPage: leaderboard.hasNextPage,
+      isFetchingNextPage: leaderboard.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <>
       <ScrollView
       className="flex-1 bg-canvas"
       contentContainerStyle={{ paddingBottom: 130 }}
+      onScroll={onScroll}
+      scrollEventThrottle={100}
     >
       <VStack space="md">
         <ScreenTitle
@@ -87,7 +99,7 @@ export function LeaderboardScreen() {
               <ButtonText>Retry</ButtonText>
             </Button>
           </VStack>
-        ) : leaderboard.data.leaders.length === 0 ? (
+        ) : leaders.length === 0 ? (
           <VStack className="items-center px-10 py-16" space="xs">
             <Text className="text-center font-inter-semibold text-content" size="sm">
               No missions completed yet
@@ -98,12 +110,21 @@ export function LeaderboardScreen() {
           </VStack>
         ) : (
           <>
-            <Podium leaders={leaderboard.data.leaders} />
+            <Podium leaders={leaders} />
             <VStack className="px-5 pt-1.5" space="xs">
-              {leaderboard.data.leaders.map((entry) => (
+              {leaders.map((entry) => (
                 <LeaderRow entry={entry} key={entry.rank} />
               ))}
             </VStack>
+            {leaderboard.hasNextPage ? (
+              leaderboard.isFetchingNextPage ? (
+                <Box className="items-center py-3" testID="leaderboard-load-more">
+                  <Spinner size="small" />
+                </Box>
+              ) : null
+            ) : (
+              <AllCaughtUp />
+            )}
           </>
         )}
       </VStack>

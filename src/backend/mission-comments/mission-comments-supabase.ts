@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { validateCommentBody } from '@/src/backend/comments';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type {
   CreateMissionCommentResult,
   MissionComment,
+  MissionCommentsPage,
   ReportMissionCommentResult,
   UpdateMissionCommentResult,
 } from './types';
@@ -64,6 +66,42 @@ export async function listMissionCommentsSupabase(
     .order('created_at', { ascending: true });
   throwIfSupabaseError(error, 'load mission comments');
   return (data as unknown as MissionCommentRow[]).map(toMissionComment);
+}
+
+// The paginated counterpart to listMissionCommentsSupabase, mirroring the
+// fetch-then-paginate-in-application-code precedent used across this
+// codebase's Supabase backends. Oldest-first, matching the thread's natural
+// reading order -- the sortKey inverts the timestamp since paginateInMemory
+// always sorts descending (same trick used for forum/event comments).
+const MAX_MISSION_COMMENT_TIMESTAMP = 9_999_999_999_999;
+
+export async function listMissionCommentsPageSupabase(
+  supabase: SupabaseClient,
+  missionId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MissionCommentsPage> {
+  const { data, error } = await supabase
+    .from('mission_comments')
+    .select(MISSION_COMMENT_SELECT)
+    .eq('mission_id', missionId)
+    .order('created_at', { ascending: true });
+  throwIfSupabaseError(error, 'load mission comments');
+  const rows = (data as unknown as MissionCommentRow[]) ?? [];
+
+  const wrapped = rows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: String(
+      MAX_MISSION_COMMENT_TIMESTAMP - Date.parse(row.created_at),
+    ).padStart(13, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    comments: page.items.map((item) => toMissionComment(item.row)),
+    nextCursor: page.nextCursor,
+  };
 }
 
 export async function createMissionCommentSupabase(

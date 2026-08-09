@@ -13,11 +13,17 @@ import {
   createEventComment,
   deleteEventComment,
   listEventComments,
+  listEventCommentsPage,
   reportEventComment,
   updateEventComment,
 } from '../../src/backend/event-comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
-import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import {
+  DEMO_USER_ID,
+  getState,
+  resetStore,
+  setState,
+} from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -42,6 +48,53 @@ describe('listEventComments', () => {
       id: 'user-mia',
       name: 'Mia Lake',
     });
+  });
+});
+
+describe('listEventCommentsPage', () => {
+  test('paginates oldest-first and preserves that order across pages', async () => {
+    // Distinct createdAt timestamps (not two real-time creates, which can
+    // land in the same millisecond and make ordering depend on the id
+    // tiebreak) so ordering is deterministic.
+    setState((current) => ({
+      ...current,
+      eventComments: [
+        ...current.eventComments,
+        {
+          authorId: DEMO_USER_ID,
+          body: 'first',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          editedAt: null,
+          id: 'event-comment-page-1',
+          eventId: 'event-1',
+        },
+        {
+          authorId: 'user-mia',
+          body: 'second',
+          createdAt: '2026-01-01T00:00:01.000Z',
+          editedAt: null,
+          id: 'event-comment-page-2',
+          eventId: 'event-1',
+        },
+      ],
+    }));
+
+    const first = await listEventCommentsPage(ctx(), 'event-1', { limit: 1 });
+    expect(first.comments.map((comment) => comment.body)).toEqual(['first']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listEventCommentsPage(ctx(), 'event-1', {
+      cursor: first.nextCursor,
+      limit: 1,
+    });
+    expect(second.comments.map((comment) => comment.body)).toEqual(['second']);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('returns an empty page for an event with no comments', async () => {
+    const page = await listEventCommentsPage(ctx(), 'event-1');
+    expect(page.comments).toEqual([]);
+    expect(page.nextCursor).toBeNull();
   });
 });
 
@@ -249,5 +302,57 @@ describe('event comment routes', () => {
       { id: 'event-nope' },
     );
     expect(response.status).toBe(404);
+  });
+
+  test('GET honors ?limit and ?cursor for pagination', async () => {
+    // Distinct createdAt timestamps (not two real-time POSTs, which can land
+    // in the same millisecond and make ordering depend on the id tiebreak)
+    // so ordering is deterministic.
+    setState((current) => ({
+      ...current,
+      eventComments: [
+        ...current.eventComments,
+        {
+          authorId: DEMO_USER_ID,
+          body: 'first',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          editedAt: null,
+          id: 'event-comment-route-1',
+          eventId: 'event-3',
+        },
+        {
+          authorId: 'user-mia',
+          body: 'second',
+          createdAt: '2026-01-01T00:00:01.000Z',
+          editedAt: null,
+          id: 'event-comment-route-2',
+          eventId: 'event-3',
+        },
+      ],
+    }));
+
+    const firstResponse = await getEventComments(
+      new Request('http://localhost/api/events/event-3/comments?limit=1'),
+      { id: 'event-3' },
+    );
+    const first = (await firstResponse.json()) as {
+      comments: readonly { body: string }[];
+      nextCursor: string | null;
+    };
+    expect(first.comments.map((comment) => comment.body)).toEqual(['first']);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getEventComments(
+      new Request(
+        `http://localhost/api/events/event-3/comments?limit=1&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+      { id: 'event-3' },
+    );
+    const second = (await secondResponse.json()) as {
+      comments: readonly { body: string }[];
+      nextCursor: string | null;
+    };
+    expect(second.comments.map((comment) => comment.body)).toEqual(['second']);
+    expect(second.nextCursor).toBeNull();
   });
 });

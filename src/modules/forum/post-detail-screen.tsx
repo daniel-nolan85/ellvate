@@ -12,10 +12,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -264,7 +266,15 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
     openProfile(post.author.id, post.author.name);
   };
 
-  const commentList = comments.data?.comments ?? [];
+  const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
+
+  const onScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: comments.fetchNextPage,
+      hasNextPage: comments.hasNextPage,
+      isFetchingNextPage: comments.isFetchingNextPage,
+    },
+  ]);
 
   return (
     <View className='flex-1 bg-canvas'>
@@ -300,6 +310,8 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         <ScrollView
           className='flex-1'
           contentContainerClassName='gap-4 px-[18px] py-4'
+          onScroll={onScroll}
+          scrollEventThrottle={100}
         >
           {post ? (
             <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
@@ -452,6 +464,15 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                   onReply={handleReply}
                 />
               ))}
+              {comments.hasNextPage ? (
+                comments.isFetchingNextPage ? (
+                  <View className='items-center py-3' testID='comments-load-more'>
+                    <Spinner size='small' />
+                  </View>
+                ) : null
+              ) : (
+                <AllCaughtUp />
+              )}
             </VStack>
           )}
         </ScrollView>

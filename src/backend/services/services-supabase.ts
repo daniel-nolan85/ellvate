@@ -17,6 +17,7 @@ import type {
   MyServiceListingsPage,
   ServiceListing,
   ServiceMedia,
+  ServicesPage,
   ServicesView,
   UpdateServiceListingResult,
 } from './types';
@@ -237,6 +238,48 @@ export async function getServicesViewSupabase(
 
   return {
     listings: rows.map((row) => toServiceListingView(row, nameById, reviewRows)),
+  };
+}
+
+// The paginated, filtered counterpart to getServicesViewSupabase, mirroring
+// getMyServiceListingsViewSupabase's precedent below: fetches the same rows,
+// paginates in application code. createdAt already sorts newest-first via
+// paginateInMemory's descending sort -- no sortKey inversion needed.
+export async function listServicesPageSupabase(
+  supabase: SupabaseClient,
+  category: ServiceCategory | undefined,
+  limit: number,
+  cursor: string | null,
+): Promise<ServicesPage> {
+  const query = supabase
+    .from('service_listings')
+    .select(SERVICE_SELECT)
+    .order('created_at', { ascending: false });
+  const { data, error } = await (category ? query.eq('category', category) : query);
+  throwIfSupabaseError(error, 'load service listings');
+  const rows = (data ?? []) as unknown as ServiceRow[];
+
+  const wrapped = rows.map((row) => ({
+    id: row.id,
+    row,
+    sortKey: row.created_at,
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  const authorIds = [...new Set(page.items.map((item) => item.row.created_by))];
+  const [nameById, reviewRows] = await Promise.all([
+    nameMapFor(supabase, authorIds),
+    reviewRowsFor(
+      supabase,
+      page.items.map((item) => item.row.id),
+    ),
+  ]);
+
+  return {
+    listings: page.items.map((item) =>
+      toServiceListingView(item.row, nameById, reviewRows),
+    ),
+    nextCursor: page.nextCursor,
   };
 }
 

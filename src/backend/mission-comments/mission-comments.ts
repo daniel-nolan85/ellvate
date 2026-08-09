@@ -7,10 +7,12 @@ import {
   type StoredMissionComment,
   type StoredUser,
 } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
   createMissionCommentSupabase,
   deleteMissionCommentSupabase,
+  listMissionCommentsPageSupabase,
   listMissionCommentsSupabase,
   reportMissionCommentSupabase,
   updateMissionCommentSupabase,
@@ -18,10 +20,14 @@ import {
 import type {
   CreateMissionCommentResult,
   MissionComment,
+  MissionCommentsPage,
   PersonRef,
   ReportMissionCommentResult,
   UpdateMissionCommentResult,
 } from './types';
+
+export const DEFAULT_MISSION_COMMENTS_PAGE_SIZE = 20;
+export const MAX_MISSION_COMMENTS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -53,6 +59,37 @@ function listMissionCommentsMemory(missionId: string): readonly MissionComment[]
     .slice()
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
     .map((comment) => toMissionComment(comment, state.users));
+}
+
+// The paginated counterpart to listMissionCommentsMemory (used by the public
+// thread view; listMissionCommentsMemory itself stays unbounded). Oldest-
+// first, matching the thread's natural reading order -- paginateInMemory
+// always sorts descending by sortKey, so the sortKey inverts the timestamp
+// to preserve that ascending order (same trick used for forum/event
+// comments).
+const MAX_MISSION_COMMENT_TIMESTAMP = 9_999_999_999_999;
+
+function listMissionCommentsPageMemory(
+  missionId: string,
+  limit: number,
+  cursor: string | null,
+): MissionCommentsPage {
+  const state = getState();
+  const filtered = state.missionComments
+    .filter((comment) => comment.missionId === missionId)
+    .map((comment) => ({
+      comment,
+      id: comment.id,
+      sortKey: String(
+        MAX_MISSION_COMMENT_TIMESTAMP - Date.parse(comment.createdAt),
+      ).padStart(13, '0'),
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    comments: page.items.map((item) => toMissionComment(item.comment, state.users)),
+    nextCursor: page.nextCursor,
+  };
 }
 
 function createMissionCommentMemory(
@@ -207,6 +244,23 @@ export async function listMissionComments(
   return ctx.supabase
     ? listMissionCommentsSupabase(ctx.supabase, missionId)
     : listMissionCommentsMemory(missionId);
+}
+
+// The paginated, public-facing counterpart to listMissionComments (see
+// listMissionCommentsPageMemory for why the two are kept separate).
+export async function listMissionCommentsPage(
+  ctx: RequestContext,
+  missionId: string,
+  options?: { readonly limit?: number; readonly cursor?: string | null },
+): Promise<MissionCommentsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_MISSION_COMMENTS_PAGE_SIZE),
+    MAX_MISSION_COMMENTS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? listMissionCommentsPageSupabase(ctx.supabase, missionId, limit, cursor)
+    : listMissionCommentsPageMemory(missionId, limit, cursor);
 }
 
 export async function createMissionComment(

@@ -7,10 +7,12 @@ import {
   type StoredEventComment,
   type StoredUser,
 } from '@/src/backend/store';
+import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
   createEventCommentSupabase,
   deleteEventCommentSupabase,
+  listEventCommentsPageSupabase,
   listEventCommentsSupabase,
   reportEventCommentSupabase,
   updateEventCommentSupabase,
@@ -18,10 +20,14 @@ import {
 import type {
   CreateEventCommentResult,
   EventComment,
+  EventCommentsPage,
   PersonRef,
   ReportEventCommentResult,
   UpdateEventCommentResult,
 } from './types';
+
+export const DEFAULT_EVENT_COMMENTS_PAGE_SIZE = 20;
+export const MAX_EVENT_COMMENTS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -53,6 +59,33 @@ function listEventCommentsMemory(eventId: string): readonly EventComment[] {
     .slice()
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
     .map((comment) => toEventComment(comment, state.users));
+}
+
+// The paginated counterpart to listEventCommentsMemory (see forum comments'
+// listCommentsPageMemory for the full rationale -- same pattern, mirrored).
+const MAX_EVENT_COMMENT_TIMESTAMP = 9_999_999_999_999;
+
+function listEventCommentsPageMemory(
+  eventId: string,
+  limit: number,
+  cursor: string | null,
+): EventCommentsPage {
+  const state = getState();
+  const filtered = state.eventComments
+    .filter((comment) => comment.eventId === eventId)
+    .map((comment) => ({
+      comment,
+      id: comment.id,
+      sortKey: String(
+        MAX_EVENT_COMMENT_TIMESTAMP - Date.parse(comment.createdAt),
+      ).padStart(13, '0'),
+    }));
+  const page = paginateInMemory(filtered, limit, cursor);
+
+  return {
+    comments: page.items.map((item) => toEventComment(item.comment, state.users)),
+    nextCursor: page.nextCursor,
+  };
 }
 
 function createEventCommentMemory(
@@ -202,6 +235,22 @@ export async function listEventComments(
   return ctx.supabase
     ? listEventCommentsSupabase(ctx.supabase, eventId)
     : listEventCommentsMemory(eventId);
+}
+
+// The paginated, public-facing counterpart to listEventComments.
+export async function listEventCommentsPage(
+  ctx: RequestContext,
+  eventId: string,
+  options?: { readonly limit?: number; readonly cursor?: string | null },
+): Promise<EventCommentsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_EVENT_COMMENTS_PAGE_SIZE),
+    MAX_EVENT_COMMENTS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? listEventCommentsPageSupabase(ctx.supabase, eventId, limit, cursor)
+    : listEventCommentsPageMemory(eventId, limit, cursor);
 }
 
 export async function createEventComment(

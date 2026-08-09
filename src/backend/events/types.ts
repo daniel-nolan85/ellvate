@@ -39,6 +39,19 @@ export interface EventsView {
   readonly events: readonly CommunityEvent[];
 }
 
+export interface EventsPage {
+  readonly events: readonly CommunityEvent[];
+  readonly nextCursor: string | null;
+}
+
+export interface ListEventsOptions {
+  // Restricts the page to events starting on this exact calendar day
+  // (YYYY-MM-DD) -- mirrors the calendar's tap-a-day filter.
+  readonly date?: string | null;
+  readonly limit?: number;
+  readonly cursor?: string | null;
+}
+
 export interface MyEventsPage {
   readonly events: readonly CommunityEvent[];
   readonly nextCursor: string | null;
@@ -47,6 +60,11 @@ export interface MyEventsPage {
 export interface MyEventsOptions {
   readonly limit?: number;
   readonly cursor?: string | null;
+}
+
+export interface EventAttendeesPage {
+  readonly attendees: readonly PersonRef[];
+  readonly nextCursor: string | null;
 }
 
 export interface JoinResult {
