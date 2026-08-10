@@ -38,6 +38,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Next.js (admin dashboard)
+/admin/.next/
+/admin/next-env.d.ts
+
 # local dev-preview tooling
 .claude/launch.json
 
