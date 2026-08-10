@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Deliberately its own identity from the mobile app's warm desert-oasis
+     palette -- this is an internal tool, not a community-facing surface,
+     so it reads as a distinct "control room" rather than a reskinned app. */
+  --color-canvas: #0f1115;
+  --color-surface: #171a21;
+  --color-surface-raised: #1f232c;
+  --color-border: #2a2f3a;
+  --color-content: #e8eaed;
+  --color-muted: #9aa1ad;
+  --color-accent: #5b8cff;
+  --color-accent-foreground: #0b0e14;
+  --color-danger: #f2685c;
+  --color-warning: #e2b93b;
+  --color-success: #4cc38a;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-content);
+}
