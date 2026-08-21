@@ -1,0 +1,116 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Ported directly from the mobile app's "desert-oasis" palette
+     (../../tailwind.config.js) -- warm sand canvas, coffee-brown ink,
+     terracotta as the one primary action/link color, plus the app's four
+     contextual accents (amber/lake/palm/plum). This site is the
+     community-facing front door, so it should read as the same app, not a
+     reskin -- the mobile app's own indigo/dark palette was provisional and
+     has since been replaced by this one everywhere. */
+  --color-canvas: #f7f1e6;
+  --color-paper: #fdf7ed;
+  --color-surface-subtle: #efe6d4;
+  --color-ink: #251e17;
+  --color-ink-muted: #786c5e;
+  --color-ink-subtle: #a99c8b;
+  --color-line: #e2d8c4;
+
+  --color-accent: #b5502c;
+  --color-accent-subtle: #f7e2d8;
+  --color-accent-foreground: #ffffff;
+  --color-amber: #d97b29;
+  --color-amber-subtle: #fbead6;
+  --color-lake: #2f6e72;
+  --color-lake-subtle: #dceeee;
+  --color-palm: #6e7f4a;
+  --color-palm-subtle: #e9eedd;
+  --color-plum: #8b5a78;
+  --color-plum-subtle: #f1e8ee;
+  --color-danger: #e7000b;
+  --color-success: #4c8a52;
+
+  /* shadcn/ui token contract, mapped onto the brand palette above so
+     copy-in shadcn components (button, card, accordion, ...) theme
+     correctly without per-component overrides. */
+  --color-background: var(--color-canvas);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-paper);
+  --color-card-foreground: var(--color-ink);
+  --color-popover: var(--color-paper);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-accent);
+  --color-primary-foreground: var(--color-accent-foreground);
+  --color-secondary: var(--color-surface-subtle);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted: var(--color-surface-subtle);
+  --color-muted-foreground: var(--color-ink-muted);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--color-accent);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Radix accordion's own height custom property, animated -- see
+     components/ui/accordion.tsx, which applies these as the open/close
+     transition instead of an abrupt show/hide. */
+  --animate-accordion-down: accordion-down 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-accordion-up: accordion-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Loading state for the waitlist/contact forms -- see
+     components/brand/cactus-spinner.tsx. */
+  --animate-cactus-bounce: cactus-bounce 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes cactus-bounce {
+  from {
+    transform: translateY(0) rotate(-6deg);
+  }
+  to {
+    transform: translateY(-3px) rotate(6deg);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-cactus-bounce {
+    animation: none;
+  }
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
