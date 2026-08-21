@@ -70,6 +70,12 @@ const NOTIFICATION_ROWS: readonly {
     hint: 'Monday morning: the week at the lake',
     icon: 'Mail',
   },
+  {
+    key: 'petitions',
+    label: 'Petitions',
+    hint: 'When a petition you signed succeeds or gets a board response',
+    icon: 'FileSignature',
+  },
 ];
 
 function SectionTitle({ children }: { readonly children: string }) {
@@ -544,6 +550,7 @@ export function ProfileScreen() {
         <SectionTitle>Account</SectionTitle>
         <SectionCard>
           <PhonePasswordRow />
+          <Row icon="Mail" label="Contact us" onPress={() => router.push('/contact')} />
           <Row icon="ArrowLeft" label="Sign out" onPress={() => setSignOutOpen(true)} />
           <Row
             danger

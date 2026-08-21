@@ -47,10 +47,11 @@ const seedEventFields = (
 };
 
 const defaultNotificationPrefs: NotificationPrefs = {
-  events: true,
-  replies: true,
-  missions: true,
   digest: false,
+  events: true,
+  missions: true,
+  petitions: true,
+  replies: true,
 };
 
 const emptyProfile = (): StoredProfile => ({
@@ -533,6 +534,12 @@ export const createSeedState = (): StoreState => {
     serviceReviews: seedServiceReviews(),
     serviceReviewReports: [],
     notifications: [],
+    contactMessages: [],
+    petitions: [],
+    petitionSignatures: [],
+    petitionComments: [],
+    petitionReports: [],
+    petitionCommentReports: [],
     bookmarks: [],
     users: seedUsers(),
     week: seedWeek(),

@@ -1,18 +1,14 @@
 import { Pressable, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import * as Haptics from 'expo-haptics';
-
-import { AiMark } from '@/src/components/ui/ai-mark';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 
-export type CommunityTabId = 'forum' | 'events' | 'missions' | 'services';
+export type CommunityTabId = 'forum' | 'events' | 'missions' | 'services' | 'petitions';
 
 interface FloatingTabBarProps {
   readonly activeTab: CommunityTabId | null;
   readonly onTabPress: (id: CommunityTabId) => void;
-  readonly onAssistantPress: () => void;
 }
 
 interface TabDefinition {
@@ -21,14 +17,12 @@ interface TabDefinition {
   readonly icon: AppIconName;
 }
 
-const LEFT_TABS: readonly TabDefinition[] = [
+const TABS: readonly TabDefinition[] = [
   { id: 'forum', label: 'Forum', icon: 'MessageCircle' },
   { id: 'events', label: 'Events', icon: 'CalendarDays' },
-];
-
-const RIGHT_TABS: readonly TabDefinition[] = [
   { id: 'missions', label: 'Missions', icon: 'Star' },
   { id: 'services', label: 'Services', icon: 'Store' },
+  { id: 'petitions', label: 'Petitions', icon: 'FileSignature' },
 ];
 
 const ACTIVE_COLOR = '#ffffff';
@@ -40,14 +34,6 @@ const barShadow: ViewStyle = {
   shadowOpacity: 0.28,
   shadowRadius: 16,
   elevation: 12,
-};
-
-const glowShadow: ViewStyle = {
-  shadowColor: 'rgb(181,80,44)',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.5,
-  shadowRadius: 9,
-  elevation: 10,
 };
 
 interface TabItemProps {
@@ -80,56 +66,14 @@ function TabItem({ tab, isActive, onPress }: TabItemProps) {
   );
 }
 
-interface AssistantButtonProps {
-  readonly onPress: () => void;
-}
-
-function AssistantButton({ onPress }: AssistantButtonProps) {
-  const handlePress = () => {
-    void Haptics.selectionAsync();
-    onPress();
-  };
-  return (
-    <Pressable
-      accessibilityLabel="Open assistant"
-      accessibilityRole="button"
-      className="mx-1.5"
-      onPress={handlePress}
-      testID="open-assistant"
-    >
-      {({ pressed }) => (
-        <View
-          className="h-[52px] w-[52px] items-center justify-center rounded-full bg-accent"
-          style={[glowShadow, { transform: [{ scale: pressed ? 0.94 : 1 }] }]}
-        >
-          <AiMark color="#ffffff" size={24} />
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
-export function FloatingTabBar({
-  activeTab,
-  onTabPress,
-  onAssistantPress,
-}: FloatingTabBarProps) {
+export function FloatingTabBar({ activeTab, onTabPress }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View
       className="absolute left-4 right-4 z-10 h-[68px] flex-row items-center rounded-full bg-[rgba(23,23,23,0.96)] px-2.5"
       style={[barShadow, { bottom: Math.max(20, insets.bottom + 8) }]}
     >
-      {LEFT_TABS.map((tab) => (
-        <TabItem
-          isActive={activeTab === tab.id}
-          key={tab.id}
-          onPress={() => onTabPress(tab.id)}
-          tab={tab}
-        />
-      ))}
-      <AssistantButton onPress={onAssistantPress} />
-      {RIGHT_TABS.map((tab) => (
+      {TABS.map((tab) => (
         <TabItem
           isActive={activeTab === tab.id}
           key={tab.id}

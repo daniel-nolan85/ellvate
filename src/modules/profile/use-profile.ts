@@ -10,6 +10,7 @@ export interface NotificationPrefs {
   readonly replies: boolean;
   readonly missions: boolean;
   readonly digest: boolean;
+  readonly petitions: boolean;
 }
 
 export interface UserProfile {

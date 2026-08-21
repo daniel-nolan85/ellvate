@@ -23,3 +23,29 @@ export function formatRelativeTime(
   }
   return `${Math.floor(elapsedMs / WEEK_MS)}w`;
 }
+
+// The future-facing counterpart to formatRelativeTime -- for a deadline or
+// any other timestamp that's ahead of now, not behind it. Reusing
+// formatRelativeTime for a future date silently breaks: `now - future` is
+// negative, which is always "< MINUTE_MS", so every future date renders as
+// "now" regardless of how far out it actually is.
+export function formatRelativeTimeUntil(
+  deadline: string,
+  now: Date = new Date(),
+): string {
+  const remainingMs = new Date(deadline).getTime() - now.getTime();
+
+  if (Number.isNaN(remainingMs) || remainingMs < MINUTE_MS) {
+    return 'soon';
+  }
+  if (remainingMs < HOUR_MS) {
+    return `in ${Math.ceil(remainingMs / MINUTE_MS)}m`;
+  }
+  if (remainingMs < DAY_MS) {
+    return `in ${Math.ceil(remainingMs / HOUR_MS)}h`;
+  }
+  if (remainingMs < WEEK_MS) {
+    return `in ${Math.ceil(remainingMs / DAY_MS)}d`;
+  }
+  return `in ${Math.ceil(remainingMs / WEEK_MS)}w`;
+}

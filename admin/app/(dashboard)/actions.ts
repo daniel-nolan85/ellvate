@@ -3,23 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { requireAdminEmail } from '@/lib/require-admin-email';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-
-// Server Actions are callable directly, not just through the rendered UI --
-// so the acting admin's identity must come from their own session, never
-// from a client-supplied argument (that would let anyone spoof who
-// performed an add/remove for the audit trail).
-async function requireAdminEmail(): Promise<string> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) {
-    redirect('/login');
-  }
-  return user.email;
-}
 
 export async function signOutAction() {
   const supabase = await createSupabaseServerClient();
@@ -41,6 +27,7 @@ export async function toggleEventFeaturedAction(
     throw error;
   }
   revalidatePath('/events');
+  revalidatePath(`/events/${eventId}`);
 }
 
 interface AddAdminResult {
@@ -73,6 +60,50 @@ export async function addAdminAction(
 
   revalidatePath('/admins');
   return { ok: true };
+}
+
+// Every table a moderator can delete from, and the path to revalidate after
+// doing so. An explicit allowlist (rather than trusting a client-supplied
+// table name outright) keeps this action from becoming an arbitrary-row-
+// delete primitive if it's ever called directly instead of through the UI.
+const DELETABLE_CONTENT = {
+  posts: '/posts',
+  comments: '/comments',
+  event_comments: '/comments',
+  mission_comments: '/comments',
+  service_reviews: '/comments',
+  events: '/events',
+  missions: '/missions',
+  service_listings: '/services',
+  mission_check_ins: '/reports',
+  app_users: '/users',
+  contact_messages: '/contact',
+  petitions: '/petitions',
+  petition_comments: '/comments',
+} as const;
+
+export type DeletableTable = keyof typeof DELETABLE_CONTENT;
+
+// Deleting the row here is the only "resolve" action a report gets -- every
+// report table cascades from its target content (see the 0007/0017/0020/0025
+// migrations), so removing the content also clears any reports filed against
+// it. There's no separate "dismiss without deleting" status in the schema.
+export async function deleteContentAction(table: DeletableTable, id: string) {
+  await requireAdminEmail();
+
+  const revalidateTarget = DELETABLE_CONTENT[table];
+  if (!revalidateTarget) {
+    throw new Error('invalid_table');
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from(table).delete().eq('id', id);
+  if (error) {
+    throw error;
+  }
+
+  revalidatePath(revalidateTarget);
+  revalidatePath('/reports');
 }
 
 export async function removeAdminAction(

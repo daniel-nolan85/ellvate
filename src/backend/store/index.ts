@@ -1,6 +1,7 @@
 export type {
   BookmarkTargetType,
   CommunityRole,
+  ContactMessageCategory,
   MissionTheme,
   MissionStatus,
   MissionUserProgress,
@@ -8,6 +9,7 @@ export type {
   ServiceCategory,
   StoredBookmark,
   StoredComment,
+  StoredContactMessage,
   StoredCommentReport,
   StoredEvent,
   StoredEventComment,
@@ -19,6 +21,11 @@ export type {
   StoredMissionComment,
   StoredMissionCommentReport,
   StoredNotification,
+  StoredPetition,
+  StoredPetitionComment,
+  StoredPetitionCommentReport,
+  StoredPetitionReport,
+  StoredPetitionSignature,
   StoredPost,
   StoredPostReport,
   StoredProfile,
@@ -28,6 +35,8 @@ export type {
   StoredUser,
   StoredWeekDay,
   StoreState,
+  PetitionCategory,
+  PetitionStatus,
 } from './types';
 export { createSeedState, DEMO_USER_ID, SEED_NOW_ISO } from './seed';
 export { getState, resetStore, setState } from './store';

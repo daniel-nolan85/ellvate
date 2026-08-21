@@ -43,6 +43,12 @@ const NOTIF_OPTS: readonly NotifOption[] = [
     sub: 'Monday morning: the week at the lake',
     title: 'Weekly digest',
   },
+  {
+    icon: 'FileSignature',
+    id: 'petitions',
+    sub: 'When a petition you signed succeeds or gets a board response',
+    title: 'Petitions',
+  },
 ];
 
 interface NotificationsStepProps {

@@ -14,6 +14,7 @@ export interface NotificationPrefs {
   readonly replies: boolean;
   readonly missions: boolean;
   readonly digest: boolean;
+  readonly petitions: boolean;
 }
 
 export interface OnboardingDraft {
@@ -32,6 +33,7 @@ const initialDraft: OnboardingDraft = {
     digest: true,
     events: true,
     missions: true,
+    petitions: true,
     replies: true,
   },
   role: null,

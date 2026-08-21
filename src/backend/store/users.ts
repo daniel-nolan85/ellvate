@@ -4,10 +4,11 @@ import type { NotificationPrefs, StoredProfile, StoredUser } from './types';
 export const DEFAULT_PROGRESS_TITLE = 'LAKE EXPLORER';
 
 const defaultNotificationPrefs = (): NotificationPrefs => ({
-  events: true,
-  replies: true,
-  missions: true,
   digest: false,
+  events: true,
+  missions: true,
+  petitions: true,
+  replies: true,
 });
 
 export const defaultProfile = (): StoredProfile => ({

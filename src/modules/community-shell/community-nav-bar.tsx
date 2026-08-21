@@ -10,7 +10,6 @@ export function CommunityNavBar() {
   return (
     <FloatingTabBar
       activeTab={null}
-      onAssistantPress={() => router.push('/assistant')}
       onTabPress={(id: CommunityTabId) => router.navigate(`/(tabs)/${id}`)}
     />
   );

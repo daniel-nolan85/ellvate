@@ -1,0 +1,126 @@
+import Link from 'next/link';
+
+import { getCurrentAdminEmail } from '@/lib/auth';
+import { loadReports } from '@/lib/reports-data';
+
+import { DeleteButton } from '../delete-button';
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<{ readonly q?: string; readonly page?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params.q?.trim() ?? '';
+  const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+  const adminEmail = await getCurrentAdminEmail();
+  const { rows, hasNext, hasPrev } = await loadReports(query, page, adminEmail);
+  const qSuffix = query ? `&q=${encodeURIComponent(query)}` : '';
+
+  return (
+    <div className="max-w-4xl space-y-6">
+      <div>
+        <h1 className="text-lg font-semibold text-content">Reports</h1>
+        <p className="text-sm text-muted">
+          Every report filed across posts, comments, reviews, and mission
+          check-in photos, newest first. Deleting the reported content clears
+          its report too. There&apos;s no report-a-member feature in the app
+          yet, so users can&apos;t be reported directly — if a specific
+          member is the problem, the Users page has their profile and a
+          delete action.
+        </p>
+      </div>
+
+      <form className="flex gap-2" method="get">
+        <input
+          className="w-64 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-content outline-none focus:border-accent"
+          defaultValue={query}
+          name="q"
+          placeholder="Search by reporter name…"
+          type="text"
+        />
+        <button
+          className="rounded-lg border border-border px-3 py-1.5 text-sm text-content hover:bg-surface-raised"
+          type="submit"
+        >
+          Search
+        </button>
+      </form>
+
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-border text-left text-xs text-muted">
+            <th className="pb-2 font-normal">Type</th>
+            <th className="pb-2 font-normal">Content</th>
+            <th className="pb-2 font-normal">Reported by</th>
+            <th className="pb-2 font-normal">Reported</th>
+            <th className="pb-2 font-normal text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td className="py-4 text-sm text-muted" colSpan={5}>
+                {query ? `No reports from a reporter matching "${query}".` : 'No reports filed yet.'}
+              </td>
+            </tr>
+          ) : (
+            rows.map((row) => (
+              <tr className="border-b border-border last:border-0" key={`${row.type}-${row.id}`}>
+                <td className="py-2 pr-4 text-xs text-muted">{row.type}</td>
+                <td className="max-w-xs py-2 pr-4 text-sm text-content">
+                  {row.photoUrl ? (
+                    <Link href={row.detailHref ?? '#'}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL */}
+                      <img
+                        alt="Reported check-in photo"
+                        className="h-10 w-10 rounded object-cover"
+                        src={row.photoUrl}
+                      />
+                    </Link>
+                  ) : row.detailHref ? (
+                    <Link className="block truncate hover:underline" href={row.detailHref}>
+                      {row.snippet}
+                    </Link>
+                  ) : (
+                    <span className="block truncate">{row.snippet}</span>
+                  )}
+                </td>
+                <td className="py-2 pr-4 text-xs text-muted">{row.reporter}</td>
+                <td className="py-2 pr-4 text-xs text-muted">
+                  {new Date(row.created_at).toLocaleDateString()}
+                </td>
+                <td className="py-2 text-right">
+                  <DeleteButton
+                    confirmLabel={`Delete this ${row.type.toLowerCase()}? This resolves the report too.`}
+                    id={row.deleteId}
+                    table={row.deleteTable}
+                  />
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <div className="flex gap-2">
+        {hasPrev ? (
+          <Link
+            className="inline-block rounded-lg border border-border px-3 py-1.5 text-sm text-content hover:bg-surface-raised"
+            href={`/reports?page=${page - 1}${qSuffix}`}
+          >
+            Previous
+          </Link>
+        ) : null}
+        {hasNext ? (
+          <Link
+            className="inline-block rounded-lg border border-border px-3 py-1.5 text-sm text-content hover:bg-surface-raised"
+            href={`/reports?page=${page + 1}${qSuffix}`}
+          >
+            Load more
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}

@@ -2,9 +2,10 @@ import '@/global.css';
 import 'react-native-reanimated';
 
 import { Component, type ReactNode } from 'react';
-import { Stack } from 'expo-router';
+import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Text } from '@/src/components/ui/text';
@@ -13,6 +14,7 @@ import {
   canAccessCommunityRoutes,
   ClerkAuthGate,
 } from '@/src/modules/authentication';
+import { AssistantButton } from '@/src/modules/community-shell';
 import { AppProviders } from '@/src/platform/providers';
 import { PushRegistration } from '@/src/platform/push';
 import { useSession } from '@/src/platform/session';
@@ -24,9 +26,20 @@ export const unstable_settings = {
   initialRouteName: 'index',
 };
 
+// Screens reachable without community access -- everything else lives under
+// Stack.Protected below. canAccessCommunity alone isn't enough to gate the
+// floating assistant button: in disabled/demo auth mode it's true from the
+// very first render (see canAccessCommunityRoutes), which would otherwise
+// show the button floating over the pre-auth marketing/onboarding screens
+// too, something it never did while it only lived inside the tab bar.
+const UNPROTECTED_ROUTES = new Set(['index', 'onboarding', 'auth']);
+
 function AppNavigator() {
   const session = useSession();
+  const insets = useSafeAreaInsets();
+  const segments = useSegments();
   const canAccessCommunity = canAccessCommunityRoutes(session.status);
+  const onProtectedRoute = segments.length > 0 && !UNPROTECTED_ROUTES.has(segments[0]);
 
   return (
     <ClerkAuthGate>
@@ -38,6 +51,7 @@ function AppNavigator() {
         <Stack.Protected guard={canAccessCommunity}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="post/[id]" />
+          <Stack.Screen name="petition/[id]" />
           <Stack.Screen name="protected" />
           <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
           <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
@@ -50,6 +64,21 @@ function AppNavigator() {
           <Stack.Screen name="digest" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
+      {canAccessCommunity && onProtectedRoute ? (
+        // Floats persistently above the tab bar (which sits at
+        // max(20, insets.bottom + 8), 68px tall -- see FloatingTabBar) on
+        // every protected screen, tabs and non-tab alike, so it no longer
+        // needs to be threaded through CommunityNavBar per-screen.
+        <AssistantButton
+          onPress={() => router.push('/assistant')}
+          style={{
+            bottom: Math.max(20, insets.bottom + 8) + 68 + 16,
+            position: 'absolute',
+            right: 16,
+            zIndex: 10,
+          }}
+        />
+      ) : null}
     </ClerkAuthGate>
   );
 }

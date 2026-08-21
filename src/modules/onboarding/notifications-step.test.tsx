@@ -5,7 +5,13 @@ import { NotificationsStep } from './notifications-step';
 
 const chrome = <View testID="test-chrome" />;
 
-const prefs = { digest: true, events: true, missions: false, replies: true };
+const prefs = {
+  digest: true,
+  events: true,
+  missions: false,
+  petitions: true,
+  replies: true,
+};
 
 describe('NotificationsStep', () => {
   test('renders a native Switch per preference, reflecting current value', async () => {
