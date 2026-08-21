@@ -8,13 +8,15 @@ const chrome = <View testID="test-chrome" />;
 describe('MOMENTS', () => {
   // onboarding-flow.tsx hardcodes stepCount around this array's length —
   // a mismatch silently breaks the progress bar and back/skip navigation.
-  test('has exactly six moments, ending with the assistant intro', () => {
+  test('has exactly eight moments, ending with the assistant intro', () => {
     expect(MOMENTS.map((moment) => moment.id)).toEqual([
       'forum',
       'events',
       'missions',
       'services',
       'leaderboard',
+      'petitions',
+      'digest',
       'assistant',
     ]);
   });
