@@ -23,7 +23,7 @@ const AUTH_INDEX = 1;
 
 // role is the first step that renders ObHeader; notifications is the last.
 const CHROME_FIRST_INDEX = 2;
-const CHROME_STEP_COUNT = 10;
+const CHROME_STEP_COUNT = 12;
 
 interface OnboardingFlowProps {
   readonly onFinished: () => void;
@@ -51,9 +51,9 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const isSignedIn = session.status === 'signed-in';
   const includePasskey =
     clerkUsable && process.env.EXPO_PUBLIC_ENABLE_PASSKEYS === 'true';
-  // welcome, auth, role, name, interests, 6 feature moments, notifications,
+  // welcome, auth, role, name, interests, 8 feature moments, notifications,
   // [passkey], commit.
-  const stepCount = includePasskey ? 14 : 13;
+  const stepCount = includePasskey ? 16 : 15;
 
   const goNext = useCallback(() => {
     setStep((current) => {
@@ -83,7 +83,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   }, [completeOnboarding, onFinished]);
 
   // Progress dots should only count the steps that actually render this
-  // shared header (role, name, interests, the 6 moments, notifications) --
+  // shared header (role, name, interests, the 8 moments, notifications) --
   // welcome, auth, passkey, and commit each render their own full-screen UI
   // with no header, so counting them would make the dots jump straight to
   // "3rd of 13" the very first time a user sees them.
@@ -143,8 +143,20 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     />,
     <MomentStep
       chrome={chrome(false)}
-      key="moment-assistant"
+      key="moment-petitions"
       moment={MOMENTS[5]}
+      onNext={goNext}
+    />,
+    <MomentStep
+      chrome={chrome(false)}
+      key="moment-digest"
+      moment={MOMENTS[6]}
+      onNext={goNext}
+    />,
+    <MomentStep
+      chrome={chrome(false)}
+      key="moment-assistant"
+      moment={MOMENTS[7]}
       onNext={goNext}
     />,
     <NotificationsStep

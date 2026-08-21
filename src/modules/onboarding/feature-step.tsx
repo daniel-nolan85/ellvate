@@ -18,6 +18,7 @@ import { ObCta } from './chrome';
 const ACCENT = 'rgb(181,80,44)';
 const AMBER = 'rgb(217,123,41)';
 const CONTENT = 'rgb(37,30,23)';
+const LAKE = 'rgb(47,110,114)';
 
 // Each preview below is a static, non-interactive stand-in for the real
 // card component it's named after (PostCard, EventRow, MissionCard,
@@ -191,6 +192,52 @@ function LeaderboardArt() {
   );
 }
 
+function PetitionsArt() {
+  return (
+    <View className="gap-2.5 rounded-[16px] border border-surface-hairline bg-paper p-4 shadow-card">
+      <Badge variant="muted">Safety</Badge>
+      <Text className="font-inter-bold text-[15px] leading-[20px] tracking-[-0.15px] text-content">
+        Add lighting to the marina walkway
+      </Text>
+      <VStack space="xs">
+        <View className="h-2 overflow-hidden rounded-full bg-secondary">
+          <View className="h-full w-[60%] rounded-full bg-accent" />
+        </View>
+        <Text className="text-[12px] text-text-muted">120 of 200 signatures</Text>
+      </VStack>
+    </View>
+  );
+}
+
+function DigestStatBox({ label, value }: { readonly label: string; readonly value: number }) {
+  return (
+    <VStack className="flex-1 items-center rounded-2xl bg-secondary py-3" space="xs">
+      <Text className="font-inter-bold text-[18px] text-content">{value}</Text>
+      <Text className="text-text-muted" size="xs">
+        {label}
+      </Text>
+    </VStack>
+  );
+}
+
+function DigestArt() {
+  return (
+    <View className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-4 shadow-card">
+      <HStack space="sm">
+        <DigestStatBox label="Posts" value={12} />
+        <DigestStatBox label="Events" value={3} />
+        <DigestStatBox label="Active" value={48} />
+      </HStack>
+      <HStack className="items-center gap-1.5 self-start rounded-full bg-lake-subtle px-3 py-[7px]">
+        <Icon color={LAKE} name="Newspaper" size={12} />
+        <Text className="font-inter-semibold text-[12px] leading-[16px] text-lake">
+          Everything you missed, one recap
+        </Text>
+      </HStack>
+    </View>
+  );
+}
+
 function AssistantArt() {
   return (
     <View className="flex-row items-center gap-3 rounded-[18px] bg-accent p-3.5 shadow-card">
@@ -248,6 +295,20 @@ export const MOMENTS: readonly Moment[] = [
     id: 'leaderboard',
     sub: 'Every mission earns XP, levels you up, and moves you up the board — see how you stack up against your neighbours.',
     title: 'Climb the ranks',
+  },
+  {
+    art: () => <PetitionsArt />,
+    eyebrow: 'PETITIONS',
+    id: 'petitions',
+    sub: 'Once the community is big enough, real signatures from real neighbours can send a request straight to the HOA board.',
+    title: 'A respectful way to be heard',
+  },
+  {
+    art: () => <DigestArt />,
+    eyebrow: 'WEEKLY DIGEST',
+    id: 'digest',
+    sub: "A recap every week — the posts everyone was talking about, the events that happened, and what's coming up next.",
+    title: 'Never wonder what you missed',
   },
   {
     art: () => <AssistantArt />,
