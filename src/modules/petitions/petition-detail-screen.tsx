@@ -166,14 +166,6 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
         <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
           Petition
         </Heading>
-        <Pressable
-          accessibilityLabel="More options"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={() => setMenuOpen(true)}
-        >
-          <Icon color="rgb(120,108,94)" name="ThreeDots" size={18} />
-        </Pressable>
       </HStack>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
@@ -186,9 +178,19 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
           {petition ? (
             <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
               <HStack className="items-center" space="xs">
-                <Badge variant="muted">{categoryLabel(petition.category)}</Badge>
-                {petition.status === 'succeeded' ? <Badge variant="success">Succeeded</Badge> : null}
-                {petition.status === 'expired' ? <Badge variant="muted">Expired</Badge> : null}
+                <HStack className="flex-1 items-center" space="xs">
+                  <Badge variant="muted">{categoryLabel(petition.category)}</Badge>
+                  {petition.status === 'succeeded' ? <Badge variant="success">Succeeded</Badge> : null}
+                  {petition.status === 'expired' ? <Badge variant="destructive">Expired</Badge> : null}
+                </HStack>
+                <Pressable
+                  accessibilityLabel="More options"
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() => setMenuOpen(true)}
+                >
+                  <Icon color="rgb(169,156,139)" name="ThreeDots" size={16} />
+                </Pressable>
               </HStack>
 
               <Heading className="font-inter-bold text-[22px]" size="lg">

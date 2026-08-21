@@ -8,6 +8,7 @@ type BadgeVariant =
   | 'muted'
   | 'outline'
   | 'success'
+  | 'destructive'
   | 'accent'
   | 'amber'
   | 'lake'
@@ -22,6 +23,7 @@ const badgeStyle = tva({
       muted: 'bg-muted',
       outline: 'bg-transparent border border-line',
       success: 'bg-success',
+      destructive: 'bg-destructive',
       accent: 'bg-accent-subtle',
       amber: 'bg-amber-subtle',
       lake: 'bg-lake-subtle',
@@ -39,6 +41,7 @@ const badgeTextStyle = tva({
       muted: 'text-secondary-foreground',
       outline: 'text-content',
       success: 'text-primary-foreground',
+      destructive: 'text-destructive-foreground',
       accent: 'text-accent',
       amber: 'text-amber',
       lake: 'text-lake',
