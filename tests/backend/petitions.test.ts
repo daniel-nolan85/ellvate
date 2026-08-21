@@ -185,6 +185,7 @@ describe('createPetition', () => {
   });
 
   test('GET /api/petitions lists open petitions by default', async () => {
+    setState((current) => ({ ...current, petitions: [] }));
     seedPetition({ status: 'open', title: 'Open one' });
     seedPetition({ status: 'succeeded', title: 'Succeeded one' });
 
@@ -196,6 +197,7 @@ describe('createPetition', () => {
 
 describe('listPetitionsPage', () => {
   test('filters by status', async () => {
+    setState((current) => ({ ...current, petitions: [] }));
     seedPetition({ id: 'p-open', status: 'open' });
     seedPetition({ id: 'p-succeeded', status: 'succeeded' });
     seedPetition({ id: 'p-expired', status: 'expired' });

@@ -3,6 +3,9 @@ import type {
   StoredComment,
   StoredEvent,
   StoredMission,
+  StoredPetition,
+  StoredPetitionComment,
+  StoredPetitionSignature,
   StoredPost,
   StoredProfile,
   StoredServiceListing,
@@ -492,6 +495,108 @@ const seedServiceReviews = (): readonly StoredServiceReview[] => [
   },
 ];
 
+// Dummy dev-only content so the three petition status tabs (open, succeeded,
+// expired) all have something to look at -- required signature counts here
+// are hand-picked for a plausible-looking progress bar, not derived from
+// computeRequiredSignatures (which would demand 200 against this tiny seeded
+// user base).
+const seedPetitions = (): readonly StoredPetition[] => [
+  {
+    category: 'safety',
+    createdAt: isoHoursBeforeSeedNow(72),
+    createdBy: 'user-jordan',
+    deadlineAt: isoHoursBeforeSeedNow(-648),
+    deadlineDays: 30,
+    description:
+      'The walkway between the marina and the north parking lot is pitch black after sunset — several of us have nearly tripped over the uneven pavers. A few solar path lights would go a long way for anyone walking home after dark.',
+    hoaEmailSentAt: null,
+    hoaResponse: null,
+    hoaResponseAt: null,
+    id: 'petition-marina-lighting',
+    requiredSignatures: 45,
+    signatureCount: 27,
+    status: 'open',
+    succeededAt: null,
+    title: 'Add lighting to the marina walkway',
+  },
+  {
+    category: 'maintenance',
+    createdAt: isoHoursBeforeSeedNow(240),
+    createdBy: 'user-priya',
+    deadlineAt: isoHoursBeforeSeedNow(-96),
+    deadlineDays: 14,
+    description:
+      'The Loop Trail has three separate pothole clusters between the golf course crossing and the fountain overlook — bad enough now that a few neighbours have stopped running it after dark. Asking the board to get it repaved before it gets worse.',
+    hoaEmailSentAt: isoHoursBeforeSeedNow(96),
+    hoaResponse:
+      'Thanks for flagging this — we\'ve added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.',
+    hoaResponseAt: isoHoursBeforeSeedNow(48),
+    id: 'petition-loop-trail-repaving',
+    requiredSignatures: 40,
+    signatureCount: 44,
+    status: 'succeeded',
+    succeededAt: isoHoursBeforeSeedNow(96),
+    title: 'Repave the Loop Trail potholes',
+  },
+  {
+    category: 'traffic-parking',
+    createdAt: isoHoursBeforeSeedNow(480),
+    createdBy: 'user-sam',
+    deadlineAt: isoHoursBeforeSeedNow(144),
+    deadlineDays: 14,
+    description:
+      'Guest parking near the Village shops fills up by mid-morning most weekends, and overflow cars end up blocking the fire lane. Requesting a few more marked guest spots along the north side.',
+    hoaEmailSentAt: null,
+    hoaResponse: null,
+    hoaResponseAt: null,
+    id: 'petition-village-guest-parking',
+    requiredSignatures: 40,
+    signatureCount: 12,
+    status: 'expired',
+    succeededAt: null,
+    title: 'Extend guest parking near the Village shops',
+  },
+];
+
+const seedPetitionSignatures = (): readonly StoredPetitionSignature[] => [
+  { createdAt: isoHoursBeforeSeedNow(70), petitionId: 'petition-marina-lighting', userId: 'user-mia' },
+  { createdAt: isoHoursBeforeSeedNow(65), petitionId: 'petition-marina-lighting', userId: 'user-andre' },
+  { createdAt: isoHoursBeforeSeedNow(50), petitionId: 'petition-marina-lighting', userId: 'user-priya' },
+  { createdAt: isoHoursBeforeSeedNow(230), petitionId: 'petition-loop-trail-repaving', userId: 'user-mia' },
+  { createdAt: isoHoursBeforeSeedNow(220), petitionId: 'petition-loop-trail-repaving', userId: 'user-andre' },
+  { createdAt: isoHoursBeforeSeedNow(210), petitionId: 'petition-loop-trail-repaving', userId: 'user-jordan' },
+  { createdAt: isoHoursBeforeSeedNow(200), petitionId: 'petition-loop-trail-repaving', userId: 'user-sam' },
+  { createdAt: isoHoursBeforeSeedNow(470), petitionId: 'petition-village-guest-parking', userId: 'user-mia' },
+  { createdAt: isoHoursBeforeSeedNow(460), petitionId: 'petition-village-guest-parking', userId: 'user-riley' },
+];
+
+const seedPetitionComments = (): readonly StoredPetitionComment[] => [
+  {
+    authorId: 'user-mia',
+    body: 'Been wanting this for ages — signed!',
+    createdAt: isoHoursBeforeSeedNow(60),
+    editedAt: null,
+    id: 'petition-comment-1',
+    petitionId: 'petition-marina-lighting',
+  },
+  {
+    authorId: 'user-andre',
+    body: 'Same walkway trips up my dog walking group every week. Hope this moves fast.',
+    createdAt: isoHoursBeforeSeedNow(40),
+    editedAt: null,
+    id: 'petition-comment-2',
+    petitionId: 'petition-marina-lighting',
+  },
+  {
+    authorId: 'user-riley',
+    body: 'Glad to see the board moving on this one so quickly.',
+    createdAt: isoHoursBeforeSeedNow(40),
+    editedAt: null,
+    id: 'petition-comment-3',
+    petitionId: 'petition-loop-trail-repaving',
+  },
+];
+
 const seedWeek = (): readonly StoredWeekDay[] => [
   { dayLabel: 'MON', dateLabel: '14', date: '2026-07-14', isToday: false },
   { dayLabel: 'TUE', dateLabel: '15', date: '2026-07-15', isToday: false },
@@ -535,9 +640,9 @@ export const createSeedState = (): StoreState => {
     serviceReviewReports: [],
     notifications: [],
     contactMessages: [],
-    petitions: [],
-    petitionSignatures: [],
-    petitionComments: [],
+    petitions: seedPetitions(),
+    petitionSignatures: seedPetitionSignatures(),
+    petitionComments: seedPetitionComments(),
     petitionReports: [],
     petitionCommentReports: [],
     bookmarks: [],

@@ -63,7 +63,7 @@ export function CommentComposer({
         />
         <Pressable
           accessibilityLabel={editing ? 'Save comment' : 'Send comment'}
-          className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+          className="h-10 w-10 items-center justify-center rounded-full bg-accent"
           disabled={!canSend}
           onPress={onSend}
           style={{ opacity: canSend ? 1 : 0.5 }}
