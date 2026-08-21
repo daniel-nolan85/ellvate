@@ -2,7 +2,8 @@ export type AssistantTool =
   | 'search_events'
   | 'search_missions'
   | 'search_posts'
-  | 'search_services';
+  | 'search_services'
+  | 'search_petitions';
 
 export interface AssistantToolCall {
   readonly tool: AssistantTool;

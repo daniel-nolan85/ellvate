@@ -15,6 +15,7 @@ const NOTIFICATION_KEYS: readonly (keyof NotificationPrefs)[] = [
   'replies',
   'missions',
   'digest',
+  'petitions',
 ];
 
 export const MAX_NAME_LENGTH = 50;
@@ -107,7 +108,7 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
   ) {
     return failure(
       'invalid_notification_prefs',
-      'notificationPrefs must be an object with boolean events, replies, missions, and digest fields.',
+      'notificationPrefs must be an object with boolean events, replies, missions, digest, and petitions fields.',
     );
   }
 

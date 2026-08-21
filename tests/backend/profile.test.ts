@@ -26,6 +26,7 @@ const defaultPrefs = {
   replies: true,
   missions: true,
   digest: false,
+  petitions: true,
 };
 
 afterEach(() => {

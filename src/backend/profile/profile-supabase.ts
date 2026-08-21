@@ -12,7 +12,7 @@ import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
 
 const PROFILE_SELECT =
-  'name,avatar_url,role,interests,notif_events,notif_replies,notif_missions,notif_digest,onboarded_at,activity_visible';
+  'name,avatar_url,role,interests,notif_events,notif_replies,notif_missions,notif_digest,notif_petitions,onboarded_at,activity_visible';
 
 interface AppUserProfileRow {
   readonly name: string;
@@ -23,6 +23,7 @@ interface AppUserProfileRow {
   readonly notif_replies: boolean;
   readonly notif_missions: boolean;
   readonly notif_digest: boolean;
+  readonly notif_petitions: boolean;
   readonly onboarded_at: string | null;
   readonly activity_visible: boolean;
 }
@@ -41,6 +42,7 @@ const toUserProfile = (
     replies: row.notif_replies,
     missions: row.notif_missions,
     digest: row.notif_digest,
+    petitions: row.notif_petitions,
   },
   onboardedAt: row.onboarded_at,
   activityVisible: row.activity_visible,
@@ -83,6 +85,7 @@ const mergedPrefs = (
   replies: update?.replies ?? row.notif_replies,
   missions: update?.missions ?? row.notif_missions,
   digest: update?.digest ?? row.notif_digest,
+  petitions: update?.petitions ?? row.notif_petitions,
 });
 
 const mergedRow = (
@@ -111,6 +114,7 @@ const mergedRow = (
     notif_replies: prefs.replies,
     notif_missions: prefs.missions,
     notif_digest: prefs.digest,
+    notif_petitions: prefs.petitions,
     onboarded_at: onboardedAt,
     activity_visible: activityVisible,
   };

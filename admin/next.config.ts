@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   // (a stray file from `expo install`, not an intended workspace) --
   // pinning it here keeps this app's build fully scoped to admin/.
   outputFileTracingRoot: path.join(__dirname),
+  // The dev-mode build-activity indicator (pulsing corner logo) is on
+  // screen constantly regardless of whether anything is actually loading --
+  // route-level loading.tsx gives a real, page-scoped loading signal instead.
+  devIndicators: false,
 };
 
 export default nextConfig;

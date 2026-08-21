@@ -2,6 +2,7 @@ import { getEventsView } from '@/src/backend/events';
 import { listPosts } from '@/src/backend/forum';
 import type { RequestContext } from '@/src/backend/http';
 import { getMissionsView } from '@/src/backend/missions';
+import { listPetitionsPage } from '@/src/backend/petitions';
 import { getServicesView } from '@/src/backend/services';
 
 export interface EventSummary {
@@ -41,7 +42,23 @@ export interface ServiceSummary {
   readonly averageRating: number | null;
 }
 
+export interface PetitionSummary {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly category: string;
+  readonly signatureCount: number;
+  readonly requiredSignatures: number;
+}
+
 const MAX_RESULTS = 3;
+// Petitions are searched/browsed with a much larger fetch cap than the
+// MAX_RESULTS=3 that other content types cap their *results* at -- this one
+// caps the *candidate pool* fetched from listPetitionsPage before ranking,
+// not the final answer size (rankByTokens/slice still trims to 3 after).
+// Community-wide petitions are expected to stay a small list; 50 is a
+// generous ceiling, not a real limit in practice.
+const PETITIONS_FETCH_CAP = 50;
 const MIN_TOKEN_LENGTH = 3;
 
 // WHY: "lake" and "village" are excluded alongside ordinary stop words, not
@@ -168,6 +185,22 @@ const toPostSummary = (post: {
   likes: post.likes,
 });
 
+const toPetitionSummary = (petition: {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly category: string;
+  readonly signatureCount: number;
+  readonly requiredSignatures: number;
+}): PetitionSummary => ({
+  category: petition.category,
+  description: petition.description,
+  id: petition.id,
+  requiredSignatures: petition.requiredSignatures,
+  signatureCount: petition.signatureCount,
+  title: petition.title,
+});
+
 const toServiceSummary = (listing: {
   readonly id: string;
   readonly businessName: string;
@@ -225,6 +258,24 @@ export async function searchPosts(
   ).map(toPostSummary);
 }
 
+// Only 'open' petitions -- the ones someone could still act on by signing --
+// mirrors getEventsView filtering to upcoming-only rather than every event
+// ever created.
+export async function searchPetitions(
+  ctx: RequestContext,
+  query: string,
+): Promise<readonly PetitionSummary[]> {
+  const { petitions } = await listPetitionsPage(ctx, {
+    limit: PETITIONS_FETCH_CAP,
+    status: 'open',
+  });
+  return rankByTokens(
+    petitions,
+    query,
+    (petition) => `${petition.title} ${petition.description} ${petition.category}`,
+  ).map(toPetitionSummary);
+}
+
 export async function searchServices(
   ctx: RequestContext,
   query: string,
@@ -265,6 +316,13 @@ export async function browsePosts(
 ): Promise<readonly PostSummary[]> {
   const posts = await listPosts(ctx);
   return posts.slice(0, MAX_RESULTS).map(toPostSummary);
+}
+
+export async function browsePetitions(
+  ctx: RequestContext,
+): Promise<readonly PetitionSummary[]> {
+  const { petitions } = await listPetitionsPage(ctx, { limit: MAX_RESULTS, status: 'open' });
+  return petitions.map(toPetitionSummary);
 }
 
 export async function browseServices(

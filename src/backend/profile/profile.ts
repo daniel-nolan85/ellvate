@@ -63,6 +63,7 @@ const mergePrefs = (
   replies: update.replies ?? current.replies,
   missions: update.missions ?? current.missions,
   digest: update.digest ?? current.digest,
+  petitions: update.petitions ?? current.petitions,
 });
 
 const applyUpdate = (

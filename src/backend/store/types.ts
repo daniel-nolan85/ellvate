@@ -7,6 +7,7 @@ export interface NotificationPrefs {
   readonly replies: boolean;
   readonly missions: boolean;
   readonly digest: boolean;
+  readonly petitions: boolean;
 }
 
 export interface StoredProfile {
@@ -244,6 +245,74 @@ export interface StoredNotification {
   readonly createdAt: string;
 }
 
+export type ContactMessageCategory = 'bug' | 'feedback' | 'question' | 'other';
+
+export interface StoredContactMessage {
+  readonly id: string;
+  readonly userId: string;
+  readonly category: ContactMessageCategory;
+  readonly message: string;
+  readonly createdAt: string;
+}
+
+export type PetitionCategory =
+  | 'safety'
+  | 'maintenance'
+  | 'amenities'
+  | 'landscaping'
+  | 'traffic-parking'
+  | 'noise-nuisance'
+  | 'other';
+
+export type PetitionStatus = 'open' | 'succeeded' | 'expired';
+
+export interface StoredPetition {
+  readonly id: string;
+  readonly createdBy: string;
+  readonly title: string;
+  readonly description: string;
+  readonly category: PetitionCategory;
+  readonly deadlineDays: 7 | 14 | 30 | 60 | 90;
+  readonly deadlineAt: string;
+  readonly requiredSignatures: number;
+  readonly signatureCount: number;
+  readonly status: PetitionStatus;
+  readonly succeededAt: string | null;
+  readonly hoaEmailSentAt: string | null;
+  readonly hoaResponse: string | null;
+  readonly hoaResponseAt: string | null;
+  readonly createdAt: string;
+}
+
+export interface StoredPetitionSignature {
+  readonly petitionId: string;
+  readonly userId: string;
+  readonly createdAt: string;
+}
+
+export interface StoredPetitionComment {
+  readonly id: string;
+  readonly petitionId: string;
+  readonly authorId: string;
+  readonly body: string;
+  readonly createdAt: string;
+  readonly editedAt: string | null;
+}
+
+export interface StoredPetitionReport {
+  readonly id: string;
+  readonly petitionId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
+export interface StoredPetitionCommentReport {
+  readonly id: string;
+  readonly petitionCommentId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
 export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service';
 
 export interface StoredBookmark {
@@ -272,6 +341,12 @@ export interface StoreState {
   readonly serviceReviews: readonly StoredServiceReview[];
   readonly serviceReviewReports: readonly StoredServiceReviewReport[];
   readonly notifications: readonly StoredNotification[];
+  readonly contactMessages: readonly StoredContactMessage[];
+  readonly petitions: readonly StoredPetition[];
+  readonly petitionSignatures: readonly StoredPetitionSignature[];
+  readonly petitionComments: readonly StoredPetitionComment[];
+  readonly petitionReports: readonly StoredPetitionReport[];
+  readonly petitionCommentReports: readonly StoredPetitionCommentReport[];
   readonly bookmarks: readonly StoredBookmark[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];

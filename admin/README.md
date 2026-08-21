@@ -13,11 +13,18 @@ the **same** Supabase project the mobile app uses.
 - Admins page: add/remove who can sign in (can't remove yourself, can't
   remove the last remaining admin)
 - Events page: toggle an event as featured
+- Posts, Comments (forum/event/mission + service reviews, tabbed), Missions,
+  and Services pages: view and delete content
+- Reports page: unified queue merging all six report tables (post, comment,
+  event comment, mission comment, service review, mission check-in photo),
+  each joined to its target content and reporter, with a delete action that
+  resolves the report by removing the reported content (every report table
+  cascades from its target, so there's no separate "dismiss" action)
 
-Not yet built: content moderation (posts, comments, missions, services) and
-the unified report queue across all six report tables. Both read from the
-same live Supabase project, so they're straightforward additions once this
-first slice is confirmed working end to end.
+Not yet built: a "report a member" feature doesn't exist anywhere in the app
+(only content — posts/comments/reviews/check-ins — can be reported), so
+there's no reported-users view here either. Would need a new table + RLS
+policies + app-side UI before an admin surface for it makes sense.
 
 ## Setup
 

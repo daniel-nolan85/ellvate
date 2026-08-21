@@ -23,6 +23,7 @@ import {
   Ellipsis,
   Eye,
   EyeOff,
+  FileSignature,
   Flag,
   Footprints,
   Globe,
@@ -96,6 +97,7 @@ export type AppIconName =
   | 'Link'
   | 'Eye'
   | 'EyeOff'
+  | 'FileSignature'
   | 'Flag'
   | 'Image'
   | 'Bookmark'
@@ -150,6 +152,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Link: Link2,
   Eye,
   EyeOff,
+  FileSignature,
   Flag,
   Image,
   Bookmark,

@@ -1,5 +1,5 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { router, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingTabBar, type CommunityTabId } from '@/src/modules/community-shell';
@@ -9,6 +9,7 @@ const TAB_IDS: readonly CommunityTabId[] = [
   'events',
   'missions',
   'services',
+  'petitions',
 ];
 
 const toCommunityTabId = (name: string): CommunityTabId =>
@@ -32,13 +33,7 @@ function CommunityTabBar({ navigation, state }: BottomTabBarProps) {
     }
   };
 
-  return (
-    <FloatingTabBar
-      activeTab={activeTab}
-      onAssistantPress={() => router.push('/assistant')}
-      onTabPress={handleTabPress}
-    />
-  );
+  return <FloatingTabBar activeTab={activeTab} onTabPress={handleTabPress} />;
 }
 
 export default function CommunityTabsLayout() {
@@ -56,6 +51,7 @@ export default function CommunityTabsLayout() {
       <Tabs.Screen name="events" />
       <Tabs.Screen name="missions" />
       <Tabs.Screen name="services" />
+      <Tabs.Screen name="petitions" />
     </Tabs>
   );
 }

@@ -1,14 +1,9 @@
-import Link from 'next/link';
-
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getCurrentAdminEmail } from '@/lib/auth';
+import { countUnseenContactMessages, countUnseenReports, getAdminSeenState } from '@/lib/unseen-counts';
 
 import { signOutAction } from './actions';
-
-const NAV_LINKS = [
-  { href: '/', label: 'Overview' },
-  { href: '/events', label: 'Events' },
-  { href: '/admins', label: 'Admins' },
-] as const;
+import { NavLinks } from './nav-links';
 
 export default async function DashboardLayout({
   children,
@@ -20,6 +15,13 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const adminEmail = await getCurrentAdminEmail();
+  const seenState = await getAdminSeenState(adminEmail);
+  const [reportsUnseenCount, contactUnseenCount] = await Promise.all([
+    countUnseenReports(seenState.reportsLastSeenAt),
+    countUnseenContactMessages(seenState.contactMessagesLastSeenAt),
+  ]);
+
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col justify-between border-r border-border bg-surface px-4 py-6">
@@ -28,17 +30,7 @@ export default async function DashboardLayout({
             LLV Community
             <span className="block text-xs font-normal text-muted">Admin</span>
           </p>
-          <nav className="space-y-1">
-            {NAV_LINKS.map((link) => (
-              <Link
-                className="block rounded-lg px-2 py-1.5 text-sm text-muted hover:bg-surface-raised hover:text-content"
-                href={link.href}
-                key={link.href}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          <NavLinks contactUnseenCount={contactUnseenCount} reportsUnseenCount={reportsUnseenCount} />
         </div>
 
         <div className="space-y-2 px-2">

@@ -79,6 +79,7 @@ describe('useOnboardingState', () => {
             digest: true,
             events: true,
             missions: true,
+            petitions: true,
             replies: true,
           },
           role: 'resident',
