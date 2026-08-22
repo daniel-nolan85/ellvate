@@ -132,6 +132,19 @@ export async function removeAdminAction(
     return { ok: false, message: 'At least one admin must remain.' };
   }
 
+  // added_by has no ON DELETE behavior (references dashboard_admins(email)
+  // with the default RESTRICT), so removing someone who'd added other
+  // admins would otherwise fail with a foreign key violation. Clear those
+  // references first -- who invited them is no longer knowable once the
+  // inviter's gone, which is fine, but it shouldn't block removal.
+  const { error: clearAddedByError } = await admin
+    .from('dashboard_admins')
+    .update({ added_by: null })
+    .eq('added_by', targetEmail.toLowerCase());
+  if (clearAddedByError) {
+    throw clearAddedByError;
+  }
+
   const { error } = await admin
     .from('dashboard_admins')
     .delete()
