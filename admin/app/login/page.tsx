@@ -3,9 +3,9 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { requestMagicLink } from './actions';
 
-type SendState = 'idle' | 'sending' | 'sent' | 'error';
+type SendState = 'idle' | 'sending' | 'sent' | 'not_allowed' | 'error';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -18,13 +18,8 @@ function LoginForm() {
     event.preventDefault();
     setState('sending');
 
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-
-    setState(error ? 'error' : 'sent');
+    const result = await requestMagicLink(email);
+    setState(result.ok ? 'sent' : result.reason);
   };
 
   return (
@@ -38,6 +33,12 @@ function LoginForm() {
         {notAllowed ? (
           <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
             That email isn&apos;t on the admin list. Ask an existing admin to add you.
+          </p>
+        ) : null}
+
+        {state === 'not_allowed' ? (
+          <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+            That email doesn&apos;t have admin access.
           </p>
         ) : null}
 
