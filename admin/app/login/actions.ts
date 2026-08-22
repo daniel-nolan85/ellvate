@@ -7,7 +7,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 type RequestMagicLinkResult =
   | { ok: true }
-  | { ok: false; reason: 'not_allowed' | 'error' };
+  | { ok: false; reason: 'not_allowed' | 'rate_limited' | 'error' };
 
 // Gates the send on the allowlist first -- unlike Supabase's own "allow new
 // signups" toggle, this always returns a distinct reason so the UI can be
@@ -41,5 +41,19 @@ export async function requestMagicLink(email: string): Promise<RequestMagicLinkR
     options: { emailRedirectTo: `${protocol}://${host}/auth/callback` },
   });
 
-  return error ? { ok: false, reason: 'error' } : { ok: true };
+  if (error) {
+    // Logged (not just swallowed) so a failure is visible in Vercel's
+    // Runtime Logs without needing a local repro -- this is the error
+    // Supabase's shared default email service throws once its (very low,
+    // testing-tier) per-hour send limit is hit, which happens easily until
+    // custom SMTP is configured -- see the comment above this function.
+    console.error(`[login] signInWithOtp failed for ${email}:`, error.code, error.message);
+
+    if (error.code === 'over_email_send_rate_limit') {
+      return { ok: false, reason: 'rate_limited' };
+    }
+    return { ok: false, reason: 'error' };
+  }
+
+  return { ok: true };
 }

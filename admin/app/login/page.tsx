@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { requestMagicLink } from './actions';
 
-type SendState = 'idle' | 'sending' | 'awaiting_link' | 'not_allowed' | 'error';
+type SendState = 'idle' | 'sending' | 'awaiting_link' | 'not_allowed' | 'rate_limited' | 'error';
 type CompleteState = 'idle' | 'completing' | 'error';
 
 // Pulls the `code` query param out of whatever the admin pastes -- the full
@@ -132,6 +132,13 @@ function LoginForm() {
             >
               {state === 'sending' ? 'Sending…' : 'Send sign-in link'}
             </button>
+            {state === 'rate_limited' ? (
+              <p className="text-sm text-danger">
+                Too many sign-in emails sent to this address recently —
+                Supabase&apos;s default email service caps this low. Wait a
+                bit and try again.
+              </p>
+            ) : null}
             {state === 'error' ? (
               <p className="text-sm text-danger">Something went wrong. Try again.</p>
             ) : null}
