@@ -3,23 +3,40 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import { requestMagicLink } from './actions';
+import { requestMagicLink, verifyMagicLinkCode } from './actions';
 
-type SendState = 'idle' | 'sending' | 'sent' | 'not_allowed' | 'error';
+type SendState = 'idle' | 'sending' | 'awaiting_code' | 'not_allowed' | 'error';
+type VerifyState = 'idle' | 'verifying' | 'error';
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const notAllowed = searchParams.get('error') === 'not_allowed';
 
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [state, setState] = useState<SendState>('idle');
+  const [verifyState, setVerifyState] = useState<VerifyState>('idle');
 
-  const handleSubmit = async (event: FormEvent) => {
+  const handleSendCode = async (event: FormEvent) => {
     event.preventDefault();
     setState('sending');
 
     const result = await requestMagicLink(email);
-    setState(result.ok ? 'sent' : result.reason);
+    setState(result.ok ? 'awaiting_code' : result.reason);
+  };
+
+  const handleVerifyCode = async (event: FormEvent) => {
+    event.preventDefault();
+    setVerifyState('verifying');
+
+    const result = await verifyMagicLinkCode(email, code);
+    if (result.ok) {
+      // Hard navigation, not router.push -- guarantees the freshly-set
+      // session cookie is present on the very next request to middleware.
+      window.location.assign('/');
+      return;
+    }
+    setVerifyState('error');
   };
 
   return (
@@ -42,12 +59,45 @@ function LoginForm() {
           </p>
         ) : null}
 
-        {state === 'sent' ? (
-          <p className="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
-            Check your email for a sign-in link.
-          </p>
+        {state === 'awaiting_code' ? (
+          <form className="space-y-3" onSubmit={handleVerifyCode}>
+            <p className="text-sm text-muted">
+              We sent a 6-digit code to <span className="text-content">{email}</span>.
+              Enter it below (ignore the link in that email for now — it points
+              to the wrong place until Auth settings are fixed).
+            </p>
+            <input
+              autoComplete="one-time-code"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-center text-lg tracking-[0.3em] text-content outline-none focus:border-accent"
+              inputMode="numeric"
+              maxLength={6}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="000000"
+              required
+              value={code}
+            />
+            <button
+              className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-60"
+              disabled={verifyState === 'verifying'}
+              type="submit"
+            >
+              {verifyState === 'verifying' ? 'Verifying…' : 'Verify code'}
+            </button>
+            {verifyState === 'error' ? (
+              <p className="text-sm text-danger">
+                That code didn&apos;t work — it may have expired. Try sending a new one.
+              </p>
+            ) : null}
+            <button
+              className="w-full text-sm text-muted underline"
+              onClick={() => setState('idle')}
+              type="button"
+            >
+              Use a different email
+            </button>
+          </form>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmit}>
+          <form className="space-y-3" onSubmit={handleSendCode}>
             <input
               autoComplete="email"
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-content outline-none focus:border-accent"
@@ -62,7 +112,7 @@ function LoginForm() {
               disabled={state === 'sending'}
               type="submit"
             >
-              {state === 'sending' ? 'Sending…' : 'Send magic link'}
+              {state === 'sending' ? 'Sending…' : 'Send sign-in code'}
             </button>
             {state === 'error' ? (
               <p className="text-sm text-danger">Something went wrong. Try again.</p>
