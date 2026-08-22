@@ -35,6 +35,13 @@ export default async function DashboardLayout({
   // me"), even though they're tracked as separate seen-timestamps so
   // visiting one tab doesn't silently clear the other's count.
   const contactUnseenCount = appContactUnseenCount + landingContactUnseenCount;
+  // The page defaults to the App tab, so a badge caused entirely by landing
+  // page messages would otherwise land an admin on an empty-looking tab --
+  // send them straight to the tab that actually has something new.
+  const contactHref =
+    landingContactUnseenCount > 0 && appContactUnseenCount === 0
+      ? '/contact?tab=landing'
+      : '/contact';
 
   return (
     <div className="flex min-h-screen">
@@ -45,6 +52,7 @@ export default async function DashboardLayout({
             <span className="block text-xs font-normal text-muted">Admin</span>
           </p>
           <NavLinks
+            contactHref={contactHref}
             contactUnseenCount={contactUnseenCount}
             reportsUnseenCount={reportsUnseenCount}
             waitlistUnseenCount={waitlistUnseenCount}

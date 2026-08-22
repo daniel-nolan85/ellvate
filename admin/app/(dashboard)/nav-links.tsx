@@ -21,12 +21,14 @@ export const NAV_LINKS = [
 interface NavLinksProps {
   readonly reportsUnseenCount?: number;
   readonly contactUnseenCount?: number;
+  readonly contactHref?: string;
   readonly waitlistUnseenCount?: number;
 }
 
 export function NavLinks({
   reportsUnseenCount = 0,
   contactUnseenCount = 0,
+  contactHref = '/contact',
   waitlistUnseenCount = 0,
 }: NavLinksProps) {
   const pathname = usePathname();
@@ -44,6 +46,7 @@ export function NavLinks({
               : link.href === '/waitlist'
                 ? waitlistUnseenCount
                 : 0;
+        const href = link.href === '/contact' ? contactHref : link.href;
 
         return (
           <Link
@@ -53,7 +56,7 @@ export function NavLinks({
                 ? 'bg-surface-raised text-content'
                 : 'text-muted hover:bg-surface-raised hover:text-content'
             }`}
-            href={link.href}
+            href={href}
             key={link.href}
           >
             <span>{link.label}</span>
