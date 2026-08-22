@@ -10,6 +10,7 @@ import { Hero } from '@/components/sections/hero';
 import { Nav } from '@/components/sections/nav';
 import { BRAND, faqs, features } from '@/lib/content';
 import { SITE_URL } from '@/lib/site-url';
+import { WaitlistProvider } from '@/modules/waitlist';
 
 const standardFeatures = features.filter((feature) => feature.id !== 'assistant');
 const assistantFeature = features.find((feature) => feature.id === 'assistant')!;
@@ -51,7 +52,7 @@ function StructuredData() {
 
 export default function LandingPage() {
   return (
-    <>
+    <WaitlistProvider>
       <StructuredData />
       <Nav />
       <main>
@@ -67,6 +68,6 @@ export default function LandingPage() {
         <Contact />
       </main>
       <Footer />
-    </>
+    </WaitlistProvider>
   );
 }

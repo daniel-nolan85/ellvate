@@ -9,18 +9,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BRAND } from '@/lib/content';
 
-type Status = 'idle' | 'submitting' | 'done' | 'error';
+import { useWaitlistStatus } from './waitlist-context';
+
+type SubmitState = 'idle' | 'submitting' | 'error';
 
 export function WaitlistForm({ className }: { className?: string }) {
   const inputId = React.useId();
   const [email, setEmail] = React.useState('');
-  const [status, setStatus] = React.useState<Status>('idle');
-  const [message, setMessage] = React.useState<string | null>(null);
+  const [submitState, setSubmitState] = React.useState<SubmitState>('idle');
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  // Shared across every WaitlistForm on the page, so submitting this one
+  // also flips any other instance (e.g. the footer's) to the done state.
+  const { status, message, markDone } = useWaitlistStatus();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus('submitting');
-    setMessage(null);
+    setSubmitState('submitting');
+    setErrorMessage(null);
 
     try {
       const response = await fetch('/api/waitlist', {
@@ -31,20 +36,19 @@ export function WaitlistForm({ className }: { className?: string }) {
       const data = await response.json();
 
       if (!response.ok) {
-        setStatus('error');
-        setMessage(data.error ?? 'Something went wrong. Please try again.');
+        setSubmitState('error');
+        setErrorMessage(data.error ?? 'Something went wrong. Please try again.');
         return;
       }
 
-      setStatus('done');
-      setMessage(
+      markDone(
         data.alreadyJoined
           ? "You're already on the list — we'll be in touch."
           : `You're on the list. We'll email you when ${BRAND.appName} launches.`
       );
     } catch {
-      setStatus('error');
-      setMessage('Something went wrong. Please try again.');
+      setSubmitState('error');
+      setErrorMessage('Something went wrong. Please try again.');
     }
   }
 
@@ -73,12 +77,12 @@ export function WaitlistForm({ className }: { className?: string }) {
             placeholder="you@example.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            disabled={status === 'submitting'}
-            aria-invalid={status === 'error'}
+            disabled={submitState === 'submitting'}
+            aria-invalid={submitState === 'error'}
           />
         </div>
-        <Button type="submit" size="lg" disabled={status === 'submitting'}>
-          {status === 'submitting' ? (
+        <Button type="submit" size="lg" disabled={submitState === 'submitting'}>
+          {submitState === 'submitting' ? (
             <>
               <CactusSpinner className="h-4 w-4" />
               Joining
@@ -88,8 +92,8 @@ export function WaitlistForm({ className }: { className?: string }) {
           )}
         </Button>
       </div>
-      {status === 'error' && message ? (
-        <p className="mt-2 text-sm text-danger">{message}</p>
+      {submitState === 'error' && errorMessage ? (
+        <p className="mt-2 text-sm text-danger">{errorMessage}</p>
       ) : null}
     </form>
   );
