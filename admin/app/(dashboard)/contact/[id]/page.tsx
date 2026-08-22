@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDateTime } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
@@ -52,7 +53,7 @@ export default async function ContactDetailPage({
       fields={[
         { label: 'Category', value: CATEGORY_LABEL[msg.category] ?? msg.category },
         { label: 'From', value: msg.user?.name ?? 'Unknown' },
-        { label: 'Sent', value: new Date(msg.created_at).toLocaleString() },
+        { label: 'Sent', value: formatDateTime(msg.created_at) },
       ]}
       title="Contact message"
     />

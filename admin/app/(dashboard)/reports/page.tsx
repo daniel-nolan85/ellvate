@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { getCurrentAdminEmail } from '@/lib/auth';
+import { formatDate } from '@/lib/format-date';
 import { loadReports } from '@/lib/reports-data';
 
 import { DeleteButton } from '../delete-button';
@@ -88,7 +89,7 @@ export default async function ReportsPage({
                 </td>
                 <td className="py-2 pr-4 text-xs text-muted">{row.reporter}</td>
                 <td className="py-2 pr-4 text-xs text-muted">
-                  {new Date(row.created_at).toLocaleDateString()}
+                  {formatDate(row.created_at)}
                 </td>
                 <td className="py-2 text-right">
                   <DeleteButton

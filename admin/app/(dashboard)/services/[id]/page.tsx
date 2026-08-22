@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
@@ -76,7 +77,7 @@ export default async function ServiceDetailPage({
         { label: 'Hours', value: listing.hours ?? '—' },
       ]}
       media={media.length > 0 ? <MediaThumbnails media={media} /> : null}
-      subtitle={new Date(listing.created_at).toLocaleDateString()}
+      subtitle={formatDate(listing.created_at)}
       title={listing.business_name}
     />
   );

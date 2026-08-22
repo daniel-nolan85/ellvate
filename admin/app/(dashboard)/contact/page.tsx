@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { getCurrentAdminEmail } from '@/lib/auth';
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { applyDescCursor, encodeCursor, escapeOrSearchTerm, LIST_PAGE_SIZE } from '@/lib/pagination';
 
@@ -108,7 +109,7 @@ export default async function ContactPage({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted">
-                      {msg.name} · {msg.email} · {new Date(msg.created_at).toLocaleDateString()}
+                      {msg.name} · {msg.email} · {formatDate(msg.created_at)}
                     </p>
                   </div>
                   <DeleteButton
@@ -182,7 +183,7 @@ export default async function ContactPage({
                 <div className="min-w-0 space-y-1">
                   <p className="text-xs text-muted">
                     {CATEGORY_LABEL[msg.category] ?? msg.category} · {msg.user?.name ?? 'Unknown'} ·{' '}
-                    {new Date(msg.created_at).toLocaleDateString()}
+                    {formatDate(msg.created_at)}
                   </p>
                 </div>
                 <DeleteButton

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDate, formatDateTime } from '@/lib/format-date';
 import { buildHoaEmailTemplate } from '@/lib/hoa-email';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -72,27 +73,25 @@ export default async function PetitionDetailPage({
           label: 'Signatures',
           value: `${petition.signature_count} / ${petition.required_signatures}`,
         },
-        { label: 'Deadline', value: new Date(petition.deadline_at).toLocaleString() },
+        { label: 'Deadline', value: formatDateTime(petition.deadline_at) },
         {
           label: 'Succeeded',
-          value: petition.succeeded_at ? new Date(petition.succeeded_at).toLocaleString() : '—',
+          value: petition.succeeded_at ? formatDateTime(petition.succeeded_at) : '—',
         },
         {
           label: 'HOA email sent',
           value: petition.hoa_email_sent_at
-            ? new Date(petition.hoa_email_sent_at).toLocaleString()
+            ? formatDateTime(petition.hoa_email_sent_at)
             : needsHoaReview
               ? 'Awaiting review below'
               : '—',
         },
         {
           label: 'HOA responded',
-          value: petition.hoa_response_at
-            ? new Date(petition.hoa_response_at).toLocaleString()
-            : '—',
+          value: petition.hoa_response_at ? formatDateTime(petition.hoa_response_at) : '—',
         },
       ]}
-      subtitle={new Date(petition.created_at).toLocaleDateString()}
+      subtitle={formatDate(petition.created_at)}
       title={petition.title}
     >
       <div className="space-y-4">

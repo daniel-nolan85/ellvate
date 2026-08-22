@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDateTime } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../../detail-layout';
@@ -46,7 +47,7 @@ export default async function LandingContactDetailPage({
       fields={[
         { label: 'From', value: msg.name },
         { label: 'Email', value: msg.email },
-        { label: 'Sent', value: new Date(msg.created_at).toLocaleString() },
+        { label: 'Sent', value: formatDateTime(msg.created_at) },
       ]}
       subtitle={msg.subject}
       title="Landing page message"

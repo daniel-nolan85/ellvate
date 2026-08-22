@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 
+import { formatDate } from '@/lib/format-date';
+
 import { removeAdminAction } from '../actions';
 
 interface AdminRowProps {
@@ -32,7 +34,7 @@ export function AdminRow({ email, actingEmail, createdAt }: AdminRowProps) {
         {isSelf ? <span className="ml-2 text-xs text-muted">(you)</span> : null}
       </td>
       <td className="py-2 pr-4 text-xs text-muted">
-        {new Date(createdAt).toLocaleDateString()}
+        {formatDate(createdAt)}
       </td>
       <td className="py-2 text-right">
         {!isSelf && (

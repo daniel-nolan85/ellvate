@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
@@ -49,7 +50,7 @@ export default async function UserDetailPage({
         { label: 'XP', value: user.xp },
         { label: 'Missions completed', value: user.missions_completed },
         { label: 'Streak', value: `${user.streak_days}d` },
-        { label: 'Joined', value: new Date(user.created_at).toLocaleDateString() },
+        { label: 'Joined', value: formatDate(user.created_at) },
       ]}
       media={
         user.avatar_url ? (

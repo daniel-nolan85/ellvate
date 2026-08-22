@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
@@ -57,7 +58,7 @@ export default async function PostDetailPage({
           <MediaThumbnails media={post.media} />
         ) : null
       }
-      subtitle={`${post.author?.name ?? 'Unknown'} · ${post.forum} · ${new Date(post.created_at).toLocaleDateString()}`}
+      subtitle={`${post.author?.name ?? 'Unknown'} · ${post.forum} · ${formatDate(post.created_at)}`}
       title={post.title}
     />
   );

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import {
   applyDescCursor,
@@ -132,7 +133,7 @@ export default async function ServicesPage({
                       </Link>
                       <p className="text-xs text-muted">
                         {listing.creator?.name ?? 'Unknown'} · {listing.category} ·{' '}
-                        {new Date(listing.created_at).toLocaleDateString()}
+                        {formatDate(listing.created_at)}
                       </p>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { isCommentTab, loadCommentTab, type CommentTab } from '@/lib/comments-data';
+import { formatDate } from '@/lib/format-date';
 
 import { DeleteButton } from '../delete-button';
 
@@ -95,7 +96,7 @@ export default async function CommentsPage({
                 <td className="py-2 pr-4 text-xs text-muted">{row.author?.name ?? 'Unknown'}</td>
                 <td className="py-2 pr-4 text-xs text-muted">{row.target}</td>
                 <td className="py-2 pr-4 text-xs text-muted">
-                  {new Date(row.created_at).toLocaleDateString()}
+                  {formatDate(row.created_at)}
                 </td>
                 <td className="py-2 text-right">
                   <DeleteButton confirmLabel="Delete this comment?" id={row.id} table={table} />

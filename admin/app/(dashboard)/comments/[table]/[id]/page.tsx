@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { isCommentTab, loadCommentById } from '@/lib/comments-data';
+import { formatDate } from '@/lib/format-date';
 
 import { DetailLayout } from '../../../detail-layout';
 
@@ -28,7 +29,7 @@ export default async function CommentDetailPage({
         id,
         table: comment.deletableTable,
       }}
-      subtitle={`${comment.authorName} · ${comment.targetLabel} · ${new Date(comment.createdAt).toLocaleDateString()}`}
+      subtitle={`${comment.authorName} · ${comment.targetLabel} · ${formatDate(comment.createdAt)}`}
       title="Comment"
     />
   );

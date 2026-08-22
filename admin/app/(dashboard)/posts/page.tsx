@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import {
   applyDescCursor,
@@ -105,7 +106,7 @@ export default async function PostsPage({
                   </Link>
                   <p className="text-xs text-muted">
                     {post.author?.name ?? 'Unknown'} · {post.forum} ·{' '}
-                    {new Date(post.created_at).toLocaleDateString()}
+                    {formatDate(post.created_at)}
                   </p>
                 </div>
                 <DeleteButton

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDateTime } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
@@ -48,7 +49,7 @@ export default async function MissionCheckInDetailPage({
       fields={[
         { label: 'Mission', value: checkIn.mission?.title ?? 'Unknown mission' },
         { label: 'Member', value: checkIn.user?.name ?? 'Unknown' },
-        { label: 'Completed', value: new Date(checkIn.completed_at).toLocaleString() },
+        { label: 'Completed', value: formatDateTime(checkIn.completed_at) },
       ]}
       media={
         checkIn.photo_url ? (

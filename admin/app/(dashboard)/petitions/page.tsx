@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import {
   applyDescCursor,
@@ -114,7 +115,7 @@ export default async function PetitionsPage({
                   <p className="text-xs text-muted">
                     {petition.creator?.name ?? 'Unknown'} · {petition.category} ·{' '}
                     {petition.status} · {petition.signature_count}/{petition.required_signatures}{' '}
-                    signatures · {new Date(petition.created_at).toLocaleDateString()}
+                    signatures · {formatDate(petition.created_at)}
                   </p>
                 </div>
                 <DeleteButton

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { formatDateTime } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { decodeCursor, escapeOrSearchTerm, LIST_PAGE_SIZE } from '@/lib/pagination';
 
@@ -132,7 +133,7 @@ export default async function EventsPage({
                   </Link>
                 </td>
                 <td className="py-2 pr-4 text-xs text-muted">
-                  {new Date(event.starts_at).toLocaleString()}
+                  {formatDateTime(event.starts_at)}
                 </td>
                 <td className="py-2 pr-4 text-xs text-muted">{event.place}</td>
                 <td className="py-2 pr-4">

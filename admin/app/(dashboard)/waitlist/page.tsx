@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { getCurrentAdminEmail } from '@/lib/auth';
+import { formatDateTime } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { applyDescCursor, encodeCursor, escapeOrSearchTerm, LIST_PAGE_SIZE } from '@/lib/pagination';
 
@@ -104,7 +105,7 @@ export default async function WaitlistPage({
               <tr className="border-b border-border last:border-0" key={signup.id}>
                 <td className="py-2 pr-4 text-sm text-content">{signup.email}</td>
                 <td className="py-2 pr-4 text-xs text-muted">
-                  {new Date(signup.created_at).toLocaleString()}
+                  {formatDateTime(signup.created_at)}
                 </td>
                 <td className="py-2 text-right">
                   <DeleteButton

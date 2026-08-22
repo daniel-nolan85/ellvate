@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { formatDateTime } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
@@ -50,7 +51,7 @@ export default async function EventDetailPage({
         table: 'events',
       }}
       fields={[
-        { label: 'Starts', value: new Date(event.starts_at).toLocaleString() },
+        { label: 'Starts', value: formatDateTime(event.starts_at) },
         { label: 'Place', value: event.place },
         {
           label: 'Featured',
