@@ -13,6 +13,7 @@ export const NAV_LINKS = [
   { href: '/petitions', label: 'Petitions' },
   { href: '/users', label: 'Users' },
   { href: '/reports', label: 'Reports' },
+  { href: '/waitlist', label: 'Waitlist' },
   { href: '/contact', label: 'Contact' },
   { href: '/admins', label: 'Admins' },
 ] as const;
@@ -20,11 +21,13 @@ export const NAV_LINKS = [
 interface NavLinksProps {
   readonly reportsUnseenCount?: number;
   readonly contactUnseenCount?: number;
+  readonly waitlistUnseenCount?: number;
 }
 
 export function NavLinks({
   reportsUnseenCount = 0,
   contactUnseenCount = 0,
+  waitlistUnseenCount = 0,
 }: NavLinksProps) {
   const pathname = usePathname();
 
@@ -38,7 +41,9 @@ export function NavLinks({
             ? reportsUnseenCount
             : link.href === '/contact'
               ? contactUnseenCount
-              : 0;
+              : link.href === '/waitlist'
+                ? waitlistUnseenCount
+                : 0;
 
         return (
           <Link

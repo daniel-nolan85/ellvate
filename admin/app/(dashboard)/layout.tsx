@@ -1,6 +1,12 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAdminEmail } from '@/lib/auth';
-import { countUnseenContactMessages, countUnseenReports, getAdminSeenState } from '@/lib/unseen-counts';
+import {
+  countUnseenContactMessages,
+  countUnseenLandingContactMessages,
+  countUnseenReports,
+  countUnseenWaitlistSignups,
+  getAdminSeenState,
+} from '@/lib/unseen-counts';
 
 import { signOutAction } from './actions';
 import { NavLinks } from './nav-links';
@@ -17,10 +23,18 @@ export default async function DashboardLayout({
 
   const adminEmail = await getCurrentAdminEmail();
   const seenState = await getAdminSeenState(adminEmail);
-  const [reportsUnseenCount, contactUnseenCount] = await Promise.all([
-    countUnseenReports(seenState.reportsLastSeenAt),
-    countUnseenContactMessages(seenState.contactMessagesLastSeenAt),
-  ]);
+  const [reportsUnseenCount, appContactUnseenCount, landingContactUnseenCount, waitlistUnseenCount] =
+    await Promise.all([
+      countUnseenReports(seenState.reportsLastSeenAt),
+      countUnseenContactMessages(seenState.contactMessagesLastSeenAt),
+      countUnseenLandingContactMessages(seenState.landingContactLastSeenAt),
+      countUnseenWaitlistSignups(seenState.waitlistLastSeenAt),
+    ]);
+  // One nav badge covers both contact sources (in-app + landing site) --
+  // they read as the same kind of thing to an admin ("messages waiting on
+  // me"), even though they're tracked as separate seen-timestamps so
+  // visiting one tab doesn't silently clear the other's count.
+  const contactUnseenCount = appContactUnseenCount + landingContactUnseenCount;
 
   return (
     <div className="flex min-h-screen">
@@ -30,7 +44,11 @@ export default async function DashboardLayout({
             LLV Community
             <span className="block text-xs font-normal text-muted">Admin</span>
           </p>
-          <NavLinks contactUnseenCount={contactUnseenCount} reportsUnseenCount={reportsUnseenCount} />
+          <NavLinks
+            contactUnseenCount={contactUnseenCount}
+            reportsUnseenCount={reportsUnseenCount}
+            waitlistUnseenCount={waitlistUnseenCount}
+          />
         </div>
 
         <div className="space-y-2 px-2">
