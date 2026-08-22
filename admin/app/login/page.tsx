@@ -3,40 +3,58 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import { requestMagicLink, verifyMagicLinkCode } from './actions';
+import { requestMagicLink } from './actions';
 
-type SendState = 'idle' | 'sending' | 'awaiting_code' | 'not_allowed' | 'error';
-type VerifyState = 'idle' | 'verifying' | 'error';
+type SendState = 'idle' | 'sending' | 'awaiting_link' | 'not_allowed' | 'error';
+type CompleteState = 'idle' | 'completing' | 'error';
+
+// Pulls the `code` query param out of whatever the admin pastes -- the full
+// failed-to-load localhost URL from their address bar, ideally, but falls
+// back to treating the input as a bare code if it doesn't parse as a URL
+// (e.g. if they only copied the query string, or the code itself).
+function extractCode(pasted: string): string {
+  const trimmed = pasted.trim();
+  try {
+    const url = new URL(trimmed);
+    return url.searchParams.get('code') ?? trimmed;
+  } catch {
+    const match = trimmed.match(/code=([^&\s]+)/);
+    const captured = match?.[1];
+    return captured ? decodeURIComponent(captured) : trimmed;
+  }
+}
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const notAllowed = searchParams.get('error') === 'not_allowed';
 
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  const [pastedLink, setPastedLink] = useState('');
   const [state, setState] = useState<SendState>('idle');
-  const [verifyState, setVerifyState] = useState<VerifyState>('idle');
+  const [completeState, setCompleteState] = useState<CompleteState>('idle');
 
-  const handleSendCode = async (event: FormEvent) => {
+  const handleSendLink = async (event: FormEvent) => {
     event.preventDefault();
     setState('sending');
 
     const result = await requestMagicLink(email);
-    setState(result.ok ? 'awaiting_code' : result.reason);
+    setState(result.ok ? 'awaiting_link' : result.reason);
   };
 
-  const handleVerifyCode = async (event: FormEvent) => {
+  const handleCompleteSignIn = (event: FormEvent) => {
     event.preventDefault();
-    setVerifyState('verifying');
+    setCompleteState('completing');
 
-    const result = await verifyMagicLinkCode(email, code);
-    if (result.ok) {
-      // Hard navigation, not router.push -- guarantees the freshly-set
-      // session cookie is present on the very next request to middleware.
-      window.location.assign('/');
+    const code = extractCode(pastedLink);
+    if (!code) {
+      setCompleteState('error');
       return;
     }
-    setVerifyState('error');
+
+    // Hard navigation to the existing callback route, which already does
+    // exchangeCodeForSession(code) -- this just gets it the code by a
+    // different path than the (currently broken) redirect would have.
+    window.location.assign(`/auth/callback?code=${encodeURIComponent(code)}`);
   };
 
   return (
@@ -59,33 +77,33 @@ function LoginForm() {
           </p>
         ) : null}
 
-        {state === 'awaiting_code' ? (
-          <form className="space-y-3" onSubmit={handleVerifyCode}>
+        {state === 'awaiting_link' ? (
+          <form className="space-y-3" onSubmit={handleCompleteSignIn}>
             <p className="text-sm text-muted">
-              We sent a 6-digit code to <span className="text-content">{email}</span>.
-              Enter it below (ignore the link in that email for now — it points
-              to the wrong place until Auth settings are fixed).
+              We sent a sign-in link to <span className="text-content">{email}</span>.
+              Click it — it&apos;ll fail to load (it points to the wrong place
+              until Auth settings are fixed), but copy the full address from
+              your browser&apos;s address bar afterward and paste it below.
             </p>
             <input
-              autoComplete="one-time-code"
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-center text-lg tracking-[0.3em] text-content outline-none focus:border-accent"
-              inputMode="numeric"
-              maxLength={6}
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="000000"
+              autoComplete="off"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-content outline-none focus:border-accent"
+              onChange={(event) => setPastedLink(event.target.value)}
+              placeholder="http://localhost:3000/?code=..."
               required
-              value={code}
+              value={pastedLink}
             />
             <button
               className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-60"
-              disabled={verifyState === 'verifying'}
+              disabled={completeState === 'completing'}
               type="submit"
             >
-              {verifyState === 'verifying' ? 'Verifying…' : 'Verify code'}
+              {completeState === 'completing' ? 'Signing in…' : 'Finish sign-in'}
             </button>
-            {verifyState === 'error' ? (
+            {completeState === 'error' ? (
               <p className="text-sm text-danger">
-                That code didn&apos;t work — it may have expired. Try sending a new one.
+                That link didn&apos;t have a usable code, or signing in
+                failed — it may have expired. Try sending a new one.
               </p>
             ) : null}
             <button
@@ -97,7 +115,7 @@ function LoginForm() {
             </button>
           </form>
         ) : (
-          <form className="space-y-3" onSubmit={handleSendCode}>
+          <form className="space-y-3" onSubmit={handleSendLink}>
             <input
               autoComplete="email"
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-content outline-none focus:border-accent"
@@ -112,7 +130,7 @@ function LoginForm() {
               disabled={state === 'sending'}
               type="submit"
             >
-              {state === 'sending' ? 'Sending…' : 'Send sign-in code'}
+              {state === 'sending' ? 'Sending…' : 'Send sign-in link'}
             </button>
             {state === 'error' ? (
               <p className="text-sm text-danger">Something went wrong. Try again.</p>
