@@ -43,24 +43,31 @@ export function About() {
             </h2>
             <div className="mx-auto mt-6 max-w-2xl space-y-5 text-muted-foreground">
               <p>
-                {BRAND.community} is a tight-knit community, but staying in the loop has
-                always meant piecing it together — a group chat here, a flyer there, a
-                recommendation you half-remember from someone at the marina.{' '}
-                {BRAND.appName} puts it all in one place: what&apos;s being talked about,
-                what&apos;s coming up, who&apos;s worth calling for a repair, and easy
-                ways to get out and actually be part of it.
+                {BRAND.community} is more than a place to live. It&apos;s a community
+                full of people, businesses, events, ideas, and experiences — and{' '}
+                {BRAND.appName} is built to bring all of that closer together.
               </p>
               <p>
-                It&apos;s built specifically for this community, not a generic app
-                reskinned for every neighborhood in the country. The forum channels, the
-                missions, the local services directory — all of it is shaped around what
-                actually happens here, from marina mornings to HOA meetings, not some
-                average of every suburb everywhere.
+                Instead of piecing things together across group chats, Facebook posts,
+                flyers, and word of mouth, you can find what&apos;s happening, discover
+                local businesses, connect with your neighbors, join community activities,
+                and have a voice in the things that matter — all in one place.
               </p>
               <p>
-                And it&apos;s built with the same care we&apos;d want as neighbors
-                ourselves: free for every resident, with features like Petitions designed
-                to give people a real way to be heard.
+                And because it&apos;s built specifically for {BRAND.community}, it
+                isn&apos;t a generic neighborhood app with our name slapped on it. The
+                features are shaped around life here — from marina mornings and local
+                events to HOA meetings, community discussions, missions, and the
+                businesses that make the Village what it is.
+              </p>
+              <p>
+                Best of all, it&apos;s built for everyone. {BRAND.appName} is free for
+                residents, with tools like Petitions giving neighbors an easy way to come
+                together and make their voices heard.
+              </p>
+              <p className="text-lg font-medium text-foreground">
+                One community. One place to connect. Built by your neighbors, for{' '}
+                {BRAND.community}.
               </p>
             </div>
           </div>

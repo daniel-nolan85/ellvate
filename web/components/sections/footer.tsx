@@ -1,4 +1,5 @@
 import { CactusMark } from '@/components/brand/cactus-mark';
+import { CopyrightYear } from '@/components/copyright-year';
 import { Reveal } from '@/components/motion/reveal';
 import { BRAND } from '@/lib/content';
 import { WaitlistForm } from '@/modules/waitlist';
@@ -22,7 +23,7 @@ export function Footer() {
             <span>{BRAND.appName}</span>
           </div>
           <span>
-            &copy; {new Date().getFullYear()} {BRAND.appName}. A{' '}
+            &copy; <CopyrightYear /> {BRAND.appName}. A{' '}
             <a
               href={BRAND.companyUrl}
               target="_blank"
