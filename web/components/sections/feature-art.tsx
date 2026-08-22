@@ -1,5 +1,14 @@
 import { ArrowUp, FileSignature, Heart, MessageCircle, Plus, Sparkles, Star, Sun, Utensils } from 'lucide-react';
 
+import { DigestDateRange } from './digest-date-range';
+
+const DIGEST_STATS = [
+  { label: 'Posts', value: '12' },
+  { label: 'Events', value: '3' },
+  { label: 'Missions', value: '8' },
+  { label: 'Active', value: '41' },
+] as const;
+
 // Static, non-interactive mockups built from the same desert design tokens
 // as the real components they stand in for -- not literal screenshots (the
 // app has none to spare pre-launch), but the same approach the app's own
@@ -74,29 +83,31 @@ export function EventsArt() {
   );
 }
 
-// Unlike the other Art components on this page, Petitions isn't built in
-// the app yet (see conversation with Daniel, 2026-08-20) -- this mockup is
-// speculative, not a stand-in for a real component. Replace with the real
-// thing once it ships.
+// Title/category from the app's own dummy seed content
+// (src/backend/store/seed.ts, id "petition-marina-lighting") -- not invented
+// for this mockup. Its seed signature count (27 of 45) predates/simplifies
+// the real 200-signature floor though, so the count shown here is adjusted
+// to actually match the 200-signature rule stated three times in the copy
+// right next to this, rather than contradicting it.
 export function PetitionArt() {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-paper p-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-subtle">
-          <FileSignature className="h-5 w-5 text-accent" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-plum-subtle">
+          <FileSignature className="h-5 w-5 text-plum" />
         </div>
         <div>
-          <p className="text-sm font-semibold">Add lighting to the Marina Trail</p>
-          <p className="text-xs text-muted-foreground">Started by a neighbor · 12 days left</p>
+          <p className="text-sm font-semibold">Add lighting to the marina walkway</p>
+          <p className="text-xs text-muted-foreground">Started by a neighbor · Safety</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         <div className="h-1.5 flex-1 rounded-full bg-muted">
-          <div className="h-1.5 w-[71%] rounded-full bg-accent" />
+          <div className="h-1.5 w-[71%] rounded-full bg-plum" />
         </div>
-        <span className="shrink-0 text-xs font-semibold text-accent">142/200</span>
+        <span className="shrink-0 text-xs font-semibold text-plum">142/200</span>
       </div>
-      <div className="rounded-full bg-accent py-2 text-center text-xs font-semibold text-white">
+      <div className="rounded-full bg-plum py-2 text-center text-xs font-semibold text-white">
         Sign this petition
       </div>
     </div>
@@ -197,12 +208,38 @@ export function AssistantArt({ compact = false }: { compact?: boolean }) {
   );
 }
 
+export function DigestArt() {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-paper p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Weekly Recap</p>
+        <DigestDateRange />
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {DIGEST_STATS.map((stat) => (
+          <div key={stat.label} className="flex flex-col items-center gap-0.5 rounded-xl bg-secondary py-2.5">
+            <span className="text-sm font-bold">{stat.value}</span>
+            <span className="text-[10px] text-muted-foreground">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2.5 rounded-xl border border-border/60 px-3 py-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary">
+          <MessageCircle className="h-3.5 w-3.5" />
+        </div>
+        <p className="truncate text-xs font-medium">Best spots to kayak at sunrise?</p>
+      </div>
+    </div>
+  );
+}
+
 export const FEATURE_ART: Record<string, () => React.ReactNode> = {
   forum: () => <ForumArt />,
   events: () => <EventsArt />,
   petitions: () => <PetitionArt />,
   missions: () => <MissionsArt />,
   leaderboard: () => <LeaderboardArt />,
+  digest: () => <DigestArt />,
   services: () => <ServicesArt />,
   assistant: () => <AssistantArt />,
 };

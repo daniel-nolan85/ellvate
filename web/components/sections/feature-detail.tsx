@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 
-import { Reveal } from '@/components/motion/reveal';
+import { Reveal, RevealScale } from '@/components/motion/reveal';
 import { ICONS } from '@/lib/icons';
 import { serviceCategories, type Feature } from '@/lib/content';
 
@@ -58,9 +58,9 @@ export function FeatureDetail({ feature, reversed }: { feature: Feature; reverse
           </p>
         </Reveal>
 
-        <Reveal delay={0.1}>
+        <RevealScale delay={0.1}>
           {feature.id === 'services' ? <ServiceCategoryGrid /> : <FeatureArtPanel feature={feature} />}
-        </Reveal>
+        </RevealScale>
       </div>
     </section>
   );

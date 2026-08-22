@@ -22,7 +22,16 @@ export function Footer() {
             <span>{BRAND.appName}</span>
           </div>
           <span>
-            &copy; {new Date().getFullYear()} {BRAND.appName}. A {BRAND.company} product.
+            &copy; {new Date().getFullYear()} {BRAND.appName}. A{' '}
+            <a
+              href={BRAND.companyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {BRAND.company}
+            </a>{' '}
+            product.
           </span>
         </div>
       </div>

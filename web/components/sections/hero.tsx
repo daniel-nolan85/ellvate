@@ -1,3 +1,4 @@
+import { DesertGlow } from '@/components/sections/desert-glow';
 import { Reveal } from '@/components/motion/reveal';
 import { Badge } from '@/components/ui/badge';
 import { BRAND } from '@/lib/content';
@@ -33,22 +34,5 @@ export function Hero() {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-function DesertGlow() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-full bg-[radial-gradient(55%_55%_at_50%_10%,theme(colors.amber/0.20),transparent)]" />
-      <svg
-        viewBox="0 0 1200 200"
-        preserveAspectRatio="none"
-        width="1200"
-        height="200"
-        className="absolute inset-x-0 bottom-0 h-40 w-full text-surface-subtle"
-      >
-        <path d="M0,120 C300,40 900,200 1200,80 L1200,200 L0,200 Z" fill="currentColor" opacity="0.6" />
-      </svg>
-    </div>
   );
 }

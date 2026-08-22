@@ -8,6 +8,9 @@ export const BRAND = {
   appName: 'Community Copilot',
   community: 'Lake Las Vegas',
   company: 'Norez Solutions',
+  // Not live yet (see conversation with Daniel, 2026-08-20) -- linked in
+  // anticipation of it. If it 404s, that's expected until it's built.
+  companyUrl: 'https://norezsolutions.com',
 } as const;
 
 export type FeatureAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'plum';
@@ -33,7 +36,7 @@ export const features: readonly Feature[] = [
       'One feed for everything happening around Lake Las Vegas, organized into channels so you only see what you came for — Announcements, HOA, Marina & Boating, Golf, Trails, Dining, Sports Club, and Buy & Sell.',
     highlights: [
       'Post, reply, and like in real time',
-      'Pinned announcements from HOA and official channels',
+      'Pin one post to the top of your own feed — private to you, swap it any time',
       'Bookmark posts to find them again later',
       'Edit or delete your own posts and comments any time',
     ],
@@ -58,23 +61,6 @@ export const features: readonly Feature[] = [
       'Anyone tired of missing things because they were buried in an email newsletter or a flyer on a board.',
     accent: 'amber',
     icon: 'CalendarDays',
-  },
-  {
-    id: 'petitions',
-    title: 'Petitions',
-    hook: 'Turn "someone should really fix that" into action.',
-    description:
-      "See a real problem around the community — a dark stretch of trail, a stop sign that needs replacing? Start a petition and get your neighbors to sign it. Once it reaches its goal, it goes straight to the HOA board.",
-    highlights: [
-      'Start a petition for anything worth fixing around the community',
-      'Neighbors sign with one tap — no forms, no printouts',
-      'Track progress toward the signature goal in real time',
-      'Petitions that reach their goal are sent straight to the HOA board',
-    ],
-    goodFor:
-      'Anyone who has ever thought "somebody should really do something about that" and wanted an actual way to make it happen.',
-    accent: 'accent',
-    icon: 'FileSignature',
   },
   {
     id: 'missions',
@@ -105,7 +91,7 @@ export const features: readonly Feature[] = [
     ],
     goodFor:
       'Anyone competitive enough to want bragging rights for being the most plugged-in neighbor on the lake.',
-    accent: 'plum',
+    accent: 'amber',
     icon: 'Trophy',
   },
   {
@@ -123,6 +109,39 @@ export const features: readonly Feature[] = [
     goodFor: 'Anyone who has ever typed "does anyone have a good pool guy?" into a group chat and waited.',
     accent: 'lake',
     icon: 'Store',
+  },
+  {
+    id: 'petitions',
+    title: 'Petitions',
+    hook: 'A respectful way to be heard, not a way to fight.',
+    description:
+      'Once the community reaches 200 members, residents can start a petition for a real local issue — more lighting on a trail, a stop sign, anything worth fixing. Every petition needs real signatures from real neighbors, and reaching the goal sends it to the HOA board as a request for consideration.',
+    highlights: [
+      'Unlocks once the community reaches 200 members, so the signature goal always means something',
+      'Needs the greater of 200 signatures or 20% of the community, fixed the moment a petition starts',
+      'Reviewed by an admin and shared with the HOA board as a respectful request — never a demand, and never a guarantee of an outcome',
+      'Stays about the issue, not individuals — no naming or accusing board members or staff',
+    ],
+    goodFor:
+      'Anyone who has ever thought "somebody should really do something about that" and wanted a real, respectful way to be heard.',
+    accent: 'plum',
+    icon: 'FileSignature',
+  },
+  {
+    id: 'digest',
+    title: 'Weekly Digest',
+    hook: 'Never wonder what you missed.',
+    description:
+      "A recap waiting for you every week — the posts everyone was talking about, the events that happened, the missions your neighbors completed — plus a look ahead at what's coming up next week. All in one place, no scrolling required.",
+    highlights: [
+      "Last week's stats at a glance: new posts, events held, missions completed, active neighbors",
+      "The forum's most-liked posts and best-attended events, so you never miss the highlights",
+      "A look ahead at next week's events and missions",
+    ],
+    goodFor:
+      "Anyone who doesn't have time to scroll through a week's worth of posts but still wants to feel in the loop.",
+    accent: 'lake',
+    icon: 'Newspaper',
   },
   {
     id: 'assistant',
@@ -170,17 +189,5 @@ export const faqs = [
   {
     question: 'What devices will it support?',
     answer: 'iOS and Android at launch, built as a single native app for both.',
-  },
-] as const;
-
-// The "Who built this?" FAQ answer is assembled from this directly in
-// components/sections/faq.tsx (first names linked inline), rather than
-// living in `faqs` as a plain string.
-export const founders = [
-  { firstName: 'Daniel', fullName: 'Daniel Nolan', linkedin: 'https://www.linkedin.com/in/daniel-nolan85/' },
-  {
-    firstName: 'Ian',
-    fullName: 'Ian Perez',
-    linkedin: 'https://www.linkedin.com/in/shadowysupercoder/',
   },
 ] as const;

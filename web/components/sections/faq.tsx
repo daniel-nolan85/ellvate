@@ -1,20 +1,6 @@
 import { Reveal } from '@/components/motion/reveal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BRAND, faqs, founders } from '@/lib/content';
-
-function FounderLink({ founder }: { founder: (typeof founders)[number] }) {
-  return (
-    <a
-      href={founder.linkedin}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`${founder.fullName} on LinkedIn`}
-      className="font-medium text-accent underline-offset-2 hover:underline"
-    >
-      {founder.firstName}
-    </a>
-  );
-}
+import { BRAND, faqs } from '@/lib/content';
 
 export function Faq() {
   return (
@@ -33,8 +19,16 @@ export function Faq() {
           <AccordionItem value="Who built this?">
             <AccordionTrigger>Who built this?</AccordionTrigger>
             <AccordionContent>
-              {BRAND.appName} is built by <FounderLink founder={founders[0]} /> and{' '}
-              <FounderLink founder={founders[1]} /> of {BRAND.company}.
+              {BRAND.appName} is built by{' '}
+              <a
+                href={BRAND.companyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {BRAND.company}
+              </a>
+              .
             </AccordionContent>
           </AccordionItem>
         </Accordion>

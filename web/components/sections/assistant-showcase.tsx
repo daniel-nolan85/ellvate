@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react';
 
-import { Reveal } from '@/components/motion/reveal';
+import { Reveal, RevealScale } from '@/components/motion/reveal';
 import { type Feature } from '@/lib/content';
 
 const EXCHANGES = [
@@ -47,9 +47,9 @@ export function AssistantShowcase({ feature }: { feature: Feature }) {
           </ul>
         </Reveal>
 
-        <Reveal delay={0.12}>
+        <RevealScale delay={0.12}>
           <ChatDemo />
-        </Reveal>
+        </RevealScale>
       </div>
     </section>
   );
