@@ -80,9 +80,12 @@ function listPetitionsPageMemory(
   cursor: string | null,
 ): PetitionsPage {
   const { petitions, petitionSignatures, users } = getState();
+  const viewer = users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const wantedStatus = status ?? 'open';
   const filtered = petitions
     .filter((petition) => petition.status === wantedStatus)
+    .filter((petition) => !mutedUserIds.has(petition.createdBy))
     .map((petition) => ({ id: petition.id, petition, sortKey: petition.createdAt }));
   const page = paginateInMemory(filtered, limit, cursor);
   const signedByUser = new Set(

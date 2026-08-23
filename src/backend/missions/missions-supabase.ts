@@ -5,6 +5,7 @@ import {
   extractExistingMedia,
   extractMediaUploads,
 } from '@/src/backend/media';
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
@@ -272,12 +273,18 @@ export async function listMissionsPageSupabase(
   limit: number,
   cursor: string | null,
 ): Promise<MissionsPage> {
-  const { data, error } = await supabase
-    .from('missions')
-    .select(MISSION_SELECT)
-    .order('position', { ascending: true });
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    supabase
+      .from('missions')
+      .select(MISSION_SELECT)
+      .order('position', { ascending: true }),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
   throwIfSupabaseError(error, 'load missions');
-  const missionRows = (data ?? []) as unknown as MissionRow[];
+  const mutedSet = new Set(mutedUserIds);
+  const missionRows = ((data ?? []) as unknown as MissionRow[]).filter(
+    (row) => !mutedSet.has(row.created_by),
+  );
 
   const { data: progressData, error: progressError } = await supabase
     .from('mission_progress')

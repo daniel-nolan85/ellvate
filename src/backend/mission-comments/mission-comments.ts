@@ -70,13 +70,17 @@ function listMissionCommentsMemory(missionId: string): readonly MissionComment[]
 const MAX_MISSION_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 function listMissionCommentsPageMemory(
+  userId: string,
   missionId: string,
   limit: number,
   cursor: string | null,
 ): MissionCommentsPage {
   const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = state.missionComments
     .filter((comment) => comment.missionId === missionId)
+    .filter((comment) => !mutedUserIds.has(comment.authorId))
     .map((comment) => ({
       comment,
       id: comment.id,
@@ -259,8 +263,8 @@ export async function listMissionCommentsPage(
   );
   const cursor = options?.cursor ?? null;
   return ctx.supabase
-    ? listMissionCommentsPageSupabase(ctx.supabase, missionId, limit, cursor)
-    : listMissionCommentsPageMemory(missionId, limit, cursor);
+    ? listMissionCommentsPageSupabase(ctx.supabase, ctx.userId, missionId, limit, cursor)
+    : listMissionCommentsPageMemory(ctx.userId, missionId, limit, cursor);
 }
 
 export async function createMissionComment(

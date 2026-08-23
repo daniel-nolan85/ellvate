@@ -18,6 +18,7 @@ import {
   updateComment,
 } from '../../src/backend/comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
+import { toggleMute } from '../../src/backend/mutes';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -80,6 +81,14 @@ describe('listCommentsPage', () => {
     const page = await listCommentsPage(ctx(), 'post-without-comments');
     expect(page.comments).toEqual([]);
     expect(page.nextCursor).toBeNull();
+  });
+
+  test('excludes comments from a muted author', async () => {
+    await createComment(ctx('user-mia'), 'post-1', { body: 'muted comment' });
+    await toggleMute(ctx(), 'user-mia');
+
+    const page = await listCommentsPage(ctx(), 'post-1', { limit: 20 });
+    expect(page.comments.map((comment) => comment.body)).not.toContain('muted comment');
   });
 });
 

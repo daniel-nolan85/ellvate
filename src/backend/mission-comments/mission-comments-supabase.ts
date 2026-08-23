@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { validateCommentBody } from '@/src/backend/comments';
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -77,17 +78,24 @@ const MAX_MISSION_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 export async function listMissionCommentsPageSupabase(
   supabase: SupabaseClient,
+  userId: string,
   missionId: string,
   limit: number,
   cursor: string | null,
 ): Promise<MissionCommentsPage> {
-  const { data, error } = await supabase
-    .from('mission_comments')
-    .select(MISSION_COMMENT_SELECT)
-    .eq('mission_id', missionId)
-    .order('created_at', { ascending: true });
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    supabase
+      .from('mission_comments')
+      .select(MISSION_COMMENT_SELECT)
+      .eq('mission_id', missionId)
+      .order('created_at', { ascending: true }),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
   throwIfSupabaseError(error, 'load mission comments');
-  const rows = (data as unknown as MissionCommentRow[]) ?? [];
+  const mutedSet = new Set(mutedUserIds);
+  const rows = ((data as unknown as MissionCommentRow[]) ?? []).filter(
+    (row) => !mutedSet.has(row.author_id),
+  );
 
   const wrapped = rows.map((row) => ({
     id: row.id,

@@ -23,6 +23,7 @@ import {
   listMissionsPage,
   updateMission,
 } from '../../src/backend/missions';
+import { toggleMute } from '../../src/backend/mutes';
 import { computeProgress } from '../../src/backend/progress';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
@@ -787,6 +788,14 @@ describe('GET /api/missions', () => {
     const page = await listMissionsPage(ctx('user-mia'), { filter: 'completed' });
     expect(page.missions).toEqual([]);
     expect(page.nextCursor).toBeNull();
+  });
+
+  test('excludes missions created by a muted author', async () => {
+    // Every seeded mission is authored by user-hoa.
+    await toggleMute(ctx(), 'user-hoa');
+
+    const page = await listMissionsPage(ctx(), { filter: 'available', limit: 20 });
+    expect(page.missions).toEqual([]);
   });
 });
 

@@ -66,13 +66,17 @@ function listEventCommentsMemory(eventId: string): readonly EventComment[] {
 const MAX_EVENT_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 function listEventCommentsPageMemory(
+  userId: string,
   eventId: string,
   limit: number,
   cursor: string | null,
 ): EventCommentsPage {
   const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = state.eventComments
     .filter((comment) => comment.eventId === eventId)
+    .filter((comment) => !mutedUserIds.has(comment.authorId))
     .map((comment) => ({
       comment,
       id: comment.id,
@@ -249,8 +253,8 @@ export async function listEventCommentsPage(
   );
   const cursor = options?.cursor ?? null;
   return ctx.supabase
-    ? listEventCommentsPageSupabase(ctx.supabase, eventId, limit, cursor)
-    : listEventCommentsPageMemory(eventId, limit, cursor);
+    ? listEventCommentsPageSupabase(ctx.supabase, ctx.userId, eventId, limit, cursor)
+    : listEventCommentsPageMemory(ctx.userId, eventId, limit, cursor);
 }
 
 export async function createEventComment(

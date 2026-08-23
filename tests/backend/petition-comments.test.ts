@@ -18,6 +18,7 @@ import {
   updatePetitionComment,
 } from '../../src/backend/petition-comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
+import { toggleMute } from '../../src/backend/mutes';
 import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
 import type { StoredPetition } from '../../src/backend/store';
 
@@ -152,6 +153,15 @@ describe('listPetitionComments / listPetitionCommentsPage', () => {
     });
     expect(secondPage.comments.map((c) => c.id)).toEqual(['pc-2']);
     expect(secondPage.nextCursor).toBeNull();
+  });
+
+  test('excludes comments from a muted author', async () => {
+    const petition = seedPetition();
+    await createPetitionComment(ctx('user-mia'), petition.id, { body: 'muted comment' });
+    await toggleMute(ctx(), 'user-mia');
+
+    const page = await listPetitionCommentsPage(ctx(), petition.id);
+    expect(page.comments.map((c) => c.body)).not.toContain('muted comment');
   });
 });
 

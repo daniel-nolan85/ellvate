@@ -17,6 +17,7 @@ import {
   reportPetition,
   toggleSignature,
 } from '../../src/backend/petitions';
+import { toggleMute } from '../../src/backend/mutes';
 import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
 import type { StoredPetition, StoredUser } from '../../src/backend/store';
 
@@ -211,6 +212,16 @@ describe('listPetitionsPage', () => {
     expect(
       (await listPetitionsPage(ctx(), { status: 'expired' })).petitions.map((p) => p.id),
     ).toEqual(['p-expired']);
+  });
+
+  test('excludes petitions created by a muted author', async () => {
+    setState((current) => ({ ...current, petitions: [] }));
+    seedPetition({ id: 'p-mine', status: 'open' });
+    seedPetition({ createdBy: 'user-mia', id: 'p-mia', status: 'open' });
+    await toggleMute(ctx(), 'user-mia');
+
+    const page = await listPetitionsPage(ctx(), { status: 'open' });
+    expect(page.petitions.map((p) => p.id)).toEqual(['p-mine']);
   });
 });
 

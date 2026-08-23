@@ -19,6 +19,7 @@ import {
 } from '../../src/backend/mission-comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMission, deleteMission } from '../../src/backend/missions';
+import { toggleMute } from '../../src/backend/mutes';
 import {
   DEMO_USER_ID,
   getState,
@@ -96,6 +97,14 @@ describe('listMissionCommentsPage', () => {
     const page = await listMissionCommentsPage(ctx(), 'mission-1');
     expect(page.comments).toEqual([]);
     expect(page.nextCursor).toBeNull();
+  });
+
+  test('excludes comments from a muted author', async () => {
+    await createMissionComment(ctx('user-mia'), 'mission-1', { body: 'muted comment' });
+    await toggleMute(ctx(), 'user-mia');
+
+    const page = await listMissionCommentsPage(ctx(), 'mission-1');
+    expect(page.comments.map((comment) => comment.body)).not.toContain('muted comment');
   });
 });
 

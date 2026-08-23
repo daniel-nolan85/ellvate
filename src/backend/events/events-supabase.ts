@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
@@ -291,19 +292,23 @@ export async function listEventsPageSupabase(
   limit: number,
   cursor: string | null,
 ): Promise<EventsPage> {
-  const [eventsRes, joinsRes] = await Promise.all([
+  const [eventsRes, joinsRes, mutedUserIds] = await Promise.all([
     supabase
       .from('events')
       .select(EVENT_SELECT)
       .order('featured', { ascending: false })
       .order('starts_at', { ascending: true }),
     supabase.from('event_joins').select('event_id,user_id'),
+    getMutedUserIdsSupabase(supabase, userId),
   ]);
   throwIfSupabaseError(eventsRes.error, 'load events');
   throwIfSupabaseError(joinsRes.error, 'load event joins');
 
+  const mutedSet = new Set(mutedUserIds);
   const allEventRows = (eventsRes.data ?? []) as unknown as EventRow[];
-  const eventRows = allEventRows.filter((row) => isUpcoming(row.starts_at));
+  const eventRows = allEventRows
+    .filter((row) => isUpcoming(row.starts_at))
+    .filter((row) => !mutedSet.has(row.created_by));
   const joinRows = (joinsRes.data ?? []) as unknown as JoinRow[];
 
   const joinedByEvent = (eventId: string): readonly string[] =>

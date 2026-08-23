@@ -163,9 +163,12 @@ function listEventsPageMemory(
   cursor: string | null,
 ): EventsPage {
   const { events, users } = getState();
+  const viewer = users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = events
     .filter((event) => isUpcoming(event.startsAt))
     .filter((event) => !date || event.startsAt.slice(0, 10) === date)
+    .filter((event) => !mutedUserIds.has(event.authorId))
     .map((event) => ({
       event,
       id: event.id,

@@ -63,13 +63,17 @@ function listPetitionCommentsMemory(petitionId: string): readonly PetitionCommen
 const MAX_PETITION_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 function listPetitionCommentsPageMemory(
+  userId: string,
   petitionId: string,
   limit: number,
   cursor: string | null,
 ): PetitionCommentsPage {
   const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = state.petitionComments
     .filter((comment) => comment.petitionId === petitionId)
+    .filter((comment) => !mutedUserIds.has(comment.authorId))
     .map((comment) => ({
       comment,
       id: comment.id,
@@ -223,8 +227,8 @@ export async function listPetitionCommentsPage(
   );
   const cursor = options?.cursor ?? null;
   return ctx.supabase
-    ? listPetitionCommentsPageSupabase(ctx.supabase, petitionId, limit, cursor)
-    : listPetitionCommentsPageMemory(petitionId, limit, cursor);
+    ? listPetitionCommentsPageSupabase(ctx.supabase, ctx.userId, petitionId, limit, cursor)
+    : listPetitionCommentsPageMemory(ctx.userId, petitionId, limit, cursor);
 }
 
 export async function createPetitionComment(
