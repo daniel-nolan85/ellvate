@@ -234,6 +234,10 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
                 <Text className="text-[13px] text-text-muted">
                   {petition.signatureCount} of {petition.requiredSignatures} signatures
                 </Text>
+                <Text className="text-[12px] text-text-muted">
+                  That&rsquo;s 20% of the community — the goal was set when this petition
+                  started and won&rsquo;t change.
+                </Text>
               </VStack>
 
               <Text className="text-[12px] leading-4 text-text-muted">

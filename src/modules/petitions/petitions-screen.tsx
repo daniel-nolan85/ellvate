@@ -175,6 +175,7 @@ export function PetitionsScreen() {
           onSubmit={(draft) =>
             createPetition.mutate(draft, { onSuccess: () => setComposing(false) })
           }
+          totalUsers={gate.data?.totalUsers ?? 0}
         />
       </Sheet>
 

@@ -12,6 +12,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import {
   PETITION_CATEGORIES,
   PETITION_DEADLINE_OPTIONS,
+  projectedSignatureGoal,
   type CreatePetitionInput,
   type PetitionCategory,
 } from './petitions-types';
@@ -57,11 +58,17 @@ const MAX_DESCRIPTION = 2000;
 
 interface PetitionComposerProps {
   readonly isSubmitting: boolean;
+  readonly totalUsers: number;
   readonly onDismiss: () => void;
   readonly onSubmit: (draft: CreatePetitionInput) => void;
 }
 
-export function PetitionComposer({ isSubmitting, onDismiss, onSubmit }: PetitionComposerProps) {
+export function PetitionComposer({
+  isSubmitting,
+  onDismiss,
+  onSubmit,
+  totalUsers,
+}: PetitionComposerProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<PetitionCategory | null>(null);
@@ -90,6 +97,15 @@ export function PetitionComposer({ isSubmitting, onDismiss, onSubmit }: Petition
           way to make sure your voice is heard, not a guarantee the board will act on
           it. The community will be updated here once the petition succeeds, and
           again if the board responds.
+        </Text>
+
+        <Text className="text-[13px] text-text-muted" testID="petition-signature-goal">
+          Right now this would need{' '}
+          <Text className="font-inter-semibold text-[13px] text-content">
+            {projectedSignatureGoal(totalUsers)} signatures
+          </Text>{' '}
+          to succeed — 20% of the community. That number locks in the moment you start the
+          petition.
         </Text>
 
         <Field label="What's the issue?">

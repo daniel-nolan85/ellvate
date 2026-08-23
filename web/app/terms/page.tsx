@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'August 21, 2026';
+const LAST_UPDATED = 'August 23, 2026';
 
 export default function TermsOfServicePage() {
   return (
@@ -70,7 +70,10 @@ export default function TermsOfServicePage() {
           board — they must stay focused on the issue itself, not name or accuse specific
           board members or staff. A petition reaching its signature goal is a respectful
           request for the board&rsquo;s consideration, never a demand or a guarantee of any
-          particular outcome or timeline.
+          particular outcome or timeline. Petitions open once the community reaches 200
+          members; from that point, each one needs signatures from 20% of the community to
+          reach its goal, a number fixed the moment the petition starts so it doesn&rsquo;t
+          change as the community grows.
         </p>
       </LegalSection>
 

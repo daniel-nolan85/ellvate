@@ -44,6 +44,16 @@ export interface PetitionsGate {
   readonly usersNeeded: number;
 }
 
+// Mirrors PETITIONS_SIGNATURE_PERCENT in src/backend/petitions/types.ts --
+// duplicated here rather than imported so this client module never reaches
+// across the backend boundary. Display-only: the server is what actually
+// freezes the real number on create.
+export const PETITION_SIGNATURE_PERCENT = 0.2;
+
+export function projectedSignatureGoal(totalUsers: number): number {
+  return Math.ceil(PETITION_SIGNATURE_PERCENT * totalUsers);
+}
+
 export interface ToggleSignatureResult {
   readonly id: string;
   readonly signed: boolean;
