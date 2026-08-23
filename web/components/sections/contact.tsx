@@ -8,7 +8,7 @@ export function Contact() {
         <Reveal className="text-center">
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Get in touch</h2>
           <p className="mt-4 text-muted-foreground">
-            Questions, feedback, or an idea for a feature? We&apos;d like to hear it.
+            Questions, feedback, or an idea for a feature — we&apos;d like to hear it.
           </p>
         </Reveal>
         <Reveal delay={0.1} className="mt-10 rounded-2xl border border-border/60 bg-card p-6 sm:p-8">

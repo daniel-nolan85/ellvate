@@ -7,12 +7,12 @@ const EXCHANGES = [
   { from: 'user' as const, text: 'Any events happening this weekend?' },
   {
     from: 'assistant' as const,
-    text: "Yes, the Locals Networking Mixer is Friday at 6:30 PM at MonteLago Village. Want me to remind you?",
+    text: "Yes — the Locals Networking Mixer is Friday at 6:30 PM at MonteLago Village. Want me to remind you?",
   },
   { from: 'user' as const, text: "What's a good spot for dinner tonight?" },
   {
     from: 'assistant' as const,
-    text: 'Lakeside Bistro is highly rated by neighbors (4.8 stars) and does dinner reservations. Want the number?',
+    text: 'Lakeside Bistro is highly rated by neighbors (4.8 stars) and does dinner reservations — want the number?',
   },
 ];
 

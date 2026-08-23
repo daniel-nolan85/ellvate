@@ -54,7 +54,7 @@ export function ContactForm({ className }: { className?: string }) {
       <div className={className}>
         <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>Thanks. We&apos;ll get back to you soon.</span>
+          <span>Thanks — we&apos;ll get back to you soon.</span>
         </div>
       </div>
     );
@@ -92,7 +92,7 @@ export function ContactForm({ className }: { className?: string }) {
         <textarea
           id={messageId}
           required
-          placeholder="Questions, feedback, ideas: whatever's on your mind."
+          placeholder="Questions, feedback, ideas — whatever's on your mind."
           className={`mt-1.5 ${TEXTAREA_CLASS}`}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
@@ -100,9 +100,8 @@ export function ContactForm({ className }: { className?: string }) {
         />
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Feel free to send this anonymously. If you leave your name and email, we can
-        reply. And if your idea is one we end up building, we&apos;d love to give you
-        credit for it.
+        Feel free to send this anonymously. If you leave your name and email, we can reply
+        — and if your idea is one we end up building, we&apos;d love to give you credit for it.
       </p>
       {status === 'error' && error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       <Button type="submit" size="lg" className="mt-5" disabled={status === 'submitting'}>

@@ -33,15 +33,15 @@ export const features: readonly Feature[] = [
     title: 'Forum',
     hook: 'Where the neighborhood actually talks.',
     description:
-      'One feed for everything happening around Lake Las Vegas, organized into channels so you only see what you came for: Announcements, HOA, Marina & Boating, Golf, Trails, Dining, Sports Club, and Buy & Sell.',
+      'One feed for everything happening around Lake Las Vegas, organized into channels so you only see what you came for — Announcements, HOA, Marina & Boating, Golf, Trails, Dining, Sports Club, and Buy & Sell.',
     highlights: [
       'Post, reply, and like in real time',
-      'Pin one post to the top of your own feed, private to you, swap it any time',
+      'Pin one post to the top of your own feed — private to you, swap it any time',
       'Bookmark posts to find them again later',
       'Edit or delete your own posts and comments any time',
     ],
     goodFor:
-      "Residents who want the honest, unfiltered version of what's actually going on, not buried three days deep in a Facebook group.",
+      "Residents who want the honest, unfiltered version of what's actually going on — not buried three days deep in a Facebook group.",
     accent: 'accent',
     icon: 'MessagesSquare',
   },
@@ -50,7 +50,7 @@ export const features: readonly Feature[] = [
     title: 'Events',
     hook: "Never miss what's happening around the lake.",
     description:
-      "A shared calendar for the whole community: resident meetups, HOA meetings, marina days, club nights. See what's coming up, RSVP in a tap, and get reminded the day of.",
+      "A shared calendar for the whole community — resident meetups, HOA meetings, marina days, club nights. See what's coming up, RSVP in a tap, and get reminded the day of.",
     highlights: [
       'One-tap RSVP with a visible attendee list',
       "Day-of reminders so it doesn't sneak up on you",
@@ -67,7 +67,7 @@ export const features: readonly Feature[] = [
     title: 'Missions',
     hook: "Turn 'get out more' into a game.",
     description:
-      "Themed challenges (Trail, Water, Village, Day, Night, and Social) that nudge you to actually go explore Lake Las Vegas: check in at the marina before sunrise, try a restaurant you've never been to, walk a trail on the other side of the lake. Photo check-ins prove you were there; XP and streaks keep you coming back.",
+      "Themed challenges — Trail, Water, Village, Day, Night, and Social — that nudge you to actually go explore Lake Las Vegas: check in at the marina before sunrise, try a restaurant you've never been to, walk a trail on the other side of the lake. Photo check-ins prove you were there; XP and streaks keep you coming back.",
     highlights: [
       'Six mission themes, from sunrise marina walks to social mixers',
       'Photo-proof check-ins at each stop along the way',
@@ -83,7 +83,7 @@ export const features: readonly Feature[] = [
     title: 'Leaderboard',
     hook: 'Friendly competition keeps everyone honest.',
     description:
-      "See who's most active in the community this week, this month, or all-time, with a podium for the top three and your own rank right below it.",
+      "See who's most active in the community this week, this month, or all-time — a podium for the top three, and your own rank right below it.",
     highlights: [
       'Weekly, monthly, and all-time rankings',
       'A podium view for the top 3',
@@ -99,10 +99,10 @@ export const features: readonly Feature[] = [
     title: 'Services',
     hook: 'Local business, found by neighbors.',
     description:
-      'A directory of local businesses and tradespeople, recommended by people who actually live here: home services, pet care, automotive, pool & spa, beauty, tech & web, dining, and more, each with honest, rating-only reviews from real residents.',
+      'A directory of local businesses and tradespeople, recommended by people who actually live here — home services, pet care, automotive, pool & spa, beauty, tech & web, dining, and more — each with honest, rating-only reviews from real residents.',
     highlights: [
       'Eight categories covering the trades neighbors ask about most',
-      'Rating-only reviews: no essay required, just a real score',
+      'Rating-only reviews — no essay required, just a real score',
       'Photos and contact info on every listing',
       'Add a listing for a business you personally trust',
     ],
@@ -115,12 +115,12 @@ export const features: readonly Feature[] = [
     title: 'Petitions',
     hook: 'A respectful way to be heard.',
     description:
-      'Once the community reaches 200 members, residents can start a petition for a real local issue: more lighting on a trail, a stop sign, anything worth fixing. Every petition needs real signatures from real neighbors, and reaching the goal sends it to the HOA board as a request for consideration.',
+      'Once the community reaches 200 members, residents can start a petition for a real local issue — more lighting on a trail, a stop sign, anything worth fixing. Every petition needs real signatures from real neighbors, and reaching the goal sends it to the HOA board as a request for consideration.',
     highlights: [
       'Unlocks once the community reaches 200 members, so the signature goal always means something',
       "Needs 20% of the community's signatures, fixed the moment a petition starts",
-      'Reviewed by an admin and shared with the HOA board as a respectful request, never a demand and never a guarantee of an outcome',
-      'Stays about the issue, not individuals: no naming or accusing board members or staff',
+      'Reviewed by an admin and shared with the HOA board as a respectful request — never a demand, and never a guarantee of an outcome',
+      'Stays about the issue, not individuals — no naming or accusing board members or staff',
     ],
     goodFor:
       'Anyone who has ever thought "somebody should really do something about that" and wanted a real, respectful way to be heard.',
@@ -132,7 +132,7 @@ export const features: readonly Feature[] = [
     title: 'Weekly Digest',
     hook: 'Never wonder what you missed.',
     description:
-      "A recap waiting for you every week: the posts everyone was talking about, the events that happened, the missions your neighbors completed, plus a look ahead at what's coming up next week. All in one place, no scrolling required.",
+      "A recap waiting for you every week — the posts everyone was talking about, the events that happened, the missions your neighbors completed — plus a look ahead at what's coming up next week. All in one place, no scrolling required.",
     highlights: [
       "Last week's stats at a glance: new posts, events held, missions completed, active neighbors",
       "The forum's most-liked posts and best-attended events, so you never miss the highlights",
@@ -184,7 +184,7 @@ export const faqs = [
   },
   {
     question: `Is this only for ${BRAND.community}?`,
-    answer: `${BRAND.appName} is built specifically for ${BRAND.community}: residents, homeowners, and regulars. It's not a generic app dropped into every neighborhood; the forum channels, missions, and services directory are all built around this community.`,
+    answer: `${BRAND.appName} is built specifically for ${BRAND.community} — residents, homeowners, and regulars. It's not a generic app dropped into every neighborhood; the forum channels, missions, and services directory are all built around this community.`,
   },
   {
     question: 'What devices will it support?',

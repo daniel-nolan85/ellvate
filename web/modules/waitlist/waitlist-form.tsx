@@ -53,7 +53,7 @@ export function WaitlistForm({
 
       markDone(
         data.alreadyJoined
-          ? "You're already on the list. We'll be in touch."
+          ? "You're already on the list — we'll be in touch."
           : `You're on the list. We'll email you when ${BRAND.appName} launches.`
       );
     } catch {

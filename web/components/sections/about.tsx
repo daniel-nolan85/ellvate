@@ -44,19 +44,19 @@ export function About() {
             <div className="mx-auto mt-6 max-w-2xl space-y-5 text-muted-foreground">
               <p>
                 {BRAND.community} is more than a place to live. It&apos;s a community
-                full of people, businesses, events, ideas, and experiences, and{' '}
+                full of people, businesses, events, ideas, and experiences — and{' '}
                 {BRAND.appName} is built to bring all of that closer together.
               </p>
               <p>
                 Instead of piecing things together across group chats, Facebook posts,
                 flyers, and word of mouth, you can find what&apos;s happening, discover
                 local businesses, connect with your neighbors, join community activities,
-                and have a voice in the things that matter, all in one place.
+                and have a voice in the things that matter — all in one place.
               </p>
               <p>
                 And because it&apos;s built specifically for {BRAND.community}, it
                 isn&apos;t a generic neighborhood app with our name slapped on it. The
-                features are shaped around life here: from marina mornings and local
+                features are shaped around life here — from marina mornings and local
                 events to HOA meetings, community discussions, missions, and the
                 businesses that make the Village what it is.
               </p>
