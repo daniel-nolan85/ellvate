@@ -18,6 +18,7 @@ import {
   updateEventComment,
 } from '../../src/backend/event-comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
+import { toggleMute } from '../../src/backend/mutes';
 import {
   DEMO_USER_ID,
   getState,
@@ -95,6 +96,14 @@ describe('listEventCommentsPage', () => {
     const page = await listEventCommentsPage(ctx(), 'event-1');
     expect(page.comments).toEqual([]);
     expect(page.nextCursor).toBeNull();
+  });
+
+  test('excludes comments from a muted author', async () => {
+    await createEventComment(ctx('user-mia'), 'event-1', { body: 'muted comment' });
+    await toggleMute(ctx(), 'user-mia');
+
+    const page = await listEventCommentsPage(ctx(), 'event-1');
+    expect(page.comments.map((comment) => comment.body)).not.toContain('muted comment');
   });
 });
 

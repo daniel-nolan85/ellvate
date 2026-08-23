@@ -72,13 +72,17 @@ function listCommentsMemory(postId: string): readonly Comment[] {
 const MAX_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 function listCommentsPageMemory(
+  userId: string,
   postId: string,
   limit: number,
   cursor: string | null,
 ): CommentsPage {
   const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = state.comments
     .filter((comment) => comment.postId === postId)
+    .filter((comment) => !mutedUserIds.has(comment.authorId))
     .map((comment) => ({
       comment,
       id: comment.id,
@@ -274,8 +278,8 @@ export async function listCommentsPage(
   );
   const cursor = options?.cursor ?? null;
   return ctx.supabase
-    ? listCommentsPageSupabase(ctx.supabase, postId, limit, cursor)
-    : listCommentsPageMemory(postId, limit, cursor);
+    ? listCommentsPageSupabase(ctx.supabase, ctx.userId, postId, limit, cursor)
+    : listCommentsPageMemory(ctx.userId, postId, limit, cursor);
 }
 
 export async function listMyComments(

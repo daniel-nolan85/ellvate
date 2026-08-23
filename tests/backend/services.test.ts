@@ -130,6 +130,17 @@ describe('listServicesPage', () => {
     expect(body.listings).toEqual([expect.objectContaining({ id: 'service-3' })]);
     expect(body.nextCursor).toBeNull();
   });
+
+  test('excludes listings created by a muted author', async () => {
+    // service-3 is authored by user-sam.
+    const before = await listServicesPage(ctx(), { limit: 20 });
+    expect(before.listings.map((listing) => listing.id)).toContain('service-3');
+
+    await toggleMute(ctx(), 'user-sam');
+
+    const after = await listServicesPage(ctx(), { limit: 20 });
+    expect(after.listings.map((listing) => listing.id)).not.toContain('service-3');
+  });
 });
 
 describe('GET /api/services/:id', () => {

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import type { PetitionCategory, PetitionStatus } from '@/src/backend/store';
 import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
@@ -74,6 +75,8 @@ export async function listPetitionsPageSupabase(
   limit: number,
   cursor: string | null,
 ): Promise<PetitionsPage> {
+  const mutedUserIds = await getMutedUserIdsSupabase(supabase, userId);
+
   let query = supabase
     .from('petitions')
     .select(PETITION_SELECT)
@@ -81,6 +84,9 @@ export async function listPetitionsPageSupabase(
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1);
+  if (mutedUserIds.length > 0) {
+    query = query.not('created_by', 'in', `(${mutedUserIds.join(',')})`);
+  }
 
   const parsedCursor = cursor ? decodeCursor(cursor) : null;
   if (parsedCursor) {

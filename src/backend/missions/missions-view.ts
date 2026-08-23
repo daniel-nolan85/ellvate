@@ -67,7 +67,10 @@ function listMissionsPageMemory(
   cursor: string | null,
 ): MissionsPage {
   const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = state.missions
+    .filter((mission) => !mutedUserIds.has(mission.authorId))
     .map((mission, index) => ({
       index,
       mission,

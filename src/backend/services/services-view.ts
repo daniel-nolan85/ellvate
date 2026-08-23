@@ -43,13 +43,17 @@ function getServicesViewMemory(
 // newest-first via paginateInMemory's descending sort, unlike missions'
 // position or events' startsAt -- no sortKey inversion needed here.
 function listServicesPageMemory(
+  userId: string,
   category: ServiceCategory | undefined,
   limit: number,
   cursor: string | null,
 ): ServicesPage {
   const state = getState();
+  const viewer = state.users.find((user) => user.id === userId);
+  const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
   const filtered = state.serviceListings
     .filter((listing) => !category || listing.category === category)
+    .filter((listing) => !mutedUserIds.has(listing.authorId))
     .map((listing) => ({ id: listing.id, listing, sortKey: listing.createdAt }));
   const page = paginateInMemory(filtered, limit, cursor);
 
@@ -120,8 +124,8 @@ export async function listServicesPage(
   );
   const cursor = options?.cursor ?? null;
   return ctx.supabase
-    ? listServicesPageSupabase(ctx.supabase, options?.category, limit, cursor)
-    : listServicesPageMemory(options?.category, limit, cursor);
+    ? listServicesPageSupabase(ctx.supabase, ctx.userId, options?.category, limit, cursor)
+    : listServicesPageMemory(ctx.userId, options?.category, limit, cursor);
 }
 
 export async function getServicesByIds(

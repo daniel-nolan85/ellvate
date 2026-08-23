@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { validateCommentBody } from '@/src/backend/comments';
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -66,17 +67,24 @@ const MAX_PETITION_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 export async function listPetitionCommentsPageSupabase(
   supabase: SupabaseClient,
+  userId: string,
   petitionId: string,
   limit: number,
   cursor: string | null,
 ): Promise<PetitionCommentsPage> {
-  const { data, error } = await supabase
-    .from('petition_comments')
-    .select(PETITION_COMMENT_SELECT)
-    .eq('petition_id', petitionId)
-    .order('created_at', { ascending: true });
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    supabase
+      .from('petition_comments')
+      .select(PETITION_COMMENT_SELECT)
+      .eq('petition_id', petitionId)
+      .order('created_at', { ascending: true }),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
   throwIfSupabaseError(error, 'load petition comments');
-  const rows = (data as unknown as PetitionCommentRow[]) ?? [];
+  const mutedSet = new Set(mutedUserIds);
+  const rows = ((data as unknown as PetitionCommentRow[]) ?? []).filter(
+    (row) => !mutedSet.has(row.author_id),
+  );
 
   const wrapped = rows.map((row) => ({
     id: row.id,

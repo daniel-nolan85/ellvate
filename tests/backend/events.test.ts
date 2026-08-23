@@ -22,6 +22,7 @@ import {
   updateEvent,
 } from '../../src/backend/events';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
+import { toggleMute } from '../../src/backend/mutes';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -400,6 +401,24 @@ describe('listEventsPage', () => {
     const page = await listEventsPage(ctx(), { date: futureDate(9999) });
     expect(page.events).toEqual([]);
     expect(page.nextCursor).toBeNull();
+  });
+
+  test('excludes events created by a muted author', async () => {
+    // event-2 is authored by user-mia.
+    const before = await listEventsPage(ctx(), { limit: 20 });
+    expect(before.events.map((event) => event.id)).toContain('event-2');
+
+    await toggleMute(ctx(), 'user-mia');
+
+    const after = await listEventsPage(ctx(), { limit: 20 });
+    expect(after.events.map((event) => event.id)).not.toContain('event-2');
+  });
+
+  test('muting only affects the muting user, not other viewers', async () => {
+    await toggleMute(ctx(), 'user-mia');
+
+    const other = await listEventsPage(ctx('user-jordan'), { limit: 20 });
+    expect(other.events.map((event) => event.id)).toContain('event-2');
   });
 });
 

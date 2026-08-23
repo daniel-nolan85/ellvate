@@ -11,9 +11,12 @@ import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMissionComment, listMissionComments } from '../../src/backend/mission-comments';
 import { checkIn, createMission, getMissionsView } from '../../src/backend/missions';
 import { getMutedUserIds, toggleMute } from '../../src/backend/mutes';
+import { createPetitionComment, listPetitionComments } from '../../src/backend/petition-comments';
+import { listPetitionsPage, toggleSignature } from '../../src/backend/petitions';
 import { createServiceReview, listServiceReviews } from '../../src/backend/service-reviews';
 import { createServiceListing, getServicesView } from '../../src/backend/services';
-import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
+import type { StoredPetition } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 const TEST_USER = 'user-delete-me';
@@ -73,6 +76,27 @@ describe('deleteAccount (memory)', () => {
       { body: 'Great job!', rating: 5 },
     );
     if (!reviewOnOwnListing.ok) throw new Error('setup failed: review');
+    // Petitions can't be created via createPetition below the community-size
+    // unlock threshold, so this seeds one directly -- same shortcut the
+    // petitions test suite's own seedPetition fixture uses.
+    const ownPetition: StoredPetition = {
+      category: 'safety',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      createdBy: TEST_USER,
+      deadlineAt: '2026-12-31T00:00:00.000Z',
+      deadlineDays: 30,
+      description: 'A description of the issue.',
+      hoaEmailSentAt: null,
+      hoaResponse: null,
+      hoaResponseAt: null,
+      id: 'petition-delete-test-own',
+      requiredSignatures: 5,
+      signatureCount: 0,
+      status: 'open',
+      succeededAt: null,
+      title: 'Delete-me test petition',
+    };
+    setState((current) => ({ ...current, petitions: [...current.petitions, ownPetition] }));
 
     // Activity on OTHER people's content.
     const commentOnOthersPost = await createComment(ctx(TEST_USER), 'post-1', {
@@ -98,6 +122,13 @@ describe('deleteAccount (memory)', () => {
       { body: 'Would recommend.', rating: 4 },
     );
     if (!ownReviewOnOthersListing.ok) throw new Error('setup failed: own review');
+    const commentOnOthersPetition = await createPetitionComment(
+      ctx(TEST_USER),
+      'petition-marina-lighting',
+      { body: 'Signed and commenting!' },
+    );
+    if (!commentOnOthersPetition.ok) throw new Error('setup failed: petition comment');
+    await toggleSignature(ctx(TEST_USER), 'petition-marina-lighting');
     await toggleMute(ctx(TEST_USER), 'user-mia');
     await toggleMute(ctx('user-mia'), TEST_USER);
     await toggleBookmark(ctx(TEST_USER), { targetId: 'post-1', targetType: 'post' });
@@ -162,6 +193,18 @@ describe('deleteAccount (memory)', () => {
       ),
     ).toBe(false);
     expect(
+      (await listPetitionComments(ctx(), 'petition-marina-lighting')).some(
+        (comment) => comment.id === commentOnOthersPetition.comment.id,
+      ),
+    ).toBe(false);
+    expect(
+      getState().petitionSignatures.some(
+        (signature) =>
+          signature.petitionId === 'petition-marina-lighting' &&
+          signature.userId === TEST_USER,
+      ),
+    ).toBe(false);
+    expect(
       (await listBookmarks(ctx(TEST_USER))).items.some(
         (item) => item.kind === 'post' && item.post.id === 'post-1',
       ),
@@ -185,6 +228,17 @@ describe('deleteAccount (memory)', () => {
     );
     expect(orphanedMission).toBeDefined();
     expect(orphanedMission?.author).toEqual({
+      avatarUrl: null,
+      id: TEST_USER,
+      name: 'Former member',
+    });
+
+    const petitionsAfter = await listPetitionsPage(ctx(), { limit: 50, status: 'open' });
+    const orphanedPetition = petitionsAfter.petitions.find(
+      (petition) => petition.id === ownPetition.id,
+    );
+    expect(orphanedPetition).toBeDefined();
+    expect(orphanedPetition?.createdBy).toEqual({
       avatarUrl: null,
       id: TEST_USER,
       name: 'Former member',

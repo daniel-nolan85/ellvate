@@ -6,6 +6,7 @@ import {
   extractLogoUpload,
   extractMediaUploads,
 } from '@/src/backend/media';
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
@@ -247,6 +248,7 @@ export async function getServicesViewSupabase(
 // paginateInMemory's descending sort -- no sortKey inversion needed.
 export async function listServicesPageSupabase(
   supabase: SupabaseClient,
+  userId: string,
   category: ServiceCategory | undefined,
   limit: number,
   cursor: string | null,
@@ -255,9 +257,15 @@ export async function listServicesPageSupabase(
     .from('service_listings')
     .select(SERVICE_SELECT)
     .order('created_at', { ascending: false });
-  const { data, error } = await (category ? query.eq('category', category) : query);
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    category ? query.eq('category', category) : query,
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
   throwIfSupabaseError(error, 'load service listings');
-  const rows = (data ?? []) as unknown as ServiceRow[];
+  const mutedSet = new Set(mutedUserIds);
+  const rows = ((data ?? []) as unknown as ServiceRow[]).filter(
+    (row) => !mutedSet.has(row.created_by),
+  );
 
   const wrapped = rows.map((row) => ({
     id: row.id,

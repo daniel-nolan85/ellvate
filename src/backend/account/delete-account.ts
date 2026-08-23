@@ -6,6 +6,8 @@ import { deletePost, toggleLike } from '@/src/backend/forum';
 import type { RequestContext } from '@/src/backend/http';
 import { deleteMissionComment } from '@/src/backend/mission-comments';
 import { toggleMute } from '@/src/backend/mutes';
+import { deletePetitionComment } from '@/src/backend/petition-comments';
+import { toggleSignature } from '@/src/backend/petitions';
 import { deleteServiceReview } from '@/src/backend/service-reviews';
 import { deleteServiceListing } from '@/src/backend/services';
 import { getState, setState } from '@/src/backend/store';
@@ -68,9 +70,19 @@ async function deleteAccountMemory(ctx: RequestContext): Promise<void> {
       await deleteMissionComment(ctx, comment.id);
     }
   }
+  for (const comment of getState().petitionComments) {
+    if (comment.authorId === userId) {
+      await deletePetitionComment(ctx, comment.id);
+    }
+  }
   for (const event of getState().events) {
     if (event.joinedBy.includes(userId)) {
       await toggleJoin(ctx, event.id);
+    }
+  }
+  for (const signature of getState().petitionSignatures) {
+    if (signature.userId === userId) {
+      await toggleSignature(ctx, signature.petitionId);
     }
   }
   const ownMutes = getState().users.find((user) => user.id === userId)?.mutedUserIds ?? [];

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { validateCommentBody } from '@/src/backend/comments';
+import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -74,17 +75,24 @@ const MAX_EVENT_COMMENT_TIMESTAMP = 9_999_999_999_999;
 
 export async function listEventCommentsPageSupabase(
   supabase: SupabaseClient,
+  userId: string,
   eventId: string,
   limit: number,
   cursor: string | null,
 ): Promise<EventCommentsPage> {
-  const { data, error } = await supabase
-    .from('event_comments')
-    .select(EVENT_COMMENT_SELECT)
-    .eq('event_id', eventId)
-    .order('created_at', { ascending: true });
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    supabase
+      .from('event_comments')
+      .select(EVENT_COMMENT_SELECT)
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true }),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
   throwIfSupabaseError(error, 'load event comments');
-  const rows = (data as unknown as EventCommentRow[]) ?? [];
+  const mutedSet = new Set(mutedUserIds);
+  const rows = ((data as unknown as EventCommentRow[]) ?? []).filter(
+    (row) => !mutedSet.has(row.author_id),
+  );
 
   const wrapped = rows.map((row) => ({
     id: row.id,
