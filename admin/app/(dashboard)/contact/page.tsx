@@ -30,9 +30,8 @@ interface AppContactRow {
 
 interface LandingContactRow {
   readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  readonly subject: string;
+  readonly name: string | null;
+  readonly email: string | null;
   readonly message: string;
   readonly created_at: string;
 }
@@ -64,10 +63,10 @@ export default async function ContactPage({
   if (tab === 'landing') {
     let request = admin
       .from('landing_contact_messages')
-      .select('id, name, email, subject, message, created_at');
+      .select('id, name, email, message, created_at');
     if (query) {
       request = request.or(
-        `subject.ilike.%${escapeOrSearchTerm(query)}%,message.ilike.%${escapeOrSearchTerm(query)}%,name.ilike.%${escapeOrSearchTerm(query)}%`,
+        `message.ilike.%${escapeOrSearchTerm(query)}%,name.ilike.%${escapeOrSearchTerm(query)}%`,
       );
     }
     request = applyDescCursor(request, 'created_at', 'id', params.cursor);
@@ -96,7 +95,7 @@ export default async function ContactPage({
       <div className="max-w-3xl space-y-6">
         <Header />
         <Tabs active={tab} qSuffix={qSuffix} />
-        <SearchForm placeholder="Search subject, message, or name…" query={query} tab={tab} />
+        <SearchForm placeholder="Search message or name…" query={query} tab={tab} />
 
         {messages.length === 0 ? (
           <p className="text-sm text-muted">
@@ -109,7 +108,8 @@ export default async function ContactPage({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 space-y-1">
                     <p className="text-xs text-muted">
-                      {msg.name} · {msg.email} · {formatDate(msg.created_at)}
+                      {msg.name ?? 'Anonymous'} · {msg.email ?? 'No email provided'} ·{' '}
+                      {formatDate(msg.created_at)}
                     </p>
                   </div>
                   <DeleteButton
@@ -119,8 +119,9 @@ export default async function ContactPage({
                   />
                 </div>
                 <Link className="mt-2 block hover:underline" href={`/contact/landing/${msg.id}`}>
-                  <p className="text-sm font-medium text-content">{msg.subject}</p>
-                  <p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted">{msg.message}</p>
+                  <p className="line-clamp-2 whitespace-pre-wrap text-sm text-content">
+                    {msg.message}
+                  </p>
                 </Link>
               </div>
             ))}

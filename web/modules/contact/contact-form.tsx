@@ -16,11 +16,9 @@ const TEXTAREA_CLASS =
 export function ContactForm({ className }: { className?: string }) {
   const nameId = React.useId();
   const emailId = React.useId();
-  const subjectId = React.useId();
   const messageId = React.useId();
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
-  const [subject, setSubject] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [status, setStatus] = React.useState<Status>('idle');
   const [error, setError] = React.useState<string | null>(null);
@@ -34,7 +32,7 @@ export function ContactForm({ className }: { className?: string }) {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message }),
+        body: JSON.stringify({ name, email, message }),
       });
       const data = await response.json();
 
@@ -66,10 +64,9 @@ export function ContactForm({ className }: { className?: string }) {
     <form onSubmit={handleSubmit} className={className} noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor={nameId}>Name</Label>
+          <Label htmlFor={nameId}>Name (optional)</Label>
           <Input
             id={nameId}
-            required
             placeholder="Your name"
             className="mt-1.5"
             value={name}
@@ -78,11 +75,10 @@ export function ContactForm({ className }: { className?: string }) {
           />
         </div>
         <div>
-          <Label htmlFor={emailId}>Email</Label>
+          <Label htmlFor={emailId}>Email (optional)</Label>
           <Input
             id={emailId}
             type="email"
-            required
             placeholder="you@example.com"
             className="mt-1.5"
             value={email}
@@ -90,18 +86,6 @@ export function ContactForm({ className }: { className?: string }) {
             disabled={status === 'submitting'}
           />
         </div>
-      </div>
-      <div className="mt-4">
-        <Label htmlFor={subjectId}>Subject</Label>
-        <Input
-          id={subjectId}
-          required
-          placeholder="What's this about?"
-          className="mt-1.5"
-          value={subject}
-          onChange={(event) => setSubject(event.target.value)}
-          disabled={status === 'submitting'}
-        />
       </div>
       <div className="mt-4">
         <Label htmlFor={messageId}>Message</Label>
@@ -115,6 +99,10 @@ export function ContactForm({ className }: { className?: string }) {
           disabled={status === 'submitting'}
         />
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Feel free to send this anonymously. If you leave your name and email, we can reply
+        — and if your idea is one we end up building, we&apos;d love to give you credit for it.
+      </p>
       {status === 'error' && error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       <Button type="submit" size="lg" className="mt-5" disabled={status === 'submitting'}>
         {status === 'submitting' ? (

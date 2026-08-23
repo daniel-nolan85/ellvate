@@ -7,9 +7,8 @@ import { DetailLayout } from '../../../detail-layout';
 
 interface LandingContactRow {
   readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  readonly subject: string;
+  readonly name: string | null;
+  readonly email: string | null;
   readonly message: string;
   readonly created_at: string;
 }
@@ -23,7 +22,7 @@ export default async function LandingContactDetailPage({
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('landing_contact_messages')
-    .select('id, name, email, subject, message, created_at')
+    .select('id, name, email, message, created_at')
     .eq('id', id)
     .maybeSingle();
   if (error) {
@@ -45,11 +44,10 @@ export default async function LandingContactDetailPage({
         table: 'landing_contact_messages',
       }}
       fields={[
-        { label: 'From', value: msg.name },
-        { label: 'Email', value: msg.email },
+        { label: 'From', value: msg.name ?? 'Anonymous' },
+        { label: 'Email', value: msg.email ?? 'Not provided' },
         { label: 'Sent', value: formatDateTime(msg.created_at) },
       ]}
-      subtitle={msg.subject}
       title="Landing page message"
     />
   );

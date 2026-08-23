@@ -8,7 +8,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export interface ContactInput {
   name: string;
   email: string;
-  subject: string;
   message: string;
 }
 
@@ -17,22 +16,14 @@ export type SendContactMessageResult = { ok: true } | { ok: false; error: string
 export async function sendContactMessage({
   name,
   email,
-  subject,
   message,
 }: ContactInput): Promise<SendContactMessageResult> {
   const trimmedName = name.trim();
   const trimmedEmail = email.trim().toLowerCase();
-  const trimmedSubject = subject.trim();
   const trimmedMessage = message.trim();
 
-  if (!trimmedName) {
-    return { ok: false, error: 'Enter your name.' };
-  }
-  if (!EMAIL_PATTERN.test(trimmedEmail)) {
+  if (trimmedEmail && !EMAIL_PATTERN.test(trimmedEmail)) {
     return { ok: false, error: 'Enter a valid email address.' };
-  }
-  if (!trimmedSubject) {
-    return { ok: false, error: 'Enter a subject.' };
   }
   if (!trimmedMessage) {
     return { ok: false, error: 'Enter a message.' };
@@ -40,9 +31,8 @@ export async function sendContactMessage({
 
   const supabase = createSupabaseClient();
   const { error } = await supabase.from('landing_contact_messages').insert({
-    name: trimmedName,
-    email: trimmedEmail,
-    subject: trimmedSubject,
+    name: trimmedName || null,
+    email: trimmedEmail || null,
     message: trimmedMessage,
   });
 
@@ -51,8 +41,8 @@ export async function sendContactMessage({
   }
 
   await sendNotificationEmail(
-    `[${trimmedSubject}] New contact message from ${trimmedName}`,
-    `${trimmedMessage}\n\nReply to: ${trimmedEmail}`
+    `New contact message from ${trimmedName || 'an anonymous visitor'}`,
+    trimmedEmail ? `${trimmedMessage}\n\nReply to: ${trimmedEmail}` : trimmedMessage
   );
 
   return { ok: true };
