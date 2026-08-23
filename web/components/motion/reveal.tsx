@@ -5,17 +5,21 @@ import { motion, type Variants } from 'framer-motion';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+// Travels further and takes a touch longer than you'd guess looks right --
+// a short slide reads as stiff even with a nice easing curve, since there's
+// barely any motion to actually perceive. This distance is tuned to feel
+// like a graceful glide into place, not a snap.
 const VARIANTS: Variants = {
-  hidden: { opacity: 0, y: 36 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
+  hidden: { opacity: 0, y: 72 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
 };
 
 // Same fade/slide as VARIANTS plus a slight scale-up, for art/mockup panels
 // specifically (feature-detail.tsx's art panel, the assistant chat demo, the
 // phone mockup) -- gives those a touch more physicality than plain text.
 const SCALE_VARIANTS: Variants = {
-  hidden: { opacity: 0, y: 28, scale: 0.96 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.8, ease: EASE } },
+  hidden: { opacity: 0, y: 56, scale: 0.94 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.9, ease: EASE } },
 };
 
 // A large negative bottom margin on the viewport means an element only
