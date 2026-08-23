@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Switch, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -77,6 +77,12 @@ const NOTIFICATION_ROWS: readonly {
     icon: 'FileSignature',
   },
 ];
+
+// Hosted on the marketing site (../web/app/terms, ../web/app/privacy), not
+// as native routes -- there's no real domain yet (see EXPO_PUBLIC_MARKETING_URL
+// in .env.example), so these rows fall back to a disabled state instead of a
+// broken link until one exists.
+const MARKETING_URL = process.env.EXPO_PUBLIC_MARKETING_URL?.trim() || null;
 
 function SectionTitle({ children }: { readonly children: string }) {
   return (
@@ -551,6 +557,26 @@ export function ProfileScreen() {
         <SectionCard>
           <PhonePasswordRow />
           <Row icon="Mail" label="Contact us" onPress={() => router.push('/contact')} />
+          <Row
+            icon="FileText"
+            label="Terms of Service"
+            onPress={
+              MARKETING_URL
+                ? () => void Linking.openURL(`${MARKETING_URL}/terms`)
+                : undefined
+            }
+            value={MARKETING_URL ? undefined : 'Not available yet'}
+          />
+          <Row
+            icon="FileText"
+            label="Privacy Policy"
+            onPress={
+              MARKETING_URL
+                ? () => void Linking.openURL(`${MARKETING_URL}/privacy`)
+                : undefined
+            }
+            value={MARKETING_URL ? undefined : 'Not available yet'}
+          />
           <Row icon="ArrowLeft" label="Sign out" onPress={() => setSignOutOpen(true)} />
           <Row
             danger

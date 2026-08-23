@@ -34,6 +34,14 @@ export function Footer() {
             </a>{' '}
             product.
           </span>
+          <div className="flex items-center gap-4">
+            <a href="/terms" className="underline-offset-2 hover:text-foreground hover:underline">
+              Terms
+            </a>
+            <a href="/privacy" className="underline-offset-2 hover:text-foreground hover:underline">
+              Privacy
+            </a>
+          </div>
         </div>
       </div>
     </footer>
