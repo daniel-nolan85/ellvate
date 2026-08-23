@@ -98,9 +98,13 @@ export function Nav() {
   };
 
   // "Join the waitlist" should land the visitor in the input ready to type,
-  // not just scroll the section into view -- scrollIntoView first so the
-  // input ends up centered rather than wherever the browser's default
-  // focus-scroll would put it, then focus once that scroll has settled.
+  // not just scroll the section into view. focus() has to happen
+  // synchronously, in the same tick as the tap -- mobile browsers only pop
+  // the on-screen keyboard when focus is a direct result of a user gesture,
+  // and calling it inside a setTimeout (even a short one) loses that, moving
+  // the cursor with no keyboard. scrollIntoView comes after so the input
+  // ends up nicely centered on top of whatever native scroll-into-view the
+  // keyboard's own appearance triggers.
   const handleWaitlistCtaClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     setMobileOpen(false);
@@ -108,8 +112,8 @@ export function Nav() {
     if (!(input instanceof HTMLElement)) {
       return;
     }
+    input.focus();
     input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    window.setTimeout(() => input.focus(), 500);
   };
 
   return (
