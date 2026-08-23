@@ -20,7 +20,7 @@ const ACCENT_BG: Record<string, string> = {
 
 export function FeatureOverview() {
   return (
-    <section id="features" className="mx-auto max-w-6xl px-6 pb-20 pt-24">
+    <section id="features" className="mx-auto max-w-6xl px-6 pb-10 pt-12">
       <Reveal className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           Everything the community needs

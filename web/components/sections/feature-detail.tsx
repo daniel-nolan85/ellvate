@@ -31,7 +31,7 @@ export function FeatureDetail({ feature, reversed }: { feature: Feature; reverse
   return (
     <section
       id={feature.id}
-      className="scroll-mt-24 border-t border-border/60 py-20 first:border-t-0 sm:py-24"
+      className="scroll-mt-24 py-12 sm:py-16"
     >
       <div
         className={`mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:gap-16 ${

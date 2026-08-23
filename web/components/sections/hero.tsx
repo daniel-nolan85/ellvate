@@ -8,7 +8,7 @@ export function Hero() {
   return (
     <section id="waitlist" className="relative overflow-hidden">
       <DesertGlow />
-      <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-28 pt-20 text-center sm:pt-28">
+      <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-14 pt-20 text-center sm:pt-28">
         <FadeIn>
           <Badge>Coming soon to iOS &amp; Android</Badge>
         </FadeIn>
