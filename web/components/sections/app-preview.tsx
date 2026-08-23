@@ -20,7 +20,7 @@ export function AppPreview() {
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">A closer look</h2>
           <p className="mt-4 max-w-md text-muted-foreground">
-            Forum, Events, Missions, Services, and Petitions — one tap away in the tab
+            Forum, Events, Missions, Services, and Petitions: one tap away in the tab
             bar, with the assistant given its own permanent home button in the corner.
             Built to feel like it belongs on your phone from day one.
           </p>

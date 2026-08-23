@@ -48,7 +48,7 @@ export function ForumArt() {
       <div>
         <p className="text-sm font-semibold">Best spots to kayak at sunrise?</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          New to the lake — where do you all put in before the wind picks up?
+          New to the lake, where do you all put in before the wind picks up?
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export function AssistantArt({ compact = false }: { compact?: boolean }) {
         <Sparkles className="h-5 w-5 text-white" />
       </div>
       <p className="text-sm leading-snug text-white">
-        &ldquo;Any networking events this weekend?&rdquo; — ask me things like that, anytime.
+        &ldquo;Any networking events this weekend?&rdquo; Ask me things like that, anytime.
       </p>
     </div>
   );
