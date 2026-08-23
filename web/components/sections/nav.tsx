@@ -97,6 +97,21 @@ export function Nav() {
     }, 1200);
   };
 
+  // "Join the waitlist" should land the visitor in the input ready to type,
+  // not just scroll the section into view -- scrollIntoView first so the
+  // input ends up centered rather than wherever the browser's default
+  // focus-scroll would put it, then focus once that scroll has settled.
+  const handleWaitlistCtaClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    setMobileOpen(false);
+    const input = document.getElementById('hero-waitlist-email');
+    if (!(input instanceof HTMLElement)) {
+      return;
+    }
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => input.focus(), 500);
+  };
+
   return (
     <header
       className={`sticky top-0 z-50 border-b bg-canvas/85 backdrop-blur transition-shadow duration-300 ${
@@ -133,7 +148,9 @@ export function Nav() {
           })}
         </nav>
         <Button asChild size="sm" className="hidden lg:inline-flex">
-          <a href="#waitlist">Join the waitlist</a>
+          <a href="#waitlist" onClick={handleWaitlistCtaClick}>
+            Join the waitlist
+          </a>
         </Button>
         <button
           type="button"
@@ -167,7 +184,7 @@ export function Nav() {
             })}
           </div>
           <Button asChild size="sm" className="mt-3 w-full">
-            <a href="#waitlist" onClick={() => setMobileOpen(false)}>
+            <a href="#waitlist" onClick={handleWaitlistCtaClick}>
               Join the waitlist
             </a>
           </Button>

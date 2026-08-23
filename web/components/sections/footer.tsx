@@ -22,7 +22,7 @@ export function Footer() {
             <CactusMark className="h-5 w-5" />
             <span>{BRAND.appName}</span>
           </div>
-          <span>
+          <span className="text-center sm:text-left">
             &copy; <CopyrightYear /> {BRAND.appName}. A{' '}
             <a
               href={BRAND.companyUrl}

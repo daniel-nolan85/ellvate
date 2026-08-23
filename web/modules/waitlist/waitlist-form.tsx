@@ -13,8 +13,18 @@ import { useWaitlistStatus } from './waitlist-context';
 
 type SubmitState = 'idle' | 'submitting' | 'error';
 
-export function WaitlistForm({ className }: { className?: string }) {
-  const inputId = React.useId();
+export function WaitlistForm({
+  className,
+  inputId: inputIdProp,
+}: {
+  className?: string;
+  // Lets the hero's instance be targeted from elsewhere on the page (the
+  // nav's "Join the waitlist" CTA scrolls to and focuses it) -- the footer's
+  // instance doesn't need one, so it keeps the auto-generated id.
+  inputId?: string;
+}) {
+  const generatedId = React.useId();
+  const inputId = inputIdProp ?? generatedId;
   const [email, setEmail] = React.useState('');
   const [submitState, setSubmitState] = React.useState<SubmitState>('idle');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
