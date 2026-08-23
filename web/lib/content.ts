@@ -113,7 +113,7 @@ export const features: readonly Feature[] = [
   {
     id: 'petitions',
     title: 'Petitions',
-    hook: 'A respectful way to be heard, not a way to fight.',
+    hook: 'A respectful way to be heard.',
     description:
       'Once the community reaches 200 members, residents can start a petition for a real local issue — more lighting on a trail, a stop sign, anything worth fixing. Every petition needs real signatures from real neighbors, and reaching the goal sends it to the HOA board as a request for consideration.',
     highlights: [

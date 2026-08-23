@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 
-import { Reveal, RevealScale } from '@/components/motion/reveal';
+import { Reveal, RevealGroup, RevealItem, RevealScale } from '@/components/motion/reveal';
 import { ICONS } from '@/lib/icons';
 import { serviceCategories, type Feature } from '@/lib/content';
 
@@ -58,9 +58,13 @@ export function FeatureDetail({ feature, reversed }: { feature: Feature; reverse
           </p>
         </Reveal>
 
-        <RevealScale delay={0.1}>
-          {feature.id === 'services' ? <ServiceCategoryGrid /> : <FeatureArtPanel feature={feature} />}
-        </RevealScale>
+        {feature.id === 'services' ? (
+          <ServiceCategoryGrid />
+        ) : (
+          <RevealScale delay={0.1}>
+            <FeatureArtPanel feature={feature} />
+          </RevealScale>
+        )}
       </div>
     </section>
   );
@@ -77,21 +81,20 @@ function FeatureArtPanel({ feature }: { feature: Feature }) {
 
 function ServiceCategoryGrid() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+    <RevealGroup className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
       {serviceCategories.map((category) => {
         const Icon = ICONS[category.icon];
         return (
-          <div
-            key={category.label}
-            className="flex flex-col items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-5 text-center"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lake-subtle text-lake">
-              {Icon ? <Icon className="h-5 w-5" /> : null}
+          <RevealItem key={category.label}>
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-5 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-lake-subtle text-lake">
+                {Icon ? <Icon className="h-5 w-5" /> : null}
+              </div>
+              <span className="text-xs font-medium">{category.label}</span>
             </div>
-            <span className="text-xs font-medium">{category.label}</span>
-          </div>
+          </RevealItem>
         );
       })}
-    </div>
+    </RevealGroup>
   );
 }
