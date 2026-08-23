@@ -12,7 +12,6 @@ import {
   getPetition,
   getPetitionsGate,
   listPetitionsPage,
-  PETITIONS_SIGNATURE_FLOOR,
   PETITIONS_UNLOCK_MIN_USERS,
   reportPetition,
   toggleSignature,
@@ -92,13 +91,10 @@ function seedPetition(overrides: Partial<StoredPetition> = {}): StoredPetition {
 }
 
 describe('computeRequiredSignatures', () => {
-  test('floors at PETITIONS_SIGNATURE_FLOOR below the percentage threshold', () => {
-    expect(computeRequiredSignatures(50)).toBe(PETITIONS_SIGNATURE_FLOOR);
-    expect(computeRequiredSignatures(200)).toBe(PETITIONS_SIGNATURE_FLOOR);
-  });
-
-  test('switches to 20% once that exceeds the floor', () => {
+  test('is 20% of total users, rounded up', () => {
+    expect(computeRequiredSignatures(200)).toBe(40);
     expect(computeRequiredSignatures(2000)).toBe(400);
+    expect(computeRequiredSignatures(11)).toBe(3);
   });
 });
 

@@ -118,7 +118,7 @@ export const features: readonly Feature[] = [
       'Once the community reaches 200 members, residents can start a petition for a real local issue — more lighting on a trail, a stop sign, anything worth fixing. Every petition needs real signatures from real neighbors, and reaching the goal sends it to the HOA board as a request for consideration.',
     highlights: [
       'Unlocks once the community reaches 200 members, so the signature goal always means something',
-      'Needs the greater of 200 signatures or 20% of the community, fixed the moment a petition starts',
+      "Needs 20% of the community's signatures, fixed the moment a petition starts",
       'Reviewed by an admin and shared with the HOA board as a respectful request — never a demand, and never a guarantee of an outcome',
       'Stays about the issue, not individuals — no naming or accusing board members or staff',
     ],

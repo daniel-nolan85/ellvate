@@ -14,21 +14,19 @@ export const PETITION_CATEGORIES: readonly PetitionCategory[] = [
 
 export const PETITION_DEADLINE_OPTIONS: readonly (7 | 14 | 30 | 60 | 90)[] = [7, 14, 30, 60, 90];
 
-// The whole feature stays behind a wall until 200 signatures -- the floor --
-// is actually reachable, i.e. until the community has at least that many
-// members. required_signatures itself is max(20% of users, 200): whichever
-// is bigger, not both at once, so this gate only needs to guarantee the
-// floor is achievable, not that 200 stays under some percentage of the
-// community.
+// The whole feature stays behind a wall until the community has at least
+// this many members -- a flat 20% of a tiny community would ask for almost
+// nobody's signature to succeed a petition, so this floor exists to make
+// sure "20% of the community" means something before the feature is even
+// offered, not to guarantee some other number is reachable.
 export const PETITIONS_UNLOCK_MIN_USERS = 200;
-export const PETITIONS_SIGNATURE_FLOOR = 200;
 export const PETITIONS_SIGNATURE_PERCENT = 0.2;
 
 // Computed once at creation and frozen on the row -- never recalculated as
 // the user base grows or shrinks, so a petition's goal doesn't move under
 // the people who already signed it.
 export function computeRequiredSignatures(totalUsers: number): number {
-  return Math.max(Math.ceil(PETITIONS_SIGNATURE_PERCENT * totalUsers), PETITIONS_SIGNATURE_FLOOR);
+  return Math.ceil(PETITIONS_SIGNATURE_PERCENT * totalUsers);
 }
 
 export interface PersonRef {

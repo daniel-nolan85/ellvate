@@ -1,8 +1,8 @@
 -- Petitions: a member raises a local issue, other members sign it, and once
 -- signatures cross a threshold it's emailed to the HOA board. The threshold
 -- is computed and frozen on the petitions row at creation time by the
--- application (max(ceil(20% of total app_users), 200)) -- never recalculated
--- as the user base grows, so a petition's goal doesn't move under it.
+-- application (ceil(20% of total app_users)) -- never recalculated as the
+-- user base grows, so a petition's goal doesn't move under it.
 --
 -- Signing must be atomic in a way none of the existing toggle patterns quite
 -- cover: events' toggleJoin (check-then-write) accepts a race because its

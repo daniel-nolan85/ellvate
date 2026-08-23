@@ -11,9 +11,9 @@ interface PetitionsGateWallProps {
 
 // Shown instead of the real petitions feature while the community is below
 // PETITIONS_UNLOCK_MIN_USERS -- see src/backend/petitions/types.ts. Below
-// that size, the 200-signature floor isn't reachable at all (there aren't
-// 200 members to sign), so the feature stays hidden rather than shipping a
-// goal nobody could ever hit.
+// that size, 20% of the community is too small a number to mean anything,
+// so the feature stays hidden until there's actually a meaningful bar to
+// clear.
 export function PetitionsGateWall({ usersNeeded }: PetitionsGateWallProps) {
   return (
     <View className="flex-1 bg-canvas">
