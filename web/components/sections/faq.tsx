@@ -1,6 +1,6 @@
 import { Reveal } from '@/components/motion/reveal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BRAND, faqs } from '@/lib/content';
+import { faqs } from '@/lib/content';
 
 export function Faq() {
   return (
@@ -16,21 +16,6 @@ export function Faq() {
               <AccordionContent>{faq.answer}</AccordionContent>
             </AccordionItem>
           ))}
-          <AccordionItem value="Who built this?">
-            <AccordionTrigger>Who built this?</AccordionTrigger>
-            <AccordionContent>
-              {BRAND.appName} is built by{' '}
-              <a
-                href={BRAND.companyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-accent underline-offset-2 hover:underline"
-              >
-                {BRAND.company}
-              </a>
-              .
-            </AccordionContent>
-          </AccordionItem>
         </Accordion>
       </Reveal>
     </section>

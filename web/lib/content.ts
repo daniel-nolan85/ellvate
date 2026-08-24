@@ -7,10 +7,6 @@
 export const BRAND = {
   appName: 'Community Copilot',
   community: 'Lake Las Vegas',
-  company: 'Norez Solutions',
-  // Not live yet (see conversation with Daniel, 2026-08-20) -- linked in
-  // anticipation of it. If it 404s, that's expected until it's built.
-  companyUrl: 'https://norezsolutions.com',
 } as const;
 
 export type FeatureAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'plum';

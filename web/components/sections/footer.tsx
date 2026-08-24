@@ -23,16 +23,7 @@ export function Footer() {
             <span>{BRAND.appName}</span>
           </div>
           <span className="text-center sm:text-left">
-            &copy; <CopyrightYear /> {BRAND.appName}. A{' '}
-            <a
-              href={BRAND.companyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline-offset-2 hover:text-foreground hover:underline"
-            >
-              {BRAND.company}
-            </a>{' '}
-            product.
+            &copy; <CopyrightYear /> {BRAND.appName}.
           </span>
           <div className="flex items-center gap-4">
             <a href="/terms" className="underline-offset-2 hover:text-foreground hover:underline">

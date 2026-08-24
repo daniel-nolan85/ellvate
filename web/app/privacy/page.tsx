@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="overview" title="Overview">
         <p>
           {BRAND.appName} is a community app for {BRAND.community}, built and operated by{' '}
-          {BRAND.company} (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). This
+          its developers (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). This
           policy explains what information we collect when you use the app, how we use it,
           who we share it with, and the choices you have.
         </p>
@@ -180,7 +180,7 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="contact" title="Contact us">
         <p>
           Questions about this policy, or a data request? Reach us through the Contact Us
-          page in the {BRAND.appName} app, or write to {BRAND.company}.
+          page in the {BRAND.appName} app.
         </p>
       </LegalSection>
     </LegalPageShell>

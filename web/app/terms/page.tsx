@@ -25,8 +25,8 @@ export default function TermsOfServicePage() {
       <LegalSection id="acceptance" title="1. Acceptance of these terms">
         <p>
           These Terms of Service (&ldquo;Terms&rdquo;) govern your use of {BRAND.appName},
-          an app for the {BRAND.community} community, provided by {BRAND.company}{' '}
-          (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By creating an account
+          an app for the {BRAND.community} community, provided by the developers of{' '}
+          {BRAND.appName} (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By creating an account
           or using {BRAND.appName}, you agree to these Terms. If you don&rsquo;t agree,
           please don&rsquo;t use the app.
         </p>
@@ -125,8 +125,8 @@ export default function TermsOfServicePage() {
           when meeting up with people or businesses you find through {BRAND.appName}.
         </p>
         <p>
-          To the fullest extent permitted by law, {BRAND.company} is not liable for any
-          indirect, incidental, or consequential damages arising from your use of the app.
+          To the fullest extent permitted by law, we are not liable for any indirect,
+          incidental, or consequential damages arising from your use of the app.
         </p>
       </LegalSection>
 
@@ -149,7 +149,7 @@ export default function TermsOfServicePage() {
       <LegalSection id="contact" title="11. Contact us">
         <p>
           Questions about these Terms? Reach us through the Contact Us page in the{' '}
-          {BRAND.appName} app, or write to {BRAND.company}.
+          {BRAND.appName} app.
         </p>
       </LegalSection>
     </LegalPageShell>
