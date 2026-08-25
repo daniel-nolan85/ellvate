@@ -8,8 +8,8 @@ per-user access. Public content is readable anonymously; every write is scoped t
 
 ## Project
 
-- Supabase project: `llv-community-app` (`xwtkfednponwvqafkeqj`), region us-west-1
-- URL: `https://xwtkfednponwvqafkeqj.supabase.co`
+- Supabase project: `llv-community-app` (`egrplppfgvejouhmcmtx`), region us-west-1
+- URL: `https://egrplppfgvejouhmcmtx.supabase.co`
 - Server env (`.env.local`): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 - Clerk env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
 - Clerk Frontend API domain: `picked-shiner-93.clerk.accounts.dev`
@@ -66,7 +66,7 @@ Supabase MCP; every migration since is deployed with the Supabase CLI.
      https://github.com/supabase/cli#install-the-cli.
 2. `supabase login` (opens a browser to authenticate the CLI once).
 3. `bun run db:link` — links this checkout to the `llv-community-app` project
-   (`xwtkfednponwvqafkeqj`) using `supabase/config.toml`.
+   (`egrplppfgvejouhmcmtx`) using `supabase/config.toml`.
 
 **Deploying a migration:**
 
