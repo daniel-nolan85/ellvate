@@ -32,12 +32,21 @@ interface SheetProps {
   readonly visible: boolean;
   readonly onClose: () => void;
   readonly children: ReactNode;
+  // False for a sheet the caller wants a deliberate in-content action to
+  // dismiss (e.g. a required consent checkbox) -- blocks the backdrop tap,
+  // drag-to-dismiss, and hardware back button that would otherwise close it.
+  readonly dismissable?: boolean;
 }
 
 // A lightweight Instagram-style bottom sheet built on reanimated + gesture
 // handler: slides up over a dimmed backdrop, drag the handle (or the sheet) down
 // to dismiss, tap the backdrop to close, and rises with the keyboard.
-export function Sheet({ children, onClose, visible }: SheetProps) {
+export function Sheet({
+  children,
+  dismissable = true,
+  onClose,
+  visible,
+}: SheetProps) {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(visible);
   const translateY = useSharedValue(HIDDEN_OFFSET);
@@ -74,9 +83,12 @@ export function Sheet({ children, onClose, visible }: SheetProps) {
   }, [visible, mounted, translateY, height, unmount]);
 
   const requestClose = useCallback(() => {
+    if (!dismissable) {
+      return;
+    }
     Keyboard.dismiss();
     onClose();
-  }, [onClose]);
+  }, [dismissable, onClose]);
 
   useEffect(() => {
     if (!mounted) {
@@ -94,9 +106,15 @@ export function Sheet({ children, onClose, visible }: SheetProps) {
 
   const pan = Gesture.Pan()
     .onUpdate((event) => {
+      if (!dismissable) {
+        return;
+      }
       translateY.value = Math.max(0, event.translationY);
     })
     .onEnd((event) => {
+      if (!dismissable) {
+        return;
+      }
       if (
         event.translationY > DISMISS_DISTANCE ||
         event.velocityY > DISMISS_VELOCITY

@@ -50,7 +50,27 @@ describe('useIdentifierAuthFlow', () => {
     jest.clearAllMocks();
   });
 
-  test('starts email sign-up when Clerk throws identifier-not-found', async () => {
+  test('routes to consent when Clerk throws identifier-not-found, without starting sign-up yet', async () => {
+    const { signIn, signUp } = createClerkMocks();
+    signIn.create.mockRejectedValueOnce({
+      errors: [{ code: 'form_identifier_not_found' }],
+    });
+
+    const { result } = await renderHook(() => useIdentifierAuthFlow());
+
+    await act(async () => {
+      result.current.chooseKind('email');
+    });
+    await act(async () => {
+      await result.current.submitIdentifier('new-user@example.invalid');
+    });
+
+    expect(signUp.create).not.toHaveBeenCalled();
+    expect(result.current.mode).toBe('signUp');
+    expect(result.current.step).toBe('consent');
+  });
+
+  test('confirmConsent starts sign-up with legalAccepted and sends the code', async () => {
     const { signIn, signUp } = createClerkMocks();
     signIn.create.mockRejectedValueOnce({
       errors: [{ code: 'form_identifier_not_found' }],
@@ -66,13 +86,35 @@ describe('useIdentifierAuthFlow', () => {
     await act(async () => {
       await result.current.submitIdentifier('new-user@example.invalid');
     });
+    await act(async () => {
+      await result.current.confirmConsent();
+    });
 
     expect(signUp.create).toHaveBeenCalledWith({
       emailAddress: 'new-user@example.invalid',
+      legalAccepted: true,
     });
     expect(signUp.verifications.sendEmailCode).toHaveBeenCalledTimes(1);
-    expect(result.current.mode).toBe('signUp');
     expect(result.current.step).toBe('code');
+  });
+
+  test('declineConsent returns to the identifier step without starting sign-up', async () => {
+    const { signIn, signUp } = createClerkMocks();
+    signIn.create.mockRejectedValueOnce({
+      errors: [{ code: 'form_identifier_not_found' }],
+    });
+
+    const { result } = await renderHook(() => useIdentifierAuthFlow());
+
+    await act(async () => {
+      await result.current.submitIdentifier('new-user@example.invalid');
+    });
+    await act(async () => {
+      result.current.declineConsent();
+    });
+
+    expect(signUp.create).not.toHaveBeenCalled();
+    expect(result.current.step).toBe('identifier');
   });
 
   test('does not start sign-up for a thrown network error', async () => {

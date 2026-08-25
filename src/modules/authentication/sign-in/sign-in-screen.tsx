@@ -1,16 +1,20 @@
-import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Linking, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Heading } from '@/src/components/ui/heading';
 import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField, InputSlot } from '@/src/components/ui/input';
+import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { publicEnvironment } from '@/src/platform/environment';
 
 import { CodeInput } from './code-input';
 import { useIdentifierAuthFlow } from './use-identifier-auth-flow';
+
+const MARKETING_URL = publicEnvironment.marketingUrl;
 
 const formatPhone = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 10);
@@ -41,6 +45,13 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
   const [emailText, setEmailText] = useState('');
   const [code, setCode] = useState('');
   const [codeInvalid, setCodeInvalid] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+
+  useEffect(() => {
+    if (flow.step !== 'consent') {
+      setConsentChecked(false);
+    }
+  }, [flow.step]);
 
   const identifierText = flow.kind === 'phone' ? phoneText : emailText;
   const identifierComplete =
@@ -80,15 +91,18 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
     }
   };
 
+  // The consent sheet slides up over this same identifier screen rather than
+  // replacing it, so it shares this screen's heading and form -- only the
+  // code step (a genuinely different screen) needs its own.
   const heading =
-    flow.step === 'identifier'
+    flow.step !== 'code'
       ? flow.kind === 'phone'
         ? {
-            sub: 'We’ll text you a quick 6-digit code to make sure it’s really you.',
+            sub: 'We’ll text you a quick 6-digit code to confirm your number.',
             title: 'What’s your number?',
           }
         : {
-            sub: 'We’ll email you a quick 6-digit code to make sure it’s really you.',
+            sub: 'We’ll email you a quick 6-digit code to confirm your email.',
             title: 'What’s your email?',
           }
       : {
@@ -124,7 +138,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           </Text>
         </VStack>
 
-        {flow.step === 'identifier' ? (
+        {flow.step !== 'code' ? (
           <VStack space="md">
             <View className="flex-row gap-2">
               {(['phone', 'email'] as const).map((option) => (
@@ -196,7 +210,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
         ) : null}
       </VStack>
 
-      {flow.step !== 'code' ? (
+      {flow.step === 'identifier' ? (
         <Button
           className="h-[54px] rounded-2xl bg-primary"
           isDisabled={
@@ -212,6 +226,82 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           </ButtonText>
         </Button>
       ) : null}
+
+      <Sheet
+        dismissable={false}
+        onClose={() => {}}
+        visible={flow.step === 'consent'}
+      >
+        <VStack className="px-5 pb-2 pt-1" space="md">
+          <Heading className="font-inter-bold" size="lg">
+            Before you join
+          </Heading>
+          <Text className="leading-6 text-muted-foreground" size="sm">
+            Please agree to continue creating your account.
+          </Text>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: consentChecked }}
+            className="flex-row items-start gap-3 rounded-2xl border border-surface-hairline bg-canvas px-4 py-3.5"
+            onPress={() => setConsentChecked((current) => !current)}
+            testID="auth-consent-checkbox"
+          >
+            <View
+              className={`mt-0.5 h-5 w-5 items-center justify-center rounded-md border ${
+                consentChecked
+                  ? 'border-primary bg-primary'
+                  : 'border-surface-hairline bg-paper'
+              }`}
+            >
+              {consentChecked ? (
+                <Icon color="rgb(255,255,255)" name="Check" size={13} />
+              ) : null}
+            </View>
+            <Text className="flex-1 leading-5 text-content" size="sm">
+              I agree to the{' '}
+              <Text
+                className="font-inter-semibold text-accent"
+                onPress={() =>
+                  MARKETING_URL
+                    ? void Linking.openURL(`${MARKETING_URL}/terms`)
+                    : undefined
+                }
+                size="sm"
+              >
+                Terms of Service
+              </Text>{' '}
+              and{' '}
+              <Text
+                className="font-inter-semibold text-accent"
+                onPress={() =>
+                  MARKETING_URL
+                    ? void Linking.openURL(`${MARKETING_URL}/privacy`)
+                    : undefined
+                }
+                size="sm"
+              >
+                Privacy Policy
+              </Text>
+              .
+            </Text>
+          </Pressable>
+          <Button
+            className="h-[52px] rounded-2xl bg-accent"
+            isDisabled={!consentChecked || flow.busy}
+            onPress={() => void flow.confirmConsent()}
+            size="lg"
+          >
+            <ButtonText className="font-inter-semibold text-accent-foreground">
+              {flow.busy ? 'Just a moment…' : 'Agree & continue'}
+            </ButtonText>
+          </Button>
+          <Pressable onPress={flow.declineConsent}>
+            <Text className="text-center text-muted-foreground" size="sm">
+              Cancel
+            </Text>
+          </Pressable>
+        </VStack>
+      </Sheet>
     </KeyboardAvoidingView>
   );
 }
