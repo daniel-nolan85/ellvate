@@ -12,7 +12,8 @@ per-user access. Public content is readable anonymously; every write is scoped t
 - URL: `https://egrplppfgvejouhmcmtx.supabase.co`
 - Server env (`.env.local`): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 - Clerk env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
-- Clerk Frontend API domain: `picked-shiner-93.clerk.accounts.dev`
+- Clerk application: `community-copilot`, Development instance
+- Clerk Frontend API domain: `capable-condor-8303.clerk.accounts.dev`
 
 ## Two one-time dashboard steps (required)
 
@@ -23,16 +24,21 @@ The MCP/Management API cannot register third-party auth, so these are manual:
    Clerk session tokens to include the `role: authenticated` claim that Supabase
    requires.
 2. **Supabase → Third-Party Auth.** In the dashboard, Authentication →
-   Third-Party Auth → **Add provider → Clerk**, and enter the domain
-   `picked-shiner-93.clerk.accounts.dev`.
+   Sign In / Providers → **Third-Party Auth** tab → **Add provider → Clerk**,
+   and enter the domain `capable-condor-8303.clerk.accounts.dev`.
 
 For CLI/local development the equivalent is in `supabase/config.toml`:
 
 ```toml
 [auth.third_party.clerk]
 enabled = true
-domain = "picked-shiner-93.clerk.accounts.dev"
+domain = "capable-condor-8303.clerk.accounts.dev"
 ```
+
+Note: this is currently the Clerk **Development** instance. A Production
+instance (with `pk_live_`/`sk_live_` keys) will need its own "Connect with
+Supabase" pass and its own Third-Party Auth provider entry before a real
+App Store build ships.
 
 Until both are done, Supabase will not accept forwarded Clerk tokens, so
 authenticated writes are denied (public reads still work).

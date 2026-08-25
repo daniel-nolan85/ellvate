@@ -15,4 +15,4 @@ major_version = 15
 # as a manual dashboard setting.
 [auth.third_party.clerk]
 enabled = true
-domain = "picked-shiner-93.clerk.accounts.dev"
+domain = "capable-condor-8303.clerk.accounts.dev"
