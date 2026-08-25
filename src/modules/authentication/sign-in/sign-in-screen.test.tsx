@@ -1,9 +1,17 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { useAuth, useSignIn, useSignUp } from '@clerk/expo';
 
 import { SignInScreen } from './sign-in-screen';
+
+// Gives the consent sheet's Terms/Privacy links a real URL to open, so the
+// regression test below (they used to be swallowed by the checkbox's own
+// Pressable and never fire at all) can assert the actual call.
+jest.mock('@/src/platform/environment', () => ({
+  publicEnvironment: { marketingUrl: 'https://example.com' },
+}));
 
 // SignInScreen reads useSafeAreaInsets() directly (no SafeAreaProvider
 // mounted by the app root in this test), so one is supplied here with a
@@ -135,6 +143,25 @@ describe('SignInScreen consent step', () => {
       legalAccepted: true,
     });
     expect(view.getByText('Check your messages')).toBeTruthy();
+  });
+
+  test('tapping the Terms of Service link opens it without toggling the checkbox', async () => {
+    const { signIn } = createClerkMocks();
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const view = await renderSignInScreen({ onAuthenticated: jest.fn() });
+
+    await reachConsentStep(view, signIn);
+
+    await act(async () => {
+      fireEvent.press(view.getByText('Terms of Service'));
+    });
+
+    expect(openURL).toHaveBeenCalledWith('https://example.com/terms');
+    expect(view.getByTestId('auth-consent-checkbox').props.accessibilityState.checked).toBe(
+      false,
+    );
+
+    openURL.mockRestore();
   });
 
   test('Cancel returns to the identifier step without starting sign-up, keeping what was typed', async () => {

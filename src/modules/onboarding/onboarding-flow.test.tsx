@@ -5,6 +5,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { WelcomeBackNoticeProvider, useWelcomeBackNotice } from '@/src/platform/notices';
 import {
   createSignedInSession,
   SessionContextProvider,
@@ -19,6 +20,15 @@ jest.mock('@/src/services/api', () => ({
 }));
 
 const mockedRequestJson = jest.mocked(requestJson);
+
+// OnboardingFlow no longer owns the "Welcome back" modal itself -- it lives
+// at the root layout so it can survive the navigation away from /onboarding
+// (see WelcomeBackNoticeProvider). This surfaces whatever name it was shown
+// with, so these tests can assert on it without re-rendering the real modal.
+function WelcomeBackProbe() {
+  const { name } = useWelcomeBackNotice();
+  return <MockText testID="welcome-back-name">{name ?? ''}</MockText>;
+}
 
 // OnboardingFlow's own step-skip and welcome-back orchestration is what's
 // under test here -- the 15 step components it renders are stubbed out
@@ -75,7 +85,9 @@ describe('OnboardingFlow', () => {
     const queryClient = new QueryClient();
     const view = await render(
       <SessionContextProvider value={signedOutSession}>
-        <OnboardingFlow onFinished={jest.fn()} />
+        <WelcomeBackNoticeProvider>
+          <OnboardingFlow onFinished={jest.fn()} />
+        </WelcomeBackNoticeProvider>
       </SessionContextProvider>,
       { wrapper: createWrapper(queryClient) },
     );
@@ -105,25 +117,22 @@ describe('OnboardingFlow', () => {
 
     const view = await render(
       <SessionContextProvider value={session}>
-        <OnboardingFlow onFinished={onFinished} />
+        <WelcomeBackNoticeProvider>
+          <OnboardingFlow onFinished={onFinished} />
+          <WelcomeBackProbe />
+        </WelcomeBackNoticeProvider>
       </SessionContextProvider>,
       { wrapper: createWrapper(queryClient) },
     );
 
     await waitFor(() => {
-      expect(view.getByText('Welcome back, Daniel!')).toBeTruthy();
+      expect(onFinished).toHaveBeenCalledTimes(1);
     });
+    expect(view.getByTestId('welcome-back-name').props.children).toBe('Daniel');
 
     expect(view.queryByTestId('stub-role')).toBeNull();
     expect(view.queryByTestId('stub-name')).toBeNull();
     expect(view.queryByTestId('stub-interests')).toBeNull();
-    expect(onFinished).not.toHaveBeenCalled();
-
-    await act(async () => {
-      fireEvent.press(view.getByText('Continue'));
-    });
-
-    expect(onFinished).toHaveBeenCalledTimes(1);
   });
 
   test('a signed-in, not-yet-onboarded user lands on the role step', async () => {
@@ -139,7 +148,9 @@ describe('OnboardingFlow', () => {
 
     const view = await render(
       <SessionContextProvider value={session}>
-        <OnboardingFlow onFinished={jest.fn()} />
+        <WelcomeBackNoticeProvider>
+          <OnboardingFlow onFinished={jest.fn()} />
+        </WelcomeBackNoticeProvider>
       </SessionContextProvider>,
       { wrapper: createWrapper(queryClient) },
     );

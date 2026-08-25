@@ -18,8 +18,19 @@ export default function IndexRoute() {
     );
   }
 
-  const canEnterCommunity =
-    isComplete && canAccessCommunityRoutes(session.status);
+  if (isComplete && canAccessCommunityRoutes(session.status)) {
+    return <Redirect href="/(tabs)/forum" />;
+  }
 
-  return <Redirect href={canEnterCommunity ? '/(tabs)/forum' : '/onboarding'} />;
+  // A device that already finished onboarding but isn't currently signed in
+  // (mid sign-out, or the app reopened after one) goes to sign-in, not back
+  // through the wizard -- same reasoning as the profile screen's own Sign
+  // out action. This also covers landing here indirectly (e.g. the layout's
+  // Stack.Protected guard bouncing to this route when session.status stops
+  // being signed-in, which can outrace an explicit navigation elsewhere).
+  if (isComplete && session.status === 'signed-out') {
+    return <Redirect href="/auth" />;
+  }
+
+  return <Redirect href="/onboarding" />;
 }

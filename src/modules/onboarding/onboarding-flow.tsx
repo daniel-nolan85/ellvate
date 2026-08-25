@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { View } from 'react-native';
 
-import { ConfirmModal } from '@/src/components/ui/confirm-modal';
 import { Spinner } from '@/src/components/ui/spinner';
+import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { useSession } from '@/src/platform/session';
 
 import { AuthStep } from './auth-step';
@@ -38,9 +38,9 @@ interface OnboardingFlowProps {
 
 export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const session = useSession();
+  const { show: showWelcomeBack } = useWelcomeBackNotice();
   const [step, setStep] = useState(0);
   const [checkingReturningUser, setCheckingReturningUser] = useState(false);
-  const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null);
   const {
     completeOnboarding,
     completionError,
@@ -119,11 +119,15 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       }
       if (returning?.onboardedAt) {
         await markOnboardingComplete();
-        setCheckingReturningUser(false);
-        // onFinished() itself waits for the "Welcome back" modal below,
-        // rather than firing here -- see its onClose. An empty string
-        // renders a name-less "Welcome back!" instead of an empty greeting.
-        setWelcomeBackName(returning.name.trim());
+        // Show the greeting (it renders from the root layout, not here --
+        // see WelcomeBackNoticeProvider) and navigate immediately, rather
+        // than waiting for it to be dismissed first. Waiting meant the
+        // destination screen didn't even start loading until after the
+        // modal closed, so dismissing it always led into a second loading
+        // spinner instead of straight into the now-ready app. An empty
+        // string renders a name-less "Welcome back!" instead of blank.
+        showWelcomeBack(returning.name.trim());
+        onFinished();
         return;
       }
       setCheckingReturningUser(false);
@@ -132,7 +136,11 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, onFinished, session.getToken, step]);
+    // welcomeBack.show is a stable reference (see WelcomeBackNoticeProvider);
+    // depending on the whole welcomeBack object instead would re-run this
+    // effect the moment show() updates its name, right as this component is
+    // about to unmount from the onFinished() navigation.
+  }, [isSignedIn, onFinished, session.getToken, showWelcomeBack, step]);
 
   const handleDone = useCallback(async () => {
     const completed = await completeOnboarding();
@@ -234,25 +242,13 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     />,
   ];
 
-  return (
-    <>
-      {checkingReturningUser ? (
-        <View className="flex-1 items-center justify-center bg-canvas">
-          <Spinner size="xlarge" />
-        </View>
-      ) : (
-        <View className="flex-1 bg-canvas">{steps[step]}</View>
-      )}
-      <ConfirmModal
-        cancelLabel="Continue"
-        message="Good to see you again."
-        onClose={() => {
-          setWelcomeBackName(null);
-          onFinished();
-        }}
-        title={welcomeBackName ? `Welcome back, ${welcomeBackName}!` : 'Welcome back!'}
-        visible={welcomeBackName !== null}
-      />
-    </>
-  );
+  if (checkingReturningUser) {
+    return (
+      <View className="flex-1 items-center justify-center bg-canvas">
+        <Spinner size="xlarge" />
+      </View>
+    );
+  }
+
+  return <View className="flex-1 bg-canvas">{steps[step]}</View>;
 }
