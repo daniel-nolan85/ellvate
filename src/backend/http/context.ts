@@ -65,6 +65,7 @@ export async function withRequestContext(
       return jsonError(error.status, error.code, error.message);
     }
     if (error instanceof SupabaseRequestError) {
+      console.error('[supabase] request failed:', error.message);
       return jsonError(
         503,
         'data_request_failed',
