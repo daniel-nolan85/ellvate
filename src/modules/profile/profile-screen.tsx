@@ -4,8 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
-import { useUserProfileModal } from '@clerk/expo';
-
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -30,6 +28,7 @@ import { getClerkConfiguration, publicEnvironment } from '@/src/platform/environ
 import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
+import { AccountIdentifiersSheet } from './account-identifiers-sheet';
 import {
   useDeleteAccount,
   useMemberProfile,
@@ -158,43 +157,6 @@ function Row({
   );
 }
 
-// useUserProfileModal() calls Clerk's useClerk() internally, which throws
-// outside a mounted ClerkProvider — and ClerkSessionProvider skips mounting
-// one entirely when auth is disabled/misconfigured. Isolating the hook call
-// in its own component (only rendered once Clerk is confirmed configured)
-// keeps that call unconditional within its own instance without crashing
-// the rest of the screen in disabled/misconfigured environments.
-function ClerkPhonePasswordRow() {
-  const { isAvailable, presentUserProfile } = useUserProfileModal();
-
-  return (
-    <Row
-      description={
-        isAvailable
-          ? 'Add your other email or phone number here so you can sign in with either'
-          : undefined
-      }
-      icon="Phone"
-      label="Phone, email & password"
-      onPress={isAvailable ? () => void presentUserProfile() : undefined}
-      value={isAvailable ? undefined : 'Use the mobile app'}
-    />
-  );
-}
-
-function PhonePasswordRow() {
-  if (getClerkConfiguration().status !== 'ready') {
-    return (
-      <Row
-        icon="Phone"
-        label="Phone, email & password"
-        value="Not available in this build"
-      />
-    );
-  }
-  return <ClerkPhonePasswordRow />;
-}
-
 function StatCard({
   label,
   onPress,
@@ -261,7 +223,14 @@ export function ProfileScreen() {
   const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
 
-  const [activeSheet, setActiveSheet] = useState<'edit' | null>(null);
+  // AccountIdentifiersSheet calls Clerk's useUser() internally, which throws
+  // outside a mounted ClerkProvider -- and ClerkSessionProvider skips
+  // mounting one entirely when auth is disabled/misconfigured. Only
+  // mounting that sheet once Clerk is confirmed ready keeps this screen
+  // safe to render in every auth mode.
+  const clerkReady = getClerkConfiguration().status === 'ready';
+
+  const [activeSheet, setActiveSheet] = useState<'edit' | 'identifiers' | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftRole, setDraftRole] = useState<CommunityRole | null>(null);
   const [draftInterests, setDraftInterests] = useState<readonly string[]>([]);
@@ -567,7 +536,14 @@ export function ProfileScreen() {
 
         <SectionTitle>Account</SectionTitle>
         <SectionCard>
-          <PhonePasswordRow />
+          <Row
+            icon="Phone"
+            label="Phone & email"
+            onPress={
+              clerkReady ? () => setActiveSheet('identifiers') : undefined
+            }
+            value={clerkReady ? undefined : 'Not available in this build'}
+          />
           <Row icon="Mail" label="Contact us" onPress={() => router.push('/contact')} />
           <Row
             icon="FileText"
@@ -721,6 +697,14 @@ export function ProfileScreen() {
           </VStack>
         ) : null}
       </Sheet>
+
+      {clerkReady ? (
+        <AccountIdentifiersSheet
+          onClose={() => setActiveSheet(null)}
+          onUpdated={showToast}
+          visible={activeSheet === 'identifiers'}
+        />
+      ) : null}
 
       <ConfirmModal
         confirmLabel="Sign out"
