@@ -26,7 +26,7 @@ import {
   resetOnboardingComplete,
   ROLES,
 } from '@/src/modules/onboarding';
-import { getClerkConfiguration } from '@/src/platform/environment';
+import { getClerkConfiguration, publicEnvironment } from '@/src/platform/environment';
 import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
@@ -79,10 +79,9 @@ const NOTIFICATION_ROWS: readonly {
 ];
 
 // Hosted on the marketing site (../web/app/terms, ../web/app/privacy), not
-// as native routes -- there's no real domain yet (see EXPO_PUBLIC_MARKETING_URL
-// in .env.example), so these rows fall back to a disabled state instead of a
-// broken link until one exists.
-const MARKETING_URL = process.env.EXPO_PUBLIC_MARKETING_URL?.trim() || null;
+// as native routes -- these rows fall back to a disabled state instead of a
+// broken link when EXPO_PUBLIC_MARKETING_URL (see .env.example) isn't set.
+const MARKETING_URL = publicEnvironment.marketingUrl;
 
 function SectionTitle({ children }: { readonly children: string }) {
   return (
@@ -170,8 +169,13 @@ function ClerkPhonePasswordRow() {
 
   return (
     <Row
+      description={
+        isAvailable
+          ? 'Add your other email or phone number here so you can sign in with either'
+          : undefined
+      }
       icon="Phone"
-      label="Phone & password"
+      label="Phone, email & password"
       onPress={isAvailable ? () => void presentUserProfile() : undefined}
       value={isAvailable ? undefined : 'Use the mobile app'}
     />
@@ -183,7 +187,7 @@ function PhonePasswordRow() {
     return (
       <Row
         icon="Phone"
-        label="Phone & password"
+        label="Phone, email & password"
         value="Not available in this build"
       />
     );
@@ -362,6 +366,16 @@ export function ProfileScreen() {
     // back into, so it keeps the onboarding-reset behavior that's the only
     // thing giving "Sign out" a visible effect there.
     const wasDemoMode = session.status === 'disabled';
+    // Navigate off this protected screen BEFORE the session actually ends.
+    // Doing it after (as this used to) raced the layout's Stack.Protected
+    // guard, which flips and redirects away the instant session.status stops
+    // being signed-in -- landing wherever that redirect went (a blank beat,
+    // then /onboarding's welcome screen) rather than where this explicitly
+    // sent it, before this replace ever got to run. /auth isn't gated behind
+    // that guard, so navigating there first sidesteps the race entirely.
+    if (!wasDemoMode) {
+      router.replace('/auth');
+    }
     void (async () => {
       try {
         await session.signOut();
@@ -369,8 +383,6 @@ export function ProfileScreen() {
         if (wasDemoMode) {
           await resetOnboardingComplete();
           router.replace('/');
-        } else {
-          router.replace('/auth');
         }
       }
     })();

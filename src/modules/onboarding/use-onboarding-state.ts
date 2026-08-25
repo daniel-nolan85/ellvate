@@ -55,6 +55,30 @@ export async function resetOnboardingComplete(): Promise<void> {
   await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
 }
 
+export interface ReturningProfile {
+  readonly onboardedAt: string | null;
+  readonly name: string;
+}
+
+// The on-device flag above only knows about this device. A returning user on
+// a new device (or an iOS reinstall, where Clerk's session commonly survives
+// in the Keychain even though the app's own storage was wiped) still has
+// isOnboardingComplete() come back false there, even though their profile is
+// already onboarded server-side. This reads that server truth directly so
+// the wizard can be skipped instead of re-run, and pulls the name along with
+// it for the "welcome back" greeting rather than a second round trip.
+export async function fetchReturningProfile(
+  getAccessToken: () => Promise<string | null>,
+): Promise<ReturningProfile> {
+  const { profile } = await requestJson<{
+    readonly profile: { readonly onboardedAt: string | null; readonly name: string };
+  }>({
+    getAccessToken,
+    path: '/api/me/profile',
+  });
+  return profile;
+}
+
 export function useOnboardingState() {
   const session = useSession();
   const queryClient = useQueryClient();

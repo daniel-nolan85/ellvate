@@ -1,7 +1,9 @@
-import React, { useCallback, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { View } from 'react-native';
 
+import { ConfirmModal } from '@/src/components/ui/confirm-modal';
+import { Spinner } from '@/src/components/ui/spinner';
 import { useSession } from '@/src/platform/session';
 
 import { AuthStep } from './auth-step';
@@ -13,7 +15,12 @@ import { NameStep } from './name-step';
 import { NotificationsStep } from './notifications-step';
 import { PasskeyStep } from './passkey-step';
 import { RoleStep } from './role-step';
-import { useOnboardingState } from './use-onboarding-state';
+import {
+  fetchReturningProfile,
+  markOnboardingComplete,
+  useOnboardingState,
+  type ReturningProfile,
+} from './use-onboarding-state';
 import { WelcomeStep } from './welcome-step';
 
 // The auth step lives at a fixed slot right after the welcome screen. Once a
@@ -32,6 +39,8 @@ interface OnboardingFlowProps {
 export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const session = useSession();
   const [step, setStep] = useState(0);
+  const [checkingReturningUser, setCheckingReturningUser] = useState(false);
+  const [welcomeBackName, setWelcomeBackName] = useState<string | null>(null);
   const {
     completeOnboarding,
     completionError,
@@ -56,14 +65,25 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const stepCount = includePasskey ? 16 : 15;
 
   const goNext = useCallback(() => {
+    if (checkingReturningUser) {
+      return;
+    }
     setStep((current) => {
+      if (current === AUTH_INDEX && clerkUsable && !isSignedIn) {
+        // The code step just verified, but isSignedIn is derived from Clerk
+        // state that hasn't reached this render yet -- stay put. The effect
+        // below picks this up as soon as it has (and decides whether this is
+        // a returning, already-onboarded user) instead of this advancing
+        // straight to the role step first regardless.
+        return current;
+      }
       let next = Math.min(stepCount - 1, current + 1);
       if (next === AUTH_INDEX && isSignedIn) {
         next = Math.min(stepCount - 1, next + 1);
       }
       return next;
     });
-  }, [isSignedIn, stepCount]);
+  }, [checkingReturningUser, clerkUsable, isSignedIn, stepCount]);
 
   const goBack = useCallback(() => {
     setStep((current) => {
@@ -74,6 +94,45 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       return prev;
     });
   }, [isSignedIn]);
+
+  // A signed-in session at or before the auth slot means either this device
+  // already had a valid Clerk session when onboarding started (e.g. an iOS
+  // reinstall, where Clerk's session commonly survives in the Keychain even
+  // though this app's own on-device onboarding flag didn't), or the code
+  // step just finished. Either way, check the real profile before showing
+  // role/name/interests again instead of assuming this is a brand-new user.
+  useEffect(() => {
+    if (!isSignedIn || step > AUTH_INDEX) {
+      return;
+    }
+    let cancelled = false;
+    setCheckingReturningUser(true);
+    void (async () => {
+      let returning: ReturningProfile | null = null;
+      try {
+        returning = await fetchReturningProfile(session.getToken);
+      } catch {
+        returning = null;
+      }
+      if (cancelled) {
+        return;
+      }
+      if (returning?.onboardedAt) {
+        await markOnboardingComplete();
+        setCheckingReturningUser(false);
+        // onFinished() itself waits for the "Welcome back" modal below,
+        // rather than firing here -- see its onClose. An empty string
+        // renders a name-less "Welcome back!" instead of an empty greeting.
+        setWelcomeBackName(returning.name.trim());
+        return;
+      }
+      setCheckingReturningUser(false);
+      setStep((current) => (current <= AUTH_INDEX ? AUTH_INDEX + 1 : current));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, onFinished, session.getToken, step]);
 
   const handleDone = useCallback(async () => {
     const completed = await completeOnboarding();
@@ -175,5 +234,25 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     />,
   ];
 
-  return <View className="flex-1 bg-canvas">{steps[step]}</View>;
+  return (
+    <>
+      {checkingReturningUser ? (
+        <View className="flex-1 items-center justify-center bg-canvas">
+          <Spinner size="xlarge" />
+        </View>
+      ) : (
+        <View className="flex-1 bg-canvas">{steps[step]}</View>
+      )}
+      <ConfirmModal
+        cancelLabel="Continue"
+        message="Good to see you again."
+        onClose={() => {
+          setWelcomeBackName(null);
+          onFinished();
+        }}
+        title={welcomeBackName ? `Welcome back, ${welcomeBackName}!` : 'Welcome back!'}
+        visible={welcomeBackName !== null}
+      />
+    </>
+  );
 }

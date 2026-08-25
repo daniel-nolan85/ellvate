@@ -13,6 +13,7 @@ export interface PublicEnvironment {
   readonly apiUrl: string | null;
   readonly authMode: AuthMode;
   readonly clerkPublishableKey: string | null;
+  readonly marketingUrl: string | null;
   readonly sentryDsn: string | null;
   readonly issues: readonly string[];
 }
@@ -36,6 +37,7 @@ const rawAuthMode =
   process.env.EXPO_PUBLIC_AUTH_MODE?.trim();
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const rawClerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+const rawMarketingUrl = process.env.EXPO_PUBLIC_MARKETING_URL?.trim();
 const rawSentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 
 const issues: string[] = [];
@@ -47,6 +49,11 @@ if (rawAuthMode && rawAuthMode !== 'clerk' && rawAuthMode !== 'disabled') {
 const explicitApiUrl = normalizeUrl(rawApiUrl);
 if (rawApiUrl && !explicitApiUrl) {
   issues.push('EXPO_PUBLIC_API_URL must be an absolute URL.');
+}
+
+const marketingUrl = normalizeUrl(rawMarketingUrl);
+if (rawMarketingUrl && !marketingUrl) {
+  issues.push('EXPO_PUBLIC_MARKETING_URL must be an absolute URL.');
 }
 
 // Without an explicit API URL: web uses its same-origin API routes (dev and
@@ -79,6 +86,7 @@ export const publicEnvironment: PublicEnvironment = Object.freeze({
   apiUrl,
   authMode,
   clerkPublishableKey,
+  marketingUrl,
   sentryDsn,
   issues: Object.freeze(issues),
 });

@@ -8,7 +8,7 @@ import {
 } from './auth-errors';
 
 export type IdentifierKind = 'email' | 'phone';
-export type AuthStep = 'identifier' | 'code';
+export type AuthStep = 'identifier' | 'consent' | 'code';
 export type AuthMode = 'signIn' | 'signUp';
 
 const sendSignInCode = async (
@@ -50,34 +50,6 @@ export function useIdentifierAuthFlow() {
       setIdentifier(value);
 
       try {
-        const startSignUp = async () => {
-          const signUpResult = await signUp.create(
-            kind === 'email' ? { emailAddress: value } : { phoneNumber: value },
-          );
-          if (signUpResult.error) {
-            setError(
-              messageForAuthError(
-                signUpResult.error,
-                'We could not start account creation.',
-              ),
-            );
-            return;
-          }
-
-          const codeResult = await sendSignUpCode(kind, signUp);
-          if (codeResult.error) {
-            setError(
-              messageForAuthError(
-                codeResult.error,
-                'We could not send a code. Try again.',
-              ),
-            );
-            return;
-          }
-          setMode('signUp');
-          setStep('code');
-        };
-
         let signInResult: Awaited<ReturnType<typeof signIn.create>>;
         try {
           signInResult = await signIn.create({
@@ -91,7 +63,12 @@ export function useIdentifierAuthFlow() {
           if (!isMissingIdentifierError(caught)) {
             throw caught;
           }
-          await startSignUp();
+          // Legal consent (required before the account can be created --
+          // see confirmConsent) has to be collected before signUp.create()
+          // fires, not after, so this only sets up for sign-up rather than
+          // starting it.
+          setMode('signUp');
+          setStep('consent');
           return;
         }
 
@@ -115,15 +92,60 @@ export function useIdentifierAuthFlow() {
           return;
         }
 
-        await startSignUp();
+        setMode('signUp');
+        setStep('consent');
       } catch (caught) {
         setError(messageForAuthError(caught, 'Something went wrong. Try again.'));
       } finally {
         setBusy(false);
       }
     },
-    [busy, isLoaded, kind, signIn, signUp],
+    [busy, isLoaded, kind, signIn],
   );
+
+  // Collects legal consent before an account exists rather than after --
+  // signUp.create() is what actually starts account creation and sends the
+  // code, and legalAccepted has to be on that call (or a later update()
+  // before finalize()) for a Clerk instance with "require legal consent"
+  // turned on to ever reach status: 'complete'.
+  const confirmConsent = useCallback(async () => {
+    if (!isLoaded || busy) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const signUpResult = await signUp.create({
+        ...(kind === 'email' ? { emailAddress: identifier } : { phoneNumber: identifier }),
+        legalAccepted: true,
+      });
+      if (signUpResult.error) {
+        setError(
+          messageForAuthError(signUpResult.error, 'We could not start account creation.'),
+        );
+        return;
+      }
+
+      const codeResult = await sendSignUpCode(kind, signUp);
+      if (codeResult.error) {
+        setError(
+          messageForAuthError(codeResult.error, 'We could not send a code. Try again.'),
+        );
+        return;
+      }
+      setStep('code');
+    } catch (caught) {
+      setError(messageForAuthError(caught, 'Something went wrong. Try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, identifier, isLoaded, kind, signUp]);
+
+  const declineConsent = useCallback(() => {
+    setError(null);
+    setStep('identifier');
+  }, []);
 
   const submitCode = useCallback(
     async (code: string): Promise<boolean> => {
@@ -213,6 +235,8 @@ export function useIdentifierAuthFlow() {
   return {
     busy,
     chooseKind,
+    confirmConsent,
+    declineConsent,
     error,
     identifier,
     kind,
