@@ -239,24 +239,27 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           <Text className="leading-6 text-muted-foreground" size="sm">
             Please agree to continue creating your account.
           </Text>
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: consentChecked }}
-            className="flex-row items-start gap-3 rounded-2xl border border-surface-hairline bg-canvas px-4 py-3.5"
-            onPress={() => setConsentChecked((current) => !current)}
-            testID="auth-consent-checkbox"
-          >
-            <View
+          <View className="flex-row items-start gap-3 rounded-2xl border border-surface-hairline bg-canvas px-4 py-3.5">
+            {/* A separate Pressable from the text below -- nesting the Terms/
+                Privacy links' own onPress inside a Pressable wrapping the
+                whole row swallowed their taps entirely, so every tap just
+                toggled the checkbox regardless of where in the row it landed. */}
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: consentChecked }}
+              hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
               className={`mt-0.5 h-5 w-5 items-center justify-center rounded-md border ${
                 consentChecked
                   ? 'border-primary bg-primary'
                   : 'border-surface-hairline bg-paper'
               }`}
+              onPress={() => setConsentChecked((current) => !current)}
+              testID="auth-consent-checkbox"
             >
               {consentChecked ? (
                 <Icon color="rgb(255,255,255)" name="Check" size={13} />
               ) : null}
-            </View>
+            </Pressable>
             <Text className="flex-1 leading-5 text-content" size="sm">
               I agree to the{' '}
               <Text
@@ -284,7 +287,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
               </Text>
               .
             </Text>
-          </Pressable>
+          </View>
           <Button
             className="h-[52px] rounded-2xl bg-accent"
             isDisabled={!consentChecked || flow.busy}

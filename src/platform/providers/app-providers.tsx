@@ -3,6 +3,7 @@ import { useEffect, useRef, type PropsWithChildren } from 'react';
 import { GluestackUIProvider } from '@/src/components/ui/gluestack-ui-provider';
 import { AuthenticationProvider } from '@/src/modules/authentication';
 import { useAppFonts } from '@/src/platform/fonts';
+import { WelcomeBackNoticeProvider } from '@/src/platform/notices';
 import { clearQueryCache, QueryProvider } from '@/src/platform/query';
 import { useSession } from '@/src/platform/session';
 import { useExpoUpdatesBootstrap } from '@/src/platform/updates';
@@ -41,7 +42,9 @@ export function AppProviders({ children }: PropsWithChildren) {
     <GluestackUIProvider mode="light">
       <AuthenticationProvider>
         <QueryProvider>
-          <SessionQueryBoundary>{children}</SessionQueryBoundary>
+          <SessionQueryBoundary>
+            <WelcomeBackNoticeProvider>{children}</WelcomeBackNoticeProvider>
+          </SessionQueryBoundary>
         </QueryProvider>
       </AuthenticationProvider>
     </GluestackUIProvider>

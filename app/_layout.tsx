@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
+import { ConfirmModal } from '@/src/components/ui/confirm-modal';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import {
@@ -15,6 +16,7 @@ import {
   ClerkAuthGate,
 } from '@/src/modules/authentication';
 import { AssistantButton } from '@/src/modules/community-shell';
+import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { AppProviders } from '@/src/platform/providers';
 import { PushRegistration } from '@/src/platform/push';
 import { useSession } from '@/src/platform/session';
@@ -36,6 +38,7 @@ const UNPROTECTED_ROUTES = new Set(['index', 'onboarding', 'auth']);
 
 function AppNavigator() {
   const session = useSession();
+  const welcomeBack = useWelcomeBackNotice();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const canAccessCommunity = canAccessCommunityRoutes(session.status);
@@ -79,6 +82,13 @@ function AppNavigator() {
           }}
         />
       ) : null}
+      <ConfirmModal
+        cancelLabel="Continue"
+        message="Good to see you again."
+        onClose={welcomeBack.dismiss}
+        title={welcomeBack.name ? `Welcome back, ${welcomeBack.name}!` : 'Welcome back!'}
+        visible={welcomeBack.name !== null}
+      />
     </ClerkAuthGate>
   );
 }

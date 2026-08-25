@@ -175,7 +175,7 @@ function ClerkPhonePasswordRow() {
           : undefined
       }
       icon="Phone"
-      label="Phone, email & password"
+      label="Phone & email"
       onPress={isAvailable ? () => void presentUserProfile() : undefined}
       value={isAvailable ? undefined : 'Use the mobile app'}
     />
@@ -187,7 +187,7 @@ function PhonePasswordRow() {
     return (
       <Row
         icon="Phone"
-        label="Phone, email & password"
+        label="Phone & email"
         value="Not available in this build"
       />
     );
