@@ -30,6 +30,8 @@ const createClerkMocks = () => {
   const signUp = {
     create: jest.fn(),
     finalize: jest.fn(),
+    missingFields: [] as string[],
+    status: 'complete' as string | null,
     verifications: {
       sendEmailCode: jest.fn(),
       sendPhoneCode: jest.fn(),
@@ -115,6 +117,36 @@ describe('useIdentifierAuthFlow', () => {
 
     expect(signUp.create).not.toHaveBeenCalled();
     expect(result.current.step).toBe('identifier');
+  });
+
+  test('reports missing requirements instead of crashing when sign-up cannot finalize', async () => {
+    const { signIn, signUp } = createClerkMocks();
+    signIn.create.mockRejectedValueOnce({
+      errors: [{ code: 'form_identifier_not_found' }],
+    });
+    signUp.create.mockResolvedValueOnce({ error: undefined });
+    signUp.verifications.sendEmailCode.mockResolvedValueOnce({ error: undefined });
+    signUp.verifications.verifyEmailCode.mockResolvedValueOnce({ error: undefined });
+    signUp.status = 'missing_requirements';
+    signUp.missingFields = ['password'];
+
+    const { result } = await renderHook(() => useIdentifierAuthFlow());
+
+    await act(async () => {
+      result.current.chooseKind('email');
+    });
+    await act(async () => {
+      await result.current.submitIdentifier('new-user@example.invalid');
+    });
+    await act(async () => {
+      await result.current.confirmConsent();
+    });
+    await act(async () => {
+      await result.current.submitCode('123456');
+    });
+
+    expect(signUp.finalize).not.toHaveBeenCalled();
+    expect(result.current.error).toBe('Still needed to finish sign-up: password.');
   });
 
   test('does not start sign-up for a thrown network error', async () => {

@@ -170,6 +170,15 @@ export function useIdentifierAuthFlow() {
           return false;
         }
 
+        if (mode === 'signUp' && signUp.status !== 'complete') {
+          setError(
+            signUp.missingFields.length > 0
+              ? `Still needed to finish sign-up: ${signUp.missingFields.join(', ')}.`
+              : 'Sign-up could not be completed. Check your Clerk sign-up requirements.',
+          );
+          return false;
+        }
+
         const finalized =
           mode === 'signIn'
             ? await signIn.finalize()
