@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "LLV Community",
-    "slug": "llv-community-app",
+    "name": "Community Copilot",
+    "slug": "community-copilot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/llv-logo.png",
@@ -48,7 +48,7 @@
         {
           "cameraPermission": false,
           "microphonePermission": false,
-          "photosPermission": "Let LLV Community access your photos so you can set a profile picture, add mission check-in photos, and upload service listing photos."
+          "photosPermission": "Let Community Copilot access your photos so you can set a profile picture, add mission check-in photos, and upload service listing photos."
         }
       ],
       [
