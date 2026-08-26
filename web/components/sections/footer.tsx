@@ -19,11 +19,20 @@ export function Footer() {
       <div className="border-t border-border/60">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
-            <CactusMark animated className="h-5 w-5" />
+            <CactusMark animated className="h-6 w-6" />
             <span>{BRAND.appName}</span>
           </div>
           <span className="text-center sm:text-left">
-            &copy; <CopyrightYear /> {BRAND.appName}.
+            &copy; <CopyrightYear /> {BRAND.appName}. A{' '}
+            <a
+              href={BRAND.companyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {BRAND.company}
+            </a>{' '}
+            product.
           </span>
           <div className="flex items-center gap-4">
             <a href="/terms" className="underline-offset-2 hover:text-foreground hover:underline">

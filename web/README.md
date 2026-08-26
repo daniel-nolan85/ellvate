@@ -1,7 +1,7 @@
 # Community Copilot — Web
 
-The public landing site for **Community Copilot**, an app for the Lake Las
-Vegas community. A standalone Next.js app, independent of
+The public landing site for **Community Copilot** (built by Nolancode
+for the Lake Las Vegas community). A standalone Next.js app, independent of
 the Expo app at the repo root and of the admin dashboard at `../admin` —
 separate `package.json`, separate deploy (Vercel, root directory `web`) —
 meant to be the app's web presence before launch (a showcase + waitlist) and
@@ -11,8 +11,8 @@ Branding note: the app was previously named "LLV Community" and used an
 indigo/dark visual identity — both have since changed (app name →
 "Community Copilot", palette → the same desert-oasis palette as the mobile
 app, see `../tailwind.config.js`). The logo used here (`components/brand/`)
-is a temporary placeholder built from the mobile app's cactus-spinner
-character, not the real logo — that's being designed separately.
+is the same shaded, crowned, dancing-cactus glyph as the mobile app's
+Spinner, hand-ported to plain SVG/CSS since this is a separate Next.js app.
 
 ## What's here
 
@@ -38,8 +38,10 @@ character, not the real logo — that's being designed separately.
 Not yet built: real app screenshots (the app preview section is a stylized
 mockup, not literal screenshots, since the UI is still moving pre-launch), a
 way to read the waitlist/contact messages back out (would be a page in
-`../admin`), the real logo, and the switch from "join the waitlist" to App
-Store / Play Store download buttons once the app has shipped.
+`../admin`), the switch from "join the waitlist" to App Store / Play Store
+download buttons once the app has shipped, and a dedicated Nolancode site
+(the footer/legal-page links to `https://www.nolancode.com` in anticipation
+of it).
 
 ## Setup
 
