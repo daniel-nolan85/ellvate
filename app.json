@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "eLLVate",
-    "slug": "community-copilot",
+    "slug": "ellvate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/cactus-icon.png",
@@ -76,11 +76,7 @@
       "fallbackToCacheTimeout": 3000
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "15fc95df-574a-49ef-ab09-25c40e287987"
-      }
-    },
-    "owner": "6missedcalls"
+      "router": {}
+    }
   }
 }
