@@ -4,11 +4,11 @@ import * as React from 'react';
 
 interface WaitlistState {
   readonly status: 'idle' | 'done';
-  readonly message: string | null;
+  readonly message: React.ReactNode;
 }
 
 interface WaitlistContextValue extends WaitlistState {
-  readonly markDone: (message: string) => void;
+  readonly markDone: (message: React.ReactNode) => void;
 }
 
 const WaitlistContext = React.createContext<WaitlistContextValue | null>(null);

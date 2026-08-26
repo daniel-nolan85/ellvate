@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
+import { Wordmark } from '@/components/brand/wordmark';
 import { Reveal } from '@/components/motion/reveal';
 import { BRAND } from '@/lib/content';
 
@@ -45,7 +46,7 @@ export function About() {
               <p>
                 {BRAND.community} is more than a place to live. It&apos;s a community
                 full of people, businesses, events, ideas, and experiences — and{' '}
-                {BRAND.appName} is built to bring all of that closer together.
+                <Wordmark className="text-foreground text-lg" /> is built to bring all of that closer together.
               </p>
               <p>
                 Instead of piecing things together across group chats, Facebook posts,
@@ -61,7 +62,8 @@ export function About() {
                 businesses that make the Village what it is.
               </p>
               <p>
-                Best of all, it&apos;s built for everyone. {BRAND.appName} is free for
+                Best of all, it&apos;s built for everyone.{' '}
+                <Wordmark className="text-foreground text-lg" /> is free for
                 residents, with tools like Petitions giving neighbors an easy way to come
                 together and make their voices heard.
               </p>

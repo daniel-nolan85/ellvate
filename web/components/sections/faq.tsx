@@ -1,3 +1,4 @@
+import { Wordmark } from '@/components/brand/wordmark';
 import { Reveal } from '@/components/motion/reveal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { BRAND, faqs } from '@/lib/content';
@@ -19,7 +20,7 @@ export function Faq() {
           <AccordionItem value="Who built this?">
             <AccordionTrigger>Who built this?</AccordionTrigger>
             <AccordionContent>
-              {BRAND.appName} is a product of{' '}
+              <Wordmark className="text-foreground text-base" /> is a product of{' '}
               <a
                 href={BRAND.companyUrl}
                 target="_blank"

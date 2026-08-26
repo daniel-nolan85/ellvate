@@ -4,10 +4,10 @@ import * as React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 
 import { CactusSpinner } from '@/components/brand/cactus-spinner';
+import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BRAND } from '@/lib/content';
 
 import { useWaitlistStatus } from './waitlist-context';
 
@@ -52,9 +52,13 @@ export function WaitlistForm({
       }
 
       markDone(
-        data.alreadyJoined
-          ? "You're already on the list — we'll be in touch."
-          : `You're on the list. We'll email you when ${BRAND.appName} launches.`
+        data.alreadyJoined ? (
+          "You're already on the list — we'll be in touch."
+        ) : (
+          <>
+            You&apos;re on the list. We&apos;ll email you when <Wordmark className="text-base" /> launches.
+          </>
+        )
       );
     } catch {
       setSubmitState('error');
