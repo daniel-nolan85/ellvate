@@ -1,7 +1,22 @@
+import * as React from 'react';
+
 import { Wordmark } from '@/components/brand/wordmark';
 import { Reveal } from '@/components/motion/reveal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { BRAND, faqs } from '@/lib/content';
+
+// lib/content.ts's faqs array is intentionally plain data (see its own
+// header comment), so the app-name-to-wordmark swap happens here at render
+// time instead of embedding a component reference in that data.
+function withWordmark(text: string, wordmarkClassName?: string): React.ReactNode {
+  const parts = text.split(BRAND.appName);
+  return parts.map((part, index) => (
+    <React.Fragment key={index}>
+      {part}
+      {index < parts.length - 1 ? <Wordmark className={wordmarkClassName} /> : null}
+    </React.Fragment>
+  ));
+}
 
 export function Faq() {
   return (
@@ -13,8 +28,8 @@ export function Faq() {
         <Accordion type="single" collapsible className="mt-12">
           {faqs.map((faq) => (
             <AccordionItem key={faq.question} value={faq.question}>
-              <AccordionTrigger>{faq.question}</AccordionTrigger>
-              <AccordionContent>{faq.answer}</AccordionContent>
+              <AccordionTrigger>{withWordmark(faq.question)}</AccordionTrigger>
+              <AccordionContent>{withWordmark(faq.answer, 'text-foreground text-base')}</AccordionContent>
             </AccordionItem>
           ))}
           <AccordionItem value="Who built this?">
