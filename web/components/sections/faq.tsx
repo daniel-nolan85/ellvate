@@ -28,7 +28,9 @@ export function Faq() {
         <Accordion type="single" collapsible className="mt-12">
           {faqs.map((faq) => (
             <AccordionItem key={faq.question} value={faq.question}>
-              <AccordionTrigger>{withWordmark(faq.question)}</AccordionTrigger>
+              <AccordionTrigger>
+                <span>{withWordmark(faq.question)}</span>
+              </AccordionTrigger>
               <AccordionContent>{withWordmark(faq.answer, 'text-foreground text-base')}</AccordionContent>
             </AccordionItem>
           ))}
