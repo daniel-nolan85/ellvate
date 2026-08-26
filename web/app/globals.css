@@ -233,6 +233,19 @@ body {
   color: var(--color-lake);
 }
 
+/* Source site's own colors verbatim, for a dark background (the footer's
+   dark credit band -- see components/sections/footer.tsx) instead of the
+   light-background adaptation above. */
+.nolancode-wordmark--dark {
+  color: rgba(248, 250, 252, 0.95);
+  text-shadow: 0 0 12px rgba(103, 232, 249, 0.4);
+}
+
+.nolancode-wordmark--dark span {
+  color: #67e8f9;
+  text-shadow: 0 0 12px rgba(103, 232, 249, 0.7);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nolancode-orbit {
     animation: none !important;

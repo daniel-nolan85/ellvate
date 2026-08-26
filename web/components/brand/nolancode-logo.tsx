@@ -3,10 +3,9 @@
 import { useMemo } from 'react';
 
 // Ported from nolancode.com's own nav (SolarIcon + the ".nav-wordmark" rule,
-// supplied directly by Daniel) for the footer's "built by" credit. See the
-// color-adaptation note above .nolancode-wordmark in globals.css -- the
-// wordmark's colors are intentionally not identical to the source site's,
-// since that one is styled for a dark nav background and this footer isn't.
+// supplied directly by Daniel) for the footer's "built by" credit. The
+// `variant` prop picks which wordmark coloring to use -- see the two
+// .nolancode-wordmark* rules in globals.css.
 function NolancodeOrbitIcon({ size = 20 }: { size?: number }) {
   // Randomized per mount so multiple instances of this icon on screen at
   // once don't all orbit in lockstep -- matches the source component
@@ -110,11 +109,21 @@ function NolancodeOrbitIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function NolancodeLogo({ className, iconSize = 20 }: { className?: string; iconSize?: number }) {
+interface NolancodeLogoProps {
+  className?: string;
+  iconSize?: number;
+  // 'light' (default) adapts the wordmark for a light background -- see the
+  // color-adaptation note above .nolancode-wordmark in globals.css. 'dark'
+  // uses the source site's own near-white/cyan-glow colors verbatim, for
+  // places (like a dark footer band) that match its native dark nav.
+  variant?: 'light' | 'dark';
+}
+
+export function NolancodeLogo({ className, iconSize = 20, variant = 'light' }: NolancodeLogoProps) {
   return (
     <span className={className} style={{ alignItems: 'center', display: 'inline-flex', gap: '0.4rem' }}>
       <NolancodeOrbitIcon size={iconSize} />
-      <span className="nolancode-wordmark">
+      <span className={variant === 'dark' ? 'nolancode-wordmark nolancode-wordmark--dark' : 'nolancode-wordmark'}>
         Nolan<span>code</span>
       </span>
     </span>
