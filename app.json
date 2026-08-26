@@ -76,7 +76,11 @@
       "fallbackToCacheTimeout": 3000
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "cb2fe50f-0723-4522-b836-cb0895e1b18c"
+      }
+    },
+    "owner": "daniel1985"
   }
 }
