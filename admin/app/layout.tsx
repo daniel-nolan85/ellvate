@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'LLV Community — Admin',
-  description: 'Moderation and content administration for LLV Community.',
+  title: 'eLLVate — Admin',
+  description: 'Moderation and content administration for eLLVate.',
 };
 
 export default function RootLayout({

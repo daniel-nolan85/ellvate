@@ -1,5 +1,6 @@
 import { CactusMark } from '@/components/brand/cactus-mark';
 import { NolancodeLogo } from '@/components/brand/nolancode-logo';
+import { Wordmark } from '@/components/brand/wordmark';
 import { CopyrightYear } from '@/components/copyright-year';
 import { Reveal } from '@/components/motion/reveal';
 import { BRAND } from '@/lib/content';
@@ -21,8 +22,11 @@ export function Footer() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-white/70 sm:flex-row">
           <div className="flex items-center gap-2">
             <CactusMark animated className="h-6 w-6" />
-            <span>
-              {BRAND.appName} &middot; &copy; <CopyrightYear />
+            <span className="flex items-center gap-1.5">
+              <Wordmark className="text-base" />
+              <span>
+                &middot; &copy; <CopyrightYear />
+              </span>
             </span>
           </div>
           <a href={BRAND.companyUrl} target="_blank" rel="noopener noreferrer" aria-label={BRAND.company}>

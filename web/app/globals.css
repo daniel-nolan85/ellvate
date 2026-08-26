@@ -198,6 +198,26 @@ body {
   font-family: var(--font-sans);
 }
 
+/* "eLLVate" wordmark -- see components/brand/wordmark.tsx. Rye stands in
+   for Dendora (a licensed foundry face, not available through next/font);
+   LLV gets the lake color so the Lake-Las-Vegas pun still reads even
+   where the capitalization gets lost (a URL, a truncated title, ...).
+   Scoped to this class and .tagline below, not used for body copy. */
+.wordmark {
+  font-family: var(--font-rye), Georgia, serif;
+  font-weight: 400;
+}
+.wordmark-llv {
+  color: var(--color-lake);
+}
+
+.tagline {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-style: italic;
+  font-weight: 340;
+  font-optical-sizing: auto;
+}
+
 /* Nolancode footer credit -- see components/brand/nolancode-logo.tsx. The
    font and orbit animation are ported verbatim from nolancode.com's own
    nav (source supplied directly). The wordmark's colors are not verbatim,

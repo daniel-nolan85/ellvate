@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { CactusMark } from '@/components/brand/cactus-mark';
 import { NolancodeLogo } from '@/components/brand/nolancode-logo';
+import { Wordmark } from '@/components/brand/wordmark';
 import { CopyrightYear } from '@/components/copyright-year';
 import { BRAND } from '@/lib/content';
 
@@ -32,9 +33,7 @@ export function LegalPageShell({
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 no-underline">
             <CactusMark animated className="h-6 w-6" />
-            <span className="text-sm font-semibold tracking-wide text-foreground">
-              {BRAND.appName}
-            </span>
+            <Wordmark className="text-base text-foreground" />
           </Link>
           <Link
             href="/"
@@ -59,8 +58,8 @@ export function LegalPageShell({
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-white/70 sm:flex-row">
           <div className="flex items-center gap-2">
             <CactusMark animated className="h-6 w-6" />
-            <span>
-              &copy; <CopyrightYear /> {BRAND.appName}
+            <span className="flex items-center gap-1.5">
+              &copy; <CopyrightYear /> <Wordmark />
             </span>
           </div>
           <a href={BRAND.companyUrl} target="_blank" rel="noopener noreferrer" aria-label={BRAND.company}>

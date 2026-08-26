@@ -19,6 +19,9 @@ export function Hero() {
             in one place.
           </h1>
         </FadeIn>
+        <FadeIn delay={0.12}>
+          <p className="tagline mt-3 text-xl text-foreground sm:text-2xl">{BRAND.tagline}</p>
+        </FadeIn>
         <FadeIn delay={0.16}>
           <p className="mt-6 max-w-xl text-lg text-muted-foreground text-balance">
             {BRAND.appName} brings {BRAND.community} together — forum discussions, a

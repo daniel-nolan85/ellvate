@@ -5,7 +5,8 @@
 // something it doesn't.
 
 export const BRAND = {
-  appName: 'Community Copilot',
+  appName: 'eLLVate',
+  tagline: 'Connect. Discover. Belong.',
   community: 'Lake Las Vegas',
   company: 'Nolancode',
   // The precise legal entity name -- used in the Terms/Privacy legal copy
