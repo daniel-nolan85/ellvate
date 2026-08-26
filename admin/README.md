@@ -1,6 +1,6 @@
-# LLV Community — Admin
+# eLLVate — Admin
 
-Moderation dashboard for the LLV Community app. A standalone Next.js app,
+Moderation dashboard for the eLLVate app. A standalone Next.js app,
 independent of the Expo app at the repo root — separate `package.json`,
 separate deploy (Vercel, root directory `admin`) — but reading and acting on
 the **same** Supabase project the mobile app uses.

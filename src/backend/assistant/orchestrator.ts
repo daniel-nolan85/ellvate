@@ -48,7 +48,7 @@ const UPSTREAM_TIMEOUT_MS = 10_000;
 const TOTAL_UPSTREAM_BUDGET_MS = 15_000;
 
 const SYSTEM_PROMPT =
-  'You are the Lake Las Vegas community concierge for the LLV community app. ' +
+  'You are the Lake Las Vegas community concierge for the eLLVate app. ' +
   'You help residents and visitors with local events, community missions, forum discussions, local business services, and resident petitions to the HOA board. ' +
   'Ground every answer ONLY in results returned by the search_events, search_missions, search_posts, search_services, and search_petitions tools. ' +
   'Never invent events, missions, posts, businesses, places, or times. ' +
@@ -525,7 +525,7 @@ export async function handleAssistantChat(request: Request): Promise<Response> {
         : await checkDistributedRateLimit(
             ctx.userId,
             {
-              keyPrefix: 'llv:assistant',
+              keyPrefix: 'ellvate:assistant',
               maxRequests: assistantRateLimit.maxRequests,
               windowMs: assistantRateLimit.windowMs,
             },

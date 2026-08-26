@@ -1,4 +1,4 @@
-appId: com.llvcommunity.app
+appId: com.ellvate.app
 ---
 - launchApp
 - waitForAnimationToEnd

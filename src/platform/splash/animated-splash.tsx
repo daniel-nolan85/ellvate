@@ -225,16 +225,16 @@ function NolancodeScreen({ opacity }: { readonly opacity: Animated.Value }) {
   );
 }
 
-// ── Community Copilot screen ────────────────────────────────────────────────
+// ── Brand screen ─────────────────────────────────────────────────────────
 
-function CommunityCopilotScreen({ opacity }: { readonly opacity: Animated.Value }) {
+function BrandSplashScreen({ opacity }: { readonly opacity: Animated.Value }) {
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: BOOT_BACKGROUND, opacity }]}>
       <View style={styles.brandContent}>
         <View style={styles.cactusScale}>
-          <Spinner aria-label="Community Copilot" size="xlarge" />
+          <Spinner aria-label="eLLVate" size="xlarge" />
         </View>
-        <Text style={styles.brandTitle}>Community Copilot</Text>
+        <Text style={styles.brandTitle}>eLLVate</Text>
         <Text style={styles.brandTagline}>Connect. Discover. Belong.</Text>
       </View>
     </Animated.View>
@@ -243,8 +243,8 @@ function CommunityCopilotScreen({ opacity }: { readonly opacity: Animated.Value 
 
 // ── Main splash ──────────────────────────────────────────────────────────
 
-// The boot-time brand sequence: a beat on the dancing-cactus/Community
-// Copilot mark, a crossfade into the Nolancode bumper, then a fade to the
+// The boot-time brand sequence: a beat on the dancing-cactus/eLLVate
+// mark, a crossfade into the Nolancode bumper, then a fade to the
 // real app. Assumes its fonts (DuneRise included) are already loaded by the
 // caller -- see useAppFonts -- so it has nothing to gate on itself.
 export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
@@ -267,7 +267,7 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
 
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: BOOT_BACKGROUND }]}>
-      <CommunityCopilotScreen opacity={brandOpacity} />
+      <BrandSplashScreen opacity={brandOpacity} />
       <NolancodeScreen opacity={nolanOpacity} />
     </View>
   );

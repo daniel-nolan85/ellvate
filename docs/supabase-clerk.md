@@ -12,7 +12,9 @@ per-user access. Public content is readable anonymously; every write is scoped t
 - URL: `https://egrplppfgvejouhmcmtx.supabase.co`
 - Server env (`.env.local`): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 - Clerk env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
-- Clerk application: `community-copilot`, Development instance
+- Clerk application: `community-copilot` (dashboard display name only —
+  rename it to `ellvate` in Clerk's dashboard if you want the label to
+  match; nothing functional depends on it), Development instance
 - Clerk Frontend API domain: `capable-condor-8303.clerk.accounts.dev`
 
 ## Two one-time dashboard steps (required)

@@ -1,18 +1,21 @@
-# Community Copilot — Web
+# eLLVate — Web
 
-The public landing site for **Community Copilot** (built by Nolancode
-for the Lake Las Vegas community). A standalone Next.js app, independent of
-the Expo app at the repo root and of the admin dashboard at `../admin` —
-separate `package.json`, separate deploy (Vercel, root directory `web`) —
-meant to be the app's web presence before launch (a showcase + waitlist) and
-after (a home base pointing people to the stores).
+The public landing site for **eLLVate** (built by Nolancode for the Lake
+Las Vegas community). A standalone Next.js app, independent of the Expo app
+at the repo root and of the admin dashboard at `../admin` — separate
+`package.json`, separate deploy (Vercel, root directory `web`) — meant to
+be the app's web presence before launch (a showcase + waitlist) and after
+(a home base pointing people to the stores).
 
-Branding note: the app was previously named "LLV Community" and used an
-indigo/dark visual identity — both have since changed (app name →
-"Community Copilot", palette → the same desert-oasis palette as the mobile
-app, see `../tailwind.config.js`). The logo used here (`components/brand/`)
-is the same shaded, crowned, dancing-cactus glyph as the mobile app's
-Spinner, hand-ported to plain SVG/CSS since this is a separate Next.js app.
+Branding note: the app has been through two names before this one —
+"LLV Community" (indigo/dark visual identity), then "Community Copilot"
+(the same desert-oasis palette this site still uses, see
+`../tailwind.config.js`), now "eLLVate". The wordmark
+(`components/brand/wordmark.tsx`) is set in Rye, with "LLV" in the lake
+color so the Lake-Las-Vegas pun survives even where capitalization
+doesn't. The logo mark itself (`components/brand/cactus-mark.tsx`) is the
+same shaded, crowned, dancing-cactus glyph as the mobile app's Spinner,
+hand-ported to plain SVG/CSS since this is a separate Next.js app.
 
 ## What's here
 
