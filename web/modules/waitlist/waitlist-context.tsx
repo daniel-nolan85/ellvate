@@ -19,7 +19,7 @@ const WaitlistContext = React.createContext<WaitlistContextValue | null>(null);
 export function WaitlistProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<WaitlistState>({ status: 'idle', message: null });
 
-  const markDone = React.useCallback((message: string) => {
+  const markDone = React.useCallback((message: React.ReactNode) => {
     setState({ status: 'done', message });
   }, []);
 
