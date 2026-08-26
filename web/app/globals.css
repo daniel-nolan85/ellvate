@@ -69,6 +69,16 @@
      components/brand/cactus-spinner.tsx. */
   --animate-cactus-bounce: cactus-bounce 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
 
+  /* Per-part dancing animation for the header/footer CactusMark (animated
+     prop) -- a web port of the mobile app's reanimated Spinner choreography
+     (src/components/ui/spinner), split into separate body/arm/shadow tracks
+     since CSS can't drive them off one shared progress value like Reanimated
+     does. */
+  --animate-cactus-body: cactus-body-bounce 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  --animate-cactus-arm-left: cactus-arm-left-kick 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  --animate-cactus-arm-right: cactus-arm-right-kick 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  --animate-cactus-shadow: cactus-shadow-squash 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+
   /* Faint drifting sand-grain texture in the hero -- see
      components/sections/desert-glow.tsx. */
   --animate-sand-drift: sand-drift 50s linear infinite;
@@ -100,6 +110,61 @@
   }
 }
 
+@keyframes cactus-body-bounce {
+  from {
+    transform: translateY(0) rotate(-7deg);
+  }
+  to {
+    transform: translateY(-1.5px) rotate(7deg);
+  }
+}
+@keyframes cactus-arm-left-kick {
+  from {
+    transform: rotate(12deg);
+  }
+  to {
+    transform: rotate(-16deg);
+  }
+}
+@keyframes cactus-arm-right-kick {
+  from {
+    transform: rotate(-12deg);
+  }
+  to {
+    transform: rotate(16deg);
+  }
+}
+@keyframes cactus-shadow-squash {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0.85);
+  }
+}
+
+/* Fixed rotation/scale pivots for the animated CactusMark's parts, in the
+   glyph's own 24x24 viewBox units -- transform-box: view-box makes
+   transform-origin resolve against that coordinate space instead of each
+   part's own bounding box, so these match the pivots the mobile Spinner
+   rotates around exactly. */
+.cactus-pivot-body {
+  transform-box: view-box;
+  transform-origin: 12px 24px;
+}
+.cactus-pivot-arm-left {
+  transform-box: view-box;
+  transform-origin: 9.3px 13.2px;
+}
+.cactus-pivot-arm-right {
+  transform-box: view-box;
+  transform-origin: 14.7px 9px;
+}
+.cactus-pivot-shadow {
+  transform-box: view-box;
+  transform-origin: 12px 23px;
+}
+
 @keyframes sand-drift {
   from {
     background-position: 0 0;
@@ -118,6 +183,10 @@ html {
     scroll-behavior: auto;
   }
   .animate-cactus-bounce,
+  .animate-cactus-body,
+  .animate-cactus-arm-left,
+  .animate-cactus-arm-right,
+  .animate-cactus-shadow,
   .animate-sand-drift {
     animation: none;
   }
