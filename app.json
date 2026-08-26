@@ -4,7 +4,7 @@
     "slug": "community-copilot",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/llv-logo.png",
+    "icon": "./assets/images/cactus-icon.png",
     "scheme": "llv",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,8 +17,8 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#171717",
-        "foregroundImage": "./assets/images/llv-logo.png",
-        "monochromeImage": "./assets/images/llv-logo.png"
+        "foregroundImage": "./assets/images/cactus-icon.png",
+        "monochromeImage": "./assets/images/cactus-icon.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
