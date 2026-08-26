@@ -1,58 +1,70 @@
 'use server';
 
-import { headers } from 'next/headers';
-
 import { isAllowedAdminEmail } from '@/lib/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-type RequestMagicLinkResult =
+type RequestCodeResult =
   | { ok: true }
   | { ok: false; reason: 'not_allowed' | 'rate_limited' | 'error' };
 
+type VerifyCodeResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid' | 'not_allowed' | 'error' };
+
 // Gates the send on the allowlist first -- unlike Supabase's own "allow new
 // signups" toggle, this always returns a distinct reason so the UI can be
-// honest with non-admins instead of claiming a link was sent.
+// honest with non-admins instead of claiming a code was sent.
 //
-// This project uses Supabase's PKCE flow (confirmed from an actual email:
-// the link is /auth/v1/verify?token=pkce_...&type=magiclink), so the emailed
-// link's token can't be verified directly via verifyOtp() the way a plain
-// OTP code could -- PKCE only completes through the redirect-based
-// code exchange. emailRedirectTo is still set here in case the link ever
-// works again once Auth > URL Configuration is reachable, but since nobody
-// on this team has dashboard access to fix the Site URL, it currently
-// always redirects to localhost regardless of this value. The login page's
-// actual working flow has the admin click the link anyway, copy the `code`
-// param off the resulting (failed-to-load) localhost URL, and paste it back
-// in -- see admin/app/login/page.tsx and the existing /auth/callback route,
-// which already does exchangeCodeForSession(code) and needs no changes.
-export async function requestMagicLink(email: string): Promise<RequestMagicLinkResult> {
+// Deliberately no `emailRedirectTo`: this flow never follows a link, only
+// the numeric code Supabase includes in the same templated email (the
+// {{ .Token }} value -- confirm it's actually in the "Magic Link" template
+// under Authentication > Email Templates, since Supabase's default template
+// only shows the link). Verifying the code directly sidesteps the whole
+// redirect/Site-URL configuration that made the old link-based flow
+// unreliable.
+export async function requestSignInCode(email: string): Promise<RequestCodeResult> {
   const allowed = await isAllowedAdminEmail(email);
   if (!allowed) {
     return { ok: false, reason: 'not_allowed' };
   }
 
-  const headersList = await headers();
-  const host = headersList.get('host');
-  const protocol = host?.startsWith('localhost') ? 'http' : 'https';
-
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${protocol}://${host}/auth/callback` },
-  });
+  const { error } = await supabase.auth.signInWithOtp({ email });
 
   if (error) {
     // Logged (not just swallowed) so a failure is visible in Vercel's
-    // Runtime Logs without needing a local repro -- this is the error
-    // Supabase's shared default email service throws once its (very low,
-    // testing-tier) per-hour send limit is hit, which happens easily until
-    // custom SMTP is configured -- see the comment above this function.
+    // Runtime Logs without needing a local repro.
     console.error(`[login] signInWithOtp failed for ${email}:`, error.code, error.message);
 
     if (error.code === 'over_email_send_rate_limit') {
       return { ok: false, reason: 'rate_limited' };
     }
     return { ok: false, reason: 'error' };
+  }
+
+  return { ok: true };
+}
+
+// Verifying the emailed code establishes the session directly (sets the
+// auth cookie via the server client) -- no redirect/callback route needed.
+export async function verifySignInCode(email: string, code: string): Promise<VerifyCodeResult> {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+
+  if (error) {
+    console.error(`[login] verifyOtp failed for ${email}:`, error.code, error.message);
+    return { ok: false, reason: 'invalid' };
+  }
+
+  // The session is valid the moment verifyOtp succeeds, but this address
+  // could have been removed from dashboard_admins in the time between
+  // requesting and entering the code -- re-check rather than trusting the
+  // earlier gate (middleware would catch this on the next request anyway,
+  // but failing here avoids a confusing flash of the dashboard first).
+  const allowed = await isAllowedAdminEmail(email);
+  if (!allowed) {
+    await supabase.auth.signOut();
+    return { ok: false, reason: 'not_allowed' };
   }
 
   return { ok: true };
