@@ -3,58 +3,41 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import { requestMagicLink } from './actions';
+import { requestSignInCode, verifySignInCode } from './actions';
 
-type SendState = 'idle' | 'sending' | 'awaiting_link' | 'not_allowed' | 'rate_limited' | 'error';
-type CompleteState = 'idle' | 'completing' | 'error';
-
-// Pulls the `code` query param out of whatever the admin pastes -- the full
-// failed-to-load localhost URL from their address bar, ideally, but falls
-// back to treating the input as a bare code if it doesn't parse as a URL
-// (e.g. if they only copied the query string, or the code itself).
-function extractCode(pasted: string): string {
-  const trimmed = pasted.trim();
-  try {
-    const url = new URL(trimmed);
-    return url.searchParams.get('code') ?? trimmed;
-  } catch {
-    const match = trimmed.match(/code=([^&\s]+)/);
-    const captured = match?.[1];
-    return captured ? decodeURIComponent(captured) : trimmed;
-  }
-}
+type SendState = 'idle' | 'sending' | 'awaiting_code' | 'not_allowed' | 'rate_limited' | 'error';
+type VerifyState = 'idle' | 'verifying' | 'invalid' | 'not_allowed' | 'error';
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const notAllowed = searchParams.get('error') === 'not_allowed';
 
   const [email, setEmail] = useState('');
-  const [pastedLink, setPastedLink] = useState('');
+  const [code, setCode] = useState('');
   const [state, setState] = useState<SendState>('idle');
-  const [completeState, setCompleteState] = useState<CompleteState>('idle');
+  const [verifyState, setVerifyState] = useState<VerifyState>('idle');
 
-  const handleSendLink = async (event: FormEvent) => {
+  const handleSendCode = async (event: FormEvent) => {
     event.preventDefault();
     setState('sending');
 
-    const result = await requestMagicLink(email);
-    setState(result.ok ? 'awaiting_link' : result.reason);
+    const result = await requestSignInCode(email);
+    setState(result.ok ? 'awaiting_code' : result.reason);
   };
 
-  const handleCompleteSignIn = (event: FormEvent) => {
+  const handleVerifyCode = async (event: FormEvent) => {
     event.preventDefault();
-    setCompleteState('completing');
+    setVerifyState('verifying');
 
-    const code = extractCode(pastedLink);
-    if (!code) {
-      setCompleteState('error');
+    const result = await verifySignInCode(email, code.trim());
+    if (result.ok) {
+      // Hard navigation so the freshly-set session cookie is picked up by
+      // middleware on the very next request, rather than relying on a
+      // client-side route transition to notice it.
+      window.location.assign('/');
       return;
     }
-
-    // Hard navigation to the existing callback route, which already does
-    // exchangeCodeForSession(code) -- this just gets it the code by a
-    // different path than the (currently broken) redirect would have.
-    window.location.assign(`/auth/callback?code=${encodeURIComponent(code)}`);
+    setVerifyState(result.reason);
   };
 
   return (
@@ -77,45 +60,53 @@ function LoginForm() {
           </p>
         ) : null}
 
-        {state === 'awaiting_link' ? (
-          <form className="space-y-3" onSubmit={handleCompleteSignIn}>
+        {state === 'awaiting_code' ? (
+          <form className="space-y-3" onSubmit={handleVerifyCode}>
             <p className="text-sm text-muted">
-              We sent a sign-in link to <span className="text-content">{email}</span>.
-              Click it — it&apos;ll fail to load (it points to the wrong place
-              until Auth settings are fixed), but copy the full address from
-              your browser&apos;s address bar afterward and paste it below.
+              We sent a sign-in code to <span className="text-content">{email}</span>. Enter it
+              below.
             </p>
             <input
-              autoComplete="off"
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-content outline-none focus:border-accent"
-              onChange={(event) => setPastedLink(event.target.value)}
-              placeholder="http://localhost:3000/?code=..."
+              autoComplete="one-time-code"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-center text-lg tracking-[0.3em] text-content outline-none focus:border-accent"
+              inputMode="numeric"
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="123456"
               required
-              value={pastedLink}
+              value={code}
             />
             <button
               className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-60"
-              disabled={completeState === 'completing'}
+              disabled={verifyState === 'verifying'}
               type="submit"
             >
-              {completeState === 'completing' ? 'Signing in…' : 'Finish sign-in'}
+              {verifyState === 'verifying' ? 'Verifying…' : 'Verify code'}
             </button>
-            {completeState === 'error' ? (
+            {verifyState === 'invalid' ? (
               <p className="text-sm text-danger">
-                That link didn&apos;t have a usable code, or signing in
-                failed — it may have expired. Try sending a new one.
+                That code is wrong or expired. Try sending a new one.
               </p>
+            ) : null}
+            {verifyState === 'not_allowed' ? (
+              <p className="text-sm text-danger">That email doesn&apos;t have admin access.</p>
+            ) : null}
+            {verifyState === 'error' ? (
+              <p className="text-sm text-danger">Something went wrong. Try again.</p>
             ) : null}
             <button
               className="w-full text-sm text-muted underline"
-              onClick={() => setState('idle')}
+              onClick={() => {
+                setState('idle');
+                setVerifyState('idle');
+                setCode('');
+              }}
               type="button"
             >
               Use a different email
             </button>
           </form>
         ) : (
-          <form className="space-y-3" onSubmit={handleSendLink}>
+          <form className="space-y-3" onSubmit={handleSendCode}>
             <input
               autoComplete="email"
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-content outline-none focus:border-accent"
@@ -130,7 +121,7 @@ function LoginForm() {
               disabled={state === 'sending'}
               type="submit"
             >
-              {state === 'sending' ? 'Sending…' : 'Send sign-in link'}
+              {state === 'sending' ? 'Sending…' : 'Send sign-in code'}
             </button>
             {state === 'rate_limited' ? (
               <p className="text-sm text-danger">

@@ -7,9 +7,10 @@ the **same** Supabase project the mobile app uses.
 
 ## What's here so far
 
-- Sign-in via Supabase Auth magic link, gated by a `dashboard_admins`
-  allowlist (no self-service sign-up — see
-  `../supabase/migrations/0028_dashboard_admins.sql`)
+- Sign-in via an emailed one-time code (Supabase Auth `signInWithOtp` +
+  `verifyOtp`, not the magic-link half of the same flow — no redirect/Site
+  URL configuration involved), gated by a `dashboard_admins` allowlist (no
+  self-service sign-up — see `../supabase/migrations/0028_dashboard_admins.sql`)
 - Admins page: add/remove who can sign in (can't remove yourself, can't
   remove the last remaining admin)
 - Events page: toggle an event as featured
@@ -37,7 +38,11 @@ policies + app-side UI before an admin surface for it makes sense.
      across every member's content) — never expose it to the client, never
      commit it.
 2. In Supabase Auth settings, enable the Email provider with magic
-   link/OTP sign-in.
+   link/OTP sign-in. Then, in Authentication → Email Templates → Magic Link,
+   make sure the template includes `{{ .Token }}` somewhere in the body
+   (Supabase's default template only shows the confirmation link) — that's
+   the actual code this app has the admin enter, since it never follows the
+   link.
 3. Apply `../supabase/migrations/0028_dashboard_admins.sql` against the
    project (same pipeline as the mobile app's migrations).
 4. Bootstrap the first admin — this is deliberately **not** seeded by the

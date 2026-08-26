@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { isAllowedAdminEmail } from './lib/auth';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback'];
+const PUBLIC_PATHS = ['/login'];
 
 interface CookieToSet {
   readonly name: string;
