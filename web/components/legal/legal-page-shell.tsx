@@ -55,23 +55,19 @@ export function LegalPageShell({
         <div className="mt-10 space-y-10">{children}</div>
       </main>
 
-      <footer className="border-t border-border/60">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-1.5 px-6 py-8 text-center text-sm text-muted-foreground">
+      <footer className="border-t border-white/10 bg-[#080c10]">
+        <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-white/70 sm:flex-row">
           <span>
-            &copy; <CopyrightYear /> {BRAND.appName}. A
+            &copy; <CopyrightYear /> {BRAND.appName}
           </span>
           <a href={BRAND.companyUrl} target="_blank" rel="noopener noreferrer" aria-label={BRAND.company}>
-            <NolancodeLogo iconSize={16} />
+            <NolancodeLogo iconSize={16} variant="dark" />
           </a>
           <span>
-            product. See also our{' '}
-            <Link
-              href={otherPolicy.href}
-              className="underline-offset-2 hover:text-foreground hover:underline"
-            >
+            See also our{' '}
+            <Link href={otherPolicy.href} className="underline-offset-2 hover:text-white hover:underline">
               {otherPolicy.label}
             </Link>
-            .
           </span>
         </div>
       </footer>
