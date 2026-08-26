@@ -1,4 +1,5 @@
 import { DesertGlow } from '@/components/sections/desert-glow';
+import { Wordmark } from '@/components/brand/wordmark';
 import { FadeIn } from '@/components/motion/fade-in';
 import { Badge } from '@/components/ui/badge';
 import { BRAND } from '@/lib/content';
@@ -24,7 +25,7 @@ export function Hero() {
         </FadeIn>
         <FadeIn delay={0.16}>
           <p className="mt-6 max-w-xl text-lg text-muted-foreground text-balance">
-            {BRAND.appName} brings {BRAND.community} together — forum discussions, a
+            <Wordmark className="text-foreground text-xl" /> brings {BRAND.community} together — forum discussions, a
             shared events calendar, neighborhood missions, a local services directory,
             and an assistant that knows the community — all in one app.
           </p>

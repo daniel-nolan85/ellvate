@@ -13,7 +13,7 @@ export function Footer() {
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Be first to know</h2>
           <p className="mt-4 text-muted-foreground">
-            {BRAND.appName} is launching soon on iOS and Android.
+            <Wordmark className="text-foreground text-lg" /> is launching soon on iOS and Android.
           </p>
           <WaitlistForm className="mx-auto mt-8 max-w-md" />
         </Reveal>
