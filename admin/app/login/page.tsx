@@ -70,8 +70,9 @@ function LoginForm() {
               autoComplete="one-time-code"
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-center text-lg tracking-[0.3em] text-content outline-none focus:border-accent"
               inputMode="numeric"
+              maxLength={8}
               onChange={(event) => setCode(event.target.value)}
-              placeholder="123456"
+              placeholder="12345678"
               required
               value={code}
             />
