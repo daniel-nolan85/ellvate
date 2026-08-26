@@ -31,6 +31,7 @@ const SHADE_COLOR = 'rgb(36,38,26)';
 const SHINE_COLOR = 'rgb(244,239,224)';
 const MOUTH_COLOR = 'rgb(58,50,34)';
 const SHADOW_COLOR = 'rgb(60,52,33)';
+const CROWN_COLOR = 'rgb(230,185,60)';
 
 // Mixes an 'rgb(r,g,b)' string toward white (percent > 0) or black
 // (percent < 0), so the body/lens gradients below track whatever `color` a
@@ -79,6 +80,7 @@ function CactusGlyph({
   const uid = useId().replace(/:/g, '');
   const bodyGradientId = `${uid}-body`;
   const lensGradientId = `${uid}-lens`;
+  const crownGradientId = `${uid}-crown`;
 
   const shadowProps = useAnimatedProps(() => ({
     transform: `translate(12 23) scale(${interpolate(progress.value, [-1, 1], [1, 0.85])} 1) translate(-12 -23)`,
@@ -94,6 +96,7 @@ function CactusGlyph({
   }));
 
   const bodyStroke = shade(color, -0.35);
+  const crownStroke = shade(CROWN_COLOR, -0.4);
 
   return (
     <Svg height="100%" viewBox="0 0 24 24" width="100%">
@@ -106,6 +109,11 @@ function CactusGlyph({
         <LinearGradient id={lensGradientId} x1="0%" y1="0%" x2="0%" y2="100%">
           <Stop offset="0%" stopColor={shade(SHADE_COLOR, 0.55)} />
           <Stop offset="100%" stopColor={shade(SHADE_COLOR, -0.3)} />
+        </LinearGradient>
+        <LinearGradient id={crownGradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <Stop offset="0%" stopColor={shade(CROWN_COLOR, 0.35)} />
+          <Stop offset="45%" stopColor={CROWN_COLOR} />
+          <Stop offset="100%" stopColor={shade(CROWN_COLOR, -0.25)} />
         </LinearGradient>
       </Defs>
       <AnimatedEllipse
@@ -137,6 +145,17 @@ function CactusGlyph({
 
         <Rect fill={`url(#${bodyGradientId})`} height={17} rx={2.7} stroke={bodyStroke} strokeWidth={0.25} width={5.4} x={9.3} y={5} />
         <Rect fill={SHINE_COLOR} height={14.5} opacity={0.2} rx={0.5} width={1} x={10} y={6} />
+
+        <Rect fill={`url(#${crownGradientId})`} height={1.1} rx={0.4} stroke={crownStroke} strokeWidth={0.25} width={5.4} x={9.3} y={4.3} />
+        <Path
+          d="M 9.3 4.3 L 9.7 2.7 L 10.7 3.8 L 12 2.1 L 13.3 3.8 L 14.3 2.7 L 14.7 4.3 Z"
+          fill={`url(#${crownGradientId})`}
+          stroke={crownStroke}
+          strokeLinejoin="round"
+          strokeWidth={0.25}
+        />
+        <Rect fill={SHINE_COLOR} height={0.9} opacity={0.28} rx={0.2} width={0.6} x={9.75} y={4.35} />
+        <Ellipse cx={12} cy={2.35} fill={SHINE_COLOR} opacity={0.85} rx={0.28} ry={0.18} />
 
         <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={13} y2={13.5} />
         <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={16} y2={16.5} />
