@@ -19,14 +19,14 @@ export function Faq() {
           <AccordionItem value="Who built this?">
             <AccordionTrigger>Who built this?</AccordionTrigger>
             <AccordionContent>
-              {BRAND.appName} is built by{' '}
+              {BRAND.appName} is a product of{' '}
               <a
                 href={BRAND.companyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-accent underline-offset-2 hover:underline"
               >
-                {BRAND.company}
+                {BRAND.companyLegalName}
               </a>
               .
             </AccordionContent>

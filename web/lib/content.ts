@@ -8,6 +8,11 @@ export const BRAND = {
   appName: 'Community Copilot',
   community: 'Lake Las Vegas',
   company: 'Nolancode',
+  // The precise legal entity name -- used in the Terms/Privacy legal copy
+  // and structured data, where naming the actual registered party matters.
+  // `company` (the short name) stays for casual mentions and the logo alt
+  // text.
+  companyLegalName: 'Nolancode LLC',
   companyUrl: 'https://www.nolancode.com',
 } as const;
 
