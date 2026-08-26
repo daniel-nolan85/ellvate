@@ -1,7 +1,7 @@
 import '@/global.css';
 import 'react-native-reanimated';
 
-import { Component, type ReactNode } from 'react';
+import { Component, useState, type ReactNode } from 'react';
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -20,6 +20,7 @@ import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { AppProviders } from '@/src/platform/providers';
 import { PushRegistration } from '@/src/platform/push';
 import { useSession } from '@/src/platform/session';
+import { AnimatedSplash } from '@/src/platform/splash';
 import { initCrashReporting, reportError } from '@/src/services/crash-reporting';
 
 initCrashReporting();
@@ -141,12 +142,22 @@ function CrashFallback({ resetError }: { readonly resetError: () => void }) {
 }
 
 export default function RootLayout() {
+  const [bootSplashDone, setBootSplashDone] = useState(false);
+
   return (
     <GestureHandlerRootView style={{ backgroundColor: 'rgb(247,241,230)', flex: 1 }}>
       <AppErrorBoundary>
         <AppProviders>
-          <AppNavigator />
-          <PushRegistration />
+          {bootSplashDone ? (
+            <>
+              <AppNavigator />
+              <PushRegistration />
+            </>
+          ) : (
+            // AppProviders already held rendering until fonts (DuneRise
+            // included) resolved, so this has nothing left to wait on itself.
+            <AnimatedSplash onFinish={() => setBootSplashDone(true)} />
+          )}
           <StatusBar style="auto" />
         </AppProviders>
       </AppErrorBoundary>
