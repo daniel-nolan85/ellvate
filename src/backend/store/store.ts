@@ -12,13 +12,13 @@ interface StoreHolder {
 }
 
 const globalRef = globalThis as typeof globalThis & {
-  __llvStoreHolder?: StoreHolder;
+  __ellvateStoreHolder?: StoreHolder;
 };
 
 const holder: StoreHolder =
-  globalRef.__llvStoreHolder ?? { state: createSeedState() };
+  globalRef.__ellvateStoreHolder ?? { state: createSeedState() };
 
-globalRef.__llvStoreHolder = holder;
+globalRef.__ellvateStoreHolder = holder;
 
 export function getState(): StoreState {
   return holder.state;

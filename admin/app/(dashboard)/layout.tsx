@@ -48,7 +48,7 @@ export default async function DashboardLayout({
       <aside className="flex w-56 shrink-0 flex-col justify-between border-r border-border bg-surface px-4 py-6">
         <div>
           <p className="mb-6 px-2 text-sm font-semibold text-content">
-            LLV Community
+            eLLVate
             <span className="block text-xs font-normal text-muted">Admin</span>
           </p>
           <NavLinks

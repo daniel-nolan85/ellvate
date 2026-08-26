@@ -1,4 +1,4 @@
-appId: com.llvcommunity.app
+appId: com.ellvate.app
 ---
 - clearState
 # Clerk's native session cache also lives in the keychain. The launch subflow

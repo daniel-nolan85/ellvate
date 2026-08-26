@@ -4,14 +4,14 @@ The provider, token cache, session contract, and route gate are already part of
 the starter. The sign-in experience is intentionally not selected for copied
 apps.
 
-## LLV custom OTP flow
+## eLLVate custom OTP flow
 
 | Flow | Best when | Native requirements |
 | --- | --- | --- |
 | Prebuilt `AuthView` / `UserButton` | Fastest path and Clerk-owned auth UI | `@clerk/expo` config plugin and a development build; not Expo Go |
 | Custom hooks + gluestack UI | The app needs exact branded copy, steps, and validation | Inspect enabled factors first; browser SSO needs scheme/redirect configuration; native Apple/Google needs a development build |
 
-LLV uses one branded custom flow with a phone/email selector and passwordless
+eLLVate uses one branded custom flow with a phone/email selector and passwordless
 verification codes. It uses the current `useSignIn` and `useSignUp` APIs; do not
 use deprecated `useOAuth` APIs. The Clerk development instance must enable both
 email-code and phone-code factors.

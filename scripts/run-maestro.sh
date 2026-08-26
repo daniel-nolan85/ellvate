@@ -45,7 +45,7 @@ for attempt in {1..60}; do
 done
 
 if [[ -n "$device" ]] && command -v xcrun >/dev/null 2>&1; then
-  xcrun simctl terminate "$device" com.llvcommunity.app >/dev/null 2>&1 || true
+  xcrun simctl terminate "$device" com.ellvate.app >/dev/null 2>&1 || true
   xcrun simctl openurl "$device" "http://127.0.0.1:${port}" >/dev/null
 fi
 

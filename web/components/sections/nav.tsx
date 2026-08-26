@@ -4,8 +4,8 @@ import * as React from 'react';
 import { Menu, X } from 'lucide-react';
 
 import { CactusMark } from '@/components/brand/cactus-mark';
+import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
-import { BRAND } from '@/lib/content';
 
 // Services isn't its own nav link -- it's one of the features, reachable
 // from the Features overview strip (#features) like any other, so listing
@@ -125,7 +125,7 @@ export function Nav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <a href="#top" className="flex items-center gap-2.5 no-underline">
           <CactusMark animated className="h-9 w-9" />
-          <span className="text-sm font-semibold tracking-wide">{BRAND.appName}</span>
+          <Wordmark className="text-xl" />
         </a>
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground lg:flex">
           {LINKS.map((link) => {

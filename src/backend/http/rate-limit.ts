@@ -9,12 +9,12 @@ export type { RateLimitPolicy } from '@/src/services/rate-limit';
 // reviews are naturally rarer, and reports get the tightest limit since mass-
 // reporting is itself an abuse vector distinct from the content it targets.
 export const WRITE_RATE_LIMIT_POLICIES = {
-  comment: { keyPrefix: 'llv:write:comment', maxRequests: 20, windowMs: 5 * 60_000 },
-  contact: { keyPrefix: 'llv:write:contact', maxRequests: 5, windowMs: 60 * 60_000 },
-  petition: { keyPrefix: 'llv:write:petition', maxRequests: 5, windowMs: 60 * 60_000 },
-  post: { keyPrefix: 'llv:write:post', maxRequests: 10, windowMs: 10 * 60_000 },
-  report: { keyPrefix: 'llv:write:report', maxRequests: 10, windowMs: 60 * 60_000 },
-  review: { keyPrefix: 'llv:write:review', maxRequests: 5, windowMs: 60 * 60_000 },
+  comment: { keyPrefix: 'ellvate:write:comment', maxRequests: 20, windowMs: 5 * 60_000 },
+  contact: { keyPrefix: 'ellvate:write:contact', maxRequests: 5, windowMs: 60 * 60_000 },
+  petition: { keyPrefix: 'ellvate:write:petition', maxRequests: 5, windowMs: 60 * 60_000 },
+  post: { keyPrefix: 'ellvate:write:post', maxRequests: 10, windowMs: 10 * 60_000 },
+  report: { keyPrefix: 'ellvate:write:report', maxRequests: 10, windowMs: 60 * 60_000 },
+  review: { keyPrefix: 'ellvate:write:review', maxRequests: 5, windowMs: 60 * 60_000 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 interface MemoryRateLimitEntry {

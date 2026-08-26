@@ -3,14 +3,14 @@ import { describe, expect, test } from 'bun:test';
 import { validateProductionEnvironment } from '../../src/platform/environment/server-environment';
 
 const valid = {
-  ANDROID_PACKAGE: 'com.llvcommunity.app',
+  ANDROID_PACKAGE: 'com.ellvate.app',
   BACKEND_AUTH_MODE: 'clerk',
   CLERK_SECRET_KEY: 'sk_live_example',
   EAS_PROJECT_ID: 'project-id',
   EXPO_PUBLIC_API_URL: 'https://api.example.com',
   EXPO_PUBLIC_AUTH_MODE: 'clerk',
   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_live_example',
-  IOS_BUNDLE_IDENTIFIER: 'com.llvcommunity.app',
+  IOS_BUNDLE_IDENTIFIER: 'com.ellvate.app',
   SUPABASE_PUBLISHABLE_KEY: 'publishable',
   SUPABASE_URL: 'https://supabase.example.com',
   UPSTASH_REDIS_REST_TOKEN: 'token',

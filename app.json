@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Community Copilot",
-    "slug": "community-copilot",
+    "name": "eLLVate",
+    "slug": "ellvate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/cactus-icon.png",
-    "scheme": "llv",
+    "scheme": "ellvate",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "runtimeVersion": {
@@ -32,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/llv-splash-icon.png",
+          "image": "./assets/images/ellvate-splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#171717",
@@ -48,7 +48,7 @@
         {
           "cameraPermission": false,
           "microphonePermission": false,
-          "photosPermission": "Let Community Copilot access your photos so you can set a profile picture, add mission check-in photos, and upload service listing photos."
+          "photosPermission": "Let eLLVate access your photos so you can set a profile picture, add mission check-in photos, and upload service listing photos."
         }
       ],
       [
@@ -78,9 +78,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "15fc95df-574a-49ef-ab09-25c40e287987"
+        "projectId": "cb2fe50f-0723-4522-b836-cb0895e1b18c"
       }
     },
-    "owner": "6missedcalls"
+    "owner": "daniel1985"
   }
 }
