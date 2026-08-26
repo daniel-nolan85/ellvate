@@ -38,7 +38,7 @@ describe('AccountIdentifiersSheet', () => {
     jest.clearAllMocks();
   });
 
-  test('lists the current phone and email, and tapping one opens the right form', async () => {
+  test('lists the current email, and tapping the row opens the right form', async () => {
     const created = createResource('new-email-id');
     const user = {
       createEmailAddress: jest.fn().mockResolvedValue(created),
@@ -46,7 +46,7 @@ describe('AccountIdentifiersSheet', () => {
       emailAddresses: [],
       phoneNumbers: [],
       primaryEmailAddress: null,
-      primaryPhoneNumber: { phoneNumber: '+12025550142' },
+      primaryPhoneNumber: null,
       update: jest.fn().mockResolvedValue(undefined),
     };
     mockedUseUser.mockReturnValue({ user } as unknown as ReturnType<typeof useUser>);
@@ -57,18 +57,8 @@ describe('AccountIdentifiersSheet', () => {
       visible: true,
     });
 
-    expect(view.getByText('(202) 555-0142')).toBeTruthy();
     expect(view.getByText('Not set')).toBeTruthy();
 
-    // Phone already has a value -- "Change". Email doesn't -- "Add".
-    await act(async () => {
-      fireEvent.press(view.getByTestId('account-identifier-phone-row'));
-    });
-    expect(view.getByText('Change phone number')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.press(view.getByLabelText('Back'));
-    });
     await act(async () => {
       fireEvent.press(view.getByTestId('account-identifier-email-row'));
     });

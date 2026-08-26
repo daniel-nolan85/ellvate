@@ -32,7 +32,7 @@ export function useIdentifierAuthFlow() {
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
 
-  const [kind, setKind] = useState<IdentifierKind>('phone');
+  const [kind, setKind] = useState<IdentifierKind>('email');
   const [step, setStep] = useState<AuthStep>('identifier');
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [identifier, setIdentifier] = useState('');

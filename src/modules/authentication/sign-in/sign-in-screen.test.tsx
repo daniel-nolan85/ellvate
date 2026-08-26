@@ -76,9 +76,6 @@ const reachConsentStep = async (
   });
 
   await act(async () => {
-    fireEvent.press(view.getByTestId('auth-kind-email'));
-  });
-  await act(async () => {
     fireEvent.changeText(view.getByTestId('auth-identifier-input'), 'new-user@example.invalid');
   });
   await act(async () => {

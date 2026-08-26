@@ -140,22 +140,6 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
 
         {flow.step !== 'code' ? (
           <VStack space="md">
-            <View className="flex-row gap-2">
-              {(['phone', 'email'] as const).map((option) => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: flow.kind === option }}
-                  className={`rounded-full px-4 py-2 ${flow.kind === option ? 'bg-primary' : 'bg-secondary'}`}
-                  key={option}
-                  onPress={() => flow.chooseKind(option)}
-                  testID={`auth-kind-${option}`}
-                >
-                  <Text className={flow.kind === option ? 'text-primary-foreground' : 'text-content'}>
-                    {option === 'phone' ? 'Phone' : 'Email'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
             <Input size="lg">
               {flow.kind === 'phone' ? (
                 <InputSlot>
