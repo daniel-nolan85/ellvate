@@ -31,7 +31,7 @@ export function LegalPageShell({
       <header className="border-b border-border/60">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <CactusMark className="h-6 w-6" />
+            <CactusMark animated className="h-6 w-6" />
             <span className="text-sm font-semibold tracking-wide text-foreground">
               {BRAND.appName}
             </span>
@@ -57,9 +57,12 @@ export function LegalPageShell({
 
       <footer className="border-t border-white/10 bg-[#080c10]">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-white/70 sm:flex-row">
-          <span>
-            &copy; <CopyrightYear /> {BRAND.appName}
-          </span>
+          <div className="flex items-center gap-2">
+            <CactusMark animated className="h-6 w-6" />
+            <span>
+              &copy; <CopyrightYear /> {BRAND.appName}
+            </span>
+          </div>
           <a href={BRAND.companyUrl} target="_blank" rel="noopener noreferrer" aria-label={BRAND.company}>
             <NolancodeLogo iconSize={16} variant="dark" />
           </a>
