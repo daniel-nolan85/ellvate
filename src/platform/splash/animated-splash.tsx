@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
 
 import { Spinner } from '@/src/components/ui/spinner';
-import { fontFamilyByWeight } from '@/src/platform/fonts';
 
 const { width: W, height: H } = Dimensions.get('window');
 const CONTAINER = Math.min(W * 0.85, 320);
@@ -234,7 +233,9 @@ function BrandSplashScreen({ opacity }: { readonly opacity: Animated.Value }) {
         <View style={styles.cactusScale}>
           <Spinner aria-label="eLLVate" size="xlarge" />
         </View>
-        <Text style={styles.brandTitle}>eLLVate</Text>
+        <Text style={styles.brandTitle}>
+          e<Text style={styles.brandTitleAccent}>LLV</Text>ate
+        </Text>
         <Text style={styles.brandTagline}>Connect. Discover. Belong.</Text>
       </View>
     </Animated.View>
@@ -252,13 +253,15 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
   const nolanOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Both holds are equal (1650ms) so eLLVate and the Nolancode bumper get
+    // even screen time -- they previously didn't (1500ms vs 1800ms).
     Animated.sequence([
-      Animated.delay(1500),
+      Animated.delay(1650),
       Animated.parallel([
         Animated.timing(brandOpacity, { duration: 400, toValue: 0, useNativeDriver: true }),
         Animated.timing(nolanOpacity, { duration: 400, toValue: 1, useNativeDriver: true }),
       ]),
-      Animated.delay(1800),
+      Animated.delay(1650),
       Animated.timing(nolanOpacity, { duration: 350, toValue: 0, useNativeDriver: true }),
     ]).start(() => onFinish());
     // Runs once: the sequence owns its own lifecycle from mount to onFinish.
@@ -282,16 +285,19 @@ const styles = StyleSheet.create({
   },
   brandTagline: {
     color: 'rgba(201,138,58,0.7)',
-    fontFamily: fontFamilyByWeight[500],
-    fontSize: 13,
-    letterSpacing: 3,
+    fontFamily: 'Fraunces_300Light_Italic',
+    fontSize: 15,
+    letterSpacing: 0.3,
     textAlign: 'center',
   },
   brandTitle: {
     color: 'rgb(244,239,224)',
-    fontFamily: fontFamilyByWeight[700],
-    fontSize: 26,
+    fontFamily: 'Rye_400Regular',
+    fontSize: 30,
     letterSpacing: 0.5,
+  },
+  brandTitleAccent: {
+    color: '#7fc3c7',
   },
   cactusScale: {
     transform: [{ scale: 1.8 }],
