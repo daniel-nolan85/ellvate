@@ -537,8 +537,8 @@ export function ProfileScreen() {
         <SectionTitle>Account</SectionTitle>
         <SectionCard>
           <Row
-            icon="Phone"
-            label="Phone & email"
+            icon="Mail"
+            label="Email address"
             onPress={
               clerkReady ? () => setActiveSheet('identifiers') : undefined
             }
