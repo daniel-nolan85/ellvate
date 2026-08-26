@@ -7,6 +7,8 @@
 export const BRAND = {
   appName: 'Community Copilot',
   community: 'Lake Las Vegas',
+  company: 'Nolancode',
+  companyUrl: 'https://www.nolancode.com',
 } as const;
 
 export type FeatureAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'plum';

@@ -56,7 +56,16 @@ export function LegalPageShell({
 
       <footer className="border-t border-border/60">
         <div className="mx-auto max-w-3xl px-6 py-8 text-center text-sm text-muted-foreground">
-          &copy; <CopyrightYear /> {BRAND.appName}. See also our{' '}
+          &copy; <CopyrightYear /> {BRAND.appName}. A{' '}
+          <a
+            href={BRAND.companyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-2 hover:text-foreground hover:underline"
+          >
+            {BRAND.company}
+          </a>{' '}
+          product. See also our{' '}
           <Link
             href={otherPolicy.href}
             className="underline-offset-2 hover:text-foreground hover:underline"
