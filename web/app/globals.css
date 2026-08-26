@@ -197,3 +197,44 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
+
+/* Nolancode footer credit -- see components/brand/nolancode-logo.tsx. The
+   font and orbit animation are ported verbatim from nolancode.com's own
+   nav (source supplied directly). The wordmark's colors are not verbatim,
+   though -- that site's version is near-white-on-dark for its own dark
+   nav, which would be unreadable on this site's light canvas, so "Nolan"
+   uses this site's ink color and "code" uses its own teal accent instead
+   of the source's cyan-glow-on-black. */
+@font-face {
+  font-family: 'DuneRise';
+  src: url('/fonts/Dune_Rise.otf') format('opentype');
+  font-display: swap;
+}
+
+@keyframes nolancode-orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nolancode-wordmark {
+  font-family: 'DuneRise', serif;
+  font-size: 15px;
+  color: var(--color-ink);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.nolancode-wordmark span {
+  color: var(--color-lake);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nolancode-orbit {
+    animation: none !important;
+  }
+}
