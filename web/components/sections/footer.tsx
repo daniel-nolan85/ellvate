@@ -39,6 +39,9 @@ export function Footer() {
             <a href="/privacy" className="underline-offset-2 hover:text-white hover:underline">
               Privacy
             </a>
+            <a href="/guidelines" className="underline-offset-2 hover:text-white hover:underline">
+              Guidelines
+            </a>
           </div>
         </div>
       </div>

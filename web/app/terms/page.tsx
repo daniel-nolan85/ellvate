@@ -19,7 +19,10 @@ export default function TermsOfServicePage() {
   return (
     <LegalPageShell
       lastUpdated={LAST_UPDATED}
-      otherPolicy={{ href: '/privacy', label: 'Privacy Policy' }}
+      otherPolicies={[
+        { href: '/privacy', label: 'Privacy Policy' },
+        { href: '/guidelines', label: 'Community Guidelines' },
+      ]}
       title="Terms of Service"
     >
       <LegalSection id="acceptance" title="1. Acceptance of these terms">
