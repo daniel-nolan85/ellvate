@@ -570,6 +570,7 @@ export function ProfileScreen() {
             }
             value={MARKETING_URL ? undefined : 'Not available yet'}
           />
+          <Row icon="Globe" label="About" onPress={() => router.push('/about')} />
           <Row icon="ArrowLeft" label="Sign out" onPress={() => setSignOutOpen(true)} />
           <Row
             danger
