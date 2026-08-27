@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { sendAccountRemovedEmail } from '@/lib/account-removed-email';
+import { banClerkUser, getClerkUserEmail } from '@/lib/clerk';
 import { requireAdminEmail } from '@/lib/require-admin-email';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -120,10 +122,28 @@ export async function deleteContentAction(table: DeletableTable, id: string) {
     throw new Error('invalid_table');
   }
 
+  // Deleting an app_users row is otherwise not a real removal: ensureUser()
+  // upserts a fresh row for any authenticated Clerk id with no row yet, so
+  // the same person could just sign back in and start over. Ban their Clerk
+  // identity first (id === the Clerk user id throughout this app) so that
+  // can't happen, and grab their email while the account still exists so
+  // there's something to notify once it's gone. Both are best-effort --
+  // see lib/clerk.ts -- a moderator can still delete a user's content even
+  // before CLERK_SECRET_KEY/RESEND_API_KEY are configured.
+  const notifyEmail =
+    table === 'app_users' ? await getClerkUserEmail(id) : null;
+  if (table === 'app_users') {
+    await banClerkUser(id);
+  }
+
   const admin = createSupabaseAdminClient();
   const { error } = await admin.from(table).delete().eq('id', id);
   if (error) {
     throw error;
+  }
+
+  if (notifyEmail) {
+    await sendAccountRemovedEmail(notifyEmail);
   }
 
   revalidatePath(revalidateTarget);

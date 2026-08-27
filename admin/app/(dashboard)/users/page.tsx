@@ -58,10 +58,14 @@ export default async function UsersPage({
         <p className="text-sm text-muted">
           Every member of the community. Deleting a user removes their
           entire history — every post, comment, mission, and listing they
-          ever created — not just their profile. There&apos;s no separate
-          ban/suspend option yet; this is a permanent, irreversible action.
-          Marking someone Admin adds a mark next to their name on their own
-          content in the app, distinct from who can sign in here.
+          ever created — not just their profile, bans their account so they
+          can&apos;t sign back in, and emails them that they&apos;ve been
+          removed (requires CLERK_SECRET_KEY / RESEND_API_KEY /
+          ADMIN_FROM_EMAIL to be configured — the deletion itself always
+          works, the ban and email are best-effort on top of it). This is a
+          permanent, irreversible action. Marking someone Admin adds a mark
+          next to their name on their own content in the app, distinct from
+          who can sign in here.
         </p>
       </div>
 
@@ -129,7 +133,7 @@ export default async function UsersPage({
                 </td>
                 <td className="py-2 text-right">
                   <DeleteButton
-                    confirmLabel={`Permanently delete ${user.name}? This removes every post, comment, mission, and listing they've ever created. This cannot be undone.`}
+                    confirmLabel={`Permanently delete ${user.name}? This removes every post, comment, mission, and listing they've ever created, bans their account so they can't sign back in, and emails them that they've been removed. This cannot be undone.`}
                     id={user.id}
                     table="app_users"
                   />
