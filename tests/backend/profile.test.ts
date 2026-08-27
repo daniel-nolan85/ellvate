@@ -25,7 +25,7 @@ const defaultPrefs = {
   events: true,
   replies: true,
   missions: true,
-  digest: false,
+  digest: true,
   petitions: true,
 };
 
@@ -242,14 +242,14 @@ describe('updateProfile', () => {
 
   test('merges partial notification prefs over existing values', async () => {
     const result = await updateProfile(ctx(), {
-      notificationPrefs: { digest: true },
+      notificationPrefs: { digest: false },
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.profile.notificationPrefs).toEqual({
         ...defaultPrefs,
-        digest: true,
+        digest: false,
       });
     }
   });

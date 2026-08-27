@@ -50,7 +50,7 @@ const seedEventFields = (
 };
 
 const defaultNotificationPrefs: NotificationPrefs = {
-  digest: false,
+  digest: true,
   events: true,
   missions: true,
   petitions: true,
