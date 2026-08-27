@@ -508,6 +508,11 @@ export function ProfileScreen() {
               />
             }
           />
+          <Row
+            icon="EyeOff"
+            label="Blocked users"
+            onPress={() => router.push('/blocked-users')}
+          />
         </SectionCard>
 
         <SectionTitle>Notifications</SectionTitle>

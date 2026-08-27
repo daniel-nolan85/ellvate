@@ -1,9 +1,11 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, type CommunityRole } from '@/src/backend/store';
 import { getMissionsView } from '@/src/backend/missions';
+import { getMutedUserIds } from '@/src/backend/mutes';
 
 import {
   getMemberActivityCountsSupabase,
+  getMemberDisplayRowsSupabase,
   getMemberRowSupabase,
 } from './public-profile-supabase';
 
@@ -105,6 +107,43 @@ function getMemberActivityCountsMemory(
       (listing) => listing.authorId === memberUserId,
     ).length,
   };
+}
+
+export interface BlockedMember {
+  readonly userId: string;
+  readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
+function getBlockedMembersMemory(
+  mutedUserIds: readonly string[],
+): readonly BlockedMember[] {
+  const { users } = getState();
+  return mutedUserIds.flatMap((id) => {
+    const user = users.find((candidate) => candidate.id === id);
+    return user ? [{ avatarUrl: user.avatarUrl, name: user.name, userId: user.id }] : [];
+  });
+}
+
+// Enriches the mutes module's raw id list with display fields, in the order
+// blocked (oldest-first for memory; Supabase has no ordering guarantee to
+// preserve, so callers shouldn't rely on order there).
+export async function getBlockedMembers(
+  ctx: RequestContext,
+): Promise<readonly BlockedMember[]> {
+  const mutedUserIds = await getMutedUserIds(ctx);
+  if (mutedUserIds.length === 0) {
+    return [];
+  }
+  if (!ctx.supabase) {
+    return getBlockedMembersMemory(mutedUserIds);
+  }
+  const rows = await getMemberDisplayRowsSupabase(ctx.supabase, mutedUserIds);
+  return rows.map((row) => ({
+    avatarUrl: row.avatarUrl,
+    name: row.name,
+    userId: row.id,
+  }));
 }
 
 export async function getPublicProfile(

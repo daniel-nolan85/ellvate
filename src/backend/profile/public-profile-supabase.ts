@@ -42,6 +42,25 @@ export async function getMemberRowSupabase(
   };
 }
 
+// Batch variant of getMemberRowSupabase for a caller that already has a set
+// of member ids in hand (the blocked-users list) and only needs display
+// fields, not the full profile row -- one query instead of one per id.
+export async function getMemberDisplayRowsSupabase(
+  supabase: SupabaseClient,
+  memberUserIds: readonly string[],
+): Promise<readonly { readonly id: string; readonly name: string; readonly avatarUrl: string | null }[]> {
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url')
+    .in('id', memberUserIds);
+  throwIfSupabaseError(error, 'load member display rows');
+  return (data ?? []).map((row) => ({
+    avatarUrl: row.avatar_url as string | null,
+    id: row.id as string,
+    name: row.name as string,
+  }));
+}
+
 // Count-only (head) queries — cheaper than fetching full rows just to
 // measure how many a member has, and mirrors the read-only, ownership-blind
 // nature of getMemberRowSupabase above (app_users is publicly readable).

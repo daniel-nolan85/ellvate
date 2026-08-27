@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -5,6 +6,7 @@ import { router } from 'expo-router';
 
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
+import { ConfirmModal } from '@/src/components/ui/confirm-modal';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
@@ -16,7 +18,9 @@ import {
   CATEGORY_CHIP_ACTIVE_TREATMENT,
   type CategoryAccent,
 } from '@/src/lib/category-accent';
+import { useSession } from '@/src/platform/session';
 
+import { useBlockUser, useBlockedUsers } from './use-block-user';
 import { useMemberProfile } from './use-profile';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -73,11 +77,44 @@ export function MemberProfileScreen({
   userId,
 }: MemberProfileScreenProps) {
   const insets = useSafeAreaInsets();
+  const session = useSession();
   const member = useMemberProfile(userId);
   const displayName = member.data?.profile.name ?? loadingName ?? 'Neighbour';
   // Aggregate figures below are always shown; the detailed activity list is
   // opt-in, so only open it when this member has chosen to share it.
   const activityShared = member.data?.profile.activityVisible ?? false;
+
+  // useOpenProfile never routes here for your own id (it sends you to
+  // /profile instead), but a hand-crafted deep link could still reach this
+  // screen with your own userId -- guard against offering to block yourself.
+  const isSelf = (session.userId ?? 'demo-user') === userId;
+  const blockedUsers = useBlockedUsers();
+  const blockUser = useBlockUser();
+  const isBlocked = blockedUsers.data?.blocked.some(
+    (blocked) => blocked.userId === userId,
+  ) ?? false;
+  const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  const handleBlock = () => {
+    setConfirmBlockOpen(false);
+    blockUser.mutate(userId, {
+      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+      onSuccess: onClose,
+    });
+  };
+
+  const handleUnblock = () => {
+    blockUser.mutate(userId, {
+      onError: () => showToast('Couldn’t unblock this neighbour. Try again.'),
+      onSuccess: () => showToast(`Unblocked ${displayName}`),
+    });
+  };
 
   return (
     <View className='flex-1 bg-canvas'>
@@ -88,13 +125,29 @@ export function MemberProfileScreen({
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
-        <Pressable
-          accessibilityLabel='Close'
-          className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-          onPress={onClose}
-        >
-          <Icon name='Close' size={18} />
-        </Pressable>
+        <HStack space='sm'>
+          {!isSelf && !blockedUsers.isPending ? (
+            <Pressable
+              accessibilityLabel={
+                isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'
+              }
+              className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
+              disabled={blockUser.isPending}
+              onPress={() =>
+                isBlocked ? handleUnblock() : setConfirmBlockOpen(true)
+              }
+            >
+              <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            accessibilityLabel='Close'
+            className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
+            onPress={onClose}
+          >
+            <Icon name='Close' size={18} />
+          </Pressable>
+        </HStack>
       </HStack>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
@@ -254,6 +307,28 @@ export function MemberProfileScreen({
           </VStack>
         )}
       </ScrollView>
+
+      <ConfirmModal
+        confirmLabel='Block'
+        destructive
+        message={`You won't see ${displayName}'s posts, comments, events, missions, or services anymore. Unblock them anytime from Profile → Blocked users.`}
+        onClose={() => setConfirmBlockOpen(false)}
+        onConfirm={handleBlock}
+        title={`Block ${displayName}?`}
+        visible={confirmBlockOpen}
+      />
+
+      {toast ? (
+        <View
+          className='absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3'
+          style={{ bottom: insets.bottom + 24 }}
+        >
+          <Icon color='rgb(250,250,250)' name='AlertCircle' size={16} />
+          <Text className='flex-1 text-[14px] text-primary-foreground'>
+            {toast}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
