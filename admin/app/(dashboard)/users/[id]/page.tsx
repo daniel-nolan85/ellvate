@@ -43,7 +43,7 @@ export default async function UserDetailPage({
       backHref="/users"
       backLabel="Users"
       deleteAction={{
-        confirmLabel: `Permanently delete ${user.name}? This removes every post, comment, mission, and listing they've ever created. This cannot be undone.`,
+        confirmLabel: `Permanently delete ${user.name}? This removes every post, comment, mission, and listing they've ever created, bans their account so they can't sign back in, and emails them that they've been removed. This cannot be undone.`,
         id: user.id,
         table: 'app_users',
       }}
