@@ -31,7 +31,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -46,7 +46,6 @@ import {
 } from './use-comments';
 import {
   useDeletePost,
-  useMuteUser,
   usePost,
   useReportPost,
   useSubforums,
@@ -83,7 +82,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const pinExplainer = usePinExplainerDismissed();
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
-  const muteUser = useMuteUser();
+  const blockUser = useBlockUser();
   const reportPost = useReportPost();
   const subforums = useSubforums();
   const subforumNames = (subforums.data?.subforums ?? []).filter(
@@ -163,14 +162,14 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
     });
   };
 
-  const handleMutePost = () => {
+  const handleBlockPost = () => {
     if (!post) {
       return;
     }
     setPostMenuOpen(false);
-    muteUser.mutate(post.author.id, {
-      onSuccess: () => showToast(`Muted ${post.author.name}`),
-      onError: () => showToast('Couldn’t mute this neighbour. Try again.'),
+    blockUser.mutate(post.author.id, {
+      onSuccess: () => showToast(`Blocked ${post.author.name}`),
+      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
     });
   };
 
@@ -532,15 +531,15 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             <>
               <SheetRow
                 icon='EyeOff'
-                label='Mute this neighbour'
+                label='Block this neighbour'
                 onPress={() => {
                   const target = actionsFor;
                   closeCommentActions();
                   if (!target) return;
-                  muteUser.mutate(target.author.id, {
+                  blockUser.mutate(target.author.id, {
                     onError: () =>
-                      showToast('Couldn’t mute this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Muted ${target.author.name}`),
+                      showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
                   });
                 }}
               />
@@ -635,8 +634,8 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             <>
               <SheetRow
                 icon='EyeOff'
-                label='Mute this neighbour'
-                onPress={handleMutePost}
+                label='Block this neighbour'
+                onPress={handleBlockPost}
               />
               <Divider />
               <SheetRow

@@ -5,8 +5,13 @@ export type {
   UpdateProfileSuccess,
   UserProfile,
 } from './profile';
-export { getMemberActivitySharing, getPublicProfile } from './public-profile';
+export {
+  getBlockedMembers,
+  getMemberActivitySharing,
+  getPublicProfile,
+} from './public-profile';
 export type {
+  BlockedMember,
   MemberActivitySharing,
   PublicMemberRow,
   PublicMemberStats,

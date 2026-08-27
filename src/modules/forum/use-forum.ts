@@ -352,25 +352,3 @@ export function useReportPost() {
   });
 }
 
-export function useMuteUser() {
-  const session = useSession();
-  const queryClient = useQueryClient();
-  const userId = session.userId ?? 'demo-user';
-
-  return useMutation({
-    mutationFn: (mutedUserId: string) =>
-      requestJson<{ muted: boolean; mutedUserId: string }>({
-        getAccessToken: session.getToken,
-        method: 'POST',
-        path: `/api/users/${mutedUserId}/mute`,
-      }),
-    onSettled: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['forum', 'posts', userId],
-      });
-      // Mute is a global visibility rule, not forum-scoped — also hide the
-      // muted neighbour's service reviews.
-      void queryClient.invalidateQueries({ queryKey: ['services', 'reviews'] });
-    },
-  });
-}

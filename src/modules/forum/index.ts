@@ -3,7 +3,6 @@ export { PostCard } from './post-card';
 export { PostDetailScreen } from './post-detail-screen';
 export {
   useForumPosts,
-  useMuteUser,
   useMyPosts,
   usePost,
   useToggleLike,

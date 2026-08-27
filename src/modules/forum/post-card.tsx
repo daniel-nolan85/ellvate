@@ -18,7 +18,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -26,7 +26,6 @@ import { PostComposer } from './post-composer';
 import type { PinAction } from './use-pin-action';
 import {
   useDeletePost,
-  useMuteUser,
   useReportPost,
   useSubforums,
   useTogglePin,
@@ -91,7 +90,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
 
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
-  const muteUser = useMuteUser();
+  const blockUser = useBlockUser();
   const reportPost = useReportPost();
   const togglePin = useTogglePin();
   const pinExplainer = usePinExplainerDismissed();
@@ -182,11 +181,11 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
     });
   };
 
-  const handleMute = () => {
+  const handleBlock = () => {
     setMenuOpen(false);
-    muteUser.mutate(post.author.id, {
-      onSuccess: () => showToast(`Muted ${post.author.name}`),
-      onError: () => showToast('Couldn’t mute this neighbour. Try again.'),
+    blockUser.mutate(post.author.id, {
+      onSuccess: () => showToast(`Blocked ${post.author.name}`),
+      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
     });
   };
 
@@ -339,8 +338,8 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
             <>
               <PostMenuRow
                 icon='EyeOff'
-                label='Mute this neighbour'
-                onPress={handleMute}
+                label='Block this neighbour'
+                onPress={handleBlock}
               />
               <Divider />
               <PostMenuRow

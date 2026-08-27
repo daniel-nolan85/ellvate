@@ -26,8 +26,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useMuteUser } from '@/src/modules/forum';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
@@ -120,7 +119,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const updateReview = useUpdateServiceReview(listingId);
   const deleteReview = useDeleteServiceReview(listingId);
   const reportReview = useReportServiceReview();
-  const muteUser = useMuteUser();
+  const blockUser = useBlockUser();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -523,15 +522,15 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
             <>
               <ListingMenuRow
                 icon="EyeOff"
-                label="Mute this neighbour"
+                label="Block this neighbour"
                 onPress={() => {
                   const target = actionsFor;
                   setActionsFor(null);
                   if (!target) return;
-                  muteUser.mutate(target.author.id, {
+                  blockUser.mutate(target.author.id, {
                     onError: () =>
-                      showToast('Couldn’t mute this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Muted ${target.author.name}`),
+                      showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
                   });
                 }}
               />
