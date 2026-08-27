@@ -1,26 +1,50 @@
+import type { ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
-import { Icon, type AppIconName } from '@/src/components/ui/icon';
+import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { CATEGORY_ACCENT_ICON_COLOR } from '@/src/lib/category-accent';
 import { publicEnvironment } from '@/src/platform/environment';
+
+const ICON_COLOR = 'rgb(181,80,44)';
 
 // Fixed developer-identity links, not tied to any deployment -- unlike
 // EXPO_PUBLIC_MARKETING_URL below, these never change per environment.
 const NOLANCODE_URL = 'https://www.nolancode.com';
 const INSTAGRAM_URL = 'https://www.instagram.com/nolan_code';
 
+// Matches the boot splash's eLLVate wordmark treatment (Rye font, LLV in the
+// app's "lake" teal so the Lake-Las-Vegas pun still reads) -- see
+// src/platform/splash/animated-splash.tsx. That screen's cream/pastel-teal
+// pairing is tuned for its dark background; this reuses the same
+// light-background pairing the web wordmark uses instead (content ink,
+// CATEGORY_ACCENT_ICON_COLOR.lake).
+const LLV_ACCENT_COLOR = CATEGORY_ACCENT_ICON_COLOR.lake;
+
+function Wordmark() {
+  return (
+    <Text
+      className="text-[15px] text-content"
+      style={{ fontFamily: 'Rye_400Regular' }}
+    >
+      e<Text style={{ color: LLV_ACCENT_COLOR }}>LLV</Text>ate
+    </Text>
+  );
+}
+
 function LinkRow({
   icon,
   label,
   url,
 }: {
-  readonly icon: AppIconName;
+  readonly icon: ReactNode;
   readonly label: string;
   readonly url: string;
 }) {
@@ -31,7 +55,7 @@ function LinkRow({
       onPress={() => void Linking.openURL(url)}
     >
       <View className="h-8 w-8 items-center justify-center rounded-full bg-secondary">
-        <Icon color="rgb(181,80,44)" name={icon} size={16} />
+        {icon}
       </View>
       <Text className="flex-1 font-inter-medium text-[15px] text-content">
         {label}
@@ -62,20 +86,24 @@ export function AboutScreen() {
       <ScrollView contentContainerStyle={{ padding: 18 }}>
         <VStack space="sm">
           <Text className="px-1 pb-2 text-[13px] leading-[19px] text-text-muted">
-            eLLVate is designed and built by Nolancode.
+            <Wordmark /> is designed and built by Nolancode.
           </Text>
           <VStack className="overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
-            <LinkRow
-              icon="Laptop"
-              label="Nolancode portfolio"
-              url={NOLANCODE_URL}
-            />
             {marketingUrl ? (
-              <LinkRow icon="Globe" label="eLLVate website" url={marketingUrl} />
+              <LinkRow
+                icon={<Icon color={ICON_COLOR} name="Globe" size={16} />}
+                label="eLLVate.com"
+                url={marketingUrl}
+              />
             ) : null}
             <LinkRow
-              icon="AtSign"
-              label="@nolan_code on Instagram"
+              icon={<Icon color={ICON_COLOR} name="Laptop" size={16} />}
+              label="nolancode.com"
+              url={NOLANCODE_URL}
+            />
+            <LinkRow
+              icon={<Ionicons color={ICON_COLOR} name="logo-instagram" size={16} />}
+              label="@nolan_code"
               url={INSTAGRAM_URL}
             />
           </VStack>

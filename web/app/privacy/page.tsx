@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'August 21, 2026';
+const LAST_UPDATED = 'August 27, 2026';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -41,7 +41,7 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="information-we-collect" title="Information we collect">
         <p>
           <strong className="text-foreground">Account information.</strong> When you sign
-          up, we collect your phone number or email address (used to sign in via a one-time
+          up, we collect your email address (used to sign in via a one-time
           code) and the display name and profile photo you choose to add. We don&rsquo;t
           require or collect your real legal name, home address, or date of birth.
         </p>

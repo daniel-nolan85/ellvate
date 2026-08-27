@@ -46,12 +46,12 @@ describe('listSubforums', () => {
       'Announcements',
       'HOA',
       'Marina & Boating',
-      'Dining',
-      'Trails',
       'Golf',
+      'Trails',
+      'Dining',
       'Sports Club',
       'Buy & Sell',
-      'Events',
+      'General',
     ]);
   });
 });

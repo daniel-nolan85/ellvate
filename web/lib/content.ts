@@ -37,7 +37,7 @@ export const features: readonly Feature[] = [
     title: 'Forum',
     hook: 'Where the neighborhood actually talks.',
     description:
-      'One feed for everything happening around Lake Las Vegas, organized into channels so you only see what you came for — Announcements, HOA, Marina & Boating, Golf, Trails, Dining, Sports Club, and Buy & Sell.',
+      'One feed for everything happening around Lake Las Vegas, organized into channels so you only see what you came for — Announcements, HOA, Marina & Boating, Golf, Trails, Dining, Sports Club, Buy & Sell, and General.',
     highlights: [
       'Post, reply, and like in real time',
       'Pin one post to the top of your own feed — private to you, swap it any time',
