@@ -58,6 +58,7 @@ describe('listComments', () => {
     expect(comments[comments.length - 1]?.author).toEqual({
       avatarUrl: null,
       id: 'user-mia',
+      isAdmin: false,
       name: 'Mia Lake',
     });
   });

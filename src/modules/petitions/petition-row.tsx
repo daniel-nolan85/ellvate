@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -112,6 +113,7 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
           <Text className="text-[12px] text-text-muted">
             Started by <Text className="font-inter-semibold text-content">{petition.createdBy.name}</Text>
           </Text>
+          <AdminBadge isAdmin={petition.createdBy.isAdmin} />
         </Pressable>
         <HStack className="items-center gap-1.5">
           <Icon color="rgb(120,108,94)" name="Clock" size={14} />

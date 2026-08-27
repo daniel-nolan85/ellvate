@@ -73,10 +73,12 @@ interface SeedUserInput {
   readonly missionsCompleted: number;
   readonly previousRank: number | null;
   readonly pinnedPostId?: string | null;
+  readonly isAdmin?: boolean;
 }
 
 const seedUser = ({
   id,
+  isAdmin = false,
   missionsCompleted,
   name,
   pinnedPostId = null,
@@ -94,6 +96,7 @@ const seedUser = ({
   profile: emptyProfile(),
   mutedUserIds: [],
   avatarUrl: null,
+  isAdmin,
   pinnedPostId,
 });
 
@@ -157,6 +160,7 @@ const seedUsers = (): readonly StoredUser[] => [
     streakDays: 0,
     missionsCompleted: 0,
     previousRank: null,
+    isAdmin: true,
   }),
   seedUser({
     id: 'user-riley',

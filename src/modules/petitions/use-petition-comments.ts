@@ -6,7 +6,12 @@ import { requestJson } from '@/src/services/api';
 export interface PetitionComment {
   readonly id: string;
   readonly petitionId: string;
-  readonly author: { readonly id: string; readonly name: string; readonly avatarUrl: string | null };
+  readonly author: {
+    readonly id: string;
+    readonly name: string;
+    readonly avatarUrl: string | null;
+    readonly isAdmin: boolean;
+  };
   readonly body: string;
   readonly createdAt: string;
   readonly editedAt: string | null;

@@ -38,6 +38,7 @@ function unlockPetitions(): void {
     const extra: StoredUser[] = Array.from({ length: needed }, (_, index) => ({
       avatarUrl: null,
       id: `fixture-user-${index}`,
+      isAdmin: false,
       missionsCompleted: 0,
       name: `Fixture User ${index}`,
       mutedUserIds: [],

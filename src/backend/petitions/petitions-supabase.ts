@@ -17,7 +17,7 @@ import type {
 import { validatePetitionInput } from './validation';
 
 const PETITION_SELECT =
-  'id,created_by,title,description,category,deadline_days,deadline_at,required_signatures,signature_count,status,succeeded_at,hoa_response,hoa_response_at,created_at,creator:app_users!petitions_created_by_fkey(id,name,avatar_url)';
+  'id,created_by,title,description,category,deadline_days,deadline_at,required_signatures,signature_count,status,succeeded_at,hoa_response,hoa_response_at,created_at,creator:app_users!petitions_created_by_fkey(id,name,avatar_url,is_admin)';
 
 interface PetitionRow {
   readonly id: string;
@@ -34,12 +34,18 @@ interface PetitionRow {
   readonly hoa_response: string | null;
   readonly hoa_response_at: string | null;
   readonly created_at: string;
-  readonly creator: { readonly id: string; readonly name: string; readonly avatar_url: string | null } | null;
+  readonly creator: {
+    readonly id: string;
+    readonly name: string;
+    readonly avatar_url: string | null;
+    readonly is_admin: boolean;
+  } | null;
 }
 
 const toCreatorRef = (row: PetitionRow): PersonRef => ({
   avatarUrl: row.creator?.avatar_url ?? null,
   id: row.created_by ?? 'unknown',
+  isAdmin: row.creator?.is_admin ?? false,
   name: row.creator?.name ?? 'Former member',
 });
 

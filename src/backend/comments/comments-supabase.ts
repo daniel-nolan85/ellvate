@@ -15,7 +15,7 @@ import type {
 import { validateCommentBody } from './validation';
 
 const COMMENT_SELECT =
-  'id,post_id,author_id,body,created_at,edited_at,author:app_users!comments_author_id_fkey(id,name,avatar_url)';
+  'id,post_id,author_id,body,created_at,edited_at,author:app_users!comments_author_id_fkey(id,name,avatar_url,is_admin)';
 
 const MY_COMMENT_SELECT =
   'id,post_id,body,created_at,post:posts!comments_post_id_fkey(title)';
@@ -39,6 +39,7 @@ interface CommentRow {
     readonly id: string;
     readonly name: string;
     readonly avatar_url: string | null;
+    readonly is_admin: boolean;
   } | null;
 }
 
@@ -46,6 +47,7 @@ const toComment = (row: CommentRow): Comment => ({
   author: {
     avatarUrl: row.author?.avatar_url ?? null,
     id: row.author_id,
+    isAdmin: row.author?.is_admin ?? false,
     name: row.author?.name ?? 'Member',
   },
   body: row.body,

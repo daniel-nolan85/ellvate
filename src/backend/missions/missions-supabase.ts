@@ -69,6 +69,7 @@ const resolveStatus = (stopsDone: number, stopsTotal: number): MissionStatus =>
 interface PersonLookup {
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly isAdmin: boolean;
 }
 
 const toMissionView = (
@@ -83,6 +84,7 @@ const toMissionView = (
     author: {
       avatarUrl: author?.avatarUrl ?? null,
       id: row.created_by,
+      isAdmin: author?.isAdmin ?? false,
       name: author?.name ?? 'Member',
     },
     title: row.title,
@@ -108,7 +110,7 @@ const nameMapFor = async (
 ): Promise<ReadonlyMap<string, PersonLookup>> => {
   const { data, error } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .eq('id', userId)
     .maybeSingle();
   throwIfSupabaseError(error, 'load mission author');
@@ -119,6 +121,7 @@ const nameMapFor = async (
             data.id as string,
             {
               avatarUrl: (data.avatar_url as string | null) ?? null,
+              isAdmin: Boolean(data.is_admin),
               name: data.name as string,
             },
           ],
@@ -218,7 +221,7 @@ export async function getMissionsViewSupabase(
   const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
   const { data: authorRows, error: authorError } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .in('id', authorIds);
   throwIfSupabaseError(authorError, 'load mission authors');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -226,6 +229,7 @@ export async function getMissionsViewSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -300,7 +304,7 @@ export async function listMissionsPageSupabase(
 
   const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
   const { data: authorRows, error: authorError } = authorIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', authorIds)
     : { data: [], error: null };
   throwIfSupabaseError(authorError, 'load mission authors');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -308,6 +312,7 @@ export async function listMissionsPageSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -392,7 +397,7 @@ export async function getMyMissionsViewSupabase(
 
   const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
   const { data: authorRows, error: authorError } = authorIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', authorIds)
     : { data: [], error: null };
   throwIfSupabaseError(authorError, 'load my mission authors');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -400,6 +405,7 @@ export async function getMyMissionsViewSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -443,7 +449,7 @@ export async function getMissionsByIdsSupabase(
 
   const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
   const { data: authorRows, error: authorError } = authorIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', authorIds)
+    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', authorIds)
     : { data: [], error: null };
   throwIfSupabaseError(authorError, 'load bookmarked mission authors');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -451,6 +457,7 @@ export async function getMissionsByIdsSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -769,6 +776,7 @@ export async function checkInSupabase(
     author: {
       avatarUrl: author?.avatarUrl ?? null,
       id: mission.created_by,
+      isAdmin: author?.isAdmin ?? false,
       name: author?.name ?? 'Member',
     },
     title: mission.title,

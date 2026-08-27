@@ -76,10 +76,10 @@ describe('getEventsView', () => {
     const featured = events[0];
 
     expect(featured?.attendees).toEqual([
-      { avatarUrl: null, id: 'user-riley', name: 'Riley Kim' },
-      { avatarUrl: null, id: 'user-mia', name: 'Mia Lake' },
-      { avatarUrl: null, id: 'user-jordan', name: 'Jordan Diaz' },
-      { avatarUrl: null, id: 'user-andre', name: 'Andre King' },
+      { avatarUrl: null, id: 'user-riley', isAdmin: false, name: 'Riley Kim' },
+      { avatarUrl: null, id: 'user-mia', isAdmin: false, name: 'Mia Lake' },
+      { avatarUrl: null, id: 'user-jordan', isAdmin: false, name: 'Jordan Diaz' },
+      { avatarUrl: null, id: 'user-andre', isAdmin: false, name: 'Andre King' },
     ]);
   });
 
@@ -134,10 +134,10 @@ describe('getEventAttendees', () => {
   test('returns the full uncapped roster, including newly joined users', async () => {
     const before = await getEventAttendees(ctx(), 'event-1');
     expect(before).toEqual([
-      { avatarUrl: null, id: 'user-riley', name: 'Riley Kim' },
-      { avatarUrl: null, id: 'user-mia', name: 'Mia Lake' },
-      { avatarUrl: null, id: 'user-jordan', name: 'Jordan Diaz' },
-      { avatarUrl: null, id: 'user-andre', name: 'Andre King' },
+      { avatarUrl: null, id: 'user-riley', isAdmin: false, name: 'Riley Kim' },
+      { avatarUrl: null, id: 'user-mia', isAdmin: false, name: 'Mia Lake' },
+      { avatarUrl: null, id: 'user-jordan', isAdmin: false, name: 'Jordan Diaz' },
+      { avatarUrl: null, id: 'user-andre', isAdmin: false, name: 'Andre King' },
     ]);
 
     await toggleJoin(ctx(), 'event-1');

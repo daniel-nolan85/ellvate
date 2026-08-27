@@ -54,8 +54,8 @@ const toAuthorRef = (
 ): PersonRef => {
   const user = users.find((candidate) => candidate.id === authorId);
   return user
-    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id: authorId, name: 'You' };
+    ? { avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }
+    : { avatarUrl: null, id: authorId, isAdmin: false, name: 'You' };
 };
 
 // pinned is viewer-relative — a Twitter/Telegram-style personal pin, not a

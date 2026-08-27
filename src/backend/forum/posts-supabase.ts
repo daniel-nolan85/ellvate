@@ -22,7 +22,7 @@ import {
 } from './validation';
 
 const POST_SELECT =
-  'id,forum,author_id,title,excerpt,media,like_count,reply_count,created_at,edited_at,author:app_users!posts_author_id_fkey(id,name,avatar_url)';
+  'id,forum,author_id,title,excerpt,media,like_count,reply_count,created_at,edited_at,author:app_users!posts_author_id_fkey(id,name,avatar_url,is_admin)';
 
 // The cursor's sortKey/id (a created_at timestamp and a post id) are
 // client-supplied and get spliced into a raw PostgREST `.or()` filter string
@@ -65,6 +65,7 @@ interface PostRow {
     readonly id: string;
     readonly name: string;
     readonly avatar_url: string | null;
+    readonly is_admin: boolean;
   } | null;
 }
 
@@ -83,6 +84,7 @@ const toForumPost = (
   author: {
     avatarUrl: row.author?.avatar_url ?? null,
     id: row.author_id,
+    isAdmin: row.author?.is_admin ?? false,
     name: row.author?.name ?? 'Member',
   },
   createdAt: row.created_at,

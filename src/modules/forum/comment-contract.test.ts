@@ -19,7 +19,12 @@ describe('parseCommentsResponse', () => {
     ).toEqual({
       comments: [
         {
-          author: { avatarUrl: null, id: 'user-1', name: 'Lake Neighbor' },
+          author: {
+            avatarUrl: null,
+            id: 'user-1',
+            isAdmin: false,
+            name: 'Lake Neighbor',
+          },
           body: 'See you at the marina.',
           createdAt: '2026-07-14T08:00:00.000Z',
           editedAt: null,

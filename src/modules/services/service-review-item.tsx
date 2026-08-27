@@ -1,5 +1,6 @@
 import { Pressable } from 'react-native';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Avatar } from '@/src/components/ui/avatar';
 import { HStack } from '@/src/components/ui/hstack';
@@ -54,11 +55,13 @@ export function ServiceReviewItem({
         <HStack className="items-center justify-between">
           <VStack className="gap-0.5">
             <Pressable
+              className="flex-row items-center gap-1"
               onPress={() => onOpenAuthor(review.author.id, review.author.name)}
             >
               <Text className="font-inter-semibold text-[13px] text-content">
                 {review.author.name}
               </Text>
+              <AdminBadge isAdmin={review.author.isAdmin} />
             </Pressable>
             <StarRow rating={review.rating} />
           </VStack>
