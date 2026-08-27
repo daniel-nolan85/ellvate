@@ -18,7 +18,10 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPageShell
       lastUpdated={LAST_UPDATED}
-      otherPolicy={{ href: '/terms', label: 'Terms of Service' }}
+      otherPolicies={[
+        { href: '/terms', label: 'Terms of Service' },
+        { href: '/guidelines', label: 'Community Guidelines' },
+      ]}
       title="Privacy Policy"
     >
       <LegalSection id="overview" title="Overview">

@@ -11,20 +11,20 @@ interface LegalPageShellProps {
   readonly eyebrow?: string;
   readonly title: string;
   readonly lastUpdated: string;
-  readonly otherPolicy: { readonly href: string; readonly label: string };
+  readonly otherPolicies: readonly { readonly href: string; readonly label: string }[];
   readonly children: ReactNode;
 }
 
-// Shared chrome for the Terms of Service and Privacy Policy pages -- same
-// header/footer, same typographic rhythm, each page supplies only its own
-// heading and content sections. Kept out of the route files themselves so
-// they stay orchestration-thin (see check-saos-structure.py's
-// thick-framework-file threshold).
+// Shared chrome for the Terms of Service, Privacy Policy, and Community
+// Guidelines pages -- same header/footer, same typographic rhythm, each
+// page supplies only its own heading and content sections. Kept out of the
+// route files themselves so they stay orchestration-thin (see
+// check-saos-structure.py's thick-framework-file threshold).
 export function LegalPageShell({
   children,
   eyebrow = 'Legal',
   lastUpdated,
-  otherPolicy,
+  otherPolicies,
   title,
 }: LegalPageShellProps) {
   return (
@@ -66,10 +66,15 @@ export function LegalPageShell({
             <NolancodeLogo iconSize={16} variant="dark" />
           </a>
           <span>
-            See also our{' '}
-            <Link href={otherPolicy.href} className="underline-offset-2 hover:text-white hover:underline">
-              {otherPolicy.label}
-            </Link>
+            See also{' '}
+            {otherPolicies.map((policy, index) => (
+              <span key={policy.href}>
+                {index > 0 ? ' and ' : ''}
+                <Link href={policy.href} className="underline-offset-2 hover:text-white hover:underline">
+                  {policy.label}
+                </Link>
+              </span>
+            ))}
           </span>
         </div>
       </footer>
