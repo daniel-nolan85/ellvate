@@ -47,7 +47,7 @@ function unlockPetitions(): void {
         activityVisible: false,
         interests: [],
         notificationPrefs: {
-          digest: false,
+          digest: true,
           events: true,
           missions: true,
           petitions: true,

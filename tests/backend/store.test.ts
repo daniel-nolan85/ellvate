@@ -185,7 +185,7 @@ describe('seed data', () => {
         events: true,
         replies: true,
         missions: true,
-        digest: false,
+        digest: true,
         petitions: true,
       },
       onboardedAt: null,

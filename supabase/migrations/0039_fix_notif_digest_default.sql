@@ -1,0 +1,13 @@
+-- notif_digest was the only notification preference column defaulting to
+-- false (0001_core_schema.sql) while notif_events, notif_replies,
+-- notif_missions, and notif_petitions all default to true -- inconsistent
+-- with the onboarding draft's own defaults (use-onboarding-state.ts's
+-- initialDraft has digest: true alongside the others), and visible as a bug
+-- report: "weekly digest acts differently" whenever a profile row exists
+-- before onboarding explicitly sets notificationPrefs.
+--
+-- Only changes the default for rows inserted from here on -- not
+-- backfilling existing rows, since a false value already on a row could be
+-- an explicit user choice rather than an untouched default, and those are
+-- indistinguishable from a boolean column alone.
+alter table app_users alter column notif_digest set default true;
