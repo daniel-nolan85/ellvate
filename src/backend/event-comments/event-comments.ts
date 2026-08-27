@@ -36,8 +36,8 @@ export const MAX_EVENT_COMMENTS_PAGE_SIZE = 50;
 const authorRef = (users: readonly StoredUser[], id: string): PersonRef => {
   const user = users.find((candidate) => candidate.id === id);
   return user
-    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id, name: 'Member' };
+    ? { avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }
+    : { avatarUrl: null, id, isAdmin: false, name: 'Member' };
 };
 
 const toEventComment = (

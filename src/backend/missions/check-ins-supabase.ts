@@ -5,7 +5,7 @@ import { throwIfSupabaseError } from '@/src/services/supabase';
 import { CHECK_INS_LIST_LIMIT, type CheckInEntry, type ReportCheckInResult } from './types';
 
 const CHECK_IN_SELECT =
-  'id,mission_id,user_id,stop_index,completed_at,photo_url,user:app_users!mission_check_ins_user_id_fkey(id,name,avatar_url)';
+  'id,mission_id,user_id,stop_index,completed_at,photo_url,user:app_users!mission_check_ins_user_id_fkey(id,name,avatar_url,is_admin)';
 
 interface CheckInRow {
   readonly id: string;
@@ -18,6 +18,7 @@ interface CheckInRow {
     readonly id: string;
     readonly name: string;
     readonly avatar_url: string | null;
+    readonly is_admin: boolean;
   } | null;
 }
 
@@ -27,6 +28,7 @@ const toCheckInEntry = (row: CheckInRow): CheckInEntry => ({
   user: {
     avatarUrl: row.user?.avatar_url ?? null,
     id: row.user_id,
+    isAdmin: row.user?.is_admin ?? false,
     name: row.user?.name ?? 'Member',
   },
   stopIndex: row.stop_index,

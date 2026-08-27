@@ -1,5 +1,6 @@
 import { Pressable, Text as RNText } from 'react-native';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { Avatar } from '@/src/components/ui/avatar';
 import { HStack } from '@/src/components/ui/hstack';
@@ -34,6 +35,7 @@ export interface DisplayComment {
     readonly id: string;
     readonly name: string;
     readonly avatarUrl?: string | null;
+    readonly isAdmin?: boolean;
   };
   readonly body: string;
   readonly createdAt: string;
@@ -70,6 +72,7 @@ export function CommentItem<TComment extends DisplayComment>({
               {comment.author.name}
             </Text>
           </Pressable>
+          <AdminBadge isAdmin={comment.author.isAdmin ?? false} />
           <Text className="text-[12px] text-text-muted">
             {formatRelativeTime(comment.createdAt)}
           </Text>

@@ -61,7 +61,7 @@ const toPersonRefs = (
   attendeeIds.flatMap((id) => {
     const user = users.find((candidate) => candidate.id === id);
     return user
-      ? [{ avatarUrl: user.avatarUrl, id: user.id, name: user.name }]
+      ? [{ avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }]
       : [];
   });
 
@@ -75,8 +75,8 @@ const toAuthorRef = (
 ): PersonRef => {
   const user = users.find((candidate) => candidate.id === authorId);
   return user
-    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id: authorId, name: 'Former member' };
+    ? { avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }
+    : { avatarUrl: null, id: authorId, isAdmin: false, name: 'Former member' };
 };
 
 // Mirrors events-supabase.ts's ATTENDEE_LIMIT — cap the avatar stack to a

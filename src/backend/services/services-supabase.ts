@@ -52,6 +52,7 @@ interface ReviewSummaryRow {
 interface PersonLookup {
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly isAdmin: boolean;
 }
 
 type UploadServiceMediaResult =
@@ -85,6 +86,7 @@ const toServiceListingView = (
     author: {
       avatarUrl: author?.avatarUrl ?? null,
       id: row.created_by,
+      isAdmin: author?.isAdmin ?? false,
       name: author?.name ?? 'Member',
     },
     businessName: row.business_name,
@@ -113,7 +115,7 @@ const nameMapFor = async (
   }
   const { data, error } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .in('id', userIds);
   throwIfSupabaseError(error, 'load service listing authors');
   return new Map(
@@ -121,6 +123,7 @@ const nameMapFor = async (
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),

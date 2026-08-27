@@ -4,6 +4,7 @@ import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 import { DetailLayout } from '../../detail-layout';
+import { AdminToggle } from '../admin-toggle';
 
 interface UserRow {
   readonly id: string;
@@ -14,6 +15,7 @@ interface UserRow {
   readonly streak_days: number;
   readonly created_at: string;
   readonly avatar_url: string | null;
+  readonly is_admin: boolean;
 }
 
 export default async function UserDetailPage({
@@ -25,7 +27,7 @@ export default async function UserDetailPage({
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('app_users')
-    .select('id, name, role, xp, missions_completed, streak_days, created_at, avatar_url')
+    .select('id, name, role, xp, missions_completed, streak_days, created_at, avatar_url, is_admin')
     .eq('id', id)
     .maybeSingle();
   if (error) {
@@ -51,6 +53,10 @@ export default async function UserDetailPage({
         { label: 'Missions completed', value: user.missions_completed },
         { label: 'Streak', value: `${user.streak_days}d` },
         { label: 'Joined', value: formatDate(user.created_at) },
+        {
+          label: 'Admin',
+          value: <AdminToggle isAdmin={user.is_admin} userId={user.id} />,
+        },
       ]}
       media={
         user.avatar_url ? (

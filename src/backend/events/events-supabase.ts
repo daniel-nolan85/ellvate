@@ -88,6 +88,7 @@ const uniqueIds = (ids: readonly string[]): readonly string[] => [
 interface PersonLookup {
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly isAdmin: boolean;
 }
 
 const toCommunityEvent = (
@@ -103,7 +104,7 @@ const toCommunityEvent = (
   const attendees: readonly PersonRef[] = attendeeIds.flatMap((id) => {
     const person = nameById.get(id);
     return person
-      ? [{ avatarUrl: person.avatarUrl, id, name: person.name }]
+      ? [{ avatarUrl: person.avatarUrl, id, isAdmin: person.isAdmin, name: person.name }]
       : [];
   });
   const author = nameById.get(row.created_by);
@@ -112,6 +113,7 @@ const toCommunityEvent = (
     author: {
       avatarUrl: author?.avatarUrl ?? null,
       id: row.created_by,
+      isAdmin: author?.isAdmin ?? false,
       name: author?.name ?? 'Member',
     },
     startsAt: row.starts_at,
@@ -139,7 +141,7 @@ const nameMapFor = async (
 ): Promise<ReadonlyMap<string, PersonLookup>> => {
   const { data, error } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .eq('id', userId)
     .maybeSingle();
   throwIfSupabaseError(error, 'load event author');
@@ -150,6 +152,7 @@ const nameMapFor = async (
             data.id as string,
             {
               avatarUrl: (data.avatar_url as string | null) ?? null,
+              isAdmin: Boolean(data.is_admin),
               name: data.name as string,
             },
           ],
@@ -239,7 +242,7 @@ export async function getEventsViewSupabase(
   ]);
   const { data: userData, error: userError } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .in('id', [...neededIds]);
   throwIfSupabaseError(userError, 'load event attendees');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -247,6 +250,7 @@ export async function getEventsViewSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -321,7 +325,7 @@ export async function listEventsPageSupabase(
   ]);
   const { data: userData, error: userError } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .in('id', [...neededIds]);
   throwIfSupabaseError(userError, 'load event attendees');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -329,6 +333,7 @@ export async function listEventsPageSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -405,7 +410,7 @@ export async function getMyEventsViewSupabase(
     ...joinRows.map((row) => row.user_id),
   ]);
   const { data: userData, error: userError } = neededIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', [...neededIds])
+    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', [...neededIds])
     : { data: [], error: null };
   throwIfSupabaseError(userError, 'load my events attendees');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -413,6 +418,7 @@ export async function getMyEventsViewSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -459,7 +465,7 @@ export async function getEventsByIdsSupabase(
     ...joinRows.map((row) => row.user_id),
   ]);
   const { data: userData, error: userError } = neededIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url').in('id', [...neededIds])
+    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', [...neededIds])
     : { data: [], error: null };
   throwIfSupabaseError(userError, 'load bookmarked events attendees');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -467,6 +473,7 @@ export async function getEventsByIdsSupabase(
       row.id as string,
       {
         avatarUrl: (row.avatar_url as string | null) ?? null,
+        isAdmin: Boolean(row.is_admin),
         name: row.name as string,
       },
     ]),
@@ -513,7 +520,7 @@ export async function getEventAttendeesSupabase(
 
   const { data: userData, error: userError } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,is_admin')
     .in('id', [...attendeeIds]);
   throwIfSupabaseError(userError, 'load event attendee users');
   const byId = new Map(
@@ -526,6 +533,7 @@ export async function getEventAttendeesSupabase(
           {
             avatarUrl: (row.avatar_url as string | null) ?? null,
             id,
+            isAdmin: Boolean(row.is_admin),
             name: row.name as string,
           },
         ]

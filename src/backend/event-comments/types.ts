@@ -2,6 +2,7 @@ export interface PersonRef {
   readonly id: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly isAdmin: boolean;
 }
 
 export interface EventComment {

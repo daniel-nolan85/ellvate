@@ -48,6 +48,7 @@ describe('listMissionComments', () => {
     expect(comments[1]?.author).toEqual({
       avatarUrl: null,
       id: 'user-mia',
+      isAdmin: false,
       name: 'Mia Lake',
     });
   });

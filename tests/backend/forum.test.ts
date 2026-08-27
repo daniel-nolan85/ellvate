@@ -78,7 +78,7 @@ describe('listPosts', () => {
     expect(rest).toEqual({
       id: 'post-1',
       forum: 'Marina & Boating',
-      author: { avatarUrl: null, id: 'user-jordan', name: 'Jordan Diaz' },
+      author: { avatarUrl: null, id: 'user-jordan', isAdmin: false, name: 'Jordan Diaz' },
       editedAt: null,
       title: 'Best spots to kayak at sunrise?',
       excerpt:

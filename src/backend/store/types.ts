@@ -25,6 +25,10 @@ export interface StoredUser {
   readonly id: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  // Community admin -- distinct from dashboard_admins, which only gates
+  // login to the separate /admin moderation tool. Drives the "admin" mark
+  // shown next to this user's name on their own content.
+  readonly isAdmin: boolean;
   readonly xp: number;
   readonly streakDays: number;
   readonly missionsCompleted: number;

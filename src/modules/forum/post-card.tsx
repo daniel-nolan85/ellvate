@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { Avatar } from '@/src/components/ui/avatar';
@@ -224,9 +225,12 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
           >
             <Avatar name={post.author.name} size='sm' src={post.author.avatarUrl ?? undefined} />
             <VStack className='flex-1' space='xs'>
-              <Text className='font-inter-bold' size='sm'>
-                {post.author.name}
-              </Text>
+              <HStack className='items-center' space='xs'>
+                <Text className='font-inter-bold' size='sm'>
+                  {post.author.name}
+                </Text>
+                <AdminBadge isAdmin={post.author.isAdmin} />
+              </HStack>
               <HStack className='items-center' space='xs'>
                 <Badge variant={categoryAccent(post.forum)}>{post.forum}</Badge>
                 <Text className='text-text-muted' size='xs'>

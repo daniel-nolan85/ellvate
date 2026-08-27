@@ -14,7 +14,7 @@ import type {
 } from './types';
 
 const MISSION_COMMENT_SELECT =
-  'id,mission_id,author_id,body,created_at,edited_at,author:app_users!mission_comments_author_id_fkey(id,name,avatar_url)';
+  'id,mission_id,author_id,body,created_at,edited_at,author:app_users!mission_comments_author_id_fkey(id,name,avatar_url,is_admin)';
 
 interface MissionCommentRow {
   readonly id: string;
@@ -27,6 +27,7 @@ interface MissionCommentRow {
     readonly id: string;
     readonly name: string;
     readonly avatar_url: string | null;
+    readonly is_admin: boolean;
   } | null;
 }
 
@@ -34,6 +35,7 @@ const toMissionComment = (row: MissionCommentRow): MissionComment => ({
   author: {
     avatarUrl: row.author?.avatar_url ?? null,
     id: row.author_id,
+    isAdmin: row.author?.is_admin ?? false,
     name: row.author?.name ?? 'Member',
   },
   body: row.body,

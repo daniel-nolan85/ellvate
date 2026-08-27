@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
@@ -231,6 +232,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                   {listing.author.name}
                 </Text>
               </Text>
+              <AdminBadge isAdmin={listing.author.isAdmin} />
             </Pressable>
 
             <HStack className="items-center gap-2">

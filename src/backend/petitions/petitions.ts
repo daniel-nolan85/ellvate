@@ -40,8 +40,8 @@ export const MAX_PETITIONS_PAGE_SIZE = 50;
 const toPersonRef = (users: readonly StoredUser[], id: string): PersonRef => {
   const user = users.find((candidate) => candidate.id === id);
   return user
-    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id, name: 'Former member' };
+    ? { avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }
+    : { avatarUrl: null, id, isAdmin: false, name: 'Former member' };
 };
 
 // `signedBy` is the set of PETITION ids the requesting user has signed (see

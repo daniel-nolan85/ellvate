@@ -219,6 +219,7 @@ describe('deleteAccount (memory)', () => {
     expect(orphanedEvent?.author).toEqual({
       avatarUrl: null,
       id: TEST_USER,
+      isAdmin: false,
       name: 'Former member',
     });
 
@@ -230,6 +231,7 @@ describe('deleteAccount (memory)', () => {
     expect(orphanedMission?.author).toEqual({
       avatarUrl: null,
       id: TEST_USER,
+      isAdmin: false,
       name: 'Former member',
     });
 
@@ -241,6 +243,7 @@ describe('deleteAccount (memory)', () => {
     expect(orphanedPetition?.createdBy).toEqual({
       avatarUrl: null,
       id: TEST_USER,
+      isAdmin: false,
       name: 'Former member',
     });
 

@@ -37,8 +37,8 @@ export const toAuthorRef = (
 ): PersonRef => {
   const user = users.find((candidate) => candidate.id === authorId);
   return user
-    ? { avatarUrl: user.avatarUrl, id: user.id, name: user.name }
-    : { avatarUrl: null, id: authorId, name: 'Former member' };
+    ? { avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }
+    : { avatarUrl: null, id: authorId, isAdmin: false, name: 'Former member' };
 };
 
 export function toMissionView(

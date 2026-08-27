@@ -30,6 +30,28 @@ export async function toggleEventFeaturedAction(
   revalidatePath(`/events/${eventId}`);
 }
 
+// Distinct from dashboard_admins above -- this flags an app_users row (a
+// community member) whose content gets an "admin" mark in the mobile app,
+// not who may sign in to this moderation tool.
+export async function toggleUserAdminAction(
+  userId: string,
+  nextIsAdmin: boolean,
+) {
+  await requireAdminEmail();
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from('app_users')
+    .update({ is_admin: nextIsAdmin })
+    .eq('id', userId);
+
+  if (error) {
+    throw error;
+  }
+  revalidatePath('/users');
+  revalidatePath(`/users/${userId}`);
+}
+
 interface AddAdminResult {
   readonly ok: boolean;
   readonly message?: string;

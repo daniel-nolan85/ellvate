@@ -2,6 +2,7 @@ export interface CommentAuthor {
   readonly id: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly isAdmin: boolean;
 }
 
 export interface ForumComment {
@@ -59,6 +60,7 @@ const parseComment = (value: unknown, index: number): ForumComment => {
       avatarUrl:
         typeof author.avatarUrl === 'string' ? author.avatarUrl : null,
       id: requiredString(author, 'id', `comments[${index}].author`),
+      isAdmin: author.isAdmin === true,
       name: requiredString(author, 'name', `comments[${index}].author`),
     },
     body: requiredString(comment, 'body', `comments[${index}]`),

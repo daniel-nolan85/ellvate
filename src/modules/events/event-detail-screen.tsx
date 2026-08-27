@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
@@ -296,6 +297,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                     {event.author.name}
                   </Text>
                 </Text>
+                <AdminBadge isAdmin={event.author.isAdmin} />
               </Pressable>
 
               <HStack className='items-center' space='xs'>

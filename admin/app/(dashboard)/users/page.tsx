@@ -6,6 +6,8 @@ import { applyDescCursor, encodeCursor, LIST_PAGE_SIZE } from '@/lib/pagination'
 
 import { DeleteButton } from '../delete-button';
 
+import { AdminToggle } from './admin-toggle';
+
 interface UserRow {
   readonly id: string;
   readonly name: string;
@@ -15,6 +17,7 @@ interface UserRow {
   readonly streak_days: number;
   readonly created_at: string;
   readonly avatar_url: string | null;
+  readonly is_admin: boolean;
 }
 
 export default async function UsersPage({
@@ -28,7 +31,7 @@ export default async function UsersPage({
   const admin = createSupabaseAdminClient();
   let request = admin
     .from('app_users')
-    .select('id, name, role, xp, missions_completed, streak_days, created_at, avatar_url');
+    .select('id, name, role, xp, missions_completed, streak_days, created_at, avatar_url, is_admin');
   if (query) {
     request = request.ilike('name', `%${query}%`);
   }
@@ -57,6 +60,8 @@ export default async function UsersPage({
           entire history — every post, comment, mission, and listing they
           ever created — not just their profile. There&apos;s no separate
           ban/suspend option yet; this is a permanent, irreversible action.
+          Marking someone Admin adds a mark next to their name on their own
+          content in the app, distinct from who can sign in here.
         </p>
       </div>
 
@@ -85,13 +90,14 @@ export default async function UsersPage({
             <th className="pb-2 font-normal">Missions done</th>
             <th className="pb-2 font-normal">Streak</th>
             <th className="pb-2 font-normal">Joined</th>
+            <th className="pb-2 font-normal">Admin</th>
             <th className="pb-2 font-normal text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td className="py-4 text-sm text-muted" colSpan={7}>
+              <td className="py-4 text-sm text-muted" colSpan={8}>
                 {query ? `No members match "${query}".` : 'No members yet.'}
               </td>
             </tr>
@@ -117,6 +123,9 @@ export default async function UsersPage({
                 <td className="py-2 pr-4 text-xs text-muted">{user.streak_days}d</td>
                 <td className="py-2 pr-4 text-xs text-muted">
                   {formatDate(user.created_at)}
+                </td>
+                <td className="py-2 pr-4">
+                  <AdminToggle isAdmin={user.is_admin} userId={user.id} />
                 </td>
                 <td className="py-2 text-right">
                   <DeleteButton

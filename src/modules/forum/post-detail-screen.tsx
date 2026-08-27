@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
 
+import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
@@ -327,9 +328,12 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                 >
                   <Avatar name={post.author.name} size='sm' src={post.author.avatarUrl ?? undefined} />
                   <VStack className='flex-1 gap-0.5'>
-                    <Text className='font-inter-bold text-[14px] text-content'>
-                      {post.author.name}
-                    </Text>
+                    <HStack className='items-center' space='xs'>
+                      <Text className='font-inter-bold text-[14px] text-content'>
+                        {post.author.name}
+                      </Text>
+                      <AdminBadge isAdmin={post.author.isAdmin} />
+                    </HStack>
                     <HStack className='items-center' space='xs'>
                       <Badge variant={categoryAccent(post.forum)}>{post.forum}</Badge>
                       <Text className='text-[12px] text-text-muted'>
