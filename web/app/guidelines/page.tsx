@@ -69,11 +69,12 @@ export default function CommunityGuidelinesPage() {
       <LegalSection id="the-right-place" title="Post in the right place">
         <p>
           The forum is organized into channels — Announcements, HOA, Marina
-          &amp; Boating, Golf, Trails, Dining, Sports Club, and Buy &amp;
-          Sell — so neighbours can find what they&rsquo;re looking for
+          &amp; Boating, Golf, Trails, Dining, Sports Club, Buy &amp; Sell,
+          and General — so neighbours can find what they&rsquo;re looking for
           without wading through everything else. Pick the channel that
-          actually fits, and keep Announcements and HOA for genuinely
-          official or board-related information.
+          actually fits (General is there for anything genuinely
+          topic-less), and keep Announcements and HOA for genuinely official
+          or board-related information.
         </p>
       </LegalSection>
 

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'August 23, 2026';
+const LAST_UPDATED = 'August 27, 2026';
 
 export default function TermsOfServicePage() {
   return (
@@ -48,8 +48,8 @@ export default function TermsOfServicePage() {
 
       <LegalSection id="accounts" title="3. Your account">
         <p>
-          You need an account to use most of {BRAND.appName}, created with your phone
-          number or email address. You&rsquo;re responsible for keeping your sign-in
+          You need an account to use most of {BRAND.appName}, created with your email
+          address. You&rsquo;re responsible for keeping your sign-in
           secure, and for everything that happens under your account. Let us know right
           away if you think someone else has access to it.
         </p>
