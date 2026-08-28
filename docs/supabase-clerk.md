@@ -37,13 +37,32 @@ enabled = true
 domain = "capable-condor-8303.clerk.accounts.dev"
 ```
 
-Note: this is currently the Clerk **Development** instance. A Production
-instance (with `pk_live_`/`sk_live_` keys) will need its own "Connect with
-Supabase" pass and its own Third-Party Auth provider entry before a real
-App Store build ships.
+Note: the above is the Clerk **Development** instance (`pk_test_`/`sk_test_`
+keys), used for local development and the preview/dev EAS environments. A
+**Production** instance (`pk_live_`/`sk_live_` keys, Frontend API domain
+`clerk.ellvate.com`) is also connected the same way and is what shipped App
+Store builds use -- if a Supabase-write feature is ever added, register it
+against both instances' Frontend API domains, not just this Development one.
 
-Until both are done, Supabase will not accept forwarded Clerk tokens, so
-authenticated writes are denied (public reads still work).
+Until both are done for a given instance, Supabase will not accept forwarded
+Clerk tokens from it, so authenticated writes are denied (public reads still
+work).
+
+## Deploying the backend to production
+
+`.env.local` intentionally holds the **Development** instance's
+`CLERK_SECRET_KEY` for everyday local development. `eas deploy` uploads
+whatever local `dist/` a prior `expo export` produced -- it does not read
+EAS's dashboard-configured environment variables, so exporting straight from
+`.env.local` ships a backend that verifies tokens against the wrong Clerk
+instance and rejects every real session token from the production app.
+
+Use `bun run deploy:backend` instead of running `expo export`/`eas deploy`
+directly -- it swaps in the production-only overrides from
+`.env.production.local` (copy `.env.production.local.example` to create it
+once), runs `bun run check:production` to catch a wrong/missing value before
+anything ships, exports, deploys, and always restores `.env.local` to your
+normal local-development config afterward, even if a step fails.
 
 ## Security model (verified)
 
