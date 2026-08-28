@@ -69,12 +69,15 @@ export async function getWeeklyDigestRawSupabase(
       .select('id,going_base,created_by')
       .gte('starts_at', startIso)
       .lt('starts_at', endIso),
-    supabase
-      .from('mission_progress')
-      .select('mission_id,user_id')
-      .eq('status', 'done')
-      .gte('completed_at', startIso)
-      .lt('completed_at', endIso),
+    // Not a plain table select: mission_progress's only RLS policy scopes
+    // SELECT to the caller's own rows (0003_rls_policies_and_triggers.sql),
+    // which would silently return just the viewer's own completions here.
+    // This RPC is SECURITY DEFINER specifically to read across every
+    // member's completions for the digest window -- see 0042_digest_fixes.sql.
+    supabase.rpc('digest_mission_completions', {
+      window_end: endIso,
+      window_start: startIso,
+    }),
     supabase.from('comments').select('author_id').gte('created_at', startIso).lt('created_at', endIso),
   ]);
   throwIfSupabaseError(postsRes.error, 'load digest posts');

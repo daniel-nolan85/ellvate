@@ -10,7 +10,7 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
-import type { MissionStatus, MissionTheme } from '@/src/backend/store';
+import { defaultDisplayName, type MissionStatus, type MissionTheme } from '@/src/backend/store';
 
 import type {
   AcceptMissionResult,
@@ -172,7 +172,7 @@ const MEDIA_UPLOAD_FAILED_MESSAGE =
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')

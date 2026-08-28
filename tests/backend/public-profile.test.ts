@@ -123,7 +123,7 @@ describe('getMemberActivityCountsSupabase', () => {
       { column: 'created_by', table: 'missions', value: 'user-other' },
       { column: 'created_by', table: 'events', value: 'user-other' },
       { column: 'user_id', table: 'event_joins', value: 'user-other' },
-      { column: 'author_id', table: 'service_listings', value: 'user-other' },
+      { column: 'created_by', table: 'service_listings', value: 'user-other' },
     ]);
   });
 });

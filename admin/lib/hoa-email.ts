@@ -47,7 +47,7 @@ export async function sendHoaEmail(subject: string, body: string): Promise<boole
   }
 
   try {
-    await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -55,9 +55,8 @@ export async function sendHoaEmail(subject: string, body: string): Promise<boole
       },
       body: JSON.stringify({ from, to, subject, text: body }),
     });
+    return response.ok;
   } catch {
-    // Best-effort -- the petition's hoa_email_sent_at is stamped by the
-    // caller regardless, since a send attempt was made either way.
+    return false;
   }
-  return true;
 }

@@ -59,7 +59,7 @@ describe('Expo starter contract', () => {
   test('keeps OTA compatibility tied to app version and release channels', () => {
     const appConfig = readJson<{
       expo: {
-        plugins: Array<string | [string, unknown]>;
+        plugins: (string | [string, unknown])[];
         runtimeVersion?: { policy?: string };
       };
     }>('app.json');

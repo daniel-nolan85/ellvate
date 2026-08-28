@@ -19,7 +19,7 @@ export async function sendAccountRemovedEmail(to: string): Promise<boolean> {
   }
 
   try {
-    await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -27,9 +27,10 @@ export async function sendAccountRemovedEmail(to: string): Promise<boolean> {
       },
       body: JSON.stringify({ from, to, subject: SUBJECT, text: BODY }),
     });
+    return response.ok;
   } catch {
     // Best-effort -- the account is already deleted regardless of whether
     // the notification actually sends.
+    return false;
   }
-  return true;
 }

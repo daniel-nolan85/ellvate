@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { defaultDisplayName } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type { ReportPostResult } from './types';
@@ -7,7 +8,7 @@ import type { ReportPostResult } from './types';
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')

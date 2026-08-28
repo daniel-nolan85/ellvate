@@ -18,7 +18,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime, formatRelativeTimeUntil } from '@/src/lib/relative-time';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import {
@@ -50,6 +50,7 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
   const petition = petitionQuery.data?.petition;
   const toggleSignature = useToggleSignature();
   const reportPetition = useReportPetition();
+  const blockUser = useBlockUser();
 
   const comments = usePetitionComments(petitionId);
   const createComment = useCreatePetitionComment(petitionId);
@@ -363,6 +364,24 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
           style={{ paddingBottom: insets.bottom + 24 }}
         >
           <View className="mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line" />
+          {petition && petition.createdBy.id !== userId ? (
+            <>
+              <Pressable
+                className="flex-row items-center gap-3 px-1.5 py-3.5"
+                onPress={() => {
+                  setMenuOpen(false);
+                  blockUser.mutate(petition.createdBy.id, {
+                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${petition.createdBy.name}`),
+                  });
+                }}
+              >
+                <Icon name="EyeOff" size={20} />
+                <Text className="text-[15px]">Block this neighbour</Text>
+              </Pressable>
+              <Divider />
+            </>
+          ) : null}
           <Pressable className="flex-row items-center gap-3 px-1.5 py-3.5" onPress={handleReportPetition}>
             <Icon color="rgb(231,0,11)" name="AlertCircle" size={20} />
             <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
@@ -406,23 +425,41 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
               </Pressable>
             </>
           ) : (
-            <Pressable
-              className="flex-row items-center gap-3 px-1.5 py-3.5"
-              onPress={() => {
-                const target = actionsFor;
-                closeCommentActions();
-                if (!target) return;
-                reportComment.mutate(target.id, {
-                  onError: () => showToast('Couldn’t report this comment. Try again.'),
-                  onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-                });
-              }}
-            >
-              <Icon color="rgb(231,0,11)" name="AlertCircle" size={20} />
-              <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
-                Report comment
-              </Text>
-            </Pressable>
+            <>
+              <Pressable
+                className="flex-row items-center gap-3 px-1.5 py-3.5"
+                onPress={() => {
+                  const target = actionsFor;
+                  closeCommentActions();
+                  if (!target) return;
+                  blockUser.mutate(target.author.id, {
+                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                  });
+                }}
+              >
+                <Icon name="EyeOff" size={20} />
+                <Text className="text-[15px]">Block this neighbour</Text>
+              </Pressable>
+              <Divider />
+              <Pressable
+                className="flex-row items-center gap-3 px-1.5 py-3.5"
+                onPress={() => {
+                  const target = actionsFor;
+                  closeCommentActions();
+                  if (!target) return;
+                  reportComment.mutate(target.id, {
+                    onError: () => showToast('Couldn’t report this comment. Try again.'),
+                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              >
+                <Icon color="rgb(231,0,11)" name="AlertCircle" size={20} />
+                <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
+                  Report comment
+                </Text>
+              </Pressable>
+            </>
           )}
         </View>
       </Modal>

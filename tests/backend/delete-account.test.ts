@@ -14,7 +14,7 @@ import { getMutedUserIds, toggleMute } from '../../src/backend/mutes';
 import { createPetitionComment, listPetitionComments } from '../../src/backend/petition-comments';
 import { listPetitionsPage, toggleSignature } from '../../src/backend/petitions';
 import { createServiceReview, listServiceReviews } from '../../src/backend/service-reviews';
-import { createServiceListing, getServicesView } from '../../src/backend/services';
+import { createServiceListing } from '../../src/backend/services';
 import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
 import type { StoredPetition } from '../../src/backend/store';
 

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { defaultDisplayName } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import { CHECK_INS_LIST_LIMIT, type CheckInEntry, type ReportCheckInResult } from './types';
@@ -43,7 +44,7 @@ const ensureUser = async (
   const { error } = await supabase
     .from('app_users')
     .upsert(
-      { id: userId, name: 'Member' },
+      { id: userId, name: defaultDisplayName(userId) },
       { ignoreDuplicates: true, onConflict: 'id' },
     );
   throwIfSupabaseError(error, 'ensure mission check-in user');

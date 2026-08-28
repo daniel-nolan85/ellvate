@@ -19,6 +19,8 @@ export async function toggleEventFeaturedAction(
   eventId: string,
   nextFeatured: boolean,
 ) {
+  await requireAdminEmail();
+
   const admin = createSupabaseAdminClient();
   const { error } = await admin
     .from('events')
@@ -114,13 +116,30 @@ export type DeletableTable = keyof typeof DELETABLE_CONTENT;
 // report table cascades from its target content (see the 0007/0017/0020/0025
 // migrations), so removing the content also clears any reports filed against
 // it. There's no separate "dismiss without deleting" status in the schema.
-export async function deleteContentAction(table: DeletableTable, id: string) {
+interface DeleteContentResult {
+  readonly ok: true;
+  // Set when the row(s) were deleted but a best-effort side effect (banning
+  // the Clerk identity, sending the removal email) didn't actually happen --
+  // surfaced so an admin knows to go finish that step manually instead of
+  // assuming deletion always means both silently succeeded too.
+  readonly warning?: string;
+}
+
+export async function deleteContentAction(
+  table: DeletableTable,
+  id: string,
+): Promise<DeleteContentResult> {
   await requireAdminEmail();
 
-  const revalidateTarget = DELETABLE_CONTENT[table];
-  if (!revalidateTarget) {
+  // `table`'s static type restricts normal callers to a real key, but a
+  // Server Action is a real network endpoint underneath -- callable with any
+  // string regardless of what TypeScript allows at the call site. `in`/plain
+  // indexing would resolve inherited Object.prototype keys like
+  // '__proto__' or 'constructor', so this checks the object's OWN keys only.
+  if (!Object.hasOwn(DELETABLE_CONTENT, table)) {
     throw new Error('invalid_table');
   }
+  const revalidateTarget = DELETABLE_CONTENT[table];
 
   // Deleting an app_users row is otherwise not a real removal: ensureUser()
   // upserts a fresh row for any authenticated Clerk id with no row yet, so
@@ -132,8 +151,13 @@ export async function deleteContentAction(table: DeletableTable, id: string) {
   // before CLERK_SECRET_KEY/RESEND_API_KEY are configured.
   const notifyEmail =
     table === 'app_users' ? await getClerkUserEmail(id) : null;
+  let banFailed = false;
   if (table === 'app_users') {
-    await banClerkUser(id);
+    const banned = await banClerkUser(id);
+    banFailed = Boolean(process.env.CLERK_SECRET_KEY) && !banned;
+    if (banFailed) {
+      console.error(`[admin] failed to ban Clerk user ${id} on account deletion`);
+    }
   }
 
   const admin = createSupabaseAdminClient();
@@ -142,12 +166,33 @@ export async function deleteContentAction(table: DeletableTable, id: string) {
     throw error;
   }
 
+  let emailFailed = false;
   if (notifyEmail) {
-    await sendAccountRemovedEmail(notifyEmail);
+    const sent = await sendAccountRemovedEmail(notifyEmail);
+    emailFailed = Boolean(process.env.RESEND_API_KEY) && !sent;
   }
 
   revalidatePath(revalidateTarget);
   revalidatePath('/reports');
+
+  if (banFailed && emailFailed) {
+    return {
+      ok: true,
+      warning:
+        'Content deleted, but banning the account in Clerk and sending the removal email both failed. Ban them manually in Clerk.',
+    };
+  }
+  if (banFailed) {
+    return {
+      ok: true,
+      warning:
+        'Content deleted, but banning the account in Clerk failed. Ban them manually so they can’t sign back in.',
+    };
+  }
+  if (emailFailed) {
+    return { ok: true, warning: 'Content deleted, but the removal email failed to send.' };
+  }
+  return { ok: true };
 }
 
 export async function removeAdminAction(

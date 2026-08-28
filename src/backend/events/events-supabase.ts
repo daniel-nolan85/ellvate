@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
+import { defaultDisplayName } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
@@ -73,7 +74,7 @@ const toWeekDay = (row: WeekDayRow): WeekDay => ({
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')

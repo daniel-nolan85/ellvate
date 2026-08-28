@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { ContactMessageCategory } from '@/src/backend/store';
+import { defaultDisplayName, type ContactMessageCategory } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type { SubmitContactMessageResult } from './types';
@@ -8,7 +8,7 @@ import type { SubmitContactMessageResult } from './types';
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')

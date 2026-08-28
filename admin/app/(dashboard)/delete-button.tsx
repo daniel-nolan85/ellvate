@@ -20,7 +20,10 @@ export function DeleteButton({ table, id, confirmLabel }: DeleteButtonProps) {
     }
     startTransition(async () => {
       try {
-        await deleteContentAction(table, id);
+        const result = await deleteContentAction(table, id);
+        if (result.warning) {
+          setError(result.warning);
+        }
       } catch {
         setError('Failed to delete. Try again.');
       }

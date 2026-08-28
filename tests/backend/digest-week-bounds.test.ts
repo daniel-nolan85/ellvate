@@ -9,12 +9,13 @@ import {
 
 describe('mostRecentCompletedWeek', () => {
   test('resolves to the prior Mon-Sun week when "now" is a Wednesday', () => {
-    // 2026-01-14 is a Wednesday.
+    // 2026-01-14 is a Wednesday. January is Pacific Standard Time (UTC-8),
+    // so Pacific midnight lands at 08:00 UTC.
     const bounds = mostRecentCompletedWeek(new Date('2026-01-14T15:00:00.000Z'));
     expect(bounds.weekStartIso).toBe('2026-01-05');
     expect(bounds.weekEndIso).toBe('2026-01-11');
-    expect(bounds.start.toISOString()).toBe('2026-01-05T00:00:00.000Z');
-    expect(bounds.end.toISOString()).toBe('2026-01-12T00:00:00.000Z');
+    expect(bounds.start.toISOString()).toBe('2026-01-05T08:00:00.000Z');
+    expect(bounds.end.toISOString()).toBe('2026-01-12T08:00:00.000Z');
   });
 
   test('resolves the same prior week when "now" is itself a Monday', () => {
@@ -43,19 +44,23 @@ describe('resolveWeekBounds', () => {
   });
 
   test('with an explicit weekStart, pins the window to that date regardless of "now"', () => {
+    // 2020-03-02 is before that year's "spring forward" (2020-03-08), so
+    // Pacific is still standard time (UTC-8) at the start of the window but
+    // has already moved to daylight time (UTC-7) by the end of it -- proof
+    // the DST transition is handled, not just a fixed offset.
     const bounds = resolveWeekBounds('2020-03-02');
     expect(bounds.weekStartIso).toBe('2020-03-02');
     expect(bounds.weekEndIso).toBe('2020-03-08');
-    expect(bounds.start.toISOString()).toBe('2020-03-02T00:00:00.000Z');
-    expect(bounds.end.toISOString()).toBe('2020-03-09T00:00:00.000Z');
+    expect(bounds.start.toISOString()).toBe('2020-03-02T08:00:00.000Z');
+    expect(bounds.end.toISOString()).toBe('2020-03-09T07:00:00.000Z');
   });
 });
 
 describe('nextSevenDaysBounds', () => {
   test('spans exactly 7 days starting today', () => {
     const bounds = nextSevenDaysBounds(new Date('2026-01-14T15:30:00.000Z'));
-    expect(bounds.start.toISOString()).toBe('2026-01-14T00:00:00.000Z');
-    expect(bounds.end.toISOString()).toBe('2026-01-21T00:00:00.000Z');
+    expect(bounds.start.toISOString()).toBe('2026-01-14T08:00:00.000Z');
+    expect(bounds.end.toISOString()).toBe('2026-01-21T08:00:00.000Z');
   });
 });
 
