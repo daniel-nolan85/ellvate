@@ -23,12 +23,12 @@ export default async function ReportsPage({
       <div>
         <h1 className="text-lg font-semibold text-content">Reports</h1>
         <p className="text-sm text-muted">
-          Every report filed across posts, comments, reviews, and mission
-          check-in photos, newest first. Deleting the reported content clears
-          its report too. There&apos;s no report-a-member feature in the app
-          yet, so users can&apos;t be reported directly — if a specific
-          member is the problem, the Users page has their profile and a
-          delete action.
+          Every report filed across posts, events, missions, petitions,
+          comments, reviews, and mission check-in photos, newest first.
+          Deleting the reported content clears its report too. There&apos;s
+          no report-a-member feature in the app yet, so users can&apos;t be
+          reported directly — if a specific member is the problem, the Users
+          page has their profile and a delete action.
         </p>
       </div>
 

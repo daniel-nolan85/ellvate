@@ -111,3 +111,11 @@ export type UpdateEventResult =
         | 'media_upload_failed';
       readonly message: string;
     };
+
+export type ReportEventResult =
+  | { readonly ok: true; readonly reported: true }
+  | {
+      readonly ok: false;
+      readonly code: 'event_not_found';
+      readonly message: string;
+    };

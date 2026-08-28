@@ -287,3 +287,16 @@ export function useToggleJoin() {
     },
   });
 }
+
+export function useReportEvent() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      requestJson<{ readonly reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/events/${eventId}/report`,
+      }),
+  });
+}

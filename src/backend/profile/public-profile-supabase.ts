@@ -94,7 +94,7 @@ export async function getMemberActivityCountsSupabase(
     supabase
       .from('service_listings')
       .select('*', { count: 'exact', head: true })
-      .eq('author_id', memberUserId),
+      .eq('created_by', memberUserId),
   ]);
   throwIfSupabaseError(postsRes.error, 'count member posts');
   throwIfSupabaseError(missionsRes.error, 'count member missions created');

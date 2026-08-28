@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
-import type { PetitionCategory, PetitionStatus } from '@/src/backend/store';
+import { defaultDisplayName, type PetitionCategory, type PetitionStatus } from '@/src/backend/store';
 import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -70,7 +70,10 @@ const toPetition = (row: PetitionRow, signed: boolean): Petition => ({
 const ensureUser = async (supabase: SupabaseClient, userId: string): Promise<void> => {
   const { error } = await supabase
     .from('app_users')
-    .upsert({ id: userId, name: 'Member' }, { ignoreDuplicates: true, onConflict: 'id' });
+    .upsert(
+      { id: userId, name: defaultDisplayName(userId) },
+      { ignoreDuplicates: true, onConflict: 'id' },
+    );
   throwIfSupabaseError(error, 'ensure petition user');
 };
 

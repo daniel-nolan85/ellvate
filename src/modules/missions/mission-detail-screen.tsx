@@ -34,7 +34,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
@@ -57,6 +57,7 @@ import {
   useMission,
   useMissionCheckIns,
   useReportCheckIn,
+  useReportMission,
   useUpdateMission,
   type CheckInCelebration,
   type CheckInEntry,
@@ -122,6 +123,8 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const checkIn = useCheckIn(setCelebration);
   const updateMission = useUpdateMission();
   const deleteMission = useDeleteMission();
+  const blockUser = useBlockUser();
+  const reportMission = useReportMission();
   const comments = useMissionComments(missionId);
   const createComment = useCreateMissionComment(missionId);
   const updateComment = useUpdateMissionComment(missionId);
@@ -339,16 +342,14 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         >
           <Icon color='rgb(120,108,94)' name='Share' size={18} />
         </Pressable>
-        {isOwnMission && (
-          <Pressable
-            accessibilityLabel='More options'
-            accessibilityRole='button'
-            hitSlop={8}
-            onPress={() => setMenuOpen(true)}
-          >
-            <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
-          </Pressable>
-        )}
+        <Pressable
+          accessibilityLabel='More options'
+          accessibilityRole='button'
+          hitSlop={8}
+          onPress={() => setMenuOpen(true)}
+        >
+          <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
+        </Pressable>
       </HStack>
 
       <KeyboardAvoidingView
@@ -641,27 +642,60 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         />
       </KeyboardAvoidingView>
 
-      {/* Own-mission options menu */}
+      {/* Mission options menu */}
       <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
         <View className='gap-1 px-[18px] pb-2'>
-          <MissionMenuRow
-            icon='Edit'
-            label='Edit mission'
-            onPress={() => {
-              setMenuOpen(false);
-              setIsEditing(true);
-            }}
-          />
-          <Divider />
-          <MissionMenuRow
-            destructive
-            icon='AlertCircle'
-            label='Delete mission'
-            onPress={() => {
-              setMenuOpen(false);
-              setConfirmDeleteOpen(true);
-            }}
-          />
+          {isOwnMission ? (
+            <>
+              <MissionMenuRow
+                icon='Edit'
+                label='Edit mission'
+                onPress={() => {
+                  setMenuOpen(false);
+                  setIsEditing(true);
+                }}
+              />
+              <Divider />
+              <MissionMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Delete mission'
+                onPress={() => {
+                  setMenuOpen(false);
+                  setConfirmDeleteOpen(true);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <MissionMenuRow
+                icon='EyeOff'
+                label='Block this neighbour'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!mission) return;
+                  blockUser.mutate(mission.author.id, {
+                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${mission.author.name}`),
+                  });
+                }}
+              />
+              <Divider />
+              <MissionMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Report mission'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!mission) return;
+                  reportMission.mutate(mission.id, {
+                    onError: () => showToast('Couldn’t report this mission. Try again.'),
+                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              />
+            </>
+          )}
         </View>
       </Sheet>
 
@@ -770,22 +804,39 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               />
             </>
           ) : (
-            <MissionMenuRow
-              destructive
-              icon='AlertCircle'
-              label='Report comment'
-              onPress={() => {
-                const target = actionsFor;
-                closeCommentActions();
-                if (!target) return;
-                reportComment.mutate(target.id, {
-                  onError: () =>
-                    showToast('Couldn’t report this comment. Try again.'),
-                  onSuccess: () =>
-                    showToast('Thanks — our moderators will take a look.'),
-                });
-              }}
-            />
+            <>
+              <MissionMenuRow
+                icon='EyeOff'
+                label='Block this neighbour'
+                onPress={() => {
+                  const target = actionsFor;
+                  closeCommentActions();
+                  if (!target) return;
+                  blockUser.mutate(target.author.id, {
+                    onError: () =>
+                      showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                  });
+                }}
+              />
+              <Divider />
+              <MissionMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Report comment'
+                onPress={() => {
+                  const target = actionsFor;
+                  closeCommentActions();
+                  if (!target) return;
+                  reportComment.mutate(target.id, {
+                    onError: () =>
+                      showToast('Couldn’t report this comment. Try again.'),
+                    onSuccess: () =>
+                      showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              />
+            </>
           )}
         </View>
       </Modal>

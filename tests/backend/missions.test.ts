@@ -12,6 +12,7 @@ import {
 import { GET as getMissionsProgress } from '../../app/api/missions/progress+api';
 import { POST as postAccept } from '../../app/api/missions/[id]/accept+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
+import { POST as postReport } from '../../app/api/missions/[id]/report+api';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import {
   acceptMission,
@@ -21,6 +22,7 @@ import {
   getMissionsView,
   getUserProgress,
   listMissionsPage,
+  reportMission,
   updateMission,
 } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
@@ -922,5 +924,33 @@ describe('POST /api/missions/:id/check-in', () => {
       code: 'mission_not_found',
       message: 'Mission not found.',
     });
+  });
+});
+
+describe('reportMission', () => {
+  test('is idempotent -- reporting twice records one report', async () => {
+    await reportMission(ctx(), 'mission-1');
+    await reportMission(ctx(), 'mission-1');
+
+    expect(
+      getState().missionReports.filter((report) => report.missionId === 'mission-1'),
+    ).toHaveLength(1);
+  });
+
+  test('returns mission_not_found for an unknown mission', async () => {
+    const result = await reportMission(ctx(), 'does-not-exist');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('mission_not_found');
+    }
+  });
+
+  test('POST /api/missions/:id/report reports a mission', async () => {
+    const response = await postReport(
+      new Request('http://localhost/api/missions/mission-1/report', { method: 'POST' }),
+      { id: 'mission-1' },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ reported: true });
   });
 });

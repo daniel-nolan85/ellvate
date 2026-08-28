@@ -60,7 +60,14 @@ export default function TermsOfServicePage() {
       </LegalSection>
 
       <LegalSection id="conduct" title="4. Community conduct">
-        <p>{BRAND.appName} works because people are decent to each other on it. When using the app, you agree not to:</p>
+        <p>
+          {BRAND.appName} works because people are decent to each other on it. Our{' '}
+          <Link className="underline" href="/guidelines">
+            Community Guidelines
+          </Link>{' '}
+          describe what that looks like in more detail and are part of these Terms. When
+          using the app, you agree not to:
+        </p>
         <ul className="list-disc space-y-2 pl-5">
           <li>Harass, threaten, or demean another member.</li>
           <li>Post content that is illegal, defamatory, or deliberately false.</li>
@@ -98,7 +105,7 @@ export default function TermsOfServicePage() {
 
       <LegalSection id="moderation" title="6. Moderation">
         <p>
-          You can report content that violates these Terms, and mute another member to
+          You can report content that violates these Terms, and block another member to
           stop seeing their content in your own feeds. We review reports and may remove
           content, or suspend or terminate an account, at our discretion, for violating
           these Terms or for any conduct we reasonably believe is harmful to the

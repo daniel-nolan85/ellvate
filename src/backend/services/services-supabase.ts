@@ -11,7 +11,7 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
-import type { ServiceCategory } from '@/src/backend/store';
+import { defaultDisplayName, type ServiceCategory } from '@/src/backend/store';
 
 import type {
   CreateServiceListingResult,
@@ -211,7 +211,7 @@ const uploadServiceLogo = async (
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')

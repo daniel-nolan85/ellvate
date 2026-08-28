@@ -101,8 +101,13 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-foreground">Resend</strong> — delivers transactional
-            emails you&rsquo;ve triggered, such as a message sent through Contact Us or a
-            petition reaching its signature goal.
+            emails such as a message sent through Contact Us, a petition being forwarded to
+            the HOA board, or a notice that your account was removed.
+          </li>
+          <li>
+            <strong className="text-foreground">Anthropic</strong> — powers the in-app AI
+            Assistant. Messages you send it are shared with Anthropic to generate a
+            response, but are not used to train their models.
           </li>
           <li>
             <strong className="text-foreground">Apple and Google</strong> — distribute the

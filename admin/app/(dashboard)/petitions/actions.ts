@@ -50,7 +50,14 @@ export async function sendPetitionToHoaAction(
     return { ok: false, message: 'Subject and message are both required.' };
   }
 
-  await sendHoaEmail(trimmedSubject, trimmedBody);
+  const sent = await sendHoaEmail(trimmedSubject, trimmedBody);
+  if (!sent) {
+    return {
+      ok: false,
+      message:
+        'Sending to the HOA board failed. Nothing was recorded as sent -- try again.',
+    };
+  }
 
   const { error: updateError } = await admin
     .from('petitions')

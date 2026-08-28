@@ -10,7 +10,7 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
-import type { MissionStatus, MissionTheme } from '@/src/backend/store';
+import { defaultDisplayName, type MissionStatus, type MissionTheme } from '@/src/backend/store';
 
 import type {
   AcceptMissionResult,
@@ -22,6 +22,7 @@ import type {
   MissionsPage,
   MissionsView,
   MyMissionsPage,
+  ReportMissionResult,
   UpdateMissionResult,
   UserProgress,
 } from './types';
@@ -172,7 +173,7 @@ const MEDIA_UPLOAD_FAILED_MESSAGE =
 const ensureUser = async (
   supabase: SupabaseClient,
   userId: string,
-  name = 'Member',
+  name = defaultDisplayName(userId),
 ): Promise<void> => {
   const { error } = await supabase
     .from('app_users')
@@ -857,4 +858,33 @@ export async function acceptMissionSupabase(
 
   const nameById = await nameMapFor(supabase, mission.created_by);
   return { ok: true, mission: toMissionView(mission, entry, nameById) };
+}
+
+export async function reportMissionSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+): Promise<ReportMissionResult> {
+  const { data: mission, error: missionError } = await supabase
+    .from('missions')
+    .select('id')
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(missionError, 'load reported mission');
+  if (!mission) {
+    return { code: 'mission_not_found', message: 'Mission not found.', ok: false };
+  }
+
+  await ensureUser(supabase, userId);
+  // Idempotent: a unique (mission_id, reporter_id) constraint on
+  // mission_reports means a repeat report from the same user is a silent
+  // no-op, not an error.
+  const { error } = await supabase
+    .from('mission_reports')
+    .upsert(
+      { mission_id: missionId, reporter_id: userId },
+      { ignoreDuplicates: true, onConflict: 'mission_id,reporter_id' },
+    );
+  throwIfSupabaseError(error, 'report mission');
+  return { ok: true, reported: true };
 }

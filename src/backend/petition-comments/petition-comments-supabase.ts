@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { validateCommentBody } from '@/src/backend/comments';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
+import { defaultDisplayName } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -48,7 +49,10 @@ const toPetitionComment = (row: PetitionCommentRow): PetitionComment => ({
 const ensureUser = async (supabase: SupabaseClient, userId: string): Promise<void> => {
   const { error } = await supabase
     .from('app_users')
-    .upsert({ id: userId, name: 'Member' }, { ignoreDuplicates: true, onConflict: 'id' });
+    .upsert(
+      { id: userId, name: defaultDisplayName(userId) },
+      { ignoreDuplicates: true, onConflict: 'id' },
+    );
   throwIfSupabaseError(error, 'ensure petition comment user');
 };
 

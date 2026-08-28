@@ -31,7 +31,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { EventComposer } from './event-composer';
@@ -47,6 +47,7 @@ import {
   useDeleteEvent,
   useEvent,
   useEventAttendees,
+  useReportEvent,
   useToggleJoin,
   useUpdateEvent,
 } from './use-events';
@@ -101,6 +102,8 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const toggleJoin = useToggleJoin();
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
+  const blockUser = useBlockUser();
+  const reportEvent = useReportEvent();
 
   const comments = useEventComments(eventId);
   const createComment = useCreateEventComment(eventId);
@@ -256,16 +259,14 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         >
           <Icon color='rgb(120,108,94)' name='Share' size={18} />
         </Pressable>
-        {isOwnEvent && (
-          <Pressable
-            accessibilityLabel='More options'
-            accessibilityRole='button'
-            hitSlop={8}
-            onPress={() => setMenuOpen(true)}
-          >
-            <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
-          </Pressable>
-        )}
+        <Pressable
+          accessibilityLabel='More options'
+          accessibilityRole='button'
+          hitSlop={8}
+          onPress={() => setMenuOpen(true)}
+        >
+          <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
+        </Pressable>
       </HStack>
 
       <KeyboardAvoidingView
@@ -437,27 +438,60 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         />
       </KeyboardAvoidingView>
 
-      {/* Own-event options menu */}
+      {/* Event options menu */}
       <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
         <View className='gap-1 px-[18px] pb-2'>
-          <EventMenuRow
-            icon='Edit'
-            label='Edit event'
-            onPress={() => {
-              setMenuOpen(false);
-              setIsEditing(true);
-            }}
-          />
-          <Divider />
-          <EventMenuRow
-            destructive
-            icon='AlertCircle'
-            label='Cancel event'
-            onPress={() => {
-              setMenuOpen(false);
-              setConfirmCancelOpen(true);
-            }}
-          />
+          {isOwnEvent ? (
+            <>
+              <EventMenuRow
+                icon='Edit'
+                label='Edit event'
+                onPress={() => {
+                  setMenuOpen(false);
+                  setIsEditing(true);
+                }}
+              />
+              <Divider />
+              <EventMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Cancel event'
+                onPress={() => {
+                  setMenuOpen(false);
+                  setConfirmCancelOpen(true);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <EventMenuRow
+                icon='EyeOff'
+                label='Block this neighbour'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!event) return;
+                  blockUser.mutate(event.author.id, {
+                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${event.author.name}`),
+                  });
+                }}
+              />
+              <Divider />
+              <EventMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Report event'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!event) return;
+                  reportEvent.mutate(event.id, {
+                    onError: () => showToast('Couldn’t report this event. Try again.'),
+                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              />
+            </>
+          )}
         </View>
       </Sheet>
 
@@ -612,22 +646,39 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               />
             </>
           ) : (
-            <EventMenuRow
-              destructive
-              icon='AlertCircle'
-              label='Report comment'
-              onPress={() => {
-                const target = actionsFor;
-                closeCommentActions();
-                if (!target) return;
-                reportComment.mutate(target.id, {
-                  onError: () =>
-                    showToast('Couldn’t report this comment. Try again.'),
-                  onSuccess: () =>
-                    showToast('Thanks — our moderators will take a look.'),
-                });
-              }}
-            />
+            <>
+              <EventMenuRow
+                icon='EyeOff'
+                label='Block this neighbour'
+                onPress={() => {
+                  const target = actionsFor;
+                  closeCommentActions();
+                  if (!target) return;
+                  blockUser.mutate(target.author.id, {
+                    onError: () =>
+                      showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                  });
+                }}
+              />
+              <Divider />
+              <EventMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Report comment'
+                onPress={() => {
+                  const target = actionsFor;
+                  closeCommentActions();
+                  if (!target) return;
+                  reportComment.mutate(target.id, {
+                    onError: () =>
+                      showToast('Couldn’t report this comment. Try again.'),
+                    onSuccess: () =>
+                      showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              />
+            </>
           )}
         </View>
       </Modal>

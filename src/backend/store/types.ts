@@ -152,6 +152,13 @@ export interface StoredEvent {
   readonly editedAt: string | null;
 }
 
+export interface StoredEventReport {
+  readonly id: string;
+  readonly eventId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+}
+
 export interface MissionUserProgress {
   readonly status: MissionStatus;
   readonly stopsDone: number;
@@ -178,6 +185,13 @@ export interface StoredMission {
   readonly progressByUser: Readonly<Record<string, MissionUserProgress>>;
   // Null until the author edits the mission at least once.
   readonly editedAt: string | null;
+}
+
+export interface StoredMissionReport {
+  readonly id: string;
+  readonly missionId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
 }
 
 export type ServiceCategory =
@@ -336,9 +350,11 @@ export interface StoreState {
   readonly events: readonly StoredEvent[];
   readonly eventComments: readonly StoredEventComment[];
   readonly eventCommentReports: readonly StoredEventCommentReport[];
+  readonly eventReports: readonly StoredEventReport[];
   readonly missions: readonly StoredMission[];
   readonly missionComments: readonly StoredMissionComment[];
   readonly missionCommentReports: readonly StoredMissionCommentReport[];
+  readonly missionReports: readonly StoredMissionReport[];
   readonly missionCheckIns: readonly StoredMissionCheckIn[];
   readonly missionCheckInReports: readonly StoredMissionCheckInReport[];
   readonly serviceListings: readonly StoredServiceListing[];

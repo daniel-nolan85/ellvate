@@ -47,7 +47,16 @@ function AppNavigator() {
 
   return (
     <ClerkAuthGate>
-      <Stack screenOptions={{ headerShown: false }}>
+      {/* contentStyle guards against the native stack's own default white
+          screen background -- otherwise visible as a white flash/edge during
+          push/pop transitions and behind any screen that hasn't yet painted
+          its own bg-canvas content, on every route in the app. */}
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: 'rgb(247,241,230)' },
+          headerShown: false,
+        }}
+      >
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="auth" />

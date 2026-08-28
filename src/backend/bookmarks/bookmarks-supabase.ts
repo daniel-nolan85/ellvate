@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { BookmarkTargetType, StoredBookmark } from '@/src/backend/store';
+import { defaultDisplayName, type BookmarkTargetType, type StoredBookmark } from '@/src/backend/store';
 import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -28,7 +28,10 @@ const toStoredBookmark = (row: BookmarkRow): StoredBookmark => ({
 const ensureUser = async (supabase: SupabaseClient, userId: string): Promise<void> => {
   const { error } = await supabase
     .from('app_users')
-    .upsert({ id: userId, name: 'Member' }, { ignoreDuplicates: true, onConflict: 'id' });
+    .upsert(
+      { id: userId, name: defaultDisplayName(userId) },
+      { ignoreDuplicates: true, onConflict: 'id' },
+    );
   throwIfSupabaseError(error, 'ensure bookmark user');
 };
 

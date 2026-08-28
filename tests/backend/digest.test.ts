@@ -16,11 +16,14 @@ import {
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
 // A fixed window unrelated to "today", so assertions never depend on when
-// the test suite actually runs.
+// the test suite actually runs. WEEK_START is read as a Pacific-local date
+// (see week-bounds.ts), so in January (PST, UTC-8) the window is
+// [2026-01-05T08:00Z, 2026-01-12T08:00Z) -- AFTER_WEEK sits right on that
+// exclusive end boundary.
 const WEEK_START = '2026-01-05';
 const IN_WEEK = '2026-01-07T12:00:00.000Z';
 const BEFORE_WEEK = '2026-01-04T23:59:59.000Z';
-const AFTER_WEEK = '2026-01-12T00:00:00.000Z';
+const AFTER_WEEK = '2026-01-12T08:00:00.000Z';
 
 function makePost(overrides: Partial<StoredPost> & { readonly id: string }): StoredPost {
   return {
@@ -272,5 +275,14 @@ describe('digest route', () => {
     const body = (await response.json()) as { weekStart: string; weekEnd: string };
     expect(typeof body.weekStart).toBe('string');
     expect(typeof body.weekEnd).toBe('string');
+  });
+
+  test('GET rejects a malformed weekStart instead of throwing', async () => {
+    const response = await getDigest(
+      new Request('http://localhost/api/digest?weekStart=not-a-date'),
+    );
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code: string };
+    expect(body.code).toBe('invalid_week_start');
   });
 });

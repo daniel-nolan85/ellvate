@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type { RequestContext } from '@/src/backend/http';
+import { defaultDisplayName } from '@/src/backend/store';
 
 import { validatePushToken, type ValidatedPushToken } from './validation';
 
@@ -23,7 +24,7 @@ const ensureUser = async (
   const { error } = await supabase
     .from('app_users')
     .upsert(
-      { id: userId, name: 'Member' },
+      { id: userId, name: defaultDisplayName(userId) },
       { ignoreDuplicates: true, onConflict: 'id' },
     );
   throwIfSupabaseError(error, 'ensure push user');
@@ -35,15 +36,14 @@ async function storePushTokenSupabase(
   value: ValidatedPushToken,
 ): Promise<StorePushTokenResult> {
   await ensureUser(supabase, userId);
-  const { error } = await supabase.from('push_tokens').upsert(
-    {
-      token: value.token,
-      user_id: userId,
-      platform: value.platform,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'token' },
-  );
+  // Not a plain upsert: the same device token can legitimately belong to a
+  // different user than last time (a device handed off between accounts),
+  // and RLS's own-row-only update policy would reject that case outright --
+  // see 0045_push_token_handoff.sql for why this needs a SECURITY DEFINER RPC.
+  const { error } = await supabase.rpc('claim_push_token', {
+    p_platform: value.platform,
+    p_token: value.token,
+  });
   throwIfSupabaseError(error, 'store push token');
   return { ok: true };
 }

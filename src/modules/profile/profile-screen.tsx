@@ -449,6 +449,11 @@ export function ProfileScreen() {
             label="Bookmarks"
             onPress={() => router.push('/bookmarks')}
           />
+          <Row
+            icon="Mail"
+            label="Weekly Recap"
+            onPress={() => router.push('/digest')}
+          />
         </SectionCard>
 
         {profile.data && profile.data.profile.interests.length > 0 ? (

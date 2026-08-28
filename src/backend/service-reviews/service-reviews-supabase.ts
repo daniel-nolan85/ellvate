@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
+import { defaultDisplayName } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
@@ -85,7 +86,7 @@ const ensureUser = async (
   const { error } = await supabase
     .from('app_users')
     .upsert(
-      { id: userId, name: 'Member' },
+      { id: userId, name: defaultDisplayName(userId) },
       { ignoreDuplicates: true, onConflict: 'id' },
     );
   throwIfSupabaseError(error, 'ensure service review user');

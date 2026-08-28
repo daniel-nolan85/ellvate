@@ -35,6 +35,9 @@ function deleteMissionMemory(userId: string, missionId: string): boolean {
       missionCheckIns: current.missionCheckIns.filter(
         (checkIn) => checkIn.missionId !== missionId,
       ),
+      missionReports: current.missionReports.filter(
+        (report) => report.missionId !== missionId,
+      ),
       missions: current.missions.filter((mission) => mission.id !== missionId),
     };
   });
