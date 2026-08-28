@@ -79,15 +79,9 @@ export async function getRequestUserId(request: Request): Promise<string> {
     if (error instanceof RequestAuthError) {
       throw error;
     }
-    // TEMPORARY: the hosting platform's dashboard isn't surfacing
-    // console.error output, so the real verifyToken failure reason is
-    // included directly in the client-visible message for one round of
-    // debugging. Revert to a generic message once diagnosed -- see
-    // https://github.com/norez-solutions/llv-community-app/pull/42.
-    const detail = error instanceof Error ? error.message : String(error);
     throw new RequestAuthError(
       'auth_required',
-      `The authentication token is invalid or expired. [debug: ${detail} | secretKey ends with ...${secretKey.slice(-6)}]`,
+      'The authentication token is invalid or expired.',
       401,
     );
   }
