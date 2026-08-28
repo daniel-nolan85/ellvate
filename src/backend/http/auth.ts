@@ -87,7 +87,7 @@ export async function getRequestUserId(request: Request): Promise<string> {
     const detail = error instanceof Error ? error.message : String(error);
     throw new RequestAuthError(
       'auth_required',
-      `The authentication token is invalid or expired. [debug: ${detail}]`,
+      `The authentication token is invalid or expired. [debug: ${detail} | secretKey ends with ...${secretKey.slice(-6)}]`,
       401,
     );
   }
