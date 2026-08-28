@@ -79,6 +79,10 @@ export async function getRequestUserId(request: Request): Promise<string> {
     if (error instanceof RequestAuthError) {
       throw error;
     }
+    // Logged server-side only -- the client always sees the generic message
+    // below, but this is otherwise the only way to see *why* verifyToken
+    // rejected a token (wrong Clerk instance, expired, malformed, etc.).
+    console.error('[auth] verifyToken failed:', error);
     throw new RequestAuthError(
       'auth_required',
       'The authentication token is invalid or expired.',
