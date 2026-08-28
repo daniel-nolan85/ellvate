@@ -43,7 +43,11 @@ export default function CommunityTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: '#ffffff', paddingTop: insets.top },
+        // Was hardcoded white -- every tab screen's safe-area strip (this
+        // padding sits above each screen's own content) showed a white bar
+        // at the top of the app on every device, standing out against the
+        // rest of the app's desert-tan bg.canvas.
+        sceneStyle: { backgroundColor: 'rgb(247,241,230)', paddingTop: insets.top },
       }}
       tabBar={(props) => <CommunityTabBar {...props} />}
     >

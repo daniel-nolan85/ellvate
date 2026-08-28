@@ -9,6 +9,7 @@ import {
 } from '../../app/api/events/[id]/index+api';
 import { GET as getAttendeesRoute } from '../../app/api/events/[id]/attendees+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
+import { POST as postReport } from '../../app/api/events/[id]/report+api';
 import { createEventComment, listEventComments } from '../../src/backend/event-comments';
 import {
   createEvent,
@@ -18,6 +19,7 @@ import {
   getEventDates,
   getEventsView,
   listEventsPage,
+  reportEvent,
   toggleJoin,
   updateEvent,
 } from '../../src/backend/events';
@@ -795,5 +797,33 @@ describe('GET /api/events/:id/attendees', () => {
       code: 'event_not_found',
       message: 'Event not found.',
     });
+  });
+});
+
+describe('reportEvent', () => {
+  test('is idempotent -- reporting twice records one report', async () => {
+    await reportEvent(ctx(), 'event-1');
+    await reportEvent(ctx(), 'event-1');
+
+    expect(
+      getState().eventReports.filter((report) => report.eventId === 'event-1'),
+    ).toHaveLength(1);
+  });
+
+  test('returns event_not_found for an unknown event', async () => {
+    const result = await reportEvent(ctx(), 'does-not-exist');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('event_not_found');
+    }
+  });
+
+  test('POST /api/events/:id/report reports an event', async () => {
+    const response = await postReport(
+      new Request('http://localhost/api/events/event-1/report', { method: 'POST' }),
+      { id: 'event-1' },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ reported: true });
   });
 });

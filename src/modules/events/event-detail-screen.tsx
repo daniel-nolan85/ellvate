@@ -47,6 +47,7 @@ import {
   useDeleteEvent,
   useEvent,
   useEventAttendees,
+  useReportEvent,
   useToggleJoin,
   useUpdateEvent,
 } from './use-events';
@@ -102,6 +103,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
   const blockUser = useBlockUser();
+  const reportEvent = useReportEvent();
 
   const comments = useEventComments(eventId);
   const createComment = useCreateEventComment(eventId);
@@ -461,18 +463,34 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               />
             </>
           ) : (
-            <EventMenuRow
-              icon='EyeOff'
-              label='Block this neighbour'
-              onPress={() => {
-                setMenuOpen(false);
-                if (!event) return;
-                blockUser.mutate(event.author.id, {
-                  onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                  onSuccess: () => showToast(`Blocked ${event.author.name}`),
-                });
-              }}
-            />
+            <>
+              <EventMenuRow
+                icon='EyeOff'
+                label='Block this neighbour'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!event) return;
+                  blockUser.mutate(event.author.id, {
+                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${event.author.name}`),
+                  });
+                }}
+              />
+              <Divider />
+              <EventMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Report event'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!event) return;
+                  reportEvent.mutate(event.id, {
+                    onError: () => showToast('Couldn’t report this event. Try again.'),
+                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              />
+            </>
           )}
         </View>
       </Sheet>

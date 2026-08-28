@@ -57,6 +57,7 @@ import {
   useMission,
   useMissionCheckIns,
   useReportCheckIn,
+  useReportMission,
   useUpdateMission,
   type CheckInCelebration,
   type CheckInEntry,
@@ -123,6 +124,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const updateMission = useUpdateMission();
   const deleteMission = useDeleteMission();
   const blockUser = useBlockUser();
+  const reportMission = useReportMission();
   const comments = useMissionComments(missionId);
   const createComment = useCreateMissionComment(missionId);
   const updateComment = useUpdateMissionComment(missionId);
@@ -665,18 +667,34 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               />
             </>
           ) : (
-            <MissionMenuRow
-              icon='EyeOff'
-              label='Block this neighbour'
-              onPress={() => {
-                setMenuOpen(false);
-                if (!mission) return;
-                blockUser.mutate(mission.author.id, {
-                  onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                  onSuccess: () => showToast(`Blocked ${mission.author.name}`),
-                });
-              }}
-            />
+            <>
+              <MissionMenuRow
+                icon='EyeOff'
+                label='Block this neighbour'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!mission) return;
+                  blockUser.mutate(mission.author.id, {
+                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                    onSuccess: () => showToast(`Blocked ${mission.author.name}`),
+                  });
+                }}
+              />
+              <Divider />
+              <MissionMenuRow
+                destructive
+                icon='AlertCircle'
+                label='Report mission'
+                onPress={() => {
+                  setMenuOpen(false);
+                  if (!mission) return;
+                  reportMission.mutate(mission.id, {
+                    onError: () => showToast('Couldn’t report this mission. Try again.'),
+                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                  });
+                }}
+              />
+            </>
           )}
         </View>
       </Sheet>

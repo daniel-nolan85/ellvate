@@ -17,6 +17,7 @@ import type {
   JoinResult,
   MyEventsPage,
   PersonRef,
+  ReportEventResult,
   UpdateEventResult,
   WeekDay,
 } from './types';
@@ -814,4 +815,32 @@ export async function toggleJoinSupabase(
     (event as { going_base: number }).going_base,
   );
   return { id: eventId, going, joined: !existing };
+}
+
+export async function reportEventSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  eventId: string,
+): Promise<ReportEventResult> {
+  const { data: event, error: eventError } = await supabase
+    .from('events')
+    .select('id')
+    .eq('id', eventId)
+    .maybeSingle();
+  throwIfSupabaseError(eventError, 'load reported event');
+  if (!event) {
+    return { code: 'event_not_found', message: 'Event not found.', ok: false };
+  }
+
+  await ensureUser(supabase, userId);
+  // Idempotent: a unique (event_id, reporter_id) constraint on event_reports
+  // means a repeat report from the same user is a silent no-op, not an error.
+  const { error } = await supabase
+    .from('event_reports')
+    .upsert(
+      { event_id: eventId, reporter_id: userId },
+      { ignoreDuplicates: true, onConflict: 'event_id,reporter_id' },
+    );
+  throwIfSupabaseError(error, 'report event');
+  return { ok: true, reported: true };
 }

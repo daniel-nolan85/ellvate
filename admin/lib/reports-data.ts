@@ -3,8 +3,8 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { DeletableTable } from '../app/(dashboard)/actions';
 import { escapeOrSearchTerm, LIST_PAGE_SIZE } from './pagination';
 
-// Reports merge 8 separate tables. A fully keyset-paginated merge across all
-// 8 (independently tracking each table's cursor position) is real complexity
+// Reports merge 10 separate tables. A fully keyset-paginated merge across all
+// 10 (independently tracking each table's cursor position) is real complexity
 // for an internal moderation queue with a small row count -- offset
 // pagination is simpler to build and maintain, and the classic downside (a
 // row shifting page as new reports arrive between loads) is a non-issue at
@@ -57,7 +57,9 @@ export async function loadReports(
     ,
     postReports,
     commentReports,
+    eventReports,
     eventCommentReports,
+    missionReports,
     missionCommentReports,
     serviceReviewReports,
     checkInReports,
@@ -83,9 +85,25 @@ export async function loadReports(
       .limit(FETCH_CAP),
     withReporterFilter(
       admin
+        .from('event_reports')
+        .select('id, event_id, created_at, reporter:app_users!inner(name), event:events(title)'),
+    )
+      .order('created_at', { ascending: false })
+      .limit(FETCH_CAP),
+    withReporterFilter(
+      admin
         .from('event_comment_reports')
         .select(
           'id, event_comment_id, created_at, reporter:app_users!inner(name), event_comment:event_comments(body)',
+        ),
+    )
+      .order('created_at', { ascending: false })
+      .limit(FETCH_CAP),
+    withReporterFilter(
+      admin
+        .from('mission_reports')
+        .select(
+          'id, mission_id, created_at, reporter:app_users!inner(name), mission:missions(title)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -138,7 +156,9 @@ export async function loadReports(
   for (const result of [
     postReports,
     commentReports,
+    eventReports,
     eventCommentReports,
+    missionReports,
     missionCommentReports,
     serviceReviewReports,
     checkInReports,
@@ -192,6 +212,26 @@ export async function loadReports(
     });
   }
 
+  for (const r of (eventReports.data ?? []) as unknown as readonly {
+    id: string;
+    event_id: string;
+    created_at: string;
+    reporter: { name: string } | null;
+    event: { title: string } | null;
+  }[]) {
+    rows.push({
+      id: r.id,
+      type: 'Event',
+      snippet: r.event?.title ?? 'Unknown event',
+      photoUrl: null,
+      detailHref: `/events/${r.event_id}`,
+      reporter: r.reporter?.name ?? 'Unknown',
+      created_at: r.created_at,
+      deleteTable: 'events',
+      deleteId: r.event_id,
+    });
+  }
+
   for (const r of (eventCommentReports.data ?? []) as unknown as readonly {
     id: string;
     event_comment_id: string;
@@ -209,6 +249,26 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'event_comments',
       deleteId: r.event_comment_id,
+    });
+  }
+
+  for (const r of (missionReports.data ?? []) as unknown as readonly {
+    id: string;
+    mission_id: string;
+    created_at: string;
+    reporter: { name: string } | null;
+    mission: { title: string } | null;
+  }[]) {
+    rows.push({
+      id: r.id,
+      type: 'Mission',
+      snippet: r.mission?.title ?? 'Unknown mission',
+      photoUrl: null,
+      detailHref: `/missions/${r.mission_id}`,
+      reporter: r.reporter?.name ?? 'Unknown',
+      created_at: r.created_at,
+      deleteTable: 'missions',
+      deleteId: r.mission_id,
     });
   }
 

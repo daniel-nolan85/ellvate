@@ -455,3 +455,16 @@ export function useReportCheckIn() {
       }),
   });
 }
+
+export function useReportMission() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (missionId: string) =>
+      requestJson<{ reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/missions/${missionId}/report`,
+      }),
+  });
+}

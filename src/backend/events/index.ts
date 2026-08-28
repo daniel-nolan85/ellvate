@@ -8,6 +8,7 @@ export {
   getEventsView,
   getMyEventsView,
   listEventsPage,
+  reportEvent,
   toggleJoin,
   updateEvent,
 } from './events';
@@ -23,6 +24,7 @@ export type {
   MyEventsOptions,
   MyEventsPage,
   PersonRef,
+  ReportEventResult,
   UpdateEventResult,
   WeekDay,
 } from './types';

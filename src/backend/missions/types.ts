@@ -157,6 +157,14 @@ export type ReportCheckInResult =
       readonly message: string;
     };
 
+export type ReportMissionResult =
+  | { readonly ok: true; readonly reported: true }
+  | {
+      readonly ok: false;
+      readonly code: 'mission_not_found';
+      readonly message: string;
+    };
+
 export type AcceptMissionResult =
   | { readonly ok: true; readonly mission: Mission }
   | {

@@ -48,22 +48,22 @@ export function AuthenticationStateScreen() {
   const copy = copyForSession(session);
 
   return (
-    <Box className="flex-1 items-center justify-center bg-background-0 px-6 py-10">
-      <Card className="w-full max-w-lg border border-outline-200 bg-background-0">
+    <Box className="flex-1 items-center justify-center bg-canvas px-6 py-10">
+      <Card className="w-full max-w-lg border border-surface-hairline bg-paper">
         <VStack space="lg">
           {session.status === 'loading' ? (
             <Spinner size="large" />
           ) : null}
           <VStack space="sm">
-            <Heading className="text-typography-950" size="xl">
+            <Heading className="text-content" size="xl">
               {copy.title}
             </Heading>
-            <Text className="text-typography-600" size="md">
+            <Text className="text-text-muted" size="md">
               {copy.body}
             </Text>
           </VStack>
           {session.status === 'misconfigured' ? (
-            <Text className="text-typography-500" size="sm">
+            <Text className="text-text-muted" size="sm">
               No secret key or placeholder session is embedded in this app.
             </Text>
           ) : null}

@@ -14,6 +14,7 @@ import {
   getEventsViewSupabase,
   getMyEventsViewSupabase,
   listEventsPageSupabase,
+  reportEventSupabase,
   toggleJoinSupabase,
   updateEventSupabase,
 } from './events-supabase';
@@ -28,6 +29,7 @@ import type {
   MyEventsOptions,
   MyEventsPage,
   PersonRef,
+  ReportEventResult,
   UpdateEventResult,
 } from './types';
 import { validateEventInput } from './validation';
@@ -381,10 +383,39 @@ function deleteEventMemory(userId: string, eventId: string): boolean {
       eventComments: current.eventComments.filter(
         (comment) => comment.eventId !== eventId,
       ),
+      eventReports: current.eventReports.filter(
+        (report) => report.eventId !== eventId,
+      ),
       events: current.events.filter((event) => event.id !== eventId),
     };
   });
   return true;
+}
+
+function reportEventMemory(userId: string, eventId: string): ReportEventResult {
+  if (!getState().events.some((event) => event.id === eventId)) {
+    return { code: 'event_not_found', message: 'Event not found.', ok: false };
+  }
+
+  const alreadyReported = getState().eventReports.some(
+    (report) => report.eventId === eventId && report.reporterId === userId,
+  );
+  if (!alreadyReported) {
+    setState((current) => ({
+      ...current,
+      eventReports: [
+        ...current.eventReports,
+        {
+          createdAt: new Date().toISOString(),
+          id: `event-report-${crypto.randomUUID()}`,
+          eventId,
+          reporterId: userId,
+        },
+      ],
+    }));
+  }
+
+  return { ok: true, reported: true };
 }
 
 function toggleJoinMemory(userId: string, eventId: string): JoinResult | null {
@@ -525,6 +556,15 @@ export async function updateEvent(
   return ctx.supabase
     ? updateEventSupabase(ctx.supabase, ctx.userId, eventId, input)
     : updateEventMemory(ctx.userId, eventId, input);
+}
+
+export async function reportEvent(
+  ctx: RequestContext,
+  eventId: string,
+): Promise<ReportEventResult> {
+  return ctx.supabase
+    ? reportEventSupabase(ctx.supabase, ctx.userId, eventId)
+    : reportEventMemory(ctx.userId, eventId);
 }
 
 export async function deleteEvent(
