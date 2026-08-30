@@ -8,6 +8,7 @@ import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
+import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -179,6 +180,10 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
         >
           {petition ? (
             <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
+              {petition.media && petition.media.length > 0 && (
+                <MediaGallery media={petition.media} />
+              )}
+
               <HStack className="items-center" space="xs">
                 <HStack className="flex-1 items-center" space="xs">
                   <Badge variant="muted">{categoryLabel(petition.category)}</Badge>

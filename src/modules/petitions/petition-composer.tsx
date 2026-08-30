@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
@@ -8,6 +8,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { Input, InputField } from '@/src/components/ui/input';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 
 import {
   PETITION_CATEGORIES,
@@ -16,6 +17,8 @@ import {
   type CreatePetitionInput,
   type PetitionCategory,
 } from './petitions-types';
+
+const MAX_MEDIA = 10;
 
 interface ChipProps {
   readonly label: string;
@@ -74,6 +77,7 @@ export function PetitionComposer({
   const [category, setCategory] = useState<PetitionCategory | null>(null);
   const [deadlineDays, setDeadlineDays] = useState<7 | 14 | 30 | 60 | 90 | null>(null);
   const [agreedToGuidelines, setAgreedToGuidelines] = useState(false);
+  const [media, setMedia] = useState<readonly PickedImage[]>([]);
 
   const canSubmit =
     title.trim().length > 0 &&
@@ -82,6 +86,19 @@ export function PetitionComposer({
     deadlineDays !== null &&
     agreedToGuidelines &&
     !isSubmitting;
+
+  const pickImage = async () => {
+    const remaining = MAX_MEDIA - media.length;
+    if (remaining <= 0) {
+      return;
+    }
+    const picked = await pickGalleryImages({ selectionLimit: remaining });
+    setMedia([...media, ...picked]);
+  };
+
+  const removeMedia = (index: number) => {
+    setMedia(media.filter((_, i) => i !== index));
+  };
 
   return (
     <ScrollView
@@ -160,6 +177,49 @@ export function PetitionComposer({
           </HStack>
         </Field>
 
+        <Field label="Photos">
+          {media.length > 0 ? (
+            <VStack space="xs">
+              <Text className="text-xs text-text-muted">{media.length}/{MAX_MEDIA} files</Text>
+              <HStack className="flex-wrap gap-2">
+                {media.map((item, index) => (
+                  <View
+                    key={item.uri}
+                    className="relative h-20 w-20 overflow-hidden rounded-lg bg-secondary"
+                  >
+                    <Image
+                      source={{ uri: item.uri }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                    />
+                    <Pressable
+                      className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500"
+                      onPress={() => removeMedia(index)}
+                    >
+                      <Icon color="white" name="Close" size={14} />
+                    </Pressable>
+                  </View>
+                ))}
+                {media.length < MAX_MEDIA && (
+                  <Pressable
+                    className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-line bg-secondary"
+                    onPress={pickImage}
+                  >
+                    <Icon color="rgb(169,156,139)" name="Add" size={20} />
+                  </Pressable>
+                )}
+              </HStack>
+            </VStack>
+          ) : (
+            <Pressable
+              className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3"
+              onPress={pickImage}
+            >
+              <Icon color="rgb(169,156,139)" name="Image" size={20} />
+            </Pressable>
+          )}
+        </Field>
+
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: agreedToGuidelines }}
@@ -206,6 +266,10 @@ export function PetitionComposer({
                 category,
                 deadlineDays,
                 description: description.trim(),
+                newMedia: media.map((item) => ({
+                  dataUrl: `data:${item.mimeType};base64,${item.base64}`,
+                  filename: item.filename,
+                })),
                 title: title.trim(),
               });
             }}

@@ -300,6 +300,7 @@ export interface StoredPetition {
   readonly hoaResponse: string | null;
   readonly hoaResponseAt: string | null;
   readonly createdAt: string;
+  readonly media?: readonly StoredMedia[];
 }
 
 export interface StoredPetitionSignature {
