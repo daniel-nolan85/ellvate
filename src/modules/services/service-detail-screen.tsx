@@ -331,25 +331,6 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
           {reviewList.length} reviews
         </Text>
 
-        <ServiceReviewComposer
-          isSubmitting={createReview.isPending}
-          key={reviewComposerKey}
-          onSubmit={(input) =>
-            createReview.mutate(input, {
-              onSuccess: () => {
-                setReviewComposerKey((key) => key + 1);
-                void Haptics.selectionAsync();
-              },
-              onError: (error) =>
-                showToast(
-                  error instanceof ApiError
-                    ? error.message
-                    : 'Couldn’t post your review. Try again.',
-                ),
-            })
-          }
-        />
-
         {reviews.isPending ? (
           <View className="items-center py-10">
             <Spinner size="xlarge" />
@@ -396,6 +377,31 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
           </VStack>
         )}
         </ScrollView>
+
+        {/* Pinned footer, not part of the scroll -- KeyboardAvoidingView only
+            resizes its flex-1 sibling above, it doesn't scroll to a focused
+            field, so a review composer embedded mid-scroll never came into
+            view on its own when the keyboard opened. */}
+        <View className="border-t border-line px-[18px] py-3">
+          <ServiceReviewComposer
+            isSubmitting={createReview.isPending}
+            key={reviewComposerKey}
+            onSubmit={(input) =>
+              createReview.mutate(input, {
+                onSuccess: () => {
+                  setReviewComposerKey((key) => key + 1);
+                  void Haptics.selectionAsync();
+                },
+                onError: (error) =>
+                  showToast(
+                    error instanceof ApiError
+                      ? error.message
+                      : 'Couldn’t post your review. Try again.',
+                  ),
+              })
+            }
+          />
+        </View>
       </KeyboardAvoidingView>
 
       {/* Own-listing options menu */}
