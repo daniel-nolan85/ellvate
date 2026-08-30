@@ -101,8 +101,12 @@ export function PostComposer({
   };
 
   return (
-    <VStack className='bg-canvas' space='sm'>
-      <VStack className='flex-1 px-5 pb-2 pt-1' space='md'>
+    <ScrollView
+      keyboardDismissMode='on-drag'
+      keyboardShouldPersistTaps='handled'
+      showsVerticalScrollIndicator={false}
+    >
+      <VStack className='px-5 pb-2 pt-1' space='md'>
         <Text className='font-inter-bold text-[17px] text-content'>
           {submitLabel === 'Post' ? 'New post' : 'Edit post'}
         </Text>
@@ -139,117 +143,113 @@ export function PostComposer({
           </ScrollView>
         </View>
 
-        <ScrollView className='flex-1' showsVerticalScrollIndicator={false}>
-          <VStack space='md'>
-            <Input size='lg'>
-              <InputField
-                autoFocus
-                onChangeText={setTitle}
-                placeholder='Title'
-                testID='forum-post-title'
-                value={title}
-              />
-            </Input>
+        <Input size='lg'>
+          <InputField
+            autoFocus
+            onChangeText={setTitle}
+            placeholder='Title'
+            testID='forum-post-title'
+            value={title}
+          />
+        </Input>
 
-            <GrowingTextInput
-              className='w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content'
-              maxHeight={200}
-              onChangeText={setExcerpt}
-              placeholder='What do you want to share?'
-              testID='forum-post-body'
-              value={excerpt}
-            />
+        <GrowingTextInput
+          className='w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content'
+          maxHeight={200}
+          onChangeText={setExcerpt}
+          placeholder='What do you want to share?'
+          testID='forum-post-body'
+          value={excerpt}
+        />
 
-            {/* Media preview grid */}
-            {media.length > 0 && (
-              <View className='gap-2'>
-                <Text className='text-xs text-text-muted'>
-                  {media.length}/10 files
-                </Text>
-                <View className='flex-row flex-wrap gap-2'>
-                  {media.map((item, index) => (
-                    <View
-                      key={item.kind === 'existing' ? item.url : item.uri}
-                      className='relative h-20 w-20 overflow-hidden rounded-lg bg-secondary'
-                    >
-                      <Image
-                        source={{ uri: item.kind === 'existing' ? item.url : item.uri }}
-                        className='h-full w-full'
-                        resizeMode='cover'
-                      />
-                      <Pressable
-                        className='absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500'
-                        onPress={() => removeMedia(index)}
-                      >
-                        <Icon color='white' name='Close' size={14} />
-                      </Pressable>
-                    </View>
-                  ))}
-                  {media.length < 10 && (
-                    <Pressable
-                      className='flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-line bg-secondary'
-                      onPress={pickImage}
-                    >
-                      <Icon color='rgb(169,156,139)' name='Add' size={20} />
-                    </Pressable>
-                  )}
+        {/* Media preview grid */}
+        {media.length > 0 && (
+          <View className='gap-2'>
+            <Text className='text-xs text-text-muted'>
+              {media.length}/10 files
+            </Text>
+            <View className='flex-row flex-wrap gap-2'>
+              {media.map((item, index) => (
+                <View
+                  key={item.kind === 'existing' ? item.url : item.uri}
+                  className='relative h-20 w-20 overflow-hidden rounded-lg bg-secondary'
+                >
+                  <Image
+                    source={{ uri: item.kind === 'existing' ? item.url : item.uri }}
+                    className='h-full w-full'
+                    resizeMode='cover'
+                  />
+                  <Pressable
+                    className='absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500'
+                    onPress={() => removeMedia(index)}
+                  >
+                    <Icon color='white' name='Close' size={14} />
+                  </Pressable>
                 </View>
-              </View>
-            )}
+              ))}
+              {media.length < 10 && (
+                <Pressable
+                  className='flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-line bg-secondary'
+                  onPress={pickImage}
+                >
+                  <Icon color='rgb(169,156,139)' name='Add' size={20} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
 
-            {/* Add media button when no media */}
-            {media.length === 0 && (
-              <Pressable
-                className='flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3'
-                onPress={pickImage}
-              >
-                <Icon color='rgb(169,156,139)' name='Image' size={20} />
-              </Pressable>
-            )}
-          </VStack>
-        </ScrollView>
+        {/* Add media button when no media */}
+        {media.length === 0 && (
+          <Pressable
+            className='flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3'
+            onPress={pickImage}
+          >
+            <Icon color='rgb(169,156,139)' name='Image' size={20} />
+          </Pressable>
+        )}
+
+        <HStack className='items-center border-t border-line pt-3' space='sm'>
+          <Button
+            action='secondary'
+            isDisabled={isSubmitting}
+            onPress={onDismiss}
+            size='sm'
+            variant='link'
+          >
+            <ButtonText className='font-inter-semibold text-[13px] text-text-muted'>
+              Cancel
+            </ButtonText>
+          </Button>
+          <View className='flex-1' />
+          <Button
+            className='rounded-full bg-accent px-4'
+            isDisabled={!canSubmit}
+            onPress={() =>
+              onSubmit({
+                excerpt: excerpt.trim(),
+                existingMedia: media
+                  .filter((item): item is ExistingMediaItem => item.kind === 'existing')
+                  .map((item) => ({ filename: item.filename, url: item.url })),
+                forum,
+                newMedia: media
+                  .filter((item): item is NewMediaItem => item.kind === 'new')
+                  .map((item) => ({
+                    dataUrl: `data:${item.mimeType};base64,${item.base64}`,
+                    filename: item.filename,
+                  })),
+                title: title.trim(),
+              })
+            }
+            testID='forum-submit-post'
+            size='sm'
+          >
+            <ButtonText className='font-inter-semibold text-[13px] text-accent-foreground'>
+              {submitLabel}
+            </ButtonText>
+          </Button>
+        </HStack>
       </VStack>
-
-      <HStack className='border-t border-line px-5 py-3' space='sm'>
-        <Button
-          action='secondary'
-          isDisabled={isSubmitting}
-          onPress={onDismiss}
-          size='sm'
-          variant='link'
-        >
-          <ButtonText className='font-inter-semibold text-[13px] text-text-muted'>
-            Cancel
-          </ButtonText>
-        </Button>
-        <View className='flex-1' />
-        <Button
-          className='rounded-full bg-accent px-4'
-          isDisabled={!canSubmit}
-          onPress={() =>
-            onSubmit({
-              excerpt: excerpt.trim(),
-              existingMedia: media
-                .filter((item): item is ExistingMediaItem => item.kind === 'existing')
-                .map((item) => ({ filename: item.filename, url: item.url })),
-              forum,
-              newMedia: media
-                .filter((item): item is NewMediaItem => item.kind === 'new')
-                .map((item) => ({
-                  dataUrl: `data:${item.mimeType};base64,${item.base64}`,
-                  filename: item.filename,
-                })),
-              title: title.trim(),
-            })
-          }
-          testID='forum-submit-post'
-          size='sm'
-        >
-          <ButtonText className='font-inter-semibold text-[13px] text-accent-foreground'>
-            {submitLabel}
-          </ButtonText>
-        </Button>
-      </HStack>
 
       {/* Alert Modal */}
       <Modal
@@ -298,6 +298,6 @@ export function PostComposer({
           </Pressable>
         </Modal>
       )}
-    </VStack>
+    </ScrollView>
   );
 }

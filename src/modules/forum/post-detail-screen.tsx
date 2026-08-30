@@ -492,21 +492,8 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         />
       </KeyboardAvoidingView>
 
-      <Modal
-        animationType='fade'
-        onRequestClose={closeCommentActions}
-        transparent
-        visible={actionsSheetOpen}
-      >
-        <Pressable
-          className='flex-1 bg-[rgba(0,0,0,0.4)]'
-          onPress={closeCommentActions}
-        />
-        <View
-          className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5'
-          style={{ paddingBottom: insets.bottom + 24 }}
-        >
-          <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />
+      <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
+        <View className='gap-1 px-[18px] pb-2'>
           <SheetRow
             icon='Link'
             label='Copy link to comment'
@@ -567,7 +554,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             </>
           )}
         </View>
-      </Modal>
+      </Sheet>
 
       <Modal
         animationType='fade'
@@ -608,21 +595,8 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         </Pressable>
       </Modal>
 
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setPostMenuOpen(false)}
-        transparent
-        visible={postMenuOpen}
-      >
-        <Pressable
-          className='flex-1 bg-[rgba(0,0,0,0.4)]'
-          onPress={() => setPostMenuOpen(false)}
-        />
-        <View
-          className='absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5'
-          style={{ paddingBottom: insets.bottom + 24 }}
-        >
-          <View className='mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line' />
+      <Sheet onClose={() => setPostMenuOpen(false)} visible={postMenuOpen}>
+        <View className='gap-1 px-[18px] pb-2'>
           {isOwnPost ? (
             <>
               <SheetRow icon='Edit' label='Edit post' onPress={handleEditPost} />
@@ -651,7 +625,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             </>
           )}
         </View>
-      </Modal>
+      </Sheet>
 
       <Modal
         animationType='fade'

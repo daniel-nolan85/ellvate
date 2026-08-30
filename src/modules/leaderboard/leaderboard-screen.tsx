@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -10,6 +11,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import { useOpenProfile } from '@/src/modules/profile';
 
 import { LeaderRow } from './leader-row';
 import { Podium } from './podium';
@@ -58,6 +60,8 @@ export function LeaderboardScreen() {
   const [range, setRange] = useState<LeaderboardRange>('all');
   const leaderboard = useLeaderboard(range);
   const leaders = leaderboard.data?.pages.flatMap((page) => page.leaders) ?? [];
+  const openProfile = useOpenProfile();
+  const [isSearching, setIsSearching] = useState(false);
   const onScroll = useLoadMoreOnScroll([
     {
       fetchNextPage: leaderboard.fetchNextPage,
@@ -77,6 +81,7 @@ export function LeaderboardScreen() {
       <VStack space="md">
         <ScreenTitle
           eyebrow={RANGE_TABS.find((tab) => tab.value === range)?.label ?? 'All time'}
+          onSearch={leaders.length > 0 ? () => setIsSearching(true) : undefined}
           title="Leaderboard"
         />
         <RangeTabs active={range} onSelect={setRange} />
@@ -129,6 +134,18 @@ export function LeaderboardScreen() {
         )}
       </VStack>
     </ScrollView>
+
+      <SearchSheet
+        getKey={(entry) => entry.user.id}
+        getSubtitle={(entry) => `${entry.xp.toLocaleString()} XP`}
+        getTitle={(entry) => entry.user.name}
+        items={leaders}
+        onClose={() => setIsSearching(false)}
+        onSelect={(entry) => openProfile(entry.user.id, entry.user.name)}
+        placeholder="Search the leaderboard"
+        visible={isSearching}
+      />
+
       <CommunityNavBar />
     </>
   );

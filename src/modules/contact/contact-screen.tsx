@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -51,7 +51,15 @@ export function ContactScreen() {
         </Heading>
       </HStack>
 
-      <ScrollView contentContainerClassName="gap-5 px-[18px] py-5">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
+      <ScrollView
+        contentContainerClassName="gap-5 px-[18px] py-5"
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+      >
         {submit.isSuccess ? (
           <VStack className="items-center gap-2 rounded-[16px] border border-line bg-paper py-8">
             <Icon color="rgb(74,141,98)" name="CheckCircle" size={28} />
@@ -103,6 +111,7 @@ export function ContactScreen() {
                 Message
               </Text>
               <GrowingTextInput
+                className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
                 minHeight={120}
                 onChangeText={setMessage}
                 placeholder="What's on your mind?"
@@ -117,14 +126,19 @@ export function ContactScreen() {
             ) : null}
 
             <Button
-              disabled={!message.trim() || submit.isPending}
+              className="h-[52px] rounded-2xl bg-accent"
+              isDisabled={!message.trim() || submit.isPending}
               onPress={handleSend}
+              size="lg"
             >
-              <ButtonText>{submit.isPending ? 'Sending…' : 'Send message'}</ButtonText>
+              <ButtonText className="font-inter-semibold text-accent-foreground">
+                {submit.isPending ? 'Sending…' : 'Send message'}
+              </ButtonText>
             </Button>
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

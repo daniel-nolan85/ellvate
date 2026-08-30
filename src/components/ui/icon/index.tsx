@@ -45,6 +45,7 @@ import {
   Plus,
   Search,
   Share2,
+  ShieldUser,
   Sparkles,
   Star,
   Store,
@@ -115,7 +116,8 @@ export type AppIconName =
   | 'Laptop'
   | 'Utensils'
   | 'Footprints'
-  | 'Users';
+  | 'Users'
+  | 'ShieldUser';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -172,6 +174,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Utensils: UtensilsCrossed,
   Footprints,
   Users,
+  ShieldUser,
 };
 
 Object.values(ICON_MAP).forEach((component) => {

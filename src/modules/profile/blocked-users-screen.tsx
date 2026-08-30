@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SearchSheet } from '@/src/components/shared/search-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -61,11 +63,16 @@ export function BlockedUsersScreen() {
   const blockUser = useBlockUser();
   const openProfile = useOpenProfile();
   const items = blockedUsers.data?.blocked ?? [];
+  const [isSearching, setIsSearching] = useState(false);
 
   return (
     <View className="flex-1 bg-canvas">
       <View style={{ paddingTop: insets.top }}>
-        <ScreenTitle eyebrow="Privacy" title="Blocked users" />
+        <ScreenTitle
+          eyebrow="Privacy"
+          onSearch={items.length > 0 ? () => setIsSearching(true) : undefined}
+          title="Blocked users"
+        />
       </View>
 
       {blockedUsers.isPending ? (
@@ -98,6 +105,16 @@ export function BlockedUsersScreen() {
           </VStack>
         </ScrollView>
       )}
+
+      <SearchSheet
+        getKey={(member) => member.userId}
+        getTitle={(member) => member.name}
+        items={items}
+        onClose={() => setIsSearching(false)}
+        onSelect={(member) => openProfile(member.userId, member.name)}
+        placeholder="Search blocked users"
+        visible={isSearching}
+      />
 
       <CommunityNavBar />
     </View>
