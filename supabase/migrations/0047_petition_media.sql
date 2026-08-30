@@ -10,6 +10,22 @@
 -- migration's comment for the 0025 regression this pattern exists to avoid.
 alter table public.petitions add column if not exists media jsonb;
 
+-- Petitions never needed an UPDATE or DELETE grant/policy before now -- there
+-- was no edit/delete feature, only insert (start a petition) and the
+-- security-definer toggle_petition_signature RPC (which bypasses RLS/grants
+-- entirely). The create-flow's own attach-media UPDATE and rollback DELETE
+-- (petitions-supabase.ts) run as the calling user, not as security definer,
+-- so without this they'd hit "0 rows" under RLS in real Supabase even though
+-- every local/memory-backend test passes. This is the exact class of gap
+-- 0012_events_missions_write_grants.sql had to fix for events/missions.
+grant update, delete on public.petitions to authenticated;
+
+create policy "update own petition" on public.petitions for update to authenticated
+  using (created_by = public.clerk_user_id()) with check (created_by = public.clerk_user_id());
+
+create policy "delete own petition" on public.petitions for delete to authenticated
+  using (created_by = public.clerk_user_id());
+
 create or replace function public.owns_media_object(object_name text) returns boolean
 language plpgsql stable security definer set search_path = ''
 as $$

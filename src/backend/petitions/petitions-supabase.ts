@@ -210,11 +210,9 @@ export async function createPetitionSupabase(
   const deadlineAt = new Date(
     Date.now() + value.deadlineDays * 24 * 60 * 60 * 1000,
   ).toISOString();
-  const petitionId = `petition-${crypto.randomUUID()}`;
   const { data, error } = await supabase
     .from('petitions')
     .insert({
-      id: petitionId,
       category: value.category,
       created_by: userId,
       deadline_at: deadlineAt,
@@ -230,6 +228,7 @@ export async function createPetitionSupabase(
     throw new Error('create petition: database returned no petition.');
   }
   const insertedRow = data as unknown as PetitionRow;
+  const petitionId = insertedRow.id;
 
   const mediaResult = await uploadPetitionMedia(supabase, petitionId, input);
   if (!mediaResult.ok) {
