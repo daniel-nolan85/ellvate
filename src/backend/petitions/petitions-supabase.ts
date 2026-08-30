@@ -1,15 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { extractMediaUploads } from '@/src/backend/media';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { defaultDisplayName, type PetitionCategory, type PetitionStatus } from '@/src/backend/store';
 import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
+import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import { computeRequiredSignatures } from './types';
 import type {
   CreatePetitionResult,
   PersonRef,
   Petition,
+  PetitionMedia,
   PetitionsPage,
   ReportPetitionResult,
   ToggleSignatureOutcome,
@@ -17,7 +20,7 @@ import type {
 import { validatePetitionInput } from './validation';
 
 const PETITION_SELECT =
-  'id,created_by,title,description,category,deadline_days,deadline_at,required_signatures,signature_count,status,succeeded_at,hoa_response,hoa_response_at,created_at,creator:app_users!petitions_created_by_fkey(id,name,avatar_url,is_admin)';
+  'id,created_by,title,description,category,deadline_days,deadline_at,required_signatures,signature_count,status,succeeded_at,hoa_response,hoa_response_at,created_at,media,creator:app_users!petitions_created_by_fkey(id,name,avatar_url,is_admin)';
 
 interface PetitionRow {
   readonly id: string;
@@ -34,6 +37,7 @@ interface PetitionRow {
   readonly hoa_response: string | null;
   readonly hoa_response_at: string | null;
   readonly created_at: string;
+  readonly media: readonly PetitionMedia[] | null;
   readonly creator: {
     readonly id: string;
     readonly name: string;
@@ -41,6 +45,43 @@ interface PetitionRow {
     readonly is_admin: boolean;
   } | null;
 }
+
+type UploadPetitionMediaResult =
+  | { readonly ok: true; readonly media: readonly PetitionMedia[] }
+  | { readonly ok: false; readonly uploaded: readonly PetitionMedia[] };
+
+const uploadPetitionMedia = async (
+  supabase: SupabaseClient,
+  petitionId: string,
+  input: unknown,
+): Promise<UploadPetitionMediaResult> => {
+  const uploads = extractMediaUploads(input);
+  if (uploads.length === 0) {
+    return { media: [], ok: true };
+  }
+  const results = await Promise.all(
+    uploads.map(async (upload) => {
+      const url = await uploadDataUrl(
+        supabase,
+        upload.dataUrl,
+        upload.filename,
+        'petitions',
+        petitionId,
+      );
+      return url ? { filename: upload.filename, url } : null;
+    }),
+  );
+  const succeeded = results.filter(
+    (media): media is PetitionMedia => media !== null,
+  );
+  if (succeeded.length !== results.length) {
+    return { ok: false, uploaded: succeeded };
+  }
+  return { media: succeeded, ok: true };
+};
+
+const MEDIA_UPLOAD_FAILED_MESSAGE =
+  'One or more images failed to upload. Please try again.';
 
 const toCreatorRef = (row: PetitionRow): PersonRef => ({
   avatarUrl: row.creator?.avatar_url ?? null,
@@ -59,6 +100,7 @@ const toPetition = (row: PetitionRow, signed: boolean): Petition => ({
   hoaResponse: row.hoa_response,
   hoaResponseAt: row.hoa_response_at,
   id: row.id,
+  media: row.media ?? undefined,
   requiredSignatures: row.required_signatures,
   signatureCount: row.signature_count,
   signed,
@@ -185,7 +227,37 @@ export async function createPetitionSupabase(
   if (!data) {
     throw new Error('create petition: database returned no petition.');
   }
-  return { ok: true, petition: toPetition(data as unknown as PetitionRow, false) };
+  const insertedRow = data as unknown as PetitionRow;
+  const petitionId = insertedRow.id;
+
+  const mediaResult = await uploadPetitionMedia(supabase, petitionId, input);
+  if (!mediaResult.ok) {
+    await removeStorageObjects(
+      supabase,
+      mediaResult.uploaded.map((media) => media.url),
+    );
+    await supabase.from('petitions').delete().eq('id', petitionId);
+    return {
+      code: 'media_upload_failed',
+      message: MEDIA_UPLOAD_FAILED_MESSAGE,
+      ok: false,
+    };
+  }
+  if (mediaResult.media.length === 0) {
+    return { ok: true, petition: toPetition(insertedRow, false) };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('petitions')
+    .update({ media: mediaResult.media })
+    .eq('id', petitionId)
+    .select(PETITION_SELECT)
+    .single();
+  throwIfSupabaseError(updateError, 'attach petition media');
+  return {
+    ok: true,
+    petition: toPetition((updated as unknown as PetitionRow) ?? insertedRow, false),
+  };
 }
 
 export async function toggleSignatureSupabase(

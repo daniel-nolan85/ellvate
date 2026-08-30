@@ -39,6 +39,11 @@ export interface PersonRef {
   readonly isAdmin: boolean;
 }
 
+export interface PetitionMedia {
+  readonly url: string;
+  readonly filename: string;
+}
+
 export interface Petition {
   readonly id: string;
   readonly createdBy: PersonRef;
@@ -55,6 +60,7 @@ export interface Petition {
   readonly hoaResponseAt: string | null;
   readonly signed: boolean;
   readonly createdAt: string;
+  readonly media?: readonly PetitionMedia[];
 }
 
 export interface PetitionsPage {
@@ -94,7 +100,7 @@ export type CreatePetitionResult =
   | { readonly ok: true; readonly petition: Petition }
   | {
       readonly ok: false;
-      readonly code: 'invalid_petition' | 'petitions_locked';
+      readonly code: 'invalid_petition' | 'petitions_locked' | 'media_upload_failed';
       readonly message: string;
     };
 

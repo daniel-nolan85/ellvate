@@ -1,4 +1,5 @@
 import type { RequestContext } from '@/src/backend/http';
+import { extractMediaUploads } from '@/src/backend/media';
 import { createNotificationMemory } from '@/src/backend/notifications';
 import {
   getState,
@@ -65,6 +66,7 @@ const toPetition = (
   hoaResponse: stored.hoaResponse,
   hoaResponseAt: stored.hoaResponseAt,
   id: stored.id,
+  media: stored.media,
   requiredSignatures: stored.requiredSignatures,
   signatureCount: stored.signatureCount,
   signed: signedBy.has(stored.id),
@@ -126,6 +128,7 @@ function createPetitionMemory(userId: string, input: unknown): CreatePetitionRes
   const value = validation.value;
   const now = new Date();
   const deadlineAt = new Date(now.getTime() + value.deadlineDays * 24 * 60 * 60 * 1000).toISOString();
+  const mediaUploads = extractMediaUploads(input);
   const stored: StoredPetition = {
     category: value.category,
     createdAt: now.toISOString(),
@@ -137,6 +140,12 @@ function createPetitionMemory(userId: string, input: unknown): CreatePetitionRes
     hoaResponse: null,
     hoaResponseAt: null,
     id: `petition-${crypto.randomUUID()}`,
+    media: mediaUploads.length
+      ? mediaUploads.map((upload) => ({
+          filename: upload.filename,
+          url: upload.dataUrl,
+        }))
+      : undefined,
     requiredSignatures: computeRequiredSignatures(totalUsers),
     signatureCount: 0,
     status: 'open',

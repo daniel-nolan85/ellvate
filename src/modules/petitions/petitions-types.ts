@@ -16,6 +16,11 @@ export interface PersonRef {
   readonly isAdmin: boolean;
 }
 
+export interface PetitionMedia {
+  readonly url: string;
+  readonly filename: string;
+}
+
 export interface Petition {
   readonly id: string;
   readonly createdBy: PersonRef;
@@ -32,6 +37,7 @@ export interface Petition {
   readonly hoaResponseAt: string | null;
   readonly signed: boolean;
   readonly createdAt: string;
+  readonly media?: readonly PetitionMedia[];
 }
 
 export interface PetitionsPage {
@@ -68,6 +74,7 @@ export interface CreatePetitionInput {
   readonly description: string;
   readonly category: PetitionCategory;
   readonly deadlineDays: 7 | 14 | 30 | 60 | 90;
+  readonly newMedia?: readonly { readonly filename: string; readonly dataUrl: string }[];
 }
 
 export const PETITION_CATEGORIES: readonly { readonly value: PetitionCategory; readonly label: string }[] = [
