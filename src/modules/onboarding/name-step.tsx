@@ -28,7 +28,7 @@ export function NameStep({ value, onChange, onNext, chrome }: NameStepProps) {
             autoFocus
             onChangeText={onChange}
             onSubmitEditing={onNext}
-            placeholder="First name"
+            placeholder="Name or nickname"
             testID="onboarding-name-input"
             value={value}
           />

@@ -62,11 +62,12 @@ export function FilterChips({
         const isActive = filter.key === active;
         return (
           <Pressable
-            className={`shrink-0 rounded-full px-3.5 py-[7px] ${
+            className={`shrink-0 items-center rounded-full px-3.5 py-[7px] ${
               isActive ? 'bg-accent' : 'bg-secondary'
             }`}
             key={filter.key}
             onPress={() => onSelect(filter.key)}
+            style={{ minWidth: 64 }}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${

@@ -19,7 +19,10 @@ export const PETITION_DEADLINE_OPTIONS: readonly (7 | 14 | 30 | 60 | 90)[] = [7,
 // nobody's signature to succeed a petition, so this floor exists to make
 // sure "20% of the community" means something before the feature is even
 // offered, not to guarantee some other number is reachable.
-export const PETITIONS_UNLOCK_MIN_USERS = 200;
+// TEMPORARY: dropped from 200 to 0 so petitions can be tested on a real
+// device before the community reaches the real threshold. Restore to 200
+// before the next build ships (see conversation asking for this).
+export const PETITIONS_UNLOCK_MIN_USERS = 0;
 export const PETITIONS_SIGNATURE_PERCENT = 0.2;
 
 // Computed once at creation and frozen on the row -- never recalculated as

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -203,12 +205,16 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
         )}
       </HStack>
 
-      <ScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
-        contentContainerClassName="gap-4 px-[18px] py-4"
-        onScroll={onScroll}
-        scrollEventThrottle={100}
       >
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-4 px-[18px] py-4"
+          onScroll={onScroll}
+          scrollEventThrottle={100}
+        >
         {listing ? (
           <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
             {listing.media && listing.media.length > 0 && (
@@ -389,7 +395,8 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
             )}
           </VStack>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Own-listing options menu */}
       <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>

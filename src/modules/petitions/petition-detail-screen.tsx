@@ -14,6 +14,7 @@ import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
+import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -357,13 +358,8 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
       </KeyboardAvoidingView>
 
       {/* Petition options menu */}
-      <Modal animationType="fade" onRequestClose={() => setMenuOpen(false)} transparent visible={menuOpen}>
-        <Pressable className="flex-1 bg-[rgba(0,0,0,0.4)]" onPress={() => setMenuOpen(false)} />
-        <View
-          className="absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5"
-          style={{ paddingBottom: insets.bottom + 24 }}
-        >
-          <View className="mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line" />
+      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
+        <View className="gap-1 px-[18px] pb-2">
           {petition && petition.createdBy.id !== userId ? (
             <>
               <Pressable
@@ -389,21 +385,11 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
             </Text>
           </Pressable>
         </View>
-      </Modal>
+      </Sheet>
 
       {/* Comment actions */}
-      <Modal
-        animationType="fade"
-        onRequestClose={closeCommentActions}
-        transparent
-        visible={actionsSheetOpen}
-      >
-        <Pressable className="flex-1 bg-[rgba(0,0,0,0.4)]" onPress={closeCommentActions} />
-        <View
-          className="absolute bottom-0 left-0 right-0 gap-1 rounded-t-[20px] bg-paper px-[18px] pt-2.5"
-          style={{ paddingBottom: insets.bottom + 24 }}
-        >
-          <View className="mx-auto mb-2.5 h-[5px] w-9 rounded-full bg-line" />
+      <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
+        <View className="gap-1 px-[18px] pb-2">
           {actionsFor && actionsFor.author.id === userId ? (
             <>
               <Pressable
@@ -462,7 +448,7 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
             </>
           )}
         </View>
-      </Modal>
+      </Sheet>
 
       {/* Delete-comment confirmation */}
       <Modal

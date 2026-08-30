@@ -35,14 +35,16 @@ export function ScreenTitle({
       <HStack className={showAvatar ? 'items-center justify-between' : 'items-center justify-end'}>
         {showAvatar ? <ProfileAvatarButton /> : null}
         <HStack className="items-center gap-4">
-          <Pressable
-            accessibilityLabel="Search"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={onSearch}
-          >
-            <Icon name="Search" size={22} />
-          </Pressable>
+          {onSearch ? (
+            <Pressable
+              accessibilityLabel="Search"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={onSearch}
+            >
+              <Icon name="Search" size={22} />
+            </Pressable>
+          ) : null}
           <NotificationBellButton />
         </HStack>
       </HStack>

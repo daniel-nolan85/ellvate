@@ -47,12 +47,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/ellvate-splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#171717",
+          "backgroundColor": "#08060F",
           "dark": {
-            "backgroundColor": "#171717"
+            "backgroundColor": "#08060F"
           }
         }
       ],
