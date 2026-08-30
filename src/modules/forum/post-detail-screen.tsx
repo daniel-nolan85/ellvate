@@ -25,7 +25,7 @@ import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
-import { Sheet } from '@/src/components/ui/sheet';
+import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -139,7 +139,13 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
 
   const handleEditPost = () => {
     setPostMenuOpen(false);
-    setIsEditingPost(true);
+    // Wait for the options Sheet's own close animation to finish before
+    // opening the edit Sheet -- a Sheet stays mounted (rendering its own
+    // full-screen Modal + backdrop) for CLOSE_DURATION after `visible` flips
+    // to false, so opening a second Sheet in the same tick briefly presents
+    // two Modals at once, and the closing one's backdrop can swallow every
+    // touch on the screen behind it.
+    setTimeout(() => setIsEditingPost(true), CLOSE_DURATION);
   };
 
   const handleDeletePost = () => {

@@ -79,6 +79,15 @@ export function Sheet({
           }
         },
       );
+      // Backstop: unmount does otherwise depend entirely on the worklet's
+      // `finished` callback firing. If it never does (a broken/hung
+      // worklet), this Sheet's full-screen Modal and backdrop would
+      // otherwise stay mounted forever, silently swallowing every touch on
+      // the screen behind it -- force the unmount after a small margin past
+      // the animation's own duration so that failure mode can't be
+      // permanent.
+      const backstop = setTimeout(unmount, CLOSE_DURATION + 150);
+      return () => clearTimeout(backstop);
     }
   }, [visible, mounted, translateY, height, unmount]);
 

@@ -596,7 +596,7 @@ export function ProfileScreen() {
         </SectionCard>
       </ScrollView>
 
-      <Sheet onClose={() => setActiveSheet(null)} visible={activeSheet !== null}>
+      <Sheet onClose={() => setActiveSheet(null)} visible={activeSheet === 'edit'}>
         {activeSheet === 'edit' ? (
           <VStack className="px-5 pb-2 pt-1" space="md">
             <Text className="font-inter-bold text-[17px] text-content">

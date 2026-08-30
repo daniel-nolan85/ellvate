@@ -67,7 +67,12 @@ export function FilterChips({
             }`}
             key={filter.key}
             onPress={() => onSelect(filter.key)}
-            style={{ minWidth: 64 }}
+            // Sized to the row's longest label ("Missions"/"Services") so
+            // every pill reads as the same size -- a flat 64px floor stopped
+            // "All" from shrink-wrapping to a near-circular blob, but still
+            // left it and "Posts" looking visibly smaller than their
+            // longer-labeled neighbors.
+            style={{ minWidth: 92 }}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${

@@ -66,18 +66,28 @@ function AppNavigator() {
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="petition/[id]" />
           <Stack.Screen name="protected" />
-          <Stack.Screen name="assistant" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
+          {/* A native `presentation: 'modal'` screen isn't flush with the
+              real screen origin (iOS presents it as an inset page sheet),
+              which breaks KeyboardAvoidingView's offset math -- so this stays
+              a normal pushed screen with a slide-up transition instead of a
+              true modal presentation, to keep the chat input reachable. */}
+          <Stack.Screen
+            name="assistant"
+            options={{ animation: 'slide_from_bottom' }}
+          />
+          {/* Profile/Activity/Bookmarks/Blocked-users are full screens (their
+              own ScreenTitle header + the floating CommunityNavBar), not
+              modals -- presenting them as `presentation: 'modal'` stacked
+              modal-on-modal when reached from Profile and made their normal
+              header read as "inside a modal". Plain pushed screens instead. */}
+          <Stack.Screen name="profile" />
           <Stack.Screen
             name="notifications"
             options={{ presentation: 'modal' }}
           />
-          <Stack.Screen name="activity" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="bookmarks" options={{ presentation: 'modal' }} />
-          <Stack.Screen
-            name="blocked-users"
-            options={{ presentation: 'modal' }}
-          />
+          <Stack.Screen name="activity" />
+          <Stack.Screen name="bookmarks" />
+          <Stack.Screen name="blocked-users" />
           <Stack.Screen name="digest" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
