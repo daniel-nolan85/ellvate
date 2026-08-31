@@ -111,8 +111,13 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const deleteComment = useDeleteEventComment(eventId);
   const reportComment = useReportEventComment();
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  // A single Sheet whose content switches by mode, rather than two separate
+  // Sheet instances -- closing one Sheet and opening another in quick
+  // succession briefly presents two native Modals at once (a Sheet stays
+  // mounted, rendering its own full-screen Modal, until its close animation
+  // finishes), which corrupts UIKit's presentation stack and can leave the
+  // screen permanently unresponsive.
+  const [sheetMode, setSheetMode] = useState<'menu' | 'edit' | null>(null);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -263,7 +268,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           accessibilityLabel='More options'
           accessibilityRole='button'
           hitSlop={8}
-          onPress={() => setMenuOpen(true)}
+          onPress={() => setSheetMode('menu')}
         >
           <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
         </Pressable>
@@ -438,61 +443,86 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         />
       </KeyboardAvoidingView>
 
-      {/* Event options menu */}
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          {isOwnEvent ? (
-            <>
-              <EventMenuRow
-                icon='Edit'
-                label='Edit event'
-                onPress={() => {
-                  setMenuOpen(false);
-                  setIsEditing(true);
-                }}
-              />
-              <Divider />
-              <EventMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Cancel event'
-                onPress={() => {
-                  setMenuOpen(false);
-                  setConfirmCancelOpen(true);
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <EventMenuRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={() => {
-                  setMenuOpen(false);
-                  if (!event) return;
-                  blockUser.mutate(event.author.id, {
-                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${event.author.name}`),
-                  });
-                }}
-              />
-              <Divider />
-              <EventMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Report event'
-                onPress={() => {
-                  setMenuOpen(false);
-                  if (!event) return;
-                  reportEvent.mutate(event.id, {
-                    onError: () => showToast('Couldn’t report this event. Try again.'),
-                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
-              />
-            </>
-          )}
-        </View>
+      {/* Event options menu / edit -- one Sheet, content switches by mode */}
+      <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
+        {sheetMode === 'edit' && event ? (
+          <EventComposer
+            initialMedia={event.media}
+            initialPlace={event.place}
+            initialStartsAt={event.startsAt}
+            initialTag={event.tag}
+            initialTitle={event.title}
+            isSubmitting={updateEvent.isPending}
+            onDismiss={() => setSheetMode(null)}
+            onSubmit={(eventDraft) =>
+              updateEvent.mutate(
+                { eventId: event.id, ...eventDraft },
+                {
+                  onSuccess: () => {
+                    setSheetMode(null);
+                    void Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
+                  },
+                  onError: () =>
+                    showToast("Couldn't save your changes. Try again."),
+                },
+              )
+            }
+            submitLabel='Save'
+          />
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            {isOwnEvent ? (
+              <>
+                <EventMenuRow
+                  icon='Edit'
+                  label='Edit event'
+                  onPress={() => setSheetMode('edit')}
+                />
+                <Divider />
+                <EventMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Cancel event'
+                  onPress={() => {
+                    setSheetMode(null);
+                    setConfirmCancelOpen(true);
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <EventMenuRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={() => {
+                    setSheetMode(null);
+                    if (!event) return;
+                    blockUser.mutate(event.author.id, {
+                      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${event.author.name}`),
+                    });
+                  }}
+                />
+                <Divider />
+                <EventMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report event'
+                  onPress={() => {
+                    setSheetMode(null);
+                    if (!event) return;
+                    reportEvent.mutate(event.id, {
+                      onError: () => showToast('Couldn’t report this event. Try again.'),
+                      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        )}
       </Sheet>
 
       {/* Cancel-event confirmation */}
@@ -582,37 +612,6 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           )}
         </VStack>
       </Sheet>
-
-      {/* Edit event sheet */}
-      {event && (
-        <Sheet onClose={() => setIsEditing(false)} visible={isEditing}>
-          <EventComposer
-            initialMedia={event.media}
-            initialPlace={event.place}
-            initialStartsAt={event.startsAt}
-            initialTag={event.tag}
-            initialTitle={event.title}
-            isSubmitting={updateEvent.isPending}
-            onDismiss={() => setIsEditing(false)}
-            onSubmit={(eventDraft) =>
-              updateEvent.mutate(
-                { eventId: event.id, ...eventDraft },
-                {
-                  onSuccess: () => {
-                    setIsEditing(false);
-                    void Haptics.notificationAsync(
-                      Haptics.NotificationFeedbackType.Success,
-                    );
-                  },
-                  onError: () =>
-                    showToast("Couldn't save your changes. Try again."),
-                },
-              )
-            }
-            submitLabel='Save'
-          />
-        </Sheet>
-      )}
 
       {/* Comment actions */}
       <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
