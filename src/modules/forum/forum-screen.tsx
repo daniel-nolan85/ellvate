@@ -4,7 +4,7 @@ import { ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -217,16 +217,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         ) : null}
       </Sheet>
 
-      <SearchSheet
-        getKey={(post) => post.id}
-        getSubtitle={(post) => post.forum}
-        getTitle={(post) => post.title}
-        items={displayedPosts}
-        onClose={() => setIsSearching(false)}
-        onSelect={(post) => onOpenPost?.(post.id)}
-        placeholder="Search posts"
-        visible={isSearching}
-      />
+      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
 
       <PinExplainerModal
         onCancel={pinAction.cancelPending}

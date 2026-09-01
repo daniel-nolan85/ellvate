@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -150,16 +150,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
         ) : null}
       </Sheet>
 
-      <SearchSheet
-        getKey={(listing) => listing.id}
-        getSubtitle={(listing) => listing.description}
-        getTitle={(listing) => listing.businessName}
-        items={listings}
-        onClose={() => setIsSearching(false)}
-        onSelect={(listing) => onOpenListing?.(listing.id)}
-        placeholder="Search services"
-        visible={isSearching}
-      />
+      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
     </>
   );
 }

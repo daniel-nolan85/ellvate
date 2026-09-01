@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -187,16 +187,7 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
         />
       </Sheet>
 
-      <SearchSheet
-        getKey={(event) => event.id}
-        getSubtitle={(event) => event.place}
-        getTitle={(event) => event.title}
-        items={events}
-        onClose={() => setIsSearching(false)}
-        onSelect={(event) => onOpenEvent?.(event.id)}
-        placeholder="Search events"
-        visible={isSearching}
-      />
+      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
     </>
   );
 }
