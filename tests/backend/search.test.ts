@@ -64,7 +64,7 @@ function seedMatchingContent(authorId: string = DEMO_USER_ID): void {
     scheduledFor: null,
     stops: ['Start'],
     stopsTotal: 1,
-    theme: 'community',
+    theme: 'trail',
     title: `${NEEDLE} mission`,
     xp: 10,
   };
