@@ -82,17 +82,56 @@ function CactusGlyph({
   const lensGradientId = `${uid}-lens`;
   const crownGradientId = `${uid}-crown`;
 
+  // Each animatedProps below returns `transform` as an array of single-
+  // property objects (the same shape React Native's own View transform
+  // takes) instead of one SVG transform-attribute string. Both spellings
+  // describe the same matrix and render identically on a static frame, but
+  // only the array form is wired to actually reach the native SVG view on
+  // every animated frame under Fabric -- a worklet mutating a string-typed
+  // `transform` prop was silently not propagating, which is why the cactus
+  // never visibly moved despite the animation itself provably running (this
+  // codebase's other animations, like Sheet's slide, use useAnimatedStyle on
+  // a plain View and always animated fine -- only this SVG-specific path was
+  // broken). A `rotate(deg cx cy)` pivot is expressed the same way SVG
+  // itself expands it: translate to the pivot, rotate, translate back --
+  // token-for-token the same order as the original SVG strings, since both
+  // SVG and CSS/RN transforms apply right-to-left to the point.
   const shadowProps = useAnimatedProps(() => ({
-    transform: `translate(12 23) scale(${interpolate(progress.value, [-1, 1], [1, 0.85])} 1) translate(-12 -23)`,
+    transform: [
+      { translateX: 12 },
+      { translateY: 23 },
+      { scaleX: interpolate(progress.value, [-1, 1], [1, 0.85]) },
+      { translateX: -12 },
+      { translateY: -23 },
+    ],
   }));
   const bodyProps = useAnimatedProps(() => ({
-    transform: `translate(0 ${interpolate(progress.value, [-1, 1], [0, -1.5])}) rotate(${interpolate(progress.value, [-1, 1], [-7, 7])} 12 24)`,
+    transform: [
+      { translateY: interpolate(progress.value, [-1, 1], [0, -1.5]) },
+      { translateX: 12 },
+      { translateY: 24 },
+      { rotate: `${interpolate(progress.value, [-1, 1], [-7, 7])}deg` },
+      { translateX: -12 },
+      { translateY: -24 },
+    ],
   }));
   const armLProps = useAnimatedProps(() => ({
-    transform: `rotate(${interpolate(progress.value, [-1, 1], [12, -16])} 9.3 13.2)`,
+    transform: [
+      { translateX: 9.3 },
+      { translateY: 13.2 },
+      { rotate: `${interpolate(progress.value, [-1, 1], [12, -16])}deg` },
+      { translateX: -9.3 },
+      { translateY: -13.2 },
+    ],
   }));
   const armRProps = useAnimatedProps(() => ({
-    transform: `rotate(${interpolate(progress.value, [-1, 1], [-12, 16])} 14.7 9)`,
+    transform: [
+      { translateX: 14.7 },
+      { translateY: 9 },
+      { rotate: `${interpolate(progress.value, [-1, 1], [-12, 16])}deg` },
+      { translateX: -14.7 },
+      { translateY: -9 },
+    ],
   }));
 
   const bodyStroke = shade(color, -0.35);
