@@ -64,9 +64,16 @@ interface PetitionComposerProps {
   readonly totalUsers: number;
   readonly onDismiss: () => void;
   readonly onSubmit: (draft: CreatePetitionInput) => void;
+  // A submission error, shown inline rather than as an outer toast -- this
+  // composer renders inside a Sheet's own full-screen Modal, which sits in
+  // its own native layer above the rest of the screen, so a toast rendered
+  // as a sibling of the Sheet would be completely invisible behind it while
+  // the sheet stays open on error.
+  readonly errorMessage?: string | null;
 }
 
 export function PetitionComposer({
+  errorMessage,
   isSubmitting,
   onDismiss,
   onSubmit,
@@ -241,6 +248,12 @@ export function PetitionComposer({
             accuse specific board members or staff.
           </Text>
         </Pressable>
+
+        {errorMessage ? (
+          <Text className="text-destructive" size="sm" testID="petition-submit-error">
+            {errorMessage}
+          </Text>
+        ) : null}
 
         <HStack className="items-center justify-end" space="sm">
           <Button

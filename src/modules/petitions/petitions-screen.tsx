@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, type Href } from 'expo-router';
 
@@ -55,19 +54,13 @@ function CreateButton({ onPress }: { readonly onPress: () => void }) {
 }
 
 export function PetitionsScreen() {
-  const insets = useSafeAreaInsets();
   const gate = usePetitionsGate();
   const [status, setStatus] = useState<PetitionStatus>('open');
   const petitions = usePetitionsPage(status);
   const createPetition = useCreatePetition();
   const [composing, setComposing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 2200);
-  };
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const items = petitions.data?.pages.flatMap((page) => page.petitions) ?? [];
   const onScroll = useLoadMoreOnScroll([
@@ -103,7 +96,14 @@ export function PetitionsScreen() {
           <ScreenTitle
             eyebrow="Raise it with the HOA"
             onSearch={() => setIsSearching(true)}
-            right={<CreateButton onPress={() => setComposing(true)} />}
+            right={
+              <CreateButton
+                onPress={() => {
+                  setSubmitError(null);
+                  setComposing(true);
+                }}
+              />
+            }
             title="Petitions"
           />
 
@@ -177,21 +177,29 @@ export function PetitionsScreen() {
         </VStack>
       </ScrollView>
 
-      <Sheet onClose={() => setComposing(false)} visible={composing}>
+      <Sheet
+        onClose={() => {
+          setComposing(false);
+          setSubmitError(null);
+        }}
+        visible={composing}
+      >
         <PetitionComposer
+          errorMessage={submitError}
           isSubmitting={createPetition.isPending}
           onDismiss={() => setComposing(false)}
-          onSubmit={(draft) =>
+          onSubmit={(draft) => {
+            setSubmitError(null);
             createPetition.mutate(draft, {
               onError: (error) =>
-                showToast(
+                setSubmitError(
                   error instanceof ApiError
                     ? error.message
                     : 'Couldn’t start your petition. Try again.',
                 ),
               onSuccess: () => setComposing(false),
-            })
-          }
+            });
+          }}
           totalUsers={gate.data?.totalUsers ?? 0}
         />
       </Sheet>
@@ -206,16 +214,6 @@ export function PetitionsScreen() {
         placeholder="Search petitions"
         visible={isSearching}
       />
-
-      {toast ? (
-        <View
-          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
-          style={{ bottom: insets.bottom + 24 }}
-        >
-          <Icon color="rgb(250,250,250)" name="AlertCircle" size={16} />
-          <Text className="flex-1 text-[14px] text-primary-foreground">{toast}</Text>
-        </View>
-      ) : null}
     </>
   );
 }

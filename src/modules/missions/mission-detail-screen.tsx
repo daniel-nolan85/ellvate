@@ -134,8 +134,13 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const reportCheckIn = useReportCheckIn();
 
   const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  // A single Sheet whose content switches by mode, rather than two separate
+  // Sheet instances -- closing one Sheet and opening another in quick
+  // succession briefly presents two native Modals at once (a Sheet stays
+  // mounted, rendering its own full-screen Modal, until its close animation
+  // finishes), which corrupts UIKit's presentation stack and can leave the
+  // screen permanently unresponsive.
+  const [sheetMode, setSheetMode] = useState<'menu' | 'edit' | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -346,7 +351,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
           accessibilityLabel='More options'
           accessibilityRole='button'
           hitSlop={8}
-          onPress={() => setMenuOpen(true)}
+          onPress={() => setSheetMode('menu')}
         >
           <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
         </Pressable>
@@ -642,61 +647,88 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         />
       </KeyboardAvoidingView>
 
-      {/* Mission options menu */}
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          {isOwnMission ? (
-            <>
-              <MissionMenuRow
-                icon='Edit'
-                label='Edit mission'
-                onPress={() => {
-                  setMenuOpen(false);
-                  setIsEditing(true);
-                }}
-              />
-              <Divider />
-              <MissionMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Delete mission'
-                onPress={() => {
-                  setMenuOpen(false);
-                  setConfirmDeleteOpen(true);
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <MissionMenuRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={() => {
-                  setMenuOpen(false);
-                  if (!mission) return;
-                  blockUser.mutate(mission.author.id, {
-                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${mission.author.name}`),
-                  });
-                }}
-              />
-              <Divider />
-              <MissionMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Report mission'
-                onPress={() => {
-                  setMenuOpen(false);
-                  if (!mission) return;
-                  reportMission.mutate(mission.id, {
-                    onError: () => showToast('Couldn’t report this mission. Try again.'),
-                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
-              />
-            </>
-          )}
-        </View>
+      {/* Mission options menu / edit -- one Sheet, content switches by mode */}
+      <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
+        {sheetMode === 'edit' && mission ? (
+          <MissionComposer
+            initialDescription={mission.description}
+            initialTheme={mission.theme}
+            initialMedia={mission.media}
+            initialScheduledFor={mission.scheduledFor ?? undefined}
+            initialStops={mission.stops}
+            initialTitle={mission.title}
+            initialXp={mission.xp}
+            isSubmitting={updateMission.isPending}
+            onDismiss={() => setSheetMode(null)}
+            onSubmit={(draft) =>
+              updateMission.mutate(
+                { missionId: mission.id, ...draft },
+                {
+                  onSuccess: () => {
+                    setSheetMode(null);
+                    void Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
+                  },
+                  onError: () =>
+                    showToast("Couldn't save your changes. Try again."),
+                },
+              )
+            }
+            submitLabel='Save'
+          />
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            {isOwnMission ? (
+              <>
+                <MissionMenuRow
+                  icon='Edit'
+                  label='Edit mission'
+                  onPress={() => setSheetMode('edit')}
+                />
+                <Divider />
+                <MissionMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Delete mission'
+                  onPress={() => {
+                    setSheetMode(null);
+                    setConfirmDeleteOpen(true);
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <MissionMenuRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={() => {
+                    setSheetMode(null);
+                    if (!mission) return;
+                    blockUser.mutate(mission.author.id, {
+                      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${mission.author.name}`),
+                    });
+                  }}
+                />
+                <Divider />
+                <MissionMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report mission'
+                  onPress={() => {
+                    setSheetMode(null);
+                    if (!mission) return;
+                    reportMission.mutate(mission.id, {
+                      onError: () => showToast('Couldn’t report this mission. Try again.'),
+                      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        )}
       </Sheet>
 
       {/* Delete confirmation */}
@@ -738,39 +770,6 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Edit mission sheet */}
-      {mission && (
-        <Sheet onClose={() => setIsEditing(false)} visible={isEditing}>
-          <MissionComposer
-            initialDescription={mission.description}
-            initialTheme={mission.theme}
-            initialMedia={mission.media}
-            initialScheduledFor={mission.scheduledFor ?? undefined}
-            initialStops={mission.stops}
-            initialTitle={mission.title}
-            initialXp={mission.xp}
-            isSubmitting={updateMission.isPending}
-            onDismiss={() => setIsEditing(false)}
-            onSubmit={(draft) =>
-              updateMission.mutate(
-                { missionId: mission.id, ...draft },
-                {
-                  onSuccess: () => {
-                    setIsEditing(false);
-                    void Haptics.notificationAsync(
-                      Haptics.NotificationFeedbackType.Success,
-                    );
-                  },
-                  onError: () =>
-                    showToast("Couldn't save your changes. Try again."),
-                },
-              )
-            }
-            submitLabel='Save'
-          />
-        </Sheet>
-      )}
 
       {/* Comment actions */}
       <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>

@@ -124,8 +124,13 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const reportReview = useReportServiceReview();
   const blockUser = useBlockUser();
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  // A single Sheet whose content switches by mode, rather than two separate
+  // Sheet instances -- closing one Sheet and opening another in quick
+  // succession briefly presents two native Modals at once (a Sheet stays
+  // mounted, rendering its own full-screen Modal, until its close animation
+  // finishes), which corrupts UIKit's presentation stack and can leave the
+  // screen permanently unresponsive.
+  const [sheetMode, setSheetMode] = useState<'menu' | 'edit' | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [actionsFor, setActionsFor] = useState<ServiceReview | null>(null);
   const [editingReview, setEditingReview] = useState<ServiceReview | null>(null);
@@ -198,7 +203,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
             accessibilityLabel="More options"
             accessibilityRole="button"
             hitSlop={8}
-            onPress={() => setMenuOpen(true)}
+            onPress={() => setSheetMode('menu')}
           >
             <Icon color="rgb(120,108,94)" name="ThreeDots" size={18} />
           </Pressable>
@@ -404,28 +409,58 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
         </View>
       </KeyboardAvoidingView>
 
-      {/* Own-listing options menu */}
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className="gap-1 px-[18px] pb-2">
-          <ListingMenuRow
-            icon="Edit"
-            label="Edit listing"
-            onPress={() => {
-              setMenuOpen(false);
-              setIsEditing(true);
-            }}
+      {/* Own-listing options menu / edit -- one Sheet, content switches by mode */}
+      <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
+        {sheetMode === 'edit' && listing ? (
+          <ServiceComposer
+            initialBusinessName={listing.businessName}
+            initialCategory={listing.category}
+            initialContactEmail={listing.contactEmail ?? ''}
+            initialContactPhone={listing.contactPhone ?? ''}
+            initialContactWebsite={listing.contactWebsite ?? ''}
+            initialDescription={listing.description}
+            initialHours={listing.hours ?? ''}
+            initialLogo={listing.logo ?? null}
+            initialMedia={listing.media}
+            initialServiceArea={listing.serviceArea ?? ''}
+            isSubmitting={updateListing.isPending}
+            onDismiss={() => setSheetMode(null)}
+            onSubmit={(draft) =>
+              updateListing.mutate(
+                { listingId: listing.id, ...draft },
+                {
+                  onSuccess: () => {
+                    setSheetMode(null);
+                    void Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
+                  },
+                  onError: () =>
+                    showToast("Couldn't save your changes. Try again."),
+                },
+              )
+            }
+            submitLabel="Save"
           />
-          <Divider />
-          <ListingMenuRow
-            destructive
-            icon="AlertCircle"
-            label="Delete listing"
-            onPress={() => {
-              setMenuOpen(false);
-              setConfirmDeleteOpen(true);
-            }}
-          />
-        </View>
+        ) : (
+          <View className="gap-1 px-[18px] pb-2">
+            <ListingMenuRow
+              icon="Edit"
+              label="Edit listing"
+              onPress={() => setSheetMode('edit')}
+            />
+            <Divider />
+            <ListingMenuRow
+              destructive
+              icon="AlertCircle"
+              label="Delete listing"
+              onPress={() => {
+                setSheetMode(null);
+                setConfirmDeleteOpen(true);
+              }}
+            />
+          </View>
+        )}
       </Sheet>
 
       {/* Delete confirmation */}
@@ -467,42 +502,6 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Edit listing sheet */}
-      {listing && (
-        <Sheet onClose={() => setIsEditing(false)} visible={isEditing}>
-          <ServiceComposer
-            initialBusinessName={listing.businessName}
-            initialCategory={listing.category}
-            initialContactEmail={listing.contactEmail ?? ''}
-            initialContactPhone={listing.contactPhone ?? ''}
-            initialContactWebsite={listing.contactWebsite ?? ''}
-            initialDescription={listing.description}
-            initialHours={listing.hours ?? ''}
-            initialLogo={listing.logo ?? null}
-            initialMedia={listing.media}
-            initialServiceArea={listing.serviceArea ?? ''}
-            isSubmitting={updateListing.isPending}
-            onDismiss={() => setIsEditing(false)}
-            onSubmit={(draft) =>
-              updateListing.mutate(
-                { listingId: listing.id, ...draft },
-                {
-                  onSuccess: () => {
-                    setIsEditing(false);
-                    void Haptics.notificationAsync(
-                      Haptics.NotificationFeedbackType.Success,
-                    );
-                  },
-                  onError: () =>
-                    showToast("Couldn't save your changes. Try again."),
-                },
-              )
-            }
-            submitLabel="Save"
-          />
-        </Sheet>
-      )}
 
       {/* Review actions */}
       <Sheet onClose={() => setActionsFor(null)} visible={actionsFor !== null}>

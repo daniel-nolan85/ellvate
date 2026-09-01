@@ -25,7 +25,7 @@ import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
-import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
+import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -98,8 +98,14 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const [commentPendingDelete, setCommentPendingDelete] =
     useState<ForumComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [postMenuOpen, setPostMenuOpen] = useState(false);
-  const [isEditingPost, setIsEditingPost] = useState(false);
+  // A single Sheet whose content switches by mode, rather than two separate
+  // Sheet instances -- closing one Sheet and opening another in quick
+  // succession briefly presents two native Modals at once (a Sheet stays
+  // mounted, rendering its own full-screen Modal, until its close animation
+  // finishes), which corrupts UIKit's presentation stack and can leave the
+  // screen permanently unresponsive. One Sheet mounted at a time can never
+  // race itself this way.
+  const [postSheetMode, setPostSheetMode] = useState<'menu' | 'edit' | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
@@ -138,18 +144,11 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   };
 
   const handleEditPost = () => {
-    setPostMenuOpen(false);
-    // Wait for the options Sheet's own close animation to finish before
-    // opening the edit Sheet -- a Sheet stays mounted (rendering its own
-    // full-screen Modal + backdrop) for CLOSE_DURATION after `visible` flips
-    // to false, so opening a second Sheet in the same tick briefly presents
-    // two Modals at once, and the closing one's backdrop can swallow every
-    // touch on the screen behind it.
-    setTimeout(() => setIsEditingPost(true), CLOSE_DURATION);
+    setPostSheetMode('edit');
   };
 
   const handleDeletePost = () => {
-    setPostMenuOpen(false);
+    setPostSheetMode(null);
     setConfirmDeleteOpen(true);
   };
 
@@ -173,7 +172,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
     if (!post) {
       return;
     }
-    setPostMenuOpen(false);
+    setPostSheetMode(null);
     blockUser.mutate(post.author.id, {
       onSuccess: () => showToast(`Blocked ${post.author.name}`),
       onError: () => showToast('Couldn’t block this neighbour. Try again.'),
@@ -184,7 +183,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
     if (!post) {
       return;
     }
-    setPostMenuOpen(false);
+    setPostSheetMode(null);
     reportPost.mutate(post.id, {
       onSuccess: () =>
         showToast('Thanks — our moderators will take a look.'),
@@ -367,7 +366,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                     accessibilityLabel='More options'
                     accessibilityRole='button'
                     hitSlop={8}
-                    onPress={() => setPostMenuOpen(true)}
+                    onPress={() => setPostSheetMode('menu')}
                   >
                     <Icon color={COLOR_TEXT_SUBTLE} name='ThreeDots' size={16} />
                   </Pressable>
@@ -601,36 +600,74 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         </Pressable>
       </Modal>
 
-      <Sheet onClose={() => setPostMenuOpen(false)} visible={postMenuOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          {isOwnPost ? (
-            <>
-              <SheetRow icon='Edit' label='Edit post' onPress={handleEditPost} />
-              <Divider />
-              <SheetRow
-                destructive
-                icon='AlertCircle'
-                label='Delete post'
-                onPress={handleDeletePost}
-              />
-            </>
-          ) : (
-            <>
-              <SheetRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={handleBlockPost}
-              />
-              <Divider />
-              <SheetRow
-                destructive
-                icon='AlertCircle'
-                label='Report post'
-                onPress={handleReportPost}
-              />
-            </>
-          )}
-        </View>
+      <Sheet
+        onClose={() => setPostSheetMode(null)}
+        visible={postSheetMode !== null}
+      >
+        {postSheetMode === 'edit' && post ? (
+          <PostComposer
+            forum={post.forum}
+            initialExcerpt={post.excerpt}
+            initialMedia={post.media}
+            initialTitle={post.title}
+            isSubmitting={updatePost.isPending}
+            onDismiss={() => setPostSheetMode(null)}
+            onSubmit={(draftPost) =>
+              updatePost.mutate(
+                {
+                  excerpt: draftPost.excerpt,
+                  existingMedia: draftPost.existingMedia,
+                  forum: draftPost.forum,
+                  newMedia: draftPost.newMedia,
+                  postId: post.id,
+                  title: draftPost.title,
+                },
+                {
+                  onSuccess: () => {
+                    setPostSheetMode(null);
+                    void Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
+                  },
+                  onError: () =>
+                    showToast("Couldn't save your changes. Try again."),
+                },
+              )
+            }
+            subforums={subforumNames}
+            submitLabel='Save'
+          />
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            {isOwnPost ? (
+              <>
+                <SheetRow icon='Edit' label='Edit post' onPress={handleEditPost} />
+                <Divider />
+                <SheetRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Delete post'
+                  onPress={handleDeletePost}
+                />
+              </>
+            ) : (
+              <>
+                <SheetRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={handleBlockPost}
+                />
+                <Divider />
+                <SheetRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report post'
+                  onPress={handleReportPost}
+                />
+              </>
+            )}
+          </View>
+        )}
       </Sheet>
 
       <Modal
@@ -671,43 +708,6 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
           </Pressable>
         </Pressable>
       </Modal>
-
-      {post ? (
-        <Sheet onClose={() => setIsEditingPost(false)} visible={isEditingPost}>
-          <PostComposer
-            forum={post.forum}
-            initialExcerpt={post.excerpt}
-            initialMedia={post.media}
-            initialTitle={post.title}
-            isSubmitting={updatePost.isPending}
-            onDismiss={() => setIsEditingPost(false)}
-            onSubmit={(draftPost) =>
-              updatePost.mutate(
-                {
-                  excerpt: draftPost.excerpt,
-                  existingMedia: draftPost.existingMedia,
-                  forum: draftPost.forum,
-                  newMedia: draftPost.newMedia,
-                  postId: post.id,
-                  title: draftPost.title,
-                },
-                {
-                  onSuccess: () => {
-                    setIsEditingPost(false);
-                    void Haptics.notificationAsync(
-                      Haptics.NotificationFeedbackType.Success,
-                    );
-                  },
-                  onError: () =>
-                    showToast("Couldn't save your changes. Try again."),
-                },
-              )
-            }
-            subforums={subforumNames}
-            submitLabel='Save'
-          />
-        </Sheet>
-      ) : null}
 
       <PinExplainerModal
         onCancel={() => setPinExplainerOpen(false)}
