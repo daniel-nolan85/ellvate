@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -242,16 +242,7 @@ export function MissionsScreen({
         />
       </Sheet>
 
-      <SearchSheet
-        getKey={(mission) => mission.id}
-        getSubtitle={(mission) => mission.description}
-        getTitle={(mission) => mission.title}
-        items={missions}
-        onClose={() => setIsSearching(false)}
-        onSelect={(mission) => onOpenMission?.(mission.id)}
-        placeholder="Search missions"
-        visible={isSearching}
-      />
+      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
 
       <MissionCelebrationModal
         awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
