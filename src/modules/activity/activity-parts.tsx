@@ -67,12 +67,24 @@ export function FilterChips({
             }`}
             key={filter.key}
             onPress={() => onSelect(filter.key)}
-            // Sized to the row's longest label ("Missions"/"Services") so
-            // every pill reads as the same size -- a flat 64px floor stopped
-            // "All" from shrink-wrapping to a near-circular blob, but still
-            // left it and "Posts" looking visibly smaller than their
-            // longer-labeled neighbors.
-            style={{ minWidth: 92 }}
+            // minWidth is sized to the row's longest label ("Missions"/
+            // "Services") so every pill reads as the same size -- a flat
+            // 64px floor stopped "All" from shrink-wrapping to a near-
+            // circular blob, but still left it and "Posts" looking visibly
+            // smaller than their longer-labeled neighbors.
+            //
+            // minHeight is an explicit floor (padding + line-height) rather
+            // than relying on padding alone to imply the height: when "All"
+            // is selected, all four activity sections mount at once below
+            // this row (vs. exactly one for any other filter), and that much
+            // larger simultaneous layout commit could leave an inactive
+            // pill's native frame shorter than its text needs for that
+            // render -- clipping the tops of letters, self-correcting only
+            // once a different filter's smaller commit lands. An explicit
+            // minHeight means Yoga/UIKit can never commit a rectangle too
+            // short for the text to fit, regardless of what triggered the
+            // undersized frame.
+            style={{ minHeight: 32, minWidth: 92 }}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${
