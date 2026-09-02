@@ -15,7 +15,7 @@ import {
   canAccessCommunityRoutes,
   ClerkAuthGate,
 } from '@/src/modules/authentication';
-import { AssistantButton } from '@/src/modules/community-shell';
+import { AssistantButton, SHEET_SCREEN_OPTIONS } from '@/src/modules/community-shell';
 import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { AppProviders } from '@/src/platform/providers';
 import { PushRegistration } from '@/src/platform/push';
@@ -65,6 +65,13 @@ function AppNavigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="petition/[id]" />
+          {/* Same drill-in treatment as post/[id/petition/[id] above --
+              these were previously left undeclared, which meant Expo Router
+              auto-registered them outside this guard entirely (not gated by
+              canAccessCommunity at all), the same gap `leaderboard` had. */}
+          <Stack.Screen name="mission/[id]" />
+          <Stack.Screen name="event/[id]" />
+          <Stack.Screen name="service/[id]" />
           <Stack.Screen name="protected" />
           {/* A native `presentation: 'modal'` screen isn't flush with the
               real screen origin (iOS presents it as an inset page sheet),
@@ -89,14 +96,18 @@ function AppNavigator() {
               screen. */}
           <Stack.Screen name="profile" options={{ animation: 'none' }} />
           <Stack.Screen name="leaderboard" options={{ animation: 'none' }} />
-          <Stack.Screen
-            name="notifications"
-            options={{ presentation: 'modal' }}
-          />
           <Stack.Screen name="activity" options={{ animation: 'none' }} />
           <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
           <Stack.Screen name="blocked-users" options={{ animation: 'none' }} />
-          <Stack.Screen name="digest" options={{ presentation: 'modal' }} />
+          {/* Every dismissible overlay now shares one presentation -- see
+              SHEET_SCREEN_OPTIONS. */}
+          <Stack.Screen name="notifications" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen name="digest" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen name="member/[userId]" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen
+            name="member/[userId]/activity"
+            options={SHEET_SCREEN_OPTIONS}
+          />
           {/* A summoned utility overlay (like `assistant`), not a drill-in
               from a list -- slides up rather than the default right-to-left
               push, and stays a plain pushed screen (not `presentation:

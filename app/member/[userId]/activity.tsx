@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 import { MemberActivityScreen } from '@/src/modules/activity';
 
@@ -10,11 +10,6 @@ export default function MemberActivityRoute() {
   }>();
 
   return (
-    <MemberActivityScreen
-      filter={filter}
-      loadingName={name}
-      onClose={() => router.back()}
-      userId={userId}
-    />
+    <MemberActivityScreen filter={filter} loadingName={name} userId={userId} />
   );
 }

@@ -24,7 +24,6 @@ import {
 } from './use-digest';
 
 interface DigestScreenProps {
-  readonly onClose: () => void;
   readonly weekStart?: string;
 }
 
@@ -241,7 +240,7 @@ function ComingUpMissionRow({
   );
 }
 
-export function DigestScreen({ onClose, weekStart }: DigestScreenProps) {
+export function DigestScreen({ weekStart }: DigestScreenProps) {
   const insets = useSafeAreaInsets();
   const digest = useWeeklyDigest(weekStart);
   const toggleLike = useToggleLike();
@@ -260,22 +259,16 @@ export function DigestScreen({ onClose, weekStart }: DigestScreenProps) {
 
   return (
     <View className="flex-1 bg-canvas">
-      {/* A `presentation: 'modal'` Stack.Screen already renders below the
-          notch/status bar on its own -- unlike Sheet's statusBarTranslucent
-          custom Modal, which spans behind it and needs its own insets.top
-          handling. Adding insets.top here on top of that double-applies the
-          safe-area inset, showing as a large empty gap above the title. */}
+      {/* No manual close button -- this screen is presented as a native
+          formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
+          dismiss, and tap-outside already cover closing it. A `formSheet`
+          page's content starts well below the physical top edge, so this
+          only needs a small fixed gap, not insets.top -- unlike Sheet's
+          statusBarTranslucent custom Modal, which spans behind the notch. */}
       <HStack className="items-center justify-between px-5 pb-1 pt-3">
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap
         </Heading>
-        <Pressable
-          accessibilityLabel="Close"
-          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          onPress={onClose}
-        >
-          <Icon name="Close" size={18} />
-        </Pressable>
       </HStack>
 
       <TabSwitcher active={tab} onSelect={setTab} />
