@@ -1,0 +1,18 @@
+-- Fixes a live bug: the petitions list ("In progress" tab) and detail routes
+-- were failing with "Could not load petitions" for every user, and a newly
+-- created petition never appeared afterward -- even though the INSERT into
+-- `petitions` itself always succeeded.
+--
+-- petitions-supabase.ts's list/detail reads also run a direct client-side
+-- SELECT against `petition_signatures` (to compute the viewer's own `signed`
+-- flag), skipped only when the page is empty. 0035_petitions.sql enabled RLS
+-- on petition_signatures and wrote a correct "read own petition signature"
+-- policy, but never granted SELECT on the table to `authenticated` at all --
+-- its own comment explains the (incomplete) reasoning: "all writes go
+-- through the RPC" (toggle_petition_signature, security definer, bypasses
+-- grants/RLS). That's true for writes, but this read path queries the table
+-- directly as the calling user's own role, which Postgres rejects with
+-- "permission denied" before RLS is ever evaluated -- the correct policy was
+-- completely inert, the same class of bug 0048 fixed, just the inverse
+-- failure mode (too closed instead of too open).
+grant select on public.petition_signatures to authenticated;
