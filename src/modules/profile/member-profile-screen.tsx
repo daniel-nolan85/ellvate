@@ -118,36 +118,30 @@ export function MemberProfileScreen({
 
   return (
     <View className='flex-1 bg-canvas'>
-      <HStack
-        className='items-center justify-between px-5 pb-3'
-        style={{ paddingTop: insets.top + 12 }}
-      >
+      {/* No manual close button -- this screen is presented as a native
+          formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
+          dismiss, and tap-outside already cover closing it. A `formSheet`
+          page's content starts well below the physical top edge, so this
+          only needs a small fixed gap, not insets.top -- unlike Sheet's
+          statusBarTranslucent custom Modal, which spans behind the notch. */}
+      <HStack className='items-center justify-between px-5 pb-3 pt-3'>
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
-        <HStack space='sm'>
-          {!isSelf && !blockedUsers.isPending ? (
-            <Pressable
-              accessibilityLabel={
-                isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'
-              }
-              className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-              disabled={blockUser.isPending}
-              onPress={() =>
-                isBlocked ? handleUnblock() : setConfirmBlockOpen(true)
-              }
-            >
-              <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
-            </Pressable>
-          ) : null}
+        {!isSelf && !blockedUsers.isPending ? (
           <Pressable
-            accessibilityLabel='Close'
+            accessibilityLabel={
+              isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'
+            }
             className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-            onPress={onClose}
+            disabled={blockUser.isPending}
+            onPress={() =>
+              isBlocked ? handleUnblock() : setConfirmBlockOpen(true)
+            }
           >
-            <Icon name='Close' size={18} />
+            <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
           </Pressable>
-        </HStack>
+        ) : null}
       </HStack>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>

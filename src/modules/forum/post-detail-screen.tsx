@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -94,19 +93,21 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<ForumComment | null>(null);
   const [actionsFor, setActionsFor] = useState<ForumComment | null>(null);
-  const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
-  const [commentPendingDelete, setCommentPendingDelete] =
-    useState<ForumComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  // A single Sheet whose content switches by mode, rather than two separate
-  // Sheet instances -- closing one Sheet and opening another in quick
-  // succession briefly presents two native Modals at once (a Sheet stays
-  // mounted, rendering its own full-screen Modal, until its close animation
-  // finishes), which corrupts UIKit's presentation stack and can leave the
-  // screen permanently unresponsive. One Sheet mounted at a time can never
-  // race itself this way.
-  const [postSheetMode, setPostSheetMode] = useState<'menu' | 'edit' | null>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // A single Sheet whose content switches by mode, rather than separate Sheet
+  // (or Sheet + native Modal) instances -- closing one and opening another in
+  // quick succession briefly presents two native Modals at once (a Sheet
+  // stays mounted, rendering its own full-screen Modal, until its close
+  // animation finishes), which corrupts UIKit's presentation stack and can
+  // leave the screen permanently unresponsive. One Sheet mounted at a time
+  // can never race itself this way -- applies to both the post's own
+  // menu/edit/delete-confirm flow and the comment actions/delete-confirm flow.
+  const [postSheetMode, setPostSheetMode] = useState<
+    'menu' | 'edit' | 'confirm-delete' | null
+  >(null);
+  const [commentSheetMode, setCommentSheetMode] = useState<
+    'actions' | 'confirm-delete' | null
+  >(null);
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const isOwnPost = post !== undefined && userId === post.author.id;
@@ -148,15 +149,14 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   };
 
   const handleDeletePost = () => {
-    setPostSheetMode(null);
-    setConfirmDeleteOpen(true);
+    setPostSheetMode('confirm-delete');
   };
 
   const confirmDeletePost = () => {
     if (!post) {
       return;
     }
-    setConfirmDeleteOpen(false);
+    setPostSheetMode(null);
     deletePost.mutate(post.id, {
       onSuccess: () => {
         void Haptics.notificationAsync(
@@ -228,13 +228,13 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
 
   const openCommentActions = (comment: ForumComment) => {
     setActionsFor(comment);
-    setActionsSheetOpen(true);
+    setCommentSheetMode('actions');
   };
 
-  const closeCommentActions = () => setActionsSheetOpen(false);
+  const closeCommentActions = () => setCommentSheetMode(null);
 
   const handleStartEditComment = (comment: ForumComment) => {
-    setActionsSheetOpen(false);
+    setCommentSheetMode(null);
     setReplyTo(null);
     setEditingComment(comment);
     setDraft(comment.body);
@@ -246,16 +246,12 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   };
 
   const handleRequestDeleteComment = () => {
-    const target = actionsFor;
-    setActionsSheetOpen(false);
-    if (target) {
-      setCommentPendingDelete(target);
-    }
+    setCommentSheetMode('confirm-delete');
   };
 
   const confirmDeleteComment = () => {
-    const target = commentPendingDelete;
-    setCommentPendingDelete(null);
+    const target = actionsFor;
+    setCommentSheetMode(null);
     if (!target) {
       return;
     }
@@ -497,84 +493,9 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
         />
       </KeyboardAvoidingView>
 
-      <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          <SheetRow
-            icon='Link'
-            label='Copy link to comment'
-            onPress={() => {
-              closeCommentActions();
-              showToast('Link copied');
-            }}
-          />
-          <Divider />
-          {actionsFor && actionsFor.author.id === userId ? (
-            <>
-              <SheetRow
-                icon='Edit'
-                label='Edit comment'
-                onPress={() => actionsFor && handleStartEditComment(actionsFor)}
-              />
-              <Divider />
-              <SheetRow
-                destructive
-                icon='AlertCircle'
-                label='Delete comment'
-                onPress={handleRequestDeleteComment}
-              />
-            </>
-          ) : (
-            <>
-              <SheetRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  blockUser.mutate(target.author.id, {
-                    onError: () =>
-                      showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
-                  });
-                }}
-              />
-              <Divider />
-              <SheetRow
-                destructive
-                icon='AlertCircle'
-                label='Report comment'
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  reportComment.mutate(target.id, {
-                    onError: () =>
-                      showToast('Couldn’t report this comment. Try again.'),
-                    onSuccess: () =>
-                      showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
-              />
-            </>
-          )}
-        </View>
-      </Sheet>
-
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setCommentPendingDelete(null)}
-        transparent
-        visible={commentPendingDelete !== null}
-      >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setCommentPendingDelete(null)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(event) => event.stopPropagation()}
-          >
+      <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
+        {commentSheetMode === 'confirm-delete' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete comment?
             </Text>
@@ -582,7 +503,7 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
               This can’t be undone.
             </Text>
             <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setCommentPendingDelete(null)}>
+              <Pressable onPress={() => setCommentSheetMode(null)}>
                 <Text className='font-inter-semibold text-[15px] text-content'>
                   Cancel
                 </Text>
@@ -596,9 +517,71 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
                 </Text>
               </Pressable>
             </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            <SheetRow
+              icon='Link'
+              label='Copy link to comment'
+              onPress={() => {
+                closeCommentActions();
+                showToast('Link copied');
+              }}
+            />
+            <Divider />
+            {actionsFor && actionsFor.author.id === userId ? (
+              <>
+                <SheetRow
+                  icon='Edit'
+                  label='Edit comment'
+                  onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+                />
+                <Divider />
+                <SheetRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Delete comment'
+                  onPress={handleRequestDeleteComment}
+                />
+              </>
+            ) : (
+              <>
+                <SheetRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={() => {
+                    const target = actionsFor;
+                    closeCommentActions();
+                    if (!target) return;
+                    blockUser.mutate(target.author.id, {
+                      onError: () =>
+                        showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                    });
+                  }}
+                />
+                <Divider />
+                <SheetRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report comment'
+                  onPress={() => {
+                    const target = actionsFor;
+                    closeCommentActions();
+                    if (!target) return;
+                    reportComment.mutate(target.id, {
+                      onError: () =>
+                        showToast('Couldn’t report this comment. Try again.'),
+                      onSuccess: () =>
+                        showToast('Thanks — our moderators will take a look.'),
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        )}
+      </Sheet>
 
       <Sheet
         onClose={() => setPostSheetMode(null)}
@@ -637,6 +620,30 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
             subforums={subforumNames}
             submitLabel='Save'
           />
+        ) : postSheetMode === 'confirm-delete' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
+            <Text className='font-inter-bold text-[17px] text-content'>
+              Delete post?
+            </Text>
+            <Text className='pb-3 text-text-muted' size='sm'>
+              This can’t be undone.
+            </Text>
+            <HStack className='justify-end gap-3'>
+              <Pressable onPress={() => setPostSheetMode(null)}>
+                <Text className='font-inter-semibold text-[15px] text-content'>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable onPress={confirmDeletePost}>
+                <Text
+                  className='font-inter-semibold text-[15px]'
+                  style={{ color: COLOR_DESTRUCTIVE }}
+                >
+                  Delete
+                </Text>
+              </Pressable>
+            </HStack>
+          </View>
         ) : (
           <View className='gap-1 px-[18px] pb-2'>
             {isOwnPost ? (
@@ -669,45 +676,6 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
           </View>
         )}
       </Sheet>
-
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setConfirmDeleteOpen(false)}
-        transparent
-        visible={confirmDeleteOpen}
-      >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setConfirmDeleteOpen(false)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(event) => event.stopPropagation()}
-          >
-            <Text className='font-inter-bold text-[17px] text-content'>
-              Delete post?
-            </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
-              This can’t be undone.
-            </Text>
-            <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setConfirmDeleteOpen(false)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable onPress={confirmDeletePost}>
-                <Text
-                  className='font-inter-semibold text-[15px]'
-                  style={{ color: COLOR_DESTRUCTIVE }}
-                >
-                  Delete
-                </Text>
-              </Pressable>
-            </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       <PinExplainerModal
         onCancel={() => setPinExplainerOpen(false)}

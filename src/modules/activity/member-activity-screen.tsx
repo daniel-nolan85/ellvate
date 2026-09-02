@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -85,13 +85,11 @@ interface MemberActivityScreenProps {
   readonly userId: string;
   readonly loadingName?: string;
   readonly filter?: string;
-  readonly onClose: () => void;
 }
 
 export function MemberActivityScreen({
   filter: filterParam,
   loadingName,
-  onClose,
   userId,
 }: MemberActivityScreenProps) {
   const insets = useSafeAreaInsets();
@@ -194,10 +192,13 @@ export function MemberActivityScreen({
 
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center justify-between px-5 pb-3"
-        style={{ paddingTop: insets.top + 12 }}
-      >
+      {/* No manual close button -- this screen is presented as a native
+          formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
+          dismiss, and tap-outside already cover closing it. A `formSheet`
+          page's content starts well below the physical top edge, so this
+          only needs a small fixed gap, not insets.top -- unlike Sheet's
+          statusBarTranslucent custom Modal, which spans behind the notch. */}
+      <HStack className="items-center justify-between px-5 pb-3 pt-3">
         <VStack>
           <Text className="text-text-muted" size="xs">
             Activity
@@ -206,13 +207,6 @@ export function MemberActivityScreen({
             {displayName}
           </Heading>
         </VStack>
-        <Pressable
-          accessibilityLabel="Close"
-          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          onPress={onClose}
-        >
-          <Icon name="Close" size={18} />
-        </Pressable>
       </HStack>
 
       {activity.isPending ? (

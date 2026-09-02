@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { router } from 'expo-router';
+
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -132,7 +133,6 @@ export function MissionsScreen({
   const progress = useMissionsProgress();
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   const missions = missionsView.data?.pages.flatMap((page) => page.missions) ?? [];
@@ -156,7 +156,7 @@ export function MissionsScreen({
         <VStack className="gap-4">
           <ScreenTitle
             eyebrow="Explore & earn"
-            onSearch={() => setIsSearching(true)}
+            onSearch={() => router.push('/search')}
             right={
               <HStack className="items-center gap-2">
                 {onOpenLeaderboard ? (
@@ -241,8 +241,6 @@ export function MissionsScreen({
           }
         />
       </Sheet>
-
-      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
 
       <MissionCelebrationModal
         awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}

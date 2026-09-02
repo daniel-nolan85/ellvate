@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -124,16 +123,20 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const reportReview = useReportServiceReview();
   const blockUser = useBlockUser();
 
-  // A single Sheet whose content switches by mode, rather than two separate
-  // Sheet instances -- closing one Sheet and opening another in quick
-  // succession briefly presents two native Modals at once (a Sheet stays
-  // mounted, rendering its own full-screen Modal, until its close animation
+  // A single Sheet whose content switches by mode, rather than separate
+  // Sheet/Modal instances -- closing one and opening another in the same
+  // tick briefly presents two native Modals at once (a Sheet stays mounted,
+  // rendering its own full-screen Modal, until its close animation
   // finishes), which corrupts UIKit's presentation stack and can leave the
-  // screen permanently unresponsive.
-  const [sheetMode, setSheetMode] = useState<'menu' | 'edit' | null>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // screen permanently unresponsive. Applies to both the listing's own
+  // menu/edit/delete-confirm flow and the review actions/edit flow.
+  const [sheetMode, setSheetMode] = useState<
+    'menu' | 'edit' | 'confirm-delete' | null
+  >(null);
   const [actionsFor, setActionsFor] = useState<ServiceReview | null>(null);
-  const [editingReview, setEditingReview] = useState<ServiceReview | null>(null);
+  const [reviewSheetMode, setReviewSheetMode] = useState<'actions' | 'edit' | null>(
+    null,
+  );
   const [toast, setToast] = useState<string | null>(null);
   // Forces the create-review composer to remount (fresh, empty state) only
   // once a submission actually succeeds — see the WHY comment in
@@ -152,7 +155,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
     if (!listing) {
       return;
     }
-    setConfirmDeleteOpen(false);
+    setSheetMode(null);
     deleteListing.mutate(listing.id, {
       onSuccess: () => {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -365,7 +368,10 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
             {reviewList.map((review) => (
               <ServiceReviewItem
                 key={review.id}
-                onActions={setActionsFor}
+                onActions={(review) => {
+                  setActionsFor(review);
+                  setReviewSheetMode('actions');
+                }}
                 onOpenAuthor={openProfile}
                 review={review}
               />
@@ -442,42 +448,8 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
             }
             submitLabel="Save"
           />
-        ) : (
-          <View className="gap-1 px-[18px] pb-2">
-            <ListingMenuRow
-              icon="Edit"
-              label="Edit listing"
-              onPress={() => setSheetMode('edit')}
-            />
-            <Divider />
-            <ListingMenuRow
-              destructive
-              icon="AlertCircle"
-              label="Delete listing"
-              onPress={() => {
-                setSheetMode(null);
-                setConfirmDeleteOpen(true);
-              }}
-            />
-          </View>
-        )}
-      </Sheet>
-
-      {/* Delete confirmation */}
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setConfirmDeleteOpen(false)}
-        transparent
-        visible={confirmDeleteOpen}
-      >
-        <Pressable
-          className="flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8"
-          onPress={() => setConfirmDeleteOpen(false)}
-        >
-          <Pressable
-            className="w-full gap-1 rounded-[20px] bg-paper p-5"
-            onPress={(event) => event.stopPropagation()}
-          >
+        ) : sheetMode === 'confirm-delete' ? (
+          <View className="gap-1 px-[18px] pb-4 pt-1">
             <Text className="font-inter-bold text-[17px] text-content">
               Delete this listing?
             </Text>
@@ -485,7 +457,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               This can’t be undone. All of its reviews will be removed too.
             </Text>
             <HStack className="justify-end gap-3">
-              <Pressable onPress={() => setConfirmDeleteOpen(false)}>
+              <Pressable onPress={() => setSheetMode(null)}>
                 <Text className="font-inter-semibold text-[15px] text-content">
                   Cancel
                 </Text>
@@ -499,94 +471,45 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                 </Text>
               </Pressable>
             </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Review actions */}
-      <Sheet onClose={() => setActionsFor(null)} visible={actionsFor !== null}>
-        <View className="gap-1 px-[18px] pb-2">
-          {actionsFor && actionsFor.author.id === userId ? (
-            <>
-              <ListingMenuRow
-                icon="Edit"
-                label="Edit review"
-                onPress={() => {
-                  const target = actionsFor;
-                  setActionsFor(null);
-                  setEditingReview(target);
-                }}
-              />
-              <Divider />
-              <ListingMenuRow
-                destructive
-                icon="AlertCircle"
-                label="Delete review"
-                onPress={() => {
-                  const target = actionsFor;
-                  setActionsFor(null);
-                  deleteReview.mutate(target.id, {
-                    onError: () =>
-                      showToast('Couldn’t delete this review. Try again.'),
-                  });
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <ListingMenuRow
-                icon="EyeOff"
-                label="Block this neighbour"
-                onPress={() => {
-                  const target = actionsFor;
-                  setActionsFor(null);
-                  if (!target) return;
-                  blockUser.mutate(target.author.id, {
-                    onError: () =>
-                      showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
-                  });
-                }}
-              />
-              <Divider />
-              <ListingMenuRow
-                destructive
-                icon="AlertCircle"
-                label="Report review"
-                onPress={() => {
-                  const target = actionsFor;
-                  setActionsFor(null);
-                  if (!target) return;
-                  reportReview.mutate(target.id, {
-                    onError: () =>
-                      showToast('Couldn’t report this review. Try again.'),
-                    onSuccess: () =>
-                      showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
-              />
-            </>
-          )}
-        </View>
+          </View>
+        ) : (
+          <View className="gap-1 px-[18px] pb-2">
+            <ListingMenuRow
+              icon="Edit"
+              label="Edit listing"
+              onPress={() => setSheetMode('edit')}
+            />
+            <Divider />
+            <ListingMenuRow
+              destructive
+              icon="AlertCircle"
+              label="Delete listing"
+              onPress={() => setSheetMode('confirm-delete')}
+            />
+          </View>
+        )}
       </Sheet>
 
-      {/* Edit review sheet */}
-      <Sheet onClose={() => setEditingReview(null)} visible={editingReview !== null}>
-        <View className="px-[18px] pb-2">
-          {editingReview ? (
+      {/* Review actions / edit -- one Sheet, content switches by mode */}
+      <Sheet
+        onClose={() => setReviewSheetMode(null)}
+        visible={reviewSheetMode !== null}
+      >
+        {reviewSheetMode === 'edit' && actionsFor ? (
+          <View className="px-[18px] pb-2">
             <ServiceReviewComposer
-              initialBody={editingReview.body}
-              initialRating={editingReview.rating}
+              initialBody={actionsFor.body}
+              initialRating={actionsFor.rating}
               isSubmitting={updateReview.isPending}
-              onCancel={() => setEditingReview(null)}
+              onCancel={() => setReviewSheetMode(null)}
               onSubmit={(input) =>
                 updateReview.mutate(
-                  { reviewId: editingReview.id, ...input },
+                  { reviewId: actionsFor.id, ...input },
                   {
                     onError: () =>
                       showToast("Couldn't save your changes. Try again."),
                     onSuccess: () => {
-                      setEditingReview(null);
+                      setReviewSheetMode(null);
                       void Haptics.notificationAsync(
                         Haptics.NotificationFeedbackType.Success,
                       );
@@ -597,8 +520,68 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
               submitLabel="Save"
               title="Edit review"
             />
-          ) : null}
-        </View>
+          </View>
+        ) : (
+          <View className="gap-1 px-[18px] pb-2">
+            {actionsFor && actionsFor.author.id === userId ? (
+              <>
+                <ListingMenuRow
+                  icon="Edit"
+                  label="Edit review"
+                  onPress={() => setReviewSheetMode('edit')}
+                />
+                <Divider />
+                <ListingMenuRow
+                  destructive
+                  icon="AlertCircle"
+                  label="Delete review"
+                  onPress={() => {
+                    const target = actionsFor;
+                    setReviewSheetMode(null);
+                    deleteReview.mutate(target.id, {
+                      onError: () =>
+                        showToast('Couldn’t delete this review. Try again.'),
+                    });
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <ListingMenuRow
+                  icon="EyeOff"
+                  label="Block this neighbour"
+                  onPress={() => {
+                    const target = actionsFor;
+                    setReviewSheetMode(null);
+                    if (!target) return;
+                    blockUser.mutate(target.author.id, {
+                      onError: () =>
+                        showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                    });
+                  }}
+                />
+                <Divider />
+                <ListingMenuRow
+                  destructive
+                  icon="AlertCircle"
+                  label="Report review"
+                  onPress={() => {
+                    const target = actionsFor;
+                    setReviewSheetMode(null);
+                    if (!target) return;
+                    reportReview.mutate(target.id, {
+                      onError: () =>
+                        showToast('Couldn’t report this review. Try again.'),
+                      onSuccess: () =>
+                        showToast('Thanks — our moderators will take a look.'),
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        )}
       </Sheet>
 
       {toast ? (

@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -50,7 +50,6 @@ interface ForumScreenProps {
 export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   const [activeForum, setActiveForum] = useState('All');
   const [isComposing, setIsComposing] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const subforums = useSubforums();
   const profile = useProfile();
   // "For You" is a client-side filter over the same fetch as "All" — no
@@ -125,7 +124,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       <VStack space="md">
         <ScreenTitle
           eyebrow="Lake Las Vegas"
-          onSearch={() => setIsSearching(true)}
+          onSearch={() => router.push('/search')}
           right={
             <Button
               className="rounded-full bg-accent px-4"
@@ -216,8 +215,6 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           </Text>
         ) : null}
       </Sheet>
-
-      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
 
       <PinExplainerModal
         onCancel={pinAction.cancelPending}

@@ -373,7 +373,12 @@ export function ProfileScreen() {
   return (
     <View className="flex-1 bg-canvas">
       <View style={{ paddingTop: insets.top }}>
-        <ScreenTitle eyebrow="Account" showAvatar={false} title="Profile" />
+        <ScreenTitle
+          eyebrow="Account"
+          onSearch={() => router.push('/search')}
+          showAvatar={false}
+          title="Profile"
+        />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>

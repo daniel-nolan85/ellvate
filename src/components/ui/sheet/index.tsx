@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -27,6 +28,9 @@ const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 800;
 // Off-screen offset used before the panel has measured its own height.
 const HIDDEN_OFFSET = 900;
+// Minimum clearance kept between the safe-area top (the notch/status bar)
+// and the sheet's own top edge, on top of insets.top itself.
+const MIN_TOP_GAP = 16;
 
 interface SheetProps {
   readonly visible: boolean;
@@ -48,6 +52,7 @@ export function Sheet({
   visible,
 }: SheetProps) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
   const translateY = useSharedValue(HIDDEN_OFFSET);
   const height = useSharedValue(HIDDEN_OFFSET);
@@ -190,12 +195,21 @@ export function Sheet({
                 backgroundColor: 'rgb(253,247,237)',
                 borderTopLeftRadius: 24,
                 borderTopRightRadius: 24,
-                maxHeight: '92%',
+                // A flat percentage of the *full* screen height (the Modal is
+                // statusBarTranslucent, so its coordinate space spans behind
+                // the notch/status bar too) reserved only a flat 8% gap at
+                // the top regardless of device -- not guaranteed to clear the
+                // real safe-area inset. Unusually tall content (e.g. Edit
+                // Profile's form) could then render its drag handle under the
+                // notch. Bounding by the actual inset plus a fixed margin
+                // means the sheet can never physically extend past the safe
+                // area, whatever the content's height.
+                maxHeight: windowHeight - insets.top - MIN_TOP_GAP,
                 paddingBottom: insets.bottom + 12,
               },
             ]}
           >
-            <View className="items-center pb-1 pt-2.5">
+            <View className="items-center pb-2.5 pt-4">
               <View className="h-1 w-10 rounded-full bg-line" />
             </View>
             {children}

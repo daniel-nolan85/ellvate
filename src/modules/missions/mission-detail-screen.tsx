@@ -134,21 +134,23 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   const reportCheckIn = useReportCheckIn();
 
   const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
-  // A single Sheet whose content switches by mode, rather than two separate
-  // Sheet instances -- closing one Sheet and opening another in quick
-  // succession briefly presents two native Modals at once (a Sheet stays
-  // mounted, rendering its own full-screen Modal, until its close animation
+  // A single Sheet whose content switches by mode, rather than separate
+  // Sheet/Modal instances -- closing one and opening another in the same
+  // tick briefly presents two native Modals at once (a Sheet stays mounted,
+  // rendering its own full-screen Modal, until its close animation
   // finishes), which corrupts UIKit's presentation stack and can leave the
-  // screen permanently unresponsive.
-  const [sheetMode, setSheetMode] = useState<'menu' | 'edit' | null>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // screen permanently unresponsive. Applies to both the mission's own
+  // menu/edit/delete-confirm flow and the comment actions/delete-confirm flow.
+  const [sheetMode, setSheetMode] = useState<
+    'menu' | 'edit' | 'confirm-delete' | null
+  >(null);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<MissionComment | null>(null);
   const [actionsFor, setActionsFor] = useState<MissionComment | null>(null);
-  const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
-  const [commentPendingDelete, setCommentPendingDelete] =
-    useState<MissionComment | null>(null);
+  const [commentSheetMode, setCommentSheetMode] = useState<
+    'actions' | 'confirm-delete' | null
+  >(null);
   const [toast, setToast] = useState<string | null>(null);
   const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(null);
   const [reportTarget, setReportTarget] = useState<CheckInEntry | null>(null);
@@ -216,7 +218,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
     if (!mission) {
       return;
     }
-    setConfirmDeleteOpen(false);
+    setSheetMode(null);
     deleteMission.mutate(mission.id, {
       onSuccess: () => {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -275,13 +277,13 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
 
   const openCommentActions = (comment: MissionComment) => {
     setActionsFor(comment);
-    setActionsSheetOpen(true);
+    setCommentSheetMode('actions');
   };
 
-  const closeCommentActions = () => setActionsSheetOpen(false);
+  const closeCommentActions = () => setCommentSheetMode(null);
 
   const handleStartEditComment = (comment: MissionComment) => {
-    setActionsSheetOpen(false);
+    setCommentSheetMode(null);
     setReplyTo(null);
     setEditingComment(comment);
     setDraft(comment.body);
@@ -293,16 +295,12 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
   };
 
   const handleRequestDeleteComment = () => {
-    const target = actionsFor;
-    setActionsSheetOpen(false);
-    if (target) {
-      setCommentPendingDelete(target);
-    }
+    setCommentSheetMode('confirm-delete');
   };
 
   const confirmDeleteComment = () => {
-    const target = commentPendingDelete;
-    setCommentPendingDelete(null);
+    const target = actionsFor;
+    setCommentSheetMode(null);
     if (!target) {
       return;
     }
@@ -677,6 +675,30 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
             }
             submitLabel='Save'
           />
+        ) : sheetMode === 'confirm-delete' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
+            <Text className='font-inter-bold text-[17px] text-content'>
+              Delete this mission?
+            </Text>
+            <Text className='pb-3 text-text-muted' size='sm'>
+              This can’t be undone. Everyone’s progress on it will be lost.
+            </Text>
+            <HStack className='justify-end gap-3'>
+              <Pressable onPress={() => setSheetMode(null)}>
+                <Text className='font-inter-semibold text-[15px] text-content'>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable onPress={handleDeleteMission}>
+                <Text
+                  className='font-inter-semibold text-[15px]'
+                  style={{ color: 'rgb(231,0,11)' }}
+                >
+                  Delete
+                </Text>
+              </Pressable>
+            </HStack>
+          </View>
         ) : (
           <View className='gap-1 px-[18px] pb-2'>
             {isOwnMission ? (
@@ -691,10 +713,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
                   destructive
                   icon='AlertCircle'
                   label='Delete mission'
-                  onPress={() => {
-                    setSheetMode(null);
-                    setConfirmDeleteOpen(true);
-                  }}
+                  onPress={() => setSheetMode('confirm-delete')}
                 />
               </>
             ) : (
@@ -731,117 +750,10 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
         )}
       </Sheet>
 
-      {/* Delete confirmation */}
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setConfirmDeleteOpen(false)}
-        transparent
-        visible={confirmDeleteOpen}
-      >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setConfirmDeleteOpen(false)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(event) => event.stopPropagation()}
-          >
-            <Text className='font-inter-bold text-[17px] text-content'>
-              Delete this mission?
-            </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
-              This can’t be undone. Everyone’s progress on it will be lost.
-            </Text>
-            <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setConfirmDeleteOpen(false)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable onPress={handleDeleteMission}>
-                <Text
-                  className='font-inter-semibold text-[15px]'
-                  style={{ color: 'rgb(231,0,11)' }}
-                >
-                  Delete
-                </Text>
-              </Pressable>
-            </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Comment actions */}
-      <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          {actionsFor && actionsFor.author.id === userId ? (
-            <>
-              <MissionMenuRow
-                icon='Edit'
-                label='Edit comment'
-                onPress={() => actionsFor && handleStartEditComment(actionsFor)}
-              />
-              <Divider />
-              <MissionMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Delete comment'
-                onPress={handleRequestDeleteComment}
-              />
-            </>
-          ) : (
-            <>
-              <MissionMenuRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  blockUser.mutate(target.author.id, {
-                    onError: () =>
-                      showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
-                  });
-                }}
-              />
-              <Divider />
-              <MissionMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Report comment'
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  reportComment.mutate(target.id, {
-                    onError: () =>
-                      showToast('Couldn’t report this comment. Try again.'),
-                    onSuccess: () =>
-                      showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
-              />
-            </>
-          )}
-        </View>
-      </Sheet>
-
-      {/* Delete-comment confirmation */}
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setCommentPendingDelete(null)}
-        transparent
-        visible={commentPendingDelete !== null}
-      >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setCommentPendingDelete(null)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(event) => event.stopPropagation()}
-          >
+      {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
+      <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
+        {commentSheetMode === 'confirm-delete' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete comment?
             </Text>
@@ -849,7 +761,7 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
               This can’t be undone.
             </Text>
             <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setCommentPendingDelete(null)}>
+              <Pressable onPress={() => setCommentSheetMode(null)}>
                 <Text className='font-inter-semibold text-[15px] text-content'>
                   Cancel
                 </Text>
@@ -863,9 +775,62 @@ export function MissionDetailScreen({ missionId, onBack }: MissionDetailScreenPr
                 </Text>
               </Pressable>
             </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            {actionsFor && actionsFor.author.id === userId ? (
+              <>
+                <MissionMenuRow
+                  icon='Edit'
+                  label='Edit comment'
+                  onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+                />
+                <Divider />
+                <MissionMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Delete comment'
+                  onPress={handleRequestDeleteComment}
+                />
+              </>
+            ) : (
+              <>
+                <MissionMenuRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={() => {
+                    const target = actionsFor;
+                    closeCommentActions();
+                    if (!target) return;
+                    blockUser.mutate(target.author.id, {
+                      onError: () =>
+                        showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                    });
+                  }}
+                />
+                <Divider />
+                <MissionMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report comment'
+                  onPress={() => {
+                    const target = actionsFor;
+                    closeCommentActions();
+                    if (!target) return;
+                    reportComment.mutate(target.id, {
+                      onError: () =>
+                        showToast('Couldn’t report this comment. Try again.'),
+                      onSuccess: () =>
+                        showToast('Thanks — our moderators will take a look.'),
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        )}
+      </Sheet>
 
       <MissionCelebrationModal
         awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { router } from 'expo-router';
+
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -64,7 +65,6 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   const toggleJoin = useToggleJoin();
   const createEvent = useCreateEvent();
   const [composing, setComposing] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
 
   const events = eventsView.data?.pages.flatMap((page) => page.events) ?? [];
   // Sorted featured-first server-side, so the very first item (if featured)
@@ -96,7 +96,7 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
         <VStack space="md">
           <ScreenTitle
             eyebrow="This week at the lake"
-            onSearch={() => setIsSearching(true)}
+            onSearch={() => router.push('/search')}
             right={<CreateButton onPress={() => setComposing(true)} />}
             title="Events"
           />
@@ -186,8 +186,6 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
           }
         />
       </Sheet>
-
-      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
     </>
   );
 }

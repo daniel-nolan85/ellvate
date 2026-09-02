@@ -62,7 +62,7 @@ export function FilterChips({
         const isActive = filter.key === active;
         return (
           <Pressable
-            className={`shrink-0 items-center rounded-full px-3.5 py-[7px] ${
+            className={`shrink-0 items-center justify-center rounded-full px-3.5 ${
               isActive ? 'bg-accent' : 'bg-secondary'
             }`}
             key={filter.key}
@@ -73,18 +73,22 @@ export function FilterChips({
             // circular blob, but still left it and "Posts" looking visibly
             // smaller than their longer-labeled neighbors.
             //
-            // minHeight is an explicit floor (padding + line-height) rather
-            // than relying on padding alone to imply the height: when "All"
-            // is selected, all four activity sections mount at once below
-            // this row (vs. exactly one for any other filter), and that much
-            // larger simultaneous layout commit could leave an inactive
-            // pill's native frame shorter than its text needs for that
-            // render -- clipping the tops of letters, self-correcting only
-            // once a different filter's smaller commit lands. An explicit
-            // minHeight means Yoga/UIKit can never commit a rectangle too
-            // short for the text to fit, regardless of what triggered the
-            // undersized frame.
-            style={{ minHeight: 32, minWidth: 92 }}
+            // height is a fixed value, not a minHeight floor derived from
+            // padding + line-height (7+7+18=32): that floor had zero margin
+            // over a "healthy" pill's own natural rendered height (font-metric
+            // leading alone commonly renders a couple px taller than the
+            // exact line-height asked for), so it never actually engaged for
+            // correctly-rendered pills -- only for whatever undersized frame
+            // "All" was committing (selecting it mounts all four activity
+            // sections below this row at once, a much larger simultaneous
+            // layout commit than any other filter), which clamped to exactly
+            // that floor and rendered visibly shorter than its healthy
+            // siblings. A fixed height removes the pill's size from that
+            // content-driven measurement entirely -- Yoga can't render it at
+            // any height but this one, whatever else is mounting alongside
+            // it -- with justifyContent/alignItems centering the label
+            // inside it instead of relying on padding to do that centering.
+            style={{ height: 36, minWidth: 92 }}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${

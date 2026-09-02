@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { router } from 'expo-router';
+
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -37,7 +38,6 @@ interface ServicesScreenProps {
 export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
   const [activeCategory, setActiveCategory] = useState<ServiceCategoryFilter>('all');
   const [isComposing, setIsComposing] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const services = useServicesView(
     activeCategory === 'all' ? undefined : activeCategory,
   );
@@ -70,7 +70,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
         <VStack space="md">
           <ScreenTitle
             eyebrow="Local businesses"
-            onSearch={() => setIsSearching(true)}
+            onSearch={() => router.push('/search')}
             right={
               <Button
                 className="rounded-full bg-accent px-4"
@@ -149,8 +149,6 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
           </Text>
         ) : null}
       </Sheet>
-
-      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
     </>
   );
 }

@@ -107,20 +107,16 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
 
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center justify-between px-5 pb-3"
-        style={{ paddingTop: insets.top + 12 }}
-      >
+      {/* No manual close button -- this screen is presented as a native
+          formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
+          dismiss, and tap-outside already cover closing it. A `formSheet`
+          page's content starts well below the physical top edge, so this
+          only needs a small fixed gap, not insets.top -- unlike Sheet's
+          statusBarTranslucent custom Modal, which spans behind the notch. */}
+      <HStack className="items-center justify-between px-5 pb-3 pt-3">
         <Heading className="font-inter-bold" size="xl">
           Notifications
         </Heading>
-        <Pressable
-          accessibilityLabel="Close"
-          className="h-9 w-9 items-center justify-center rounded-full bg-secondary"
-          onPress={onClose}
-        >
-          <Icon name="Close" size={18} />
-        </Pressable>
       </HStack>
 
       {hasUnread ? (
