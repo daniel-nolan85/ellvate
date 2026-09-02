@@ -4,7 +4,6 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { GlobalSearchSheet } from '@/src/components/shared/global-search-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -59,7 +58,6 @@ export function PetitionsScreen() {
   const petitions = usePetitionsPage(status);
   const createPetition = useCreatePetition();
   const [composing, setComposing] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const items = petitions.data?.pages.flatMap((page) => page.petitions) ?? [];
@@ -95,7 +93,7 @@ export function PetitionsScreen() {
         <VStack space="md">
           <ScreenTitle
             eyebrow="Raise it with the HOA"
-            onSearch={() => setIsSearching(true)}
+            onSearch={() => router.push('/search')}
             right={
               <CreateButton
                 onPress={() => {
@@ -203,8 +201,6 @@ export function PetitionsScreen() {
           totalUsers={gate.data?.totalUsers ?? 0}
         />
       </Sheet>
-
-      <GlobalSearchSheet onClose={() => setIsSearching(false)} visible={isSearching} />
     </>
   );
 }

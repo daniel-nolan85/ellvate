@@ -260,10 +260,12 @@ export function DigestScreen({ onClose, weekStart }: DigestScreenProps) {
 
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center justify-between px-5 pb-1"
-        style={{ paddingTop: insets.top + 12 }}
-      >
+      {/* A `presentation: 'modal'` Stack.Screen already renders below the
+          notch/status bar on its own -- unlike Sheet's statusBarTranslucent
+          custom Modal, which spans behind it and needs its own insets.top
+          handling. Adding insets.top here on top of that double-applies the
+          safe-area inset, showing as a large empty gap above the title. */}
+      <HStack className="items-center justify-between px-5 pb-1 pt-3">
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap
         </Heading>

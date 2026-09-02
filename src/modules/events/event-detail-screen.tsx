@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -111,22 +110,24 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const deleteComment = useDeleteEventComment(eventId);
   const reportComment = useReportEventComment();
 
-  // A single Sheet whose content switches by mode, rather than two separate
-  // Sheet instances -- closing one Sheet and opening another in quick
-  // succession briefly presents two native Modals at once (a Sheet stays
-  // mounted, rendering its own full-screen Modal, until its close animation
+  // A single Sheet whose content switches by mode, rather than separate
+  // Sheet/Modal instances -- closing one and opening another in the same
+  // tick briefly presents two native Modals at once (a Sheet stays mounted,
+  // rendering its own full-screen Modal, until its close animation
   // finishes), which corrupts UIKit's presentation stack and can leave the
-  // screen permanently unresponsive.
-  const [sheetMode, setSheetMode] = useState<'menu' | 'edit' | null>(null);
-  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  // screen permanently unresponsive. Applies to both the event's own
+  // menu/edit/cancel-confirm flow and the comment actions/delete-confirm flow.
+  const [sheetMode, setSheetMode] = useState<
+    'menu' | 'edit' | 'confirm-cancel' | null
+  >(null);
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<EventComment | null>(null);
   const [actionsFor, setActionsFor] = useState<EventComment | null>(null);
-  const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
-  const [commentPendingDelete, setCommentPendingDelete] =
-    useState<EventComment | null>(null);
+  const [commentSheetMode, setCommentSheetMode] = useState<
+    'actions' | 'confirm-delete' | null
+  >(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const attendees = useEventAttendees(eventId, attendeesOpen);
@@ -181,13 +182,13 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
 
   const openCommentActions = (comment: EventComment) => {
     setActionsFor(comment);
-    setActionsSheetOpen(true);
+    setCommentSheetMode('actions');
   };
 
-  const closeCommentActions = () => setActionsSheetOpen(false);
+  const closeCommentActions = () => setCommentSheetMode(null);
 
   const handleStartEditComment = (comment: EventComment) => {
-    setActionsSheetOpen(false);
+    setCommentSheetMode(null);
     setReplyTo(null);
     setEditingComment(comment);
     setDraft(comment.body);
@@ -199,16 +200,12 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   };
 
   const handleRequestDeleteComment = () => {
-    const target = actionsFor;
-    setActionsSheetOpen(false);
-    if (target) {
-      setCommentPendingDelete(target);
-    }
+    setCommentSheetMode('confirm-delete');
   };
 
   const confirmDeleteComment = () => {
-    const target = commentPendingDelete;
-    setCommentPendingDelete(null);
+    const target = actionsFor;
+    setCommentSheetMode(null);
     if (!target) {
       return;
     }
@@ -218,7 +215,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   };
 
   const handleCancelEvent = () => {
-    setConfirmCancelOpen(false);
+    setSheetMode(null);
     deleteEvent.mutate(eventId, {
       onSuccess: () => {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -471,6 +468,30 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
             }
             submitLabel='Save'
           />
+        ) : sheetMode === 'confirm-cancel' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
+            <Text className='font-inter-bold text-[17px] text-content'>
+              Cancel this event?
+            </Text>
+            <Text className='pb-3 text-text-muted' size='sm'>
+              This can’t be undone. Everyone who joined will lose their spot.
+            </Text>
+            <HStack className='justify-end gap-3'>
+              <Pressable onPress={() => setSheetMode(null)}>
+                <Text className='font-inter-semibold text-[15px] text-content'>
+                  Keep event
+                </Text>
+              </Pressable>
+              <Pressable onPress={handleCancelEvent}>
+                <Text
+                  className='font-inter-semibold text-[15px]'
+                  style={{ color: 'rgb(231,0,11)' }}
+                >
+                  Cancel event
+                </Text>
+              </Pressable>
+            </HStack>
+          </View>
         ) : (
           <View className='gap-1 px-[18px] pb-2'>
             {isOwnEvent ? (
@@ -485,10 +506,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                   destructive
                   icon='AlertCircle'
                   label='Cancel event'
-                  onPress={() => {
-                    setSheetMode(null);
-                    setConfirmCancelOpen(true);
-                  }}
+                  onPress={() => setSheetMode('confirm-cancel')}
                 />
               </>
             ) : (
@@ -524,46 +542,6 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
           </View>
         )}
       </Sheet>
-
-      {/* Cancel-event confirmation */}
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setConfirmCancelOpen(false)}
-        transparent
-        visible={confirmCancelOpen}
-      >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setConfirmCancelOpen(false)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(pressEvent) => pressEvent.stopPropagation()}
-          >
-            <Text className='font-inter-bold text-[17px] text-content'>
-              Cancel this event?
-            </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
-              This can’t be undone. Everyone who joined will lose their spot.
-            </Text>
-            <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setConfirmCancelOpen(false)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
-                  Keep event
-                </Text>
-              </Pressable>
-              <Pressable onPress={handleCancelEvent}>
-                <Text
-                  className='font-inter-semibold text-[15px]'
-                  style={{ color: 'rgb(231,0,11)' }}
-                >
-                  Cancel event
-                </Text>
-              </Pressable>
-            </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       {/* Attendee list */}
       <Sheet onClose={() => setAttendeesOpen(false)} visible={attendeesOpen}>
@@ -613,77 +591,10 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
         </VStack>
       </Sheet>
 
-      {/* Comment actions */}
-      <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          {actionsFor && actionsFor.author.id === userId ? (
-            <>
-              <EventMenuRow
-                icon='Edit'
-                label='Edit comment'
-                onPress={() => actionsFor && handleStartEditComment(actionsFor)}
-              />
-              <Divider />
-              <EventMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Delete comment'
-                onPress={handleRequestDeleteComment}
-              />
-            </>
-          ) : (
-            <>
-              <EventMenuRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  blockUser.mutate(target.author.id, {
-                    onError: () =>
-                      showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${target.author.name}`),
-                  });
-                }}
-              />
-              <Divider />
-              <EventMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Report comment'
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  reportComment.mutate(target.id, {
-                    onError: () =>
-                      showToast('Couldn’t report this comment. Try again.'),
-                    onSuccess: () =>
-                      showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
-              />
-            </>
-          )}
-        </View>
-      </Sheet>
-
-      {/* Delete-comment confirmation */}
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setCommentPendingDelete(null)}
-        transparent
-        visible={commentPendingDelete !== null}
-      >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setCommentPendingDelete(null)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(pressEvent) => pressEvent.stopPropagation()}
-          >
+      {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
+      <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
+        {commentSheetMode === 'confirm-delete' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete comment?
             </Text>
@@ -691,7 +602,7 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
               This can’t be undone.
             </Text>
             <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setCommentPendingDelete(null)}>
+              <Pressable onPress={() => setCommentSheetMode(null)}>
                 <Text className='font-inter-semibold text-[15px] text-content'>
                   Cancel
                 </Text>
@@ -705,9 +616,62 @@ export function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
                 </Text>
               </Pressable>
             </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            {actionsFor && actionsFor.author.id === userId ? (
+              <>
+                <EventMenuRow
+                  icon='Edit'
+                  label='Edit comment'
+                  onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+                />
+                <Divider />
+                <EventMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Delete comment'
+                  onPress={handleRequestDeleteComment}
+                />
+              </>
+            ) : (
+              <>
+                <EventMenuRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={() => {
+                    const target = actionsFor;
+                    closeCommentActions();
+                    if (!target) return;
+                    blockUser.mutate(target.author.id, {
+                      onError: () =>
+                        showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                    });
+                  }}
+                />
+                <Divider />
+                <EventMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report comment'
+                  onPress={() => {
+                    const target = actionsFor;
+                    closeCommentActions();
+                    if (!target) return;
+                    reportComment.mutate(target.id, {
+                      onError: () =>
+                        showToast('Couldn’t report this comment. Try again.'),
+                      onSuccess: () =>
+                        showToast('Thanks — our moderators will take a look.'),
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        )}
+      </Sheet>
 
       {toast ? (
         <View

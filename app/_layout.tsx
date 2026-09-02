@@ -75,20 +75,37 @@ function AppNavigator() {
             name="assistant"
             options={{ animation: 'slide_from_bottom' }}
           />
-          {/* Profile/Activity/Bookmarks/Blocked-users are full screens (their
-              own ScreenTitle header + the floating CommunityNavBar), not
-              modals -- presenting them as `presentation: 'modal'` stacked
+          {/* Profile/Leaderboard/Activity/Bookmarks/Blocked-users are full
+              screens (their own ScreenTitle header + the floating
+              CommunityNavBar) reached from a persistent icon or a tap inside
+              another full screen -- peer sections, not a modal and not a
+              drill-in from a list. `presentation: 'modal'` stacked
               modal-on-modal when reached from Profile and made their normal
-              header read as "inside a modal". Plain pushed screens instead. */}
-          <Stack.Screen name="profile" />
+              header read as "inside a modal"; the platform's default push
+              animation (a right-to-left slide) instead made switching to one
+              feel like navigating deeper rather than switching sections, the
+              way tapping a different tab never does. `animation: 'none'`
+              matches that "just switch" feel while staying a plain pushed
+              screen. */}
+          <Stack.Screen name="profile" options={{ animation: 'none' }} />
+          <Stack.Screen name="leaderboard" options={{ animation: 'none' }} />
           <Stack.Screen
             name="notifications"
             options={{ presentation: 'modal' }}
           />
-          <Stack.Screen name="activity" />
-          <Stack.Screen name="bookmarks" />
-          <Stack.Screen name="blocked-users" />
+          <Stack.Screen name="activity" options={{ animation: 'none' }} />
+          <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
+          <Stack.Screen name="blocked-users" options={{ animation: 'none' }} />
           <Stack.Screen name="digest" options={{ presentation: 'modal' }} />
+          {/* A summoned utility overlay (like `assistant`), not a drill-in
+              from a list -- slides up rather than the default right-to-left
+              push, and stays a plain pushed screen (not `presentation:
+              'modal'`) so it renders full-bleed like the detail screens
+              instead of iOS's inset page-sheet look. */}
+          <Stack.Screen
+            name="search"
+            options={{ animation: 'slide_from_bottom' }}
+          />
         </Stack.Protected>
       </Stack>
       {canAccessCommunity && onProtectedRoute ? (

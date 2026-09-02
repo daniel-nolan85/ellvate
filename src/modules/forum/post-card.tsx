@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Pressable, Share, View } from 'react-native';
+import { Pressable, Share, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
@@ -100,10 +100,17 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
     (name) => name !== 'All',
   );
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  // A single Sheet whose content switches by mode, rather than separate
+  // Sheet/Modal instances -- closing one and opening another in the same
+  // tick briefly presents two native Modals at once (a Sheet stays mounted,
+  // rendering its own full-screen Modal, until its close animation
+  // finishes), which corrupts UIKit's presentation stack and can leave the
+  // card permanently unresponsive. One Sheet mounted at a time can never
+  // race itself this way -- mirrors the same fix in post-detail-screen.tsx.
+  const [cardSheetMode, setCardSheetMode] = useState<
+    'menu' | 'edit' | 'confirm-delete' | null
+  >(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const showToast = (message: string) => {
@@ -123,17 +130,15 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   };
 
   const handleEdit = () => {
-    setMenuOpen(false);
-    setIsEditing(true);
+    setCardSheetMode('edit');
   };
 
   const handleDelete = () => {
-    setMenuOpen(false);
-    setConfirmDeleteOpen(true);
+    setCardSheetMode('confirm-delete');
   };
 
   const handleTogglePin = () => {
-    setMenuOpen(false);
+    setCardSheetMode(null);
     togglePin.mutate(post.id, {
       onSuccess: (result) =>
         showToast(result.pinned ? 'Post pinned' : 'Post unpinned'),
@@ -148,7 +153,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   // modal — see PostCardProps.pinAction.
   const requestTogglePin = () => {
     if (pinAction) {
-      setMenuOpen(false);
+      setCardSheetMode(null);
       pinAction.requestTogglePin(post, {
         onError: () => showToast('Couldn’t update pin status. Try again.'),
         onSuccess: (pinned) =>
@@ -172,7 +177,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   };
 
   const confirmDelete = () => {
-    setConfirmDeleteOpen(false);
+    setCardSheetMode(null);
     deletePost.mutate(post.id, {
       onSuccess: () =>
         void Haptics.notificationAsync(
@@ -183,7 +188,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   };
 
   const handleBlock = () => {
-    setMenuOpen(false);
+    setCardSheetMode(null);
     blockUser.mutate(post.author.id, {
       onSuccess: () => showToast(`Blocked ${post.author.name}`),
       onError: () => showToast('Couldn’t block this neighbour. Try again.'),
@@ -191,7 +196,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   };
 
   const handleReport = () => {
-    setMenuOpen(false);
+    setCardSheetMode(null);
     reportPost.mutate(post.id, {
       onSuccess: () =>
         showToast('Thanks — our moderators will take a look.'),
@@ -263,7 +268,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
               hitSlop={8}
               onPress={(event) => {
                 event.stopPropagation();
-                setMenuOpen(true);
+                setCardSheetMode('menu');
               }}
             >
               <Icon color={COLOR_TEXT_SUBTLE} name='ThreeDots' size={16} />
@@ -325,52 +330,45 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
         </Pressable>
       </HStack>
 
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
-          {isOwnPost ? (
-            <>
-              <PostMenuRow icon='Edit' label='Edit post' onPress={handleEdit} />
-              <Divider />
-              <PostMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Delete post'
-                onPress={handleDelete}
-              />
-            </>
-          ) : (
-            <>
-              <PostMenuRow
-                icon='EyeOff'
-                label='Block this neighbour'
-                onPress={handleBlock}
-              />
-              <Divider />
-              <PostMenuRow
-                destructive
-                icon='AlertCircle'
-                label='Report post'
-                onPress={handleReport}
-              />
-            </>
-          )}
-        </View>
-      </Sheet>
-
-      <Modal
-        animationType='fade'
-        onRequestClose={() => setConfirmDeleteOpen(false)}
-        transparent
-        visible={confirmDeleteOpen}
+      <Sheet
+        onClose={() => setCardSheetMode(null)}
+        visible={cardSheetMode !== null}
       >
-        <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.4)] px-8'
-          onPress={() => setConfirmDeleteOpen(false)}
-        >
-          <Pressable
-            className='w-full gap-1 rounded-[20px] bg-paper p-5'
-            onPress={(event) => event.stopPropagation()}
-          >
+        {cardSheetMode === 'edit' ? (
+          <PostComposer
+            forum={post.forum}
+            initialExcerpt={post.excerpt}
+            initialMedia={post.media}
+            initialTitle={post.title}
+            isSubmitting={updatePost.isPending}
+            onDismiss={() => setCardSheetMode(null)}
+            onSubmit={(draft) =>
+              updatePost.mutate(
+                {
+                  excerpt: draft.excerpt,
+                  existingMedia: draft.existingMedia,
+                  forum: draft.forum,
+                  newMedia: draft.newMedia,
+                  postId: post.id,
+                  title: draft.title,
+                },
+                {
+                  onSuccess: () => {
+                    setCardSheetMode(null);
+                    void Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
+                  },
+                  onError: () =>
+                    showToast("Couldn't save your changes. Try again."),
+                },
+              )
+            }
+            subforums={subforumNames}
+            submitLabel='Save'
+          />
+        ) : cardSheetMode === 'confirm-delete' ? (
+          <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete post?
             </Text>
@@ -378,7 +376,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
               This can’t be undone.
             </Text>
             <HStack className='justify-end gap-3'>
-              <Pressable onPress={() => setConfirmDeleteOpen(false)}>
+              <Pressable onPress={() => setCardSheetMode(null)}>
                 <Text className='font-inter-semibold text-[15px] text-content'>
                   Cancel
                 </Text>
@@ -392,43 +390,38 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
                 </Text>
               </Pressable>
             </HStack>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Sheet onClose={() => setIsEditing(false)} visible={isEditing}>
-        <PostComposer
-          forum={post.forum}
-          initialExcerpt={post.excerpt}
-          initialMedia={post.media}
-          initialTitle={post.title}
-          isSubmitting={updatePost.isPending}
-          onDismiss={() => setIsEditing(false)}
-          onSubmit={(draft) =>
-            updatePost.mutate(
-              {
-                excerpt: draft.excerpt,
-                existingMedia: draft.existingMedia,
-                forum: draft.forum,
-                newMedia: draft.newMedia,
-                postId: post.id,
-                title: draft.title,
-              },
-              {
-                onSuccess: () => {
-                  setIsEditing(false);
-                  void Haptics.notificationAsync(
-                    Haptics.NotificationFeedbackType.Success,
-                  );
-                },
-                onError: () =>
-                  showToast("Couldn't save your changes. Try again."),
-              },
-            )
-          }
-          subforums={subforumNames}
-          submitLabel='Save'
-        />
+          </View>
+        ) : (
+          <View className='gap-1 px-[18px] pb-2'>
+            {isOwnPost ? (
+              <>
+                <PostMenuRow icon='Edit' label='Edit post' onPress={handleEdit} />
+                <Divider />
+                <PostMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Delete post'
+                  onPress={handleDelete}
+                />
+              </>
+            ) : (
+              <>
+                <PostMenuRow
+                  icon='EyeOff'
+                  label='Block this neighbour'
+                  onPress={handleBlock}
+                />
+                <Divider />
+                <PostMenuRow
+                  destructive
+                  icon='AlertCircle'
+                  label='Report post'
+                  onPress={handleReport}
+                />
+              </>
+            )}
+          </View>
+        )}
       </Sheet>
 
       {pinAction ? null : (
