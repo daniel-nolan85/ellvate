@@ -17,7 +17,14 @@ import {
 } from '@/src/platform/session';
 
 function ClerkSessionBridge({ children }: PropsWithChildren) {
-  const { getToken, isLoaded, isSignedIn, signOut, userId } = useAuth();
+  // Native session sync goes through an async "pending" phase; Clerk's
+  // default (treatPendingAsSignedOut: true) reports that phase as signed
+  // out, which can bounce an already-authenticated user back to the
+  // sign-in screen (observed as an unrecoverable lockout on the sign-in
+  // screen after backgrounding/restarting the app).
+  const { getToken, isLoaded, isSignedIn, signOut, userId } = useAuth({
+    treatPendingAsSignedOut: false,
+  });
 
   const session = useMemo<AppSession>(() => {
     if (!isLoaded) {
