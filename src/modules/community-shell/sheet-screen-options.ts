@@ -35,3 +35,30 @@ export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   // it) is react-native-screens' own documented workaround.
   contentStyle: { height: '100%' },
 };
+
+// For a formSheet screen that's always reached by chaining directly off
+// another formSheet screen (Notifications -> Digest on every notification
+// tap; Member Profile -> Member Activity from its stat cards). That specific
+// combination -- a formSheet presented over another formSheet, with a
+// ScrollView inside -- hits a confirmed, currently-unfixed upstream bug
+// (software-mansion/react-native-screens#3569): the newly-presented sheet's
+// content height comes out wrong, reproducing exactly as this app's
+// "smushed at the top" reports, and it gets worse on repeated back-and-forth
+// rather than resolving. Three rounds of application-level fixes here
+// (view-flattening's collapsable={false}, content-height's height: '100%',
+// then sequencing the navigation transition itself) each fixed a real
+// problem but never this one, because this one isn't fixable from this
+// side of the native boundary -- it's in react-native-screens' own sheet
+// content wrapper. The only reliable fix is to not put two formSheet
+// screens back-to-back: this uses `modal` (no sheetAllowedDetents/height-
+// resolution machinery, so the bug's precondition never applies) for
+// whichever end of a formSheet pair is *always* reached by chaining off the
+// other -- the destination still gets a plain, respectable native modal
+// presentation, and the OTHER member of each pair (Digest, Member Profile)
+// keeps the full formSheet treatment for its other, non-chained entry
+// points (a direct icon tap, search, leaderboard, forum, ...).
+export const MODAL_SCREEN_OPTIONS: NativeStackNavigationOptions = {
+  presentation: 'modal',
+  headerShown: false,
+  contentStyle: { height: '100%' },
+};

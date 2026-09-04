@@ -15,7 +15,7 @@ import {
   canAccessCommunityRoutes,
   ClerkAuthGate,
 } from '@/src/modules/authentication';
-import { AssistantButton, SHEET_SCREEN_OPTIONS } from '@/src/modules/community-shell';
+import { AssistantButton, MODAL_SCREEN_OPTIONS, SHEET_SCREEN_OPTIONS } from '@/src/modules/community-shell';
 import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { AppProviders } from '@/src/platform/providers';
 import { PushRegistration } from '@/src/platform/push';
@@ -99,14 +99,15 @@ function AppNavigator() {
           <Stack.Screen name="activity" options={{ animation: 'none' }} />
           <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
           <Stack.Screen name="blocked-users" options={{ animation: 'none' }} />
-          {/* Every dismissible overlay now shares one presentation -- see
-              SHEET_SCREEN_OPTIONS. */}
-          <Stack.Screen name="notifications" options={SHEET_SCREEN_OPTIONS} />
+          {/* Every dismissible overlay shares SHEET_SCREEN_OPTIONS except
+              notifications and member/[userId]/activity -- see
+              MODAL_SCREEN_OPTIONS for why. */}
+          <Stack.Screen name="notifications" options={MODAL_SCREEN_OPTIONS} />
           <Stack.Screen name="digest" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen name="member/[userId]" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen
             name="member/[userId]/activity"
-            options={SHEET_SCREEN_OPTIONS}
+            options={MODAL_SCREEN_OPTIONS}
           />
           {/* A summoned utility overlay (like `assistant`), not a drill-in
               from a list -- slides up rather than the default right-to-left

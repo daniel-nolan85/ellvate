@@ -370,7 +370,25 @@ export function ActivityScreen() {
         </VStack>
       ) : (
         <>
-          <HStack className="px-5 pb-3" space="sm">
+          {/* collapsable={false}: reported as the filter pills row below
+              looking "smushed" specifically when "All" is selected, never
+              when a single category is -- i.e. specifically when the
+              ScrollView below ends up with five stacked sections instead of
+              one. Bookmarks' otherwise-identical FilterChips (verified
+              byte-for-byte identical to this screen's own, twice) has no
+              equivalent report, and the one structural difference between
+              the two screens is this stat-box row, which Bookmarks doesn't
+              have at all. React Native's view-flattening optimization
+              (already the confirmed cause of a near-identical overlap
+              symptom on four other screens in this app, all fixed the same
+              way -- see e.g. notifications-screen.tsx) makes its collapse
+              decision per-render from the current subtree shape, and
+              switching between a 1-section and a 5-section sibling changes
+              that shape -- consistent with this only showing up for "All".
+              Forcing this row to stay a real native view is the same
+              documented workaround as those four screens, applied here for
+              the first time. */}
+          <HStack className="px-5 pb-3" collapsable={false} space="sm">
             <StatBox label="Posts" value={myPostItems.length} />
             <StatBox label="Events" value={myEventItems.length} />
             <StatBox label="Missions" value={myMissionItems.length} />

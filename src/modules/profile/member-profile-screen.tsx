@@ -199,16 +199,30 @@ export function MemberProfileScreen({
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
-        {!isSelf && !blockedUsers.isPending ? (
-          <Pressable
-            accessibilityLabel='More options'
-            className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-            onPress={openMenu}
-          >
-            <Icon name='ThreeDots' size={18} />
-          </Pressable>
-        ) : null}
       </HStack>
+
+      {/* Rendered outside the collapsable={false} header above, not as its
+          child -- two rounds of fixes at *what the button opens* (a Sheet,
+          then an inline dropdown, then ActionSheetIOS -- iOS's own native
+          menu, which App code cannot make invisible) all failed to fix
+          "the ellipsis does nothing", which only makes sense if the tap was
+          never reaching the button at all. This button was the one thing
+          every attempt left unchanged: the only interactive element inside
+          this screen's forced-native (collapsable={false}) header, unlike
+          every sibling formSheet screen's header, which holds only text.
+          Moving it out to its own independent, absolutely-positioned layer
+          removes forcing-a-view-real from the equation for its own touch
+          handling, whatever exactly that combination was doing to it. */}
+      {!isSelf && !blockedUsers.isPending ? (
+        <Pressable
+          accessibilityLabel='More options'
+          className='absolute right-5 h-9 w-9 items-center justify-center rounded-full bg-secondary'
+          onPress={openMenu}
+          style={{ top: 20 }}
+        >
+          <Icon name='ThreeDots' size={18} />
+        </Pressable>
+      ) : null}
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <VStack className='items-center px-5 pb-2 pt-6' space='sm'>
