@@ -1,6 +1,8 @@
 export {
   createPetition,
+  getMyPetitionsView,
   getPetition,
+  getPetitionsByIds,
   getPetitionsGate,
   listPetitionsPage,
   reportPetition,
@@ -9,6 +11,8 @@ export {
 export type {
   CreatePetitionResult,
   ListPetitionsOptions,
+  MyPetitionsOptions,
+  MyPetitionsPage,
   PersonRef,
   Petition,
   PetitionCategory,

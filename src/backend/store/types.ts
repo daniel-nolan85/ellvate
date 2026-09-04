@@ -332,7 +332,7 @@ export interface StoredPetitionCommentReport {
   readonly createdAt: string;
 }
 
-export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service';
+export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
 
 export interface StoredBookmark {
   readonly id: string;

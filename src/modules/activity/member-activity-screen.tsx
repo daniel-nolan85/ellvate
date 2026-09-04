@@ -25,6 +25,7 @@ import {
   type CheckInCelebration,
   type Mission,
 } from '@/src/modules/missions';
+import { PetitionRow, type Petition } from '@/src/modules/petitions';
 import { useMemberProfile } from '@/src/modules/profile';
 import {
   SERVICE_CATEGORY_LABEL,
@@ -47,6 +48,7 @@ import { useMemberActivity } from './use-member-activity';
 const KIND_LABEL = {
   event: 'Created an event',
   mission: 'Created a mission',
+  petition: 'Started a petition',
   post: 'Posted in the forum',
   service: 'Listed a service',
 } as const;
@@ -54,6 +56,7 @@ const KIND_LABEL = {
 const COMMENT_LABEL = 'Commented on a post';
 const MISSION_COMPLETED_LABEL = 'Completed a mission';
 const EVENT_GOING_LABEL = 'Marked going to an event';
+const PETITION_SIGNED_LABEL = 'Signed a petition';
 
 interface PostActivityItem {
   readonly key: string;
@@ -81,6 +84,12 @@ interface ServiceActivityItem {
   readonly listing: ServiceListing;
 }
 
+interface PetitionActivityItem {
+  readonly key: string;
+  readonly petition: Petition;
+  readonly signedOnly: boolean;
+}
+
 interface MemberActivityScreenProps {
   readonly userId: string;
   readonly loadingName?: string;
@@ -105,6 +114,7 @@ export function MemberActivityScreen({
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
+  const [openPetition, setOpenPetition] = useState<Petition | null>(null);
   const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   const closeThenNavigate = (
@@ -112,12 +122,14 @@ export function MemberActivityScreen({
       | `/post/${string}`
       | `/event/${string}`
       | `/mission/${string}`
-      | `/service/${string}`,
+      | `/service/${string}`
+      | `/petition/${string}`,
   ) => {
     setOpenPost(null);
     setOpenEvent(null);
     setOpenMission(null);
     setOpenService(null);
+    setOpenPetition(null);
     setTimeout(() => router.push(path), CLOSE_DURATION);
   };
 
@@ -179,16 +191,30 @@ export function MemberActivityScreen({
     [activity.data],
   );
 
+  const petitionItems = useMemo(
+    (): readonly PetitionActivityItem[] =>
+      (activity.data?.petitions ?? []).map(
+        (petition): PetitionActivityItem => ({
+          key: petition.id,
+          petition,
+          signedOnly: petition.createdBy.id !== userId && petition.signed,
+        }),
+      ),
+    [activity.data, userId],
+  );
+
   const hasAnything =
     postItems.length > 0 ||
     eventItems.length > 0 ||
     missionItems.length > 0 ||
-    serviceItems.length > 0;
+    serviceItems.length > 0 ||
+    petitionItems.length > 0;
 
   const showPosts = filter === 'all' || filter === 'post';
   const showEvents = filter === 'all' || filter === 'event';
   const showMissions = filter === 'all' || filter === 'mission';
   const showServices = filter === 'all' || filter === 'service';
+  const showPetitions = filter === 'all' || filter === 'petition';
 
   return (
     <View className="flex-1 bg-canvas">
@@ -198,7 +224,7 @@ export function MemberActivityScreen({
           page's content starts well below the physical top edge, so this
           only needs a small fixed gap, not insets.top -- unlike Sheet's
           statusBarTranslucent custom Modal, which spans behind the notch. */}
-      <HStack className="items-center justify-between px-5 pb-3 pt-3">
+      <HStack className="items-center justify-between px-5 pb-3 pt-6">
         <VStack>
           <Text className="text-text-muted" size="xs">
             Activity
@@ -217,8 +243,8 @@ export function MemberActivityScreen({
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
           <Icon name="Star" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
-            {displayName} hasn&apos;t posted, joined an event, or listed
-            anything yet.
+            {displayName} hasn&apos;t posted, joined an event, listed
+            anything, or started a petition yet.
           </Text>
         </VStack>
       ) : (
@@ -228,6 +254,7 @@ export function MemberActivityScreen({
             <StatBox label="Events" value={eventItems.length} />
             <StatBox label="Missions" value={missionItems.length} />
             <StatBox label="Services" value={serviceItems.length} />
+            <StatBox label="Petitions" value={petitionItems.length} />
           </HStack>
 
           <FilterChips active={filter} onSelect={setFilter} />
@@ -324,6 +351,28 @@ export function MemberActivityScreen({
                 )}
               </>
             ) : null}
+
+            {showPetitions ? (
+              <>
+                <SectionHeader count={petitionItems.length} title="Petitions" />
+                {petitionItems.length === 0 ? (
+                  <EmptyHint label="No petitions started or signed yet." />
+                ) : (
+                  <SectionCard>
+                    {petitionItems.map(({ key, petition, signedOnly }) => (
+                      <ActivityRow
+                        key={key}
+                        kind="petition"
+                        label={signedOnly ? PETITION_SIGNED_LABEL : KIND_LABEL.petition}
+                        onPress={() => setOpenPetition(petition)}
+                        subtitle={`${petition.signatureCount} of ${petition.requiredSignatures} signatures`}
+                        title={petition.title}
+                      />
+                    ))}
+                  </SectionCard>
+                )}
+              </>
+            ) : null}
           </ScrollView>
         </>
       )}
@@ -369,6 +418,17 @@ export function MemberActivityScreen({
             <ServiceListingCard
               listing={openService}
               onOpen={(listingId) => closeThenNavigate(`/service/${listingId}`)}
+            />
+          </View>
+        ) : null}
+      </Sheet>
+
+      <Sheet onClose={() => setOpenPetition(null)} visible={openPetition !== null}>
+        {openPetition ? (
+          <View className="px-4 pb-4">
+            <PetitionRow
+              onOpen={(petitionId) => closeThenNavigate(`/petition/${petitionId}`)}
+              petition={openPetition}
             />
           </View>
         ) : null}

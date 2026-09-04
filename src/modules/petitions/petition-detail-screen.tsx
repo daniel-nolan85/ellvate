@@ -20,6 +20,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime, formatRelativeTimeUntil } from '@/src/lib/relative-time';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
@@ -170,6 +171,7 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
         <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
           Petition
         </Heading>
+        <BookmarkButton size={18} targetId={petitionId} targetType="petition" />
       </HStack>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">

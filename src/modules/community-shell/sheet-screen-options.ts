@@ -15,4 +15,11 @@ export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   sheetAllowedDetents: [1],
   sheetCornerRadius: 24,
   sheetGrabberVisible: true,
+  // The parent <Stack>'s screenOptions already sets headerShown: false, but
+  // formSheet is a distinct native presentation style from the plain push/
+  // modal ones every other screen in that shared config uses -- without
+  // setting it again here explicitly, a formSheet screen renders its own
+  // native header bar overlapping this screen's own custom heading and the
+  // first row of content beneath it.
+  headerShown: false,
 };

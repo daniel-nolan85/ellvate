@@ -13,6 +13,8 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { countAppUsers } from './gate';
 import {
   createPetitionSupabase,
+  getMyPetitionsViewSupabase,
+  getPetitionsByIdsSupabase,
   getPetitionSupabase,
   listPetitionsPageSupabase,
   reportPetitionSupabase,
@@ -21,6 +23,8 @@ import {
 import type {
   CreatePetitionResult,
   ListPetitionsOptions,
+  MyPetitionsOptions,
+  MyPetitionsPage,
   PersonRef,
   Petition,
   PetitionsGate,
@@ -33,6 +37,8 @@ import { validatePetitionInput } from './validation';
 
 export const DEFAULT_PETITIONS_PAGE_SIZE = 20;
 export const MAX_PETITIONS_PAGE_SIZE = 50;
+export const DEFAULT_MY_PETITIONS_PAGE_SIZE = 20;
+export const MAX_MY_PETITIONS_PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // In-memory backend (tests / no-DB dev)
@@ -97,6 +103,44 @@ function listPetitionsPageMemory(
   return {
     nextCursor: page.nextCursor,
     petitions: page.items.map((item) => toPetition(item.petition, users, signedByUser)),
+  };
+}
+
+// Fetches specific petitions by id — used to hydrate bookmarks, which can
+// point at any petition regardless of status or authorship.
+function getPetitionsByIdsMemory(
+  userId: string,
+  ids: readonly string[],
+): readonly Petition[] {
+  const { petitions, petitionSignatures, users } = getState();
+  const idSet = new Set(ids);
+  const signedByUser = new Set(
+    petitionSignatures.filter((sig) => sig.userId === userId).map((sig) => sig.petitionId),
+  );
+  return petitions
+    .filter((petition) => idSet.has(petition.id))
+    .map((petition) => toPetition(petition, users, signedByUser));
+}
+
+// The activity hub — petitions the caller started or signed, mirroring
+// getMyEventsViewMemory's created-or-joined precedent.
+function getMyPetitionsViewMemory(
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): MyPetitionsPage {
+  const { petitions, petitionSignatures, users } = getState();
+  const signedIds = new Set(
+    petitionSignatures.filter((sig) => sig.userId === userId).map((sig) => sig.petitionId),
+  );
+  const mine = petitions
+    .filter((petition) => petition.createdBy === userId || signedIds.has(petition.id))
+    .map((petition) => ({ id: petition.id, petition, sortKey: petition.createdAt }));
+  const page = paginateInMemory(mine, limit, cursor);
+
+  return {
+    nextCursor: page.nextCursor,
+    petitions: page.items.map((item) => toPetition(item.petition, users, signedIds)),
   };
 }
 
@@ -318,6 +362,32 @@ export async function getPetition(
   return ctx.supabase
     ? getPetitionSupabase(ctx.supabase, ctx.userId, petitionId)
     : getPetitionMemory(petitionId, ctx.userId);
+}
+
+export async function getPetitionsByIds(
+  ctx: RequestContext,
+  ids: readonly string[],
+): Promise<readonly Petition[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return ctx.supabase
+    ? getPetitionsByIdsSupabase(ctx.supabase, ctx.userId, ids)
+    : getPetitionsByIdsMemory(ctx.userId, ids);
+}
+
+export async function getMyPetitionsView(
+  ctx: RequestContext,
+  options?: MyPetitionsOptions,
+): Promise<MyPetitionsPage> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_MY_PETITIONS_PAGE_SIZE),
+    MAX_MY_PETITIONS_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? getMyPetitionsViewSupabase(ctx.supabase, ctx.userId, limit, cursor)
+    : getMyPetitionsViewMemory(ctx.userId, limit, cursor);
 }
 
 export async function createPetition(

@@ -22,6 +22,7 @@ import {
   MissionCelebrationModal,
   type CheckInCelebration,
 } from '@/src/modules/missions';
+import { PetitionRow } from '@/src/modules/petitions';
 import { ServiceListingCard } from '@/src/modules/services';
 
 import { useBookmarks, type BookmarkedItem, type BookmarkTargetType } from './use-bookmarks';
@@ -31,6 +32,7 @@ type BookmarksFilter = 'all' | BookmarkTargetType;
 const KIND_ICON: Readonly<Record<BookmarkTargetType, AppIconName>> = {
   event: 'CalendarDays',
   mission: 'Star',
+  petition: 'FileSignature',
   post: 'MessageCircle',
   service: 'Store',
 };
@@ -38,6 +40,7 @@ const KIND_ICON: Readonly<Record<BookmarkTargetType, AppIconName>> = {
 const KIND_LABEL: Readonly<Record<BookmarkTargetType, string>> = {
   event: 'Bookmarked event',
   mission: 'Bookmarked mission',
+  petition: 'Bookmarked petition',
   post: 'Bookmarked post',
   service: 'Bookmarked listing',
 };
@@ -48,6 +51,7 @@ const FILTERS: readonly { readonly key: BookmarksFilter; readonly label: string 
   { key: 'event', label: 'Events' },
   { key: 'mission', label: 'Missions' },
   { key: 'service', label: 'Services' },
+  { key: 'petition', label: 'Petitions' },
 ];
 
 // The API/backend model a bookmark list as one unified, server-paginated
@@ -120,6 +124,8 @@ function subtitleFor(item: BookmarkedItem): string {
       return item.mission.scheduledFor
         ? formatDateOnly(item.mission.scheduledFor)
         : `${item.mission.stopsDone}/${item.mission.stopsTotal} stops`;
+    case 'petition':
+      return `${item.petition.signatureCount} of ${item.petition.requiredSignatures} signatures`;
     case 'post':
       return formatRelativeTime(item.bookmarkedAt);
     case 'service':
@@ -133,6 +139,8 @@ function titleFor(item: BookmarkedItem): string {
       return item.event.title;
     case 'mission':
       return item.mission.title;
+    case 'petition':
+      return item.petition.title;
     case 'post':
       return item.post.title;
     case 'service':
@@ -190,7 +198,8 @@ export function BookmarksScreen() {
       | `/post/${string}`
       | `/event/${string}`
       | `/mission/${string}`
-      | `/service/${string}`,
+      | `/service/${string}`
+      | `/petition/${string}`,
   ) => {
     setOpenItem(null);
     setTimeout(() => router.push(path as Href), CLOSE_DURATION);
@@ -231,7 +240,7 @@ export function BookmarksScreen() {
           <Icon name="Bookmark" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
             Nothing bookmarked yet — tap the bookmark icon on a post, event,
-            mission, or service listing to save it here.
+            mission, service listing, or petition to save it here.
           </Text>
         </VStack>
       ) : (
@@ -288,6 +297,14 @@ export function BookmarksScreen() {
             <ServiceListingCard
               listing={openItem.listing}
               onOpen={(listingId) => closeThenNavigate(`/service/${listingId}`)}
+            />
+          </View>
+        ) : null}
+        {openItem?.kind === 'petition' ? (
+          <View className="px-4 pb-4">
+            <PetitionRow
+              onOpen={(petitionId) => closeThenNavigate(`/petition/${petitionId}`)}
+              petition={openItem.petition}
             />
           </View>
         ) : null}

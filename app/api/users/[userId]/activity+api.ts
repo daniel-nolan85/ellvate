@@ -3,6 +3,7 @@ import { getMyEventsView } from '@/src/backend/events';
 import { getMyPosts } from '@/src/backend/forum';
 import { jsonError, jsonOk, withRequestContext } from '@/src/backend/http';
 import { getMyMissionsView } from '@/src/backend/missions';
+import { getMyPetitionsView } from '@/src/backend/petitions';
 import { getMemberActivitySharing } from '@/src/backend/profile';
 import { getMyServiceListingsView } from '@/src/backend/services';
 
@@ -41,19 +42,21 @@ export async function GET(
     // a member's stats without impersonating them for writes.
     const memberCtx = { ...ctx, userId };
 
-    const [postsPage, comments, eventsPage, missionsPage, servicesPage] =
+    const [postsPage, comments, eventsPage, missionsPage, servicesPage, petitionsPage] =
       await Promise.all([
         getMyPosts(memberCtx, { limit: MEMBER_ACTIVITY_LIMIT }),
         listMyComments(memberCtx),
         getMyEventsView(memberCtx, { limit: MEMBER_ACTIVITY_LIMIT }),
         getMyMissionsView(memberCtx, { limit: MEMBER_ACTIVITY_LIMIT }),
         getMyServiceListingsView(memberCtx, { limit: MEMBER_ACTIVITY_LIMIT }),
+        getMyPetitionsView(memberCtx, { limit: MEMBER_ACTIVITY_LIMIT }),
       ]);
 
     return jsonOk({
       comments,
       events: eventsPage.events,
       missions: missionsPage.missions,
+      petitions: petitionsPage.petitions,
       posts: postsPage.posts,
       services: servicesPage.listings,
     });

@@ -45,6 +45,11 @@ export interface PetitionsPage {
   readonly nextCursor: string | null;
 }
 
+export interface MyPetitionsPage {
+  readonly petitions: readonly Petition[];
+  readonly nextCursor: string | null;
+}
+
 export interface PetitionsGate {
   readonly unlocked: boolean;
   readonly totalUsers: number;

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { CommunityEvent } from '@/src/modules/events';
 import type { ForumPost, MyComment } from '@/src/modules/forum';
 import type { Mission } from '@/src/modules/missions';
+import type { Petition } from '@/src/modules/petitions';
 import type { ServiceListing } from '@/src/modules/services';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -13,6 +14,7 @@ export interface MemberActivity {
   readonly events: readonly CommunityEvent[];
   readonly missions: readonly Mission[];
   readonly services: readonly ServiceListing[];
+  readonly petitions: readonly Petition[];
 }
 
 // A read-only, capped snapshot of another member's activity — see

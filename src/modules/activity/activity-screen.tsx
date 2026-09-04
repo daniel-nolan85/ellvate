@@ -36,6 +36,7 @@ import {
   type CheckInCelebration,
   type Mission,
 } from '@/src/modules/missions';
+import { PetitionRow, useMyPetitionsView, type Petition } from '@/src/modules/petitions';
 import {
   SERVICE_CATEGORY_LABEL,
   ServiceListingCard,
@@ -59,6 +60,7 @@ import {
 const KIND_LABEL = {
   event: 'You created an event',
   mission: 'You created a mission',
+  petition: 'You started a petition',
   post: 'You created a post',
   service: 'You listed a service',
 } as const;
@@ -66,6 +68,7 @@ const KIND_LABEL = {
 const COMMENT_LABEL = 'You commented on a post';
 const MISSION_COMPLETED_LABEL = 'You completed a mission';
 const EVENT_GOING_LABEL = 'You marked going to an event';
+const PETITION_SIGNED_LABEL = 'You signed a petition';
 
 interface PostActivityItem {
   readonly key: string;
@@ -93,6 +96,12 @@ interface ServiceActivityItem {
   readonly listing: ServiceListing;
 }
 
+interface PetitionActivityItem {
+  readonly key: string;
+  readonly petition: Petition;
+  readonly signedOnly: boolean;
+}
+
 interface SearchableActivityItem {
   readonly key: string;
   readonly title: string;
@@ -114,6 +123,7 @@ export function ActivityScreen() {
   const events = useMyEventsView();
   const missions = useMyMissionsView();
   const services = useMyServiceListingsView();
+  const petitions = useMyPetitionsView();
   const toggleLike = useToggleLike();
 
   // Lets a link (e.g. a tappable stat on the profile screen) land directly
@@ -128,6 +138,7 @@ export function ActivityScreen() {
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
+  const [openPetition, setOpenPetition] = useState<Petition | null>(null);
   const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   // Close the open sheet first and let it slide down, then navigate once
@@ -138,12 +149,14 @@ export function ActivityScreen() {
       | `/post/${string}`
       | `/event/${string}`
       | `/mission/${string}`
-      | `/service/${string}`,
+      | `/service/${string}`
+      | `/petition/${string}`,
   ) => {
     setOpenPost(null);
     setOpenEvent(null);
     setOpenMission(null);
     setOpenService(null);
+    setOpenPetition(null);
     setTimeout(() => router.push(path), CLOSE_DURATION);
   };
 
@@ -170,6 +183,11 @@ export function ActivityScreen() {
     (): readonly ServiceListing[] =>
       services.data?.pages.flatMap((page) => page.listings) ?? [],
     [services.data],
+  );
+  const myPetitionsList = useMemo(
+    (): readonly Petition[] =>
+      petitions.data?.pages.flatMap((page) => page.petitions) ?? [],
+    [petitions.data],
   );
 
   const myPostItems = useMemo((): readonly PostActivityItem[] => {
@@ -228,22 +246,37 @@ export function ActivityScreen() {
     [myServiceListings],
   );
 
+  const myPetitionItems = useMemo(
+    (): readonly PetitionActivityItem[] =>
+      myPetitionsList.map(
+        (petition): PetitionActivityItem => ({
+          key: petition.id,
+          petition,
+          signedOnly: petition.createdBy.id !== userId && petition.signed,
+        }),
+      ),
+    [myPetitionsList, userId],
+  );
+
   const isPending =
     posts.isPending ||
     comments.isPending ||
     events.isPending ||
     missions.isPending ||
-    services.isPending;
+    services.isPending ||
+    petitions.isPending;
   const hasAnything =
     myPostItems.length > 0 ||
     myEventItems.length > 0 ||
     myMissionItems.length > 0 ||
-    myServiceItems.length > 0;
+    myServiceItems.length > 0 ||
+    myPetitionItems.length > 0;
 
   const showPosts = filter === 'all' || filter === 'post';
   const showEvents = filter === 'all' || filter === 'event';
   const showMissions = filter === 'all' || filter === 'mission';
   const showServices = filter === 'all' || filter === 'service';
+  const showPetitions = filter === 'all' || filter === 'petition';
 
   // Reaching the bottom of the shared ScrollView loads the next page of
   // every currently-visible section at once, rather than trying to detect
@@ -260,6 +293,9 @@ export function ActivityScreen() {
       : []),
     ...(showServices
       ? [{ fetchNextPage: services.fetchNextPage, hasNextPage: services.hasNextPage, isFetchingNextPage: services.isFetchingNextPage }]
+      : []),
+    ...(showPetitions
+      ? [{ fetchNextPage: petitions.fetchNextPage, hasNextPage: petitions.hasNextPage, isFetchingNextPage: petitions.isFetchingNextPage }]
       : []),
   ]);
 
@@ -298,8 +334,16 @@ export function ActivityScreen() {
           title: listing.businessName,
         }),
       ),
+      ...myPetitionItems.map(
+        ({ key, petition }): SearchableActivityItem => ({
+          key,
+          onSelect: () => setOpenPetition(petition),
+          subtitle: KIND_LABEL.petition,
+          title: petition.title,
+        }),
+      ),
     ],
-    [myPostItems, myEventItems, myMissionItems, myServiceItems],
+    [myPostItems, myEventItems, myMissionItems, myServiceItems, myPetitionItems],
   );
 
   return (
@@ -320,8 +364,8 @@ export function ActivityScreen() {
         <VStack className="items-center gap-2 px-8 py-16" space="sm">
           <Icon name="Star" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
-            Nothing here yet — posts, events, missions, and services you
-            create will show up in one place.
+            Nothing here yet — posts, events, missions, services, and
+            petitions you create will show up in one place.
           </Text>
         </VStack>
       ) : (
@@ -331,6 +375,7 @@ export function ActivityScreen() {
             <StatBox label="Events" value={myEventItems.length} />
             <StatBox label="Missions" value={myMissionItems.length} />
             <StatBox label="Services" value={myServiceItems.length} />
+            <StatBox label="Petitions" value={myPetitionItems.length} />
           </HStack>
 
           <FilterChips active={filter} onSelect={setFilter} />
@@ -435,6 +480,29 @@ export function ActivityScreen() {
                 )}
               </>
             ) : null}
+
+            {showPetitions ? (
+              <>
+                <SectionHeader count={myPetitionItems.length} title="Petitions" />
+                {myPetitionItems.length === 0 ? (
+                  <EmptyHint label="You haven't started or signed a petition yet." />
+                ) : (
+                  <SectionCard>
+                    {myPetitionItems.map(({ key, petition, signedOnly }) => (
+                      <ActivityRow
+                        key={key}
+                        kind="petition"
+                        label={signedOnly ? PETITION_SIGNED_LABEL : KIND_LABEL.petition}
+                        onPress={() => setOpenPetition(petition)}
+                        subtitle={`${petition.signatureCount} of ${petition.requiredSignatures} signatures`}
+                        title={petition.title}
+                      />
+                    ))}
+                    <LoadMoreFooter isLoading={petitions.isFetchingNextPage} />
+                  </SectionCard>
+                )}
+              </>
+            ) : null}
           </ScrollView>
         </>
       )}
@@ -480,6 +548,17 @@ export function ActivityScreen() {
             <ServiceListingCard
               listing={openService}
               onOpen={(listingId) => closeThenNavigate(`/service/${listingId}`)}
+            />
+          </View>
+        ) : null}
+      </Sheet>
+
+      <Sheet onClose={() => setOpenPetition(null)} visible={openPetition !== null}>
+        {openPetition ? (
+          <View className="px-4 pb-4">
+            <PetitionRow
+              onOpen={(petitionId) => closeThenNavigate(`/petition/${petitionId}`)}
+              petition={openPetition}
             />
           </View>
         ) : null}

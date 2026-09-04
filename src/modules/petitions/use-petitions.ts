@@ -12,6 +12,7 @@ import { requestJson } from '@/src/services/api';
 
 import type {
   CreatePetitionInput,
+  MyPetitionsPage,
   Petition,
   PetitionsGate,
   PetitionsPage,
@@ -20,6 +21,7 @@ import type {
 } from './petitions-types';
 
 const PETITIONS_PAGE_SIZE = 20;
+const MY_PETITIONS_PAGE_SIZE = 20;
 
 const petitionsGateKey = (userId: string | null) =>
   ['petitions', 'gate', userId ?? 'demo-user'] as const;
@@ -29,6 +31,8 @@ const petitionsListKey = (userId: string | null, status: PetitionStatus) =>
   [...petitionsListKeyPrefix(userId), status] as const;
 const petitionDetailKey = (userId: string | null, petitionId: string) =>
   ['petitions', 'detail', userId ?? 'demo-user', petitionId] as const;
+const myPetitionsViewKey = (userId: string | null) =>
+  ['petitions', 'mine', userId ?? 'demo-user'] as const;
 
 const petitionsPagePath = (status: PetitionStatus, cursor: string | null): `/${string}` =>
   `/api/petitions?status=${status}&limit=${PETITIONS_PAGE_SIZE}${
@@ -73,6 +77,27 @@ export function usePetitionsPage(status: PetitionStatus = 'open') {
         signal,
       }),
     queryKey: petitionsListKey(session.userId, status),
+  });
+}
+
+// The activity hub — petitions the caller started or signed, server-scoped
+// and paginated rather than filtered client-side from the full directory.
+export function useMyPetitionsView() {
+  const session = useSession();
+
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: MyPetitionsPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: { persist: true, sensitive: false },
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      requestJson<MyPetitionsPage>({
+        getAccessToken: session.getToken,
+        path: `/api/petitions/mine?limit=${MY_PETITIONS_PAGE_SIZE}${
+          pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''
+        }`,
+        signal,
+      }),
+    queryKey: myPetitionsViewKey(session.userId),
   });
 }
 

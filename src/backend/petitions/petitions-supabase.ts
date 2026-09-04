@@ -3,13 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractMediaUploads } from '@/src/backend/media';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { defaultDisplayName, type PetitionCategory, type PetitionStatus } from '@/src/backend/store';
-import { decodeCursor, encodeCursor } from '@/src/lib/cursor-pagination';
+import { decodeCursor, encodeCursor, paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import { computeRequiredSignatures } from './types';
 import type {
   CreatePetitionResult,
+  MyPetitionsPage,
   PersonRef,
   Petition,
   PetitionMedia,
@@ -168,6 +169,85 @@ export async function listPetitionsPageSupabase(
   return {
     nextCursor,
     petitions: page.map((row) => toPetition(row, signedIds.has(row.id))),
+  };
+}
+
+// Fetches specific petitions by id — used to hydrate bookmarks, which can
+// point at any petition regardless of status or authorship.
+export async function getPetitionsByIdsSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  ids: readonly string[],
+): Promise<readonly Petition[]> {
+  const { data, error } = await supabase.from('petitions').select(PETITION_SELECT).in('id', ids);
+  throwIfSupabaseError(error, 'load petitions by id');
+  const rows = (data ?? []) as unknown as PetitionRow[];
+
+  const { data: signedRows, error: signedError } = rows.length
+    ? await supabase
+        .from('petition_signatures')
+        .select('petition_id')
+        .eq('user_id', userId)
+        .in('petition_id', rows.map((row) => row.id))
+    : { data: [] as { petition_id: string }[], error: null };
+  throwIfSupabaseError(signedError, 'load own petition signatures');
+  const signedIds = new Set((signedRows ?? []).map((row) => row.petition_id));
+
+  return rows.map((row) => toPetition(row, signedIds.has(row.id)));
+}
+
+// The activity hub — petitions the caller started or signed, mirroring
+// getMyEventsViewSupabase's created-or-joined precedent. Fetched by id union
+// rather than a single query since "created" and "signed" are two separate
+// tables, then paginated in application code like every other "mine" view.
+export async function getMyPetitionsViewSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MyPetitionsPage> {
+  const [createdRes, signedRes] = await Promise.all([
+    supabase.from('petitions').select('id,created_at').eq('created_by', userId),
+    supabase.from('petition_signatures').select('petition_id').eq('user_id', userId),
+  ]);
+  throwIfSupabaseError(createdRes.error, 'load my petitions');
+  throwIfSupabaseError(signedRes.error, 'load my petition signatures');
+
+  const createdRows = (createdRes.data ?? []) as { id: string; created_at: string }[];
+  const signedIds = ((signedRes.data ?? []) as { petition_id: string }[]).map(
+    (row) => row.petition_id,
+  );
+  const createdIds = new Set(createdRows.map((row) => row.id));
+  const idsToFetch = signedIds.filter((id) => !createdIds.has(id));
+
+  let signedRows: readonly { id: string; created_at: string }[] = [];
+  if (idsToFetch.length > 0) {
+    const { data, error } = await supabase
+      .from('petitions')
+      .select('id,created_at')
+      .in('id', idsToFetch);
+    throwIfSupabaseError(error, 'load signed petitions');
+    signedRows = (data ?? []) as { id: string; created_at: string }[];
+  }
+
+  const wrapped = [...createdRows, ...signedRows].map((row) => ({
+    id: row.id,
+    sortKey: row.created_at,
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+  const petitions = await getPetitionsByIdsSupabase(
+    supabase,
+    userId,
+    page.items.map((item) => item.id),
+  );
+  const petitionById = new Map(petitions.map((petition) => [petition.id, petition]));
+
+  return {
+    nextCursor: page.nextCursor,
+    petitions: page.items.flatMap((item) => {
+      const petition = petitionById.get(item.id);
+      return petition ? [petition] : [];
+    }),
   };
 }
 
