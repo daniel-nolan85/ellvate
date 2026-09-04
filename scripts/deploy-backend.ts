@@ -111,7 +111,18 @@ try {
 
   run('bun run check:production', childEnv);
   run('bunx expo export --platform web', childEnv);
-  run('eas deploy --prod', childEnv);
+  // Expo bundles every app/api/**/*+api.ts route as its own independent
+  // server function, and each one's sourcemap embeds a full copy of the
+  // shared backend code it imports -- so total sourcemap size scales with
+  // route count, not just app size. EAS Hosting caps the combined gzipped
+  // sourcemap size at 15MB across a deployment; with enough routes (69 and
+  // climbing as of this comment) that cap gets crossed on its own, with no
+  // code-level fix available. --no-source-maps excludes sourcemaps from the
+  // upload entirely rather than failing the deploy -- an acceptable trade
+  // since EAS Hosting's own function logs are the only consumer, and this
+  // project doesn't currently upload these particular sourcemaps to Sentry
+  // either.
+  run('eas deploy --prod --no-source-maps', childEnv);
   succeeded = true;
 } catch (error) {
   console.error('\nDeploy failed:', error instanceof Error ? error.message : error);
