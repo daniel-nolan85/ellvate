@@ -441,6 +441,19 @@ export async function getMyEventsViewSupabase(
   };
 }
 
+// Only used by getEventsByIdsSupabase below: embeds event_joins directly
+// (a one-to-many PostgREST relation, same FK-embed technique as MISSION_SELECT
+// in missions-supabase.ts) so bookmark hydration doesn't need its own
+// follow-up `event_joins` query -- one less subrequest against the hosting
+// platform's per-request cap. Kept local rather than folded into the shared
+// EVENT_SELECT/EventRow (used by several other functions) to keep this fix
+// scoped to the one call site that was actually observed hitting that cap.
+const EVENTS_BY_IDS_SELECT = `${EVENT_SELECT},event_joins(user_id)`;
+
+interface EventRowWithJoins extends EventRow {
+  readonly event_joins: readonly { readonly user_id: string }[];
+}
+
 // Fetches specific events by id — used to hydrate bookmarks, which can point
 // at any event regardless of authorship or join status.
 export async function getEventsByIdsSupabase(
@@ -448,23 +461,22 @@ export async function getEventsByIdsSupabase(
   userId: string,
   ids: readonly string[],
 ): Promise<readonly CommunityEvent[]> {
-  const { data, error } = await supabase.from('events').select(EVENT_SELECT).in('id', ids);
+  const { data, error } = await supabase
+    .from('events')
+    .select(EVENTS_BY_IDS_SELECT)
+    .in('id', ids);
   throwIfSupabaseError(error, 'load events by id');
-  const eventRows = (data ?? []) as unknown as EventRow[];
+  const eventRows = (data ?? []) as unknown as EventRowWithJoins[];
 
-  const { data: joinsData, error: joinsError } = await supabase
-    .from('event_joins')
-    .select('event_id,user_id')
-    .in('event_id', ids);
-  throwIfSupabaseError(joinsError, 'load event joins for bookmarked events');
-  const joinRows = (joinsData ?? []) as unknown as JoinRow[];
   const joinedByEvent = (eventId: string): readonly string[] =>
-    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+    (eventRows.find((row) => row.id === eventId)?.event_joins ?? []).map(
+      (row) => row.user_id,
+    );
 
   const neededIds = uniqueIds([
     ...eventRows.map((row) => row.created_by),
     ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
-    ...joinRows.map((row) => row.user_id),
+    ...eventRows.flatMap((row) => row.event_joins.map((join) => join.user_id)),
   ]);
   const { data: userData, error: userError } = neededIds.length
     ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', [...neededIds])
