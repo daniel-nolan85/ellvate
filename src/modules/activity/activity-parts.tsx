@@ -32,6 +32,10 @@ export const FILTERS: readonly { readonly key: ActivityFilter; readonly label: s
   { key: 'petition', label: 'Petitions' },
 ];
 
+// How many rows each section shows when "All" is selected -- see
+// SectionHeader's onSeeAll and activity-screen.tsx for why.
+export const ALL_FILTER_PREVIEW_COUNT = 5;
+
 export const isActivityFilter = (
   value: string | undefined,
 ): value is ActivityFilter =>
@@ -113,17 +117,31 @@ export function StatBox({ label, value }: { readonly label: string; readonly val
 
 export function SectionHeader({
   count,
+  onSeeAll,
   title,
 }: {
   readonly count: number;
   readonly title: string;
+  // Present only when "All" is selected and this section has more rows than
+  // ALL_FILTER_PREVIEW_COUNT -- switches straight to this section's own
+  // filter, which shows every row (see activity-screen.tsx).
+  readonly onSeeAll?: () => void;
 }) {
   return (
-    <HStack className="items-center gap-2 px-5 pb-1.5 pt-6">
-      <Text className="font-inter-bold text-[12px] uppercase tracking-[1px] text-text-muted">
-        {title}
-      </Text>
-      <Badge variant="muted">{count}</Badge>
+    <HStack className="items-center justify-between px-5 pb-1.5 pt-6">
+      <HStack className="items-center gap-2">
+        <Text className="font-inter-bold text-[12px] uppercase tracking-[1px] text-text-muted">
+          {title}
+        </Text>
+        <Badge variant="muted">{count}</Badge>
+      </HStack>
+      {onSeeAll ? (
+        <Pressable accessibilityRole="button" onPress={onSeeAll}>
+          <Text className="font-inter-semibold text-[12px] text-accent">
+            See all
+          </Text>
+        </Pressable>
+      ) : null}
     </HStack>
   );
 }

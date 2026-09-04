@@ -41,6 +41,7 @@ import {
   SectionHeader,
   StatBox,
   isActivityFilter,
+  ALL_FILTER_PREVIEW_COUNT,
   type ActivityFilter,
 } from './activity-parts';
 import { useMemberActivity } from './use-member-activity';
@@ -210,10 +211,11 @@ export function MemberActivityScreen({
     serviceItems.length > 0 ||
     petitionItems.length > 0;
 
-  // See activity-screen.tsx's identical deferredFilter for why -- this
-  // screen shares the same stat row + FilterChips + 1-to-5-section
-  // ScrollView shape, so it's the same latent commit-size mismatch.
+  // See activity-screen.tsx's identical deferredFilter and isAllPreview for
+  // why -- this screen shares the same stat row + FilterChips + 1-to-5-
+  // section ScrollView shape, so it's the same latent bug.
   const deferredFilter = useDeferredValue(filter);
+  const isAllPreview = deferredFilter === 'all';
   const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
   const showEvents = deferredFilter === 'all' || deferredFilter === 'event';
   const showMissions = deferredFilter === 'all' || deferredFilter === 'mission';
@@ -282,23 +284,36 @@ export function MemberActivityScreen({
           <FilterChips active={filter} onSelect={setFilter} />
 
           <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+            {/* "All" previews at most ALL_FILTER_PREVIEW_COUNT rows per
+                section -- see activity-screen.tsx's identical comment for
+                why. */}
             {showPosts ? (
               <>
-                <SectionHeader count={postItems.length} title="Posts" />
+                <SectionHeader
+                  count={postItems.length}
+                  onSeeAll={
+                    isAllPreview && postItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('post')
+                      : undefined
+                  }
+                  title="Posts"
+                />
                 {postItems.length === 0 ? (
                   <EmptyHint label="No posts or comments yet." />
                 ) : (
                   <SectionCard>
-                    {postItems.map((item) => (
-                      <ActivityRow
-                        key={item.key}
-                        kind="post"
-                        label={item.label}
-                        onPress={item.onPress}
-                        subtitle={item.subtitle}
-                        title={item.title}
-                      />
-                    ))}
+                    {(isAllPreview ? postItems.slice(0, ALL_FILTER_PREVIEW_COUNT) : postItems).map(
+                      (item) => (
+                        <ActivityRow
+                          key={item.key}
+                          kind="post"
+                          label={item.label}
+                          onPress={item.onPress}
+                          subtitle={item.subtitle}
+                          title={item.title}
+                        />
+                      ),
+                    )}
                   </SectionCard>
                 )}
               </>
@@ -306,21 +321,31 @@ export function MemberActivityScreen({
 
             {showEvents ? (
               <>
-                <SectionHeader count={eventItems.length} title="Events" />
+                <SectionHeader
+                  count={eventItems.length}
+                  onSeeAll={
+                    isAllPreview && eventItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('event')
+                      : undefined
+                  }
+                  title="Events"
+                />
                 {eventItems.length === 0 ? (
                   <EmptyHint label="No events created or joined yet." />
                 ) : (
                   <SectionCard>
-                    {eventItems.map(({ event, going, key }) => (
-                      <ActivityRow
-                        key={key}
-                        kind="event"
-                        label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
-                        onPress={() => setOpenEvent(event)}
-                        subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
-                        title={event.title}
-                      />
-                    ))}
+                    {(isAllPreview ? eventItems.slice(0, ALL_FILTER_PREVIEW_COUNT) : eventItems).map(
+                      ({ event, going, key }) => (
+                        <ActivityRow
+                          key={key}
+                          kind="event"
+                          label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
+                          onPress={() => setOpenEvent(event)}
+                          subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
+                          title={event.title}
+                        />
+                      ),
+                    )}
                   </SectionCard>
                 )}
               </>
@@ -328,12 +353,23 @@ export function MemberActivityScreen({
 
             {showMissions ? (
               <>
-                <SectionHeader count={missionItems.length} title="Missions" />
+                <SectionHeader
+                  count={missionItems.length}
+                  onSeeAll={
+                    isAllPreview && missionItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('mission')
+                      : undefined
+                  }
+                  title="Missions"
+                />
                 {missionItems.length === 0 ? (
                   <EmptyHint label="No missions created or completed yet." />
                 ) : (
                   <SectionCard>
-                    {missionItems.map(({ completed, key, mission }) => (
+                    {(isAllPreview
+                      ? missionItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
+                      : missionItems
+                    ).map(({ completed, key, mission }) => (
                       <ActivityRow
                         key={key}
                         kind="mission"
@@ -354,12 +390,23 @@ export function MemberActivityScreen({
 
             {showServices ? (
               <>
-                <SectionHeader count={serviceItems.length} title="Services" />
+                <SectionHeader
+                  count={serviceItems.length}
+                  onSeeAll={
+                    isAllPreview && serviceItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('service')
+                      : undefined
+                  }
+                  title="Services"
+                />
                 {serviceItems.length === 0 ? (
                   <EmptyHint label="No services listed yet." />
                 ) : (
                   <SectionCard>
-                    {serviceItems.map(({ key, listing }) => (
+                    {(isAllPreview
+                      ? serviceItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
+                      : serviceItems
+                    ).map(({ key, listing }) => (
                       <ActivityRow
                         key={key}
                         kind="service"
@@ -376,12 +423,23 @@ export function MemberActivityScreen({
 
             {showPetitions ? (
               <>
-                <SectionHeader count={petitionItems.length} title="Petitions" />
+                <SectionHeader
+                  count={petitionItems.length}
+                  onSeeAll={
+                    isAllPreview && petitionItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('petition')
+                      : undefined
+                  }
+                  title="Petitions"
+                />
                 {petitionItems.length === 0 ? (
                   <EmptyHint label="No petitions started or signed yet." />
                 ) : (
                   <SectionCard>
-                    {petitionItems.map(({ key, petition, signedOnly }) => (
+                    {(isAllPreview
+                      ? petitionItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
+                      : petitionItems
+                    ).map(({ key, petition, signedOnly }) => (
                       <ActivityRow
                         key={key}
                         kind="petition"

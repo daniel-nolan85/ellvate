@@ -54,6 +54,7 @@ import {
   SectionHeader,
   StatBox,
   isActivityFilter,
+  ALL_FILTER_PREVIEW_COUNT,
   type ActivityFilter,
 } from './activity-parts';
 
@@ -272,16 +273,18 @@ export function ActivityScreen() {
     myServiceItems.length > 0 ||
     myPetitionItems.length > 0;
 
-  // Deferred, not `filter` directly: switching to "All" mounts five
-  // SectionCards worth of ActivityRows in the ScrollView below, in the same
-  // commit as the pills row restyling -- a much heavier commit than any
-  // single-category filter, and the one thing that reliably correlates
-  // with the pills row's text clipping ("All" is both this screen's
-  // default filter and its heaviest one). useDeferredValue lets the pills'
-  // own restyle (driven by `filter`, not `deferredFilter`, below) commit
-  // and paint on its own first, instead of being bundled into the same
-  // synchronous pass as mounting/unmounting four extra SectionCards.
+  // Deferred, not `filter` directly: switching to "All" mounts (at most
+  // ALL_FILTER_PREVIEW_COUNT rows of, see below) five SectionCards in the
+  // ScrollView below, in the same commit as the pills row restyling above.
+  // useDeferredValue lets the pills' own restyle (driven by `filter`, not
+  // `deferredFilter`) commit and paint on its own first. Kept as a real,
+  // if modest, optimization even though it turned out not to be *the* fix
+  // for the pills' clipping on "All" -- that's addressed below instead,
+  // once it became clear (on-device, reproducible on load and every return
+  // to "All", never mid-transition) that the actual correlation was steady-
+  // state content size, not commit timing.
   const deferredFilter = useDeferredValue(filter);
+  const isAllPreview = deferredFilter === 'all';
   const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
   const showEvents = deferredFilter === 'all' || deferredFilter === 'event';
   const showMissions = deferredFilter === 'all' || deferredFilter === 'mission';
@@ -402,24 +405,48 @@ export function ActivityScreen() {
             onScroll={onScroll}
             scrollEventThrottle={100}
           >
+            {/* "All" previews at most ALL_FILTER_PREVIEW_COUNT rows per
+                section instead of every row from all 5 sources at once --
+                see activity-parts.tsx's ALL_FILTER_PREVIEW_COUNT. On-device
+                reports (screenshots, then confirmed reproducible on load and
+                on every return to "All", never on a single filter) pointed
+                at "All" mounting five full, independently-paginated lists
+                at once as the one real difference from every other filter,
+                not any rendering-timing mechanism -- three earlier fixes
+                aimed at timing (a remount key, then useDeferredValue) left
+                this exact pattern unchanged. Bookmarks' identical pills
+                never show this because its own "all" is one already-
+                paginated feed, never a client-side union of several. */}
             {showPosts ? (
               <>
-                <SectionHeader count={myPostItems.length} title="Posts" />
+                <SectionHeader
+                  count={myPostItems.length}
+                  onSeeAll={
+                    isAllPreview && myPostItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('post')
+                      : undefined
+                  }
+                  title="Posts"
+                />
                 {myPostItems.length === 0 ? (
                   <EmptyHint label="You haven't posted or commented in the forum yet." />
                 ) : (
                   <SectionCard>
-                    {myPostItems.map((item) => (
-                      <ActivityRow
-                        key={item.key}
-                        kind="post"
-                        label={item.label}
-                        onPress={item.onPress}
-                        subtitle={item.subtitle}
-                        title={item.title}
-                      />
-                    ))}
-                    <LoadMoreFooter isLoading={posts.isFetchingNextPage} />
+                    {(isAllPreview ? myPostItems.slice(0, ALL_FILTER_PREVIEW_COUNT) : myPostItems).map(
+                      (item) => (
+                        <ActivityRow
+                          key={item.key}
+                          kind="post"
+                          label={item.label}
+                          onPress={item.onPress}
+                          subtitle={item.subtitle}
+                          title={item.title}
+                        />
+                      ),
+                    )}
+                    {isAllPreview ? null : (
+                      <LoadMoreFooter isLoading={posts.isFetchingNextPage} />
+                    )}
                   </SectionCard>
                 )}
               </>
@@ -427,22 +454,34 @@ export function ActivityScreen() {
 
             {showEvents ? (
               <>
-                <SectionHeader count={myEventItems.length} title="Events" />
+                <SectionHeader
+                  count={myEventItems.length}
+                  onSeeAll={
+                    isAllPreview && myEventItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('event')
+                      : undefined
+                  }
+                  title="Events"
+                />
                 {myEventItems.length === 0 ? (
                   <EmptyHint label="You haven't created or gone to an event yet." />
                 ) : (
                   <SectionCard>
-                    {myEventItems.map(({ event, going, key }) => (
-                      <ActivityRow
-                        key={key}
-                        kind="event"
-                        label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
-                        onPress={() => setOpenEvent(event)}
-                        subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
-                        title={event.title}
-                      />
-                    ))}
-                    <LoadMoreFooter isLoading={events.isFetchingNextPage} />
+                    {(isAllPreview ? myEventItems.slice(0, ALL_FILTER_PREVIEW_COUNT) : myEventItems).map(
+                      ({ event, going, key }) => (
+                        <ActivityRow
+                          key={key}
+                          kind="event"
+                          label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
+                          onPress={() => setOpenEvent(event)}
+                          subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
+                          title={event.title}
+                        />
+                      ),
+                    )}
+                    {isAllPreview ? null : (
+                      <LoadMoreFooter isLoading={events.isFetchingNextPage} />
+                    )}
                   </SectionCard>
                 )}
               </>
@@ -450,12 +489,23 @@ export function ActivityScreen() {
 
             {showMissions ? (
               <>
-                <SectionHeader count={myMissionItems.length} title="Missions" />
+                <SectionHeader
+                  count={myMissionItems.length}
+                  onSeeAll={
+                    isAllPreview && myMissionItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('mission')
+                      : undefined
+                  }
+                  title="Missions"
+                />
                 {myMissionItems.length === 0 ? (
                   <EmptyHint label="You haven't created or completed a mission yet." />
                 ) : (
                   <SectionCard>
-                    {myMissionItems.map(({ completed, key, mission }) => (
+                    {(isAllPreview
+                      ? myMissionItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
+                      : myMissionItems
+                    ).map(({ completed, key, mission }) => (
                       <ActivityRow
                         key={key}
                         kind="mission"
@@ -469,7 +519,9 @@ export function ActivityScreen() {
                         title={mission.title}
                       />
                     ))}
-                    <LoadMoreFooter isLoading={missions.isFetchingNextPage} />
+                    {isAllPreview ? null : (
+                      <LoadMoreFooter isLoading={missions.isFetchingNextPage} />
+                    )}
                   </SectionCard>
                 )}
               </>
@@ -477,12 +529,23 @@ export function ActivityScreen() {
 
             {showServices ? (
               <>
-                <SectionHeader count={myServiceItems.length} title="Services" />
+                <SectionHeader
+                  count={myServiceItems.length}
+                  onSeeAll={
+                    isAllPreview && myServiceItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('service')
+                      : undefined
+                  }
+                  title="Services"
+                />
                 {myServiceItems.length === 0 ? (
                   <EmptyHint label="You haven't listed a service yet." />
                 ) : (
                   <SectionCard>
-                    {myServiceItems.map(({ key, listing }) => (
+                    {(isAllPreview
+                      ? myServiceItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
+                      : myServiceItems
+                    ).map(({ key, listing }) => (
                       <ActivityRow
                         key={key}
                         kind="service"
@@ -492,7 +555,9 @@ export function ActivityScreen() {
                         title={listing.businessName}
                       />
                     ))}
-                    <LoadMoreFooter isLoading={services.isFetchingNextPage} />
+                    {isAllPreview ? null : (
+                      <LoadMoreFooter isLoading={services.isFetchingNextPage} />
+                    )}
                   </SectionCard>
                 )}
               </>
@@ -500,12 +565,23 @@ export function ActivityScreen() {
 
             {showPetitions ? (
               <>
-                <SectionHeader count={myPetitionItems.length} title="Petitions" />
+                <SectionHeader
+                  count={myPetitionItems.length}
+                  onSeeAll={
+                    isAllPreview && myPetitionItems.length > ALL_FILTER_PREVIEW_COUNT
+                      ? () => setFilter('petition')
+                      : undefined
+                  }
+                  title="Petitions"
+                />
                 {myPetitionItems.length === 0 ? (
                   <EmptyHint label="You haven't started or signed a petition yet." />
                 ) : (
                   <SectionCard>
-                    {myPetitionItems.map(({ key, petition, signedOnly }) => (
+                    {(isAllPreview
+                      ? myPetitionItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
+                      : myPetitionItems
+                    ).map(({ key, petition, signedOnly }) => (
                       <ActivityRow
                         key={key}
                         kind="petition"
@@ -515,7 +591,9 @@ export function ActivityScreen() {
                         title={petition.title}
                       />
                     ))}
-                    <LoadMoreFooter isLoading={petitions.isFetchingNextPage} />
+                    {isAllPreview ? null : (
+                      <LoadMoreFooter isLoading={petitions.isFetchingNextPage} />
+                    )}
                   </SectionCard>
                 )}
               </>
