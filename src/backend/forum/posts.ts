@@ -418,15 +418,20 @@ export async function getMyPosts(
     : getMyPostsMemory(ctx.userId, limit, cursor);
 }
 
+// includeViewerState: false for a read-only, non-interactive listing that
+// never reads the result's `.liked`/`.pinned` fields (the weekly digest's
+// "Popular Posts" preview) -- see getPostsByIdsSupabase for why that's
+// worth a dedicated flag rather than always paying for it.
 export async function getPostsByIds(
   ctx: RequestContext,
   ids: readonly string[],
+  includeViewerState = true,
 ): Promise<readonly ForumPost[]> {
   if (ids.length === 0) {
     return [];
   }
   return ctx.supabase
-    ? getPostsByIdsSupabase(ctx.supabase, ctx.userId, ids)
+    ? getPostsByIdsSupabase(ctx.supabase, ctx.userId, ids, includeViewerState)
     : getPostsByIdsMemory(ctx.userId, ids);
 }
 

@@ -17,6 +17,7 @@ interface EventRow {
   readonly id: string;
   readonly going_base: number;
   readonly created_by: string;
+  readonly event_joins: readonly { readonly user_id: string }[];
 }
 
 interface UpcomingEventRow {
@@ -75,9 +76,14 @@ export async function getWeeklyDigestRawSupabase(
         .select('id,like_count,reply_count,author_id')
         .gte('created_at', startIso)
         .lt('created_at', endIso),
+      // event_joins embedded via PostgREST's foreign-table join (events.id
+      // <- event_joins.event_id) instead of a separate follow-up query --
+      // see missions-supabase.ts's MISSION_SELECT comment for why every
+      // subrequest here is worth cutting on a hosting platform that caps
+      // them per request.
       supabase
         .from('events')
-        .select('id,going_base,created_by')
+        .select('id,going_base,created_by,event_joins(user_id)')
         .gte('starts_at', startIso)
         .lt('starts_at', endIso),
       // Not a plain table select: mission_progress's only RLS policy scopes
@@ -122,24 +128,16 @@ export async function getWeeklyDigestRawSupabase(
   const completedRows = (completedProgressRes.data ?? []) as unknown as CompletedProgressRow[];
   const commentRows = (commentsRes.data ?? []) as { author_id: string }[];
 
-  // Both of these depend on the batch above (event/mission ids to look up)
-  // but not on each other, so they run together as one round trip instead
-  // of two sequential ones.
-  const eventIds = eventRows.map((row) => row.id);
+  // Mission ids to look up depend on the batch above (which missions were
+  // completed), event going-counts no longer do -- they're now embedded on
+  // eventRows itself (see the `events` query above).
   const missionIds = [...new Set(completedRows.map((row) => row.mission_id))];
-  const [joinsRes, missionsRes] = await Promise.all([
-    eventIds.length
-      ? supabase.from('event_joins').select('event_id,user_id').in('event_id', eventIds)
-      : Promise.resolve({ data: [] as { event_id: string; user_id: string }[], error: null }),
-    missionIds.length
-      ? supabase.from('missions').select('id,title,xp').in('id', missionIds)
-      : Promise.resolve({ data: [] as MissionSummaryRow[], error: null }),
-  ]);
-  throwIfSupabaseError(joinsRes.error, 'load digest event joins');
+  const missionsRes = missionIds.length
+    ? await supabase.from('missions').select('id,title,xp').in('id', missionIds)
+    : { data: [] as MissionSummaryRow[], error: null };
   throwIfSupabaseError(missionsRes.error, 'load digest completed missions');
-  const joinRows = (joinsRes.data ?? []) as { event_id: string; user_id: string }[];
   const goingCountFor = (eventId: string): number =>
-    joinRows.filter((row) => row.event_id === eventId).length;
+    eventRows.find((row) => row.id === eventId)?.event_joins.length ?? 0;
   const missionById = new Map(
     ((missionsRes.data ?? []) as unknown as MissionSummaryRow[]).map((row) => [row.id, row]),
   );

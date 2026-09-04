@@ -456,10 +456,19 @@ interface EventRowWithJoins extends EventRow {
 
 // Fetches specific events by id — used to hydrate bookmarks, which can point
 // at any event regardless of authorship or join status.
+//
+// includeAttendeeDetails is false for a caller that only displays a going
+// count, not author/attendee names or avatars (the weekly digest's
+// "Popular Events" preview -- see PopularEventRow), which skips the batch
+// `app_users` lookup those need. `going` itself still comes through
+// correctly either way -- it's computed from event_joins, already embedded
+// in EVENTS_BY_IDS_SELECT, not from this lookup. See getPostsByIdsSupabase
+// for why cutting an otherwise-unused subrequest here matters.
 export async function getEventsByIdsSupabase(
   supabase: SupabaseClient,
   userId: string,
   ids: readonly string[],
+  includeAttendeeDetails = true,
 ): Promise<readonly CommunityEvent[]> {
   const { data, error } = await supabase
     .from('events')
@@ -473,11 +482,13 @@ export async function getEventsByIdsSupabase(
       (row) => row.user_id,
     );
 
-  const neededIds = uniqueIds([
-    ...eventRows.map((row) => row.created_by),
-    ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
-    ...eventRows.flatMap((row) => row.event_joins.map((join) => join.user_id)),
-  ]);
+  const neededIds = includeAttendeeDetails
+    ? uniqueIds([
+        ...eventRows.map((row) => row.created_by),
+        ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
+        ...eventRows.flatMap((row) => row.event_joins.map((join) => join.user_id)),
+      ])
+    : [];
   const { data: userData, error: userError } = neededIds.length
     ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', [...neededIds])
     : { data: [], error: null };
