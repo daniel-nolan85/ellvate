@@ -29,8 +29,19 @@ import type {
 import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 import { validateMissionInput } from './validation';
 
+// The embedded `author` relation (same pattern already used by posts,
+// comments, petitions, etc. -- see e.g. posts-supabase.ts's POST_SELECT)
+// folds what used to be a separate `app_users` lookup into this same
+// request via PostgREST's foreign-table join, instead of firing it as its
+// own follow-up query. Each of those follow-up queries counted as its own
+// subrequest against the hosting platform's per-request subrequest cap, and
+// with several of them firing in parallel per screen (missions, progress,
+// authors, activity counts, ...) real requests were hitting that cap --
+// "Too many subrequests by single Worker invocation" in the deployment
+// logs, surfacing to users as a generic 503 on member profiles and other
+// screens that route through this module.
 const MISSION_SELECT =
-  'id,created_by,title,description,scheduled_for,xp,stops_total,stops,theme,media,position,edited_at';
+  'id,created_by,title,description,scheduled_for,xp,stops_total,stops,theme,media,position,edited_at,author:app_users!missions_created_by_fkey(id,name,avatar_url,is_admin)';
 
 interface MissionRow {
   readonly id: string;
@@ -45,6 +56,12 @@ interface MissionRow {
   readonly media: readonly MissionMedia[] | null;
   readonly position: number;
   readonly edited_at: string | null;
+  readonly author: {
+    readonly id: string;
+    readonly name: string;
+    readonly avatar_url: string | null;
+    readonly is_admin: boolean;
+  } | null;
 }
 
 interface ProgressRow {
@@ -72,6 +89,30 @@ interface PersonLookup {
   readonly avatarUrl: string | null;
   readonly isAdmin: boolean;
 }
+
+// Builds toMissionView's nameById map from rows already carrying their own
+// embedded `author` (see MISSION_SELECT) -- a plain in-memory fold, not a
+// query, since the join already happened server-side as part of fetching
+// missionRows itself.
+const nameByIdFromRows = (
+  rows: readonly MissionRow[],
+): ReadonlyMap<string, PersonLookup> =>
+  new Map(
+    rows.flatMap((row) =>
+      row.author
+        ? ([
+            [
+              row.created_by,
+              {
+                avatarUrl: row.author.avatar_url,
+                isAdmin: row.author.is_admin,
+                name: row.author.name,
+              },
+            ],
+          ] as const)
+        : [],
+    ),
+  );
 
 const toMissionView = (
   row: MissionRow,
@@ -219,22 +260,7 @@ export async function getMissionsViewSupabase(
 
   const userRow = await loadUserRow(supabase, userId);
 
-  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
-  const { data: authorRows, error: authorError } = await supabase
-    .from('app_users')
-    .select('id,name,avatar_url,is_admin')
-    .in('id', authorIds);
-  throwIfSupabaseError(authorError, 'load mission authors');
-  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
-    (authorRows ?? []).map((row) => [
-      row.id as string,
-      {
-        avatarUrl: (row.avatar_url as string | null) ?? null,
-        isAdmin: Boolean(row.is_admin),
-        name: row.name as string,
-      },
-    ]),
-  );
+  const nameById = nameByIdFromRows(missionRows);
 
   return {
     missions: missionRows.map((row) =>
@@ -303,21 +329,7 @@ export async function listMissionsPageSupabase(
     ]),
   );
 
-  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
-  const { data: authorRows, error: authorError } = authorIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', authorIds)
-    : { data: [], error: null };
-  throwIfSupabaseError(authorError, 'load mission authors');
-  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
-    (authorRows ?? []).map((row) => [
-      row.id as string,
-      {
-        avatarUrl: (row.avatar_url as string | null) ?? null,
-        isAdmin: Boolean(row.is_admin),
-        name: row.name as string,
-      },
-    ]),
-  );
+  const nameById = nameByIdFromRows(missionRows);
 
   const filtered = missionRows
     .map((row, index) => ({
@@ -396,21 +408,7 @@ export async function getMyMissionsViewSupabase(
   const missionRows = [...createdRows, ...completedRows];
   const progressByMission = new Map(myProgress.map((row) => [row.mission_id, row]));
 
-  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
-  const { data: authorRows, error: authorError } = authorIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', authorIds)
-    : { data: [], error: null };
-  throwIfSupabaseError(authorError, 'load my mission authors');
-  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
-    (authorRows ?? []).map((row) => [
-      row.id as string,
-      {
-        avatarUrl: (row.avatar_url as string | null) ?? null,
-        isAdmin: Boolean(row.is_admin),
-        name: row.name as string,
-      },
-    ]),
-  );
+  const nameById = nameByIdFromRows(missionRows);
 
   const wrapped = missionRows.map((row) => ({
     id: row.id,
@@ -448,21 +446,7 @@ export async function getMissionsByIdsSupabase(
     ((progressData ?? []) as unknown as ProgressRow[]).map((row) => [row.mission_id, row]),
   );
 
-  const authorIds = [...new Set(missionRows.map((row) => row.created_by))];
-  const { data: authorRows, error: authorError } = authorIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', authorIds)
-    : { data: [], error: null };
-  throwIfSupabaseError(authorError, 'load bookmarked mission authors');
-  const nameById: ReadonlyMap<string, PersonLookup> = new Map(
-    (authorRows ?? []).map((row) => [
-      row.id as string,
-      {
-        avatarUrl: (row.avatar_url as string | null) ?? null,
-        isAdmin: Boolean(row.is_admin),
-        name: row.name as string,
-      },
-    ]),
-  );
+  const nameById = nameByIdFromRows(missionRows);
 
   return missionRows.map((row) =>
     toMissionView(row, progressByMission.get(row.id), nameById),
