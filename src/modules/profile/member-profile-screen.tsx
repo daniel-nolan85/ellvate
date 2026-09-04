@@ -169,7 +169,7 @@ export function MemberProfileScreen({
       </HStack>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-        <VStack className='items-center px-5 pb-2 pt-3' space='sm'>
+        <VStack className='items-center px-5 pb-2 pt-6' space='sm'>
           <Avatar
             name={displayName}
             size='2xl'
