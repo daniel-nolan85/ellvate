@@ -261,7 +261,13 @@ export function MemberActivityScreen({
         </VStack>
       ) : (
         <>
-          <HStack className="px-5 pb-3" space="sm">
+          {/* collapsable={false}: same fix, same reasoning as
+              activity-screen.tsx's identical stat-box row (see its own
+              comment) -- this screen shares that exact structure (stat
+              row + FilterChips + a ScrollView that goes from one section
+              to five depending on the filter), so it's the same latent
+              bug even though it hadn't been reported here yet. */}
+          <HStack className="px-5 pb-3" collapsable={false} space="sm">
             <StatBox label="Posts" value={postItems.length} />
             <StatBox label="Events" value={eventItems.length} />
             <StatBox label="Missions" value={missionItems.length} />
