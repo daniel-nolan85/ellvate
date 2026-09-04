@@ -72,16 +72,19 @@ function AppNavigator() {
           <Stack.Screen name="mission/[id]" />
           <Stack.Screen name="event/[id]" />
           <Stack.Screen name="service/[id]" />
+          {/* Modal duplicates of the 4 screens above, used only by
+              Notifications -- see app/notification/post/[id].tsx. */}
+          <Stack.Screen name="notification/post/[id]" options={MODAL_SCREEN_OPTIONS} />
+          <Stack.Screen name="notification/event/[id]" options={MODAL_SCREEN_OPTIONS} />
+          <Stack.Screen name="notification/mission/[id]" options={MODAL_SCREEN_OPTIONS} />
+          <Stack.Screen name="notification/petition/[id]" options={MODAL_SCREEN_OPTIONS} />
           <Stack.Screen name="protected" />
           {/* A native `presentation: 'modal'` screen isn't flush with the
               real screen origin (iOS presents it as an inset page sheet),
               which breaks KeyboardAvoidingView's offset math -- so this stays
               a normal pushed screen with a slide-up transition instead of a
               true modal presentation, to keep the chat input reachable. */}
-          <Stack.Screen
-            name="assistant"
-            options={{ animation: 'slide_from_bottom' }}
-          />
+          <Stack.Screen name="assistant" options={{ animation: 'slide_from_bottom' }} />
           {/* Profile/Leaderboard/Activity/Bookmarks/Blocked-users are full
               screens (their own ScreenTitle header + the floating
               CommunityNavBar) reached from a persistent icon or a tap inside
@@ -105,19 +108,13 @@ function AppNavigator() {
               digest/member/[userId]/activity -- see MODAL_SCREEN_OPTIONS. */}
           <Stack.Screen name="digest" options={MODAL_SCREEN_OPTIONS} />
           <Stack.Screen name="member/[userId]" options={SHEET_SCREEN_OPTIONS} />
-          <Stack.Screen
-            name="member/[userId]/activity"
-            options={MODAL_SCREEN_OPTIONS}
-          />
+          <Stack.Screen name="member/[userId]/activity" options={MODAL_SCREEN_OPTIONS} />
           {/* A summoned utility overlay (like `assistant`), not a drill-in
               from a list -- slides up rather than the default right-to-left
               push, and stays a plain pushed screen (not `presentation:
               'modal'`) so it renders full-bleed like the detail screens
               instead of iOS's inset page-sheet look. */}
-          <Stack.Screen
-            name="search"
-            options={{ animation: 'slide_from_bottom' }}
-          />
+          <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
         </Stack.Protected>
       </Stack>
       {canAccessCommunity && onProtectedRoute ? (

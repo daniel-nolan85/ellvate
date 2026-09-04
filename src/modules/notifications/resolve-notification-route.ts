@@ -4,10 +4,10 @@
 export function resolveNotificationRoute(
   data: Readonly<Record<string, unknown>>,
 ):
-  | `/post/${string}`
-  | `/event/${string}`
-  | `/mission/${string}`
-  | `/petition/${string}`
+  | `/notification/post/${string}`
+  | `/notification/event/${string}`
+  | `/notification/mission/${string}`
+  | `/notification/petition/${string}`
   | `/digest`
   | `/digest?${string}`
   | null {
@@ -16,21 +16,26 @@ export function resolveNotificationRoute(
   const missionId = data.missionId;
   const petitionId = data.petitionId;
   const weekStart = data.weekStart;
+  // Each of these routes to a /notification/... duplicate (see
+  // app/notification/post/[id].tsx and friends), not the plain /post/...
+  // etc. used everywhere else -- so anything reached from Notifications
+  // always presents as a modal, without changing those screens' other,
+  // plain-push entry points.
   if (typeof postId === 'string') {
-    return `/post/${postId}`;
+    return `/notification/post/${postId}`;
   }
   if (typeof eventId === 'string') {
-    return `/event/${eventId}`;
+    return `/notification/event/${eventId}`;
   }
   if (typeof missionId === 'string') {
-    return `/mission/${missionId}`;
+    return `/notification/mission/${missionId}`;
   }
   // "Petition succeeded" / "The HOA board responded" notifications (see
   // migrations 0035/0036) carry a bare petitionId, same shape as the other
   // kinds -- this case was missing entirely, so tapping either fell through
   // to the null case below and silently did nothing.
   if (typeof petitionId === 'string') {
-    return `/petition/${petitionId}`;
+    return `/notification/petition/${petitionId}`;
   }
   if (typeof weekStart === 'string') {
     return `/digest?weekStart=${encodeURIComponent(weekStart)}`;

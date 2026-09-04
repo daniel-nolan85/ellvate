@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -272,11 +272,21 @@ export function ActivityScreen() {
     myServiceItems.length > 0 ||
     myPetitionItems.length > 0;
 
-  const showPosts = filter === 'all' || filter === 'post';
-  const showEvents = filter === 'all' || filter === 'event';
-  const showMissions = filter === 'all' || filter === 'mission';
-  const showServices = filter === 'all' || filter === 'service';
-  const showPetitions = filter === 'all' || filter === 'petition';
+  // Deferred, not `filter` directly: switching to "All" mounts five
+  // SectionCards worth of ActivityRows in the ScrollView below, in the same
+  // commit as the pills row restyling -- a much heavier commit than any
+  // single-category filter, and the one thing that reliably correlates
+  // with the pills row's text clipping ("All" is both this screen's
+  // default filter and its heaviest one). useDeferredValue lets the pills'
+  // own restyle (driven by `filter`, not `deferredFilter`, below) commit
+  // and paint on its own first, instead of being bundled into the same
+  // synchronous pass as mounting/unmounting four extra SectionCards.
+  const deferredFilter = useDeferredValue(filter);
+  const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
+  const showEvents = deferredFilter === 'all' || deferredFilter === 'event';
+  const showMissions = deferredFilter === 'all' || deferredFilter === 'mission';
+  const showServices = deferredFilter === 'all' || deferredFilter === 'service';
+  const showPetitions = deferredFilter === 'all' || deferredFilter === 'petition';
 
   // Reaching the bottom of the shared ScrollView loads the next page of
   // every currently-visible section at once, rather than trying to detect
@@ -370,24 +380,13 @@ export function ActivityScreen() {
         </VStack>
       ) : (
         <>
-          {/* collapsable={false}: reported as the filter pills row below
-              looking "smushed" specifically when "All" is selected, never
-              when a single category is -- i.e. specifically when the
-              ScrollView below ends up with five stacked sections instead of
-              one. Bookmarks' otherwise-identical FilterChips (verified
-              byte-for-byte identical to this screen's own, twice) has no
-              equivalent report, and the one structural difference between
-              the two screens is this stat-box row, which Bookmarks doesn't
-              have at all. React Native's view-flattening optimization
-              (already the confirmed cause of a near-identical overlap
-              symptom on four other screens in this app, all fixed the same
-              way -- see e.g. notifications-screen.tsx) makes its collapse
-              decision per-render from the current subtree shape, and
-              switching between a 1-section and a 5-section sibling changes
-              that shape -- consistent with this only showing up for "All".
-              Forcing this row to stay a real native view is the same
-              documented workaround as those four screens, applied here for
-              the first time. */}
+          {/* collapsable={false}: the same real react-native-screens#3092
+              view-flattening workaround used on four other screens in this
+              app (see e.g. notifications-screen.tsx) -- kept here as a
+              defensive measure against that class of bug, though the pills
+              row's own "smushed on All" report is addressed instead by
+              deferredFilter below, decoupling this row's restyle from the
+              much heavier 1-to-5-section ScrollView commit underneath it. */}
           <HStack className="px-5 pb-3" collapsable={false} space="sm">
             <StatBox label="Posts" value={myPostItems.length} />
             <StatBox label="Events" value={myEventItems.length} />

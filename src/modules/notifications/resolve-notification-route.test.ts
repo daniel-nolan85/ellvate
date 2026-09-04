@@ -3,23 +3,27 @@ import { describe, expect, test } from 'bun:test';
 import { resolveNotificationRoute } from './resolve-notification-route';
 
 describe('resolveNotificationRoute', () => {
-  test('routes a comment/like notification to its post', () => {
-    expect(resolveNotificationRoute({ postId: 'post-1' })).toBe('/post/post-1');
-  });
-
-  test('routes an event notification to its event', () => {
-    expect(resolveNotificationRoute({ eventId: 'evt-1' })).toBe('/event/evt-1');
-  });
-
-  test('routes a mission reminder notification to its mission', () => {
-    expect(resolveNotificationRoute({ missionId: 'msn-1' })).toBe(
-      '/mission/msn-1',
+  test('routes a comment/like notification to its post modal', () => {
+    expect(resolveNotificationRoute({ postId: 'post-1' })).toBe(
+      '/notification/post/post-1',
     );
   });
 
-  test('routes a petition succeeded/HOA response notification to its petition', () => {
+  test('routes an event notification to its event modal', () => {
+    expect(resolveNotificationRoute({ eventId: 'evt-1' })).toBe(
+      '/notification/event/evt-1',
+    );
+  });
+
+  test('routes a mission reminder notification to its mission modal', () => {
+    expect(resolveNotificationRoute({ missionId: 'msn-1' })).toBe(
+      '/notification/mission/msn-1',
+    );
+  });
+
+  test('routes a petition succeeded/HOA response notification to its petition modal', () => {
     expect(resolveNotificationRoute({ petitionId: 'pet-1' })).toBe(
-      '/petition/pet-1',
+      '/notification/petition/pet-1',
     );
   });
 
@@ -30,7 +34,7 @@ describe('resolveNotificationRoute', () => {
         missionId: 'msn-1',
         postId: 'post-1',
       }),
-    ).toBe('/post/post-1');
+    ).toBe('/notification/post/post-1');
   });
 
   test('routes a digest notification to the digest screen with its week', () => {
@@ -42,7 +46,7 @@ describe('resolveNotificationRoute', () => {
   test('prefers postId/eventId/missionId over weekStart when both are present', () => {
     expect(
       resolveNotificationRoute({ postId: 'post-1', weekStart: '2026-01-05' }),
-    ).toBe('/post/post-1');
+    ).toBe('/notification/post/post-1');
   });
 
   test('returns null when no known id is present', () => {

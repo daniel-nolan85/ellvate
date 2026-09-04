@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -210,11 +210,15 @@ export function MemberActivityScreen({
     serviceItems.length > 0 ||
     petitionItems.length > 0;
 
-  const showPosts = filter === 'all' || filter === 'post';
-  const showEvents = filter === 'all' || filter === 'event';
-  const showMissions = filter === 'all' || filter === 'mission';
-  const showServices = filter === 'all' || filter === 'service';
-  const showPetitions = filter === 'all' || filter === 'petition';
+  // See activity-screen.tsx's identical deferredFilter for why -- this
+  // screen shares the same stat row + FilterChips + 1-to-5-section
+  // ScrollView shape, so it's the same latent commit-size mismatch.
+  const deferredFilter = useDeferredValue(filter);
+  const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
+  const showEvents = deferredFilter === 'all' || deferredFilter === 'event';
+  const showMissions = deferredFilter === 'all' || deferredFilter === 'mission';
+  const showServices = deferredFilter === 'all' || deferredFilter === 'service';
+  const showPetitions = deferredFilter === 'all' || deferredFilter === 'petition';
 
   return (
     <View className="flex-1 bg-canvas">

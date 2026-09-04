@@ -10,6 +10,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import { CommunityNavBar } from '@/src/modules/community-shell';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -126,7 +127,11 @@ export function SearchScreen() {
         </Pressable>
       </HStack>
 
-      <ScrollView contentContainerClassName="px-[18px] py-4" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerClassName="px-[18px] pt-4"
+        contentContainerStyle={{ paddingBottom: 130 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <VStack space="md">
           {!isQueryLongEnough ? (
             <Text className="px-1 py-6 text-center text-text-muted" size="sm">
@@ -173,6 +178,8 @@ export function SearchScreen() {
           )}
         </VStack>
       </ScrollView>
+
+      <CommunityNavBar />
     </View>
   );
 }

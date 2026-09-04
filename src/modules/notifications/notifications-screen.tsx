@@ -12,6 +12,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { CommunityNavBar } from '@/src/modules/community-shell';
 
 import {
   resolveNotificationRoute,
@@ -167,7 +168,7 @@ export function NotificationsScreen() {
         </VStack>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          contentContainerStyle={{ paddingBottom: 130 }}
           onScroll={onScroll}
           scrollEventThrottle={100}
         >
@@ -184,6 +185,8 @@ export function NotificationsScreen() {
           ) : null}
         </ScrollView>
       )}
+
+      <CommunityNavBar />
     </View>
   );
 }
