@@ -21,10 +21,6 @@ import {
   type Notification,
 } from './use-notifications';
 
-interface NotificationsScreenProps {
-  readonly onClose: () => void;
-}
-
 const ICON_BY_KIND: Readonly<Record<string, AppIconName>> = {
   comment: 'MessageCircle',
   digest: 'Newspaper',
@@ -76,7 +72,7 @@ function NotificationRow({
   );
 }
 
-export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
+export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const notifications = useNotifications();
   const markRead = useMarkNotificationRead();
@@ -100,8 +96,17 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
     }
     const route = resolveNotificationRoute(notification.data);
     if (route) {
-      onClose();
-      router.push(route);
+      // router.replace, not router.back() + router.push(): both are native
+      // formSheet presentations, and dismissing this one while immediately
+      // presenting a new one as two separate, back-to-back navigation calls
+      // raced on-device -- the destination screen (and this one, on
+      // returning to it later) rendered with squashed/overlapping content,
+      // consistent with its layout being computed mid-transition rather
+      // than after either transition actually settled. replace swaps the
+      // route in one transition instead of two overlapping ones, and ends
+      // at the same place in history back() + push() did (this screen
+      // popped, the destination in its place).
+      router.replace(route);
     }
   };
 

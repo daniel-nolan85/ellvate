@@ -11,7 +11,6 @@ import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
-import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -57,7 +56,11 @@ function StatCard({
 }) {
   return (
     <Pressable
-      className='flex-1 items-center gap-2 rounded-2xl border border-surface-hairline bg-paper py-3.5 shadow-card'
+      // px-1.5: the label below routinely wraps to two lines ("Missions
+      // completed", "Services listed", "Petitions started") on a card this
+      // narrow (4 per row); with no horizontal padding at all, wrapped
+      // words sat flush against the card's rounded edges.
+      className='flex-1 items-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card'
       disabled={!onPress}
       onPress={onPress}
     >
@@ -122,13 +125,9 @@ export function MemberProfileScreen({
     });
   };
 
-  // Closes the menu sheet first and waits for its close animation before
-  // opening the confirm modal -- both are native Modals, so presenting one
-  // while the other is still mounted risks the same concurrent-modal
-  // freeze this app has hit before with two overlapping RN Modals.
   const openConfirmBlock = () => {
     setMenuOpen(false);
-    setTimeout(() => setConfirmBlockOpen(true), CLOSE_DURATION);
+    setConfirmBlockOpen(true);
   };
 
   const handleReport = () => {
@@ -170,7 +169,7 @@ export function MemberProfileScreen({
       </HStack>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-        <VStack className='items-center px-5 pb-2 pt-3' space='sm'>
+        <VStack className='items-center px-5 pb-2 pt-6' space='sm'>
           <Avatar
             name={displayName}
             size='2xl'
@@ -351,31 +350,54 @@ export function MemberProfileScreen({
         )}
       </ScrollView>
 
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className='gap-1 px-[18px] pb-2'>
+      {menuOpen ? (
+        <>
+          {/* An inline dropdown, not a Sheet (a second native Modal) -- a
+              Modal opened from this button, which lives in this screen's
+              own formSheet header, has been reported as silently doing
+              nothing on-device. RN's <Modal> presenting on top of a screen
+              that's itself already natively presented (formSheet) is a
+              known bad combination on iOS (see software-mansion/
+              react-native-screens#2048, #1356, #525) -- content-triggered
+              Sheets elsewhere on this same formSheet screen type (digest,
+              member-activity) work fine, but this one opens from the
+              collapsable={false} header rather than from within the
+              ScrollView, which is the one thing different about it.
+              Rendering the menu inline, in this screen's own view tree,
+              sidesteps the whole question of why. */}
           <Pressable
-            accessibilityRole='button'
-            className='flex-row items-center gap-3 px-1.5 py-3.5'
-            onPress={() => (isBlocked ? handleUnblock() : openConfirmBlock())}
+            accessibilityLabel='Close menu'
+            className='absolute inset-0'
+            onPress={() => setMenuOpen(false)}
+          />
+          <View
+            className='absolute right-5 min-w-[220px] gap-1 rounded-2xl border border-surface-hairline bg-paper py-1 shadow-card'
+            style={{ top: 76 }}
           >
-            <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={20} />
-            <Text className='text-[15px]'>
-              {isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'}
-            </Text>
-          </Pressable>
-          <Divider />
-          <Pressable
-            accessibilityRole='button'
-            className='flex-row items-center gap-3 px-1.5 py-3.5'
-            onPress={handleReport}
-          >
-            <Icon color='rgb(231,0,11)' name='AlertCircle' size={20} />
-            <Text className='text-[15px]' style={{ color: 'rgb(231,0,11)' }}>
-              Report this member
-            </Text>
-          </Pressable>
-        </View>
-      </Sheet>
+            <Pressable
+              accessibilityRole='button'
+              className='flex-row items-center gap-3 px-4 py-3'
+              onPress={() => (isBlocked ? handleUnblock() : openConfirmBlock())}
+            >
+              <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
+              <Text className='text-[14px]'>
+                {isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'}
+              </Text>
+            </Pressable>
+            <Divider />
+            <Pressable
+              accessibilityRole='button'
+              className='flex-row items-center gap-3 px-4 py-3'
+              onPress={handleReport}
+            >
+              <Icon color='rgb(231,0,11)' name='AlertCircle' size={18} />
+              <Text className='text-[14px]' style={{ color: 'rgb(231,0,11)' }}>
+                Report this member
+              </Text>
+            </Pressable>
+          </View>
+        </>
+      ) : null}
 
       <ConfirmModal
         confirmLabel='Block'

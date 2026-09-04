@@ -79,8 +79,17 @@ export function FilterChips({
             key={filter.key}
             onPress={() => onSelect(filter.key)}
           >
+            {/* allowFontScaling={false}: a fixed leading-[18px] clipped the
+                top of these glyphs on a device with a larger OS text-size
+                setting -- the actual rendered font grows with that setting
+                by default, but the hard-coded 18px line box doesn't grow
+                with it, so taller scaled glyphs no longer fit inside it.
+                These are short, fixed-purpose labels on a compact pill
+                control (not body copy), so opting out of scaling here is
+                the same tradeoff a segmented control/tab bar would make. */}
             <Text
-              className={`font-inter-medium text-[13px] leading-[18px] ${
+              allowFontScaling={false}
+              className={`font-inter-medium text-[13px] ${
                 isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
               }`}
             >
@@ -96,11 +105,11 @@ export function FilterChips({
 export function StatBox({ label, value }: { readonly label: string; readonly value: number }) {
   return (
     <VStack
-      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper py-3.5 shadow-card"
+      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card"
       space="xs"
     >
       <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
-      <Text className="text-text-muted" size="xs">
+      <Text className="text-center text-text-muted" size="xs">
         {label}
       </Text>
     </VStack>

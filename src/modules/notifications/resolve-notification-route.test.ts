@@ -17,6 +17,12 @@ describe('resolveNotificationRoute', () => {
     );
   });
 
+  test('routes a petition succeeded/HOA response notification to its petition', () => {
+    expect(resolveNotificationRoute({ petitionId: 'pet-1' })).toBe(
+      '/petition/pet-1',
+    );
+  });
+
   test('prefers postId over eventId and missionId when multiple are present', () => {
     expect(
       resolveNotificationRoute({
