@@ -40,6 +40,7 @@ export interface MemberActivityStats {
   readonly eventsCreated: number;
   readonly eventsAttended: number;
   readonly servicesListed: number;
+  readonly petitionsStarted: number;
 }
 
 interface MemberProfileResponse {

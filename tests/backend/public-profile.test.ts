@@ -115,6 +115,7 @@ describe('getMemberActivityCountsSupabase', () => {
       eventsAttended: 3,
       eventsCreated: 3,
       missionsCreated: 3,
+      petitionsStarted: 3,
       postsCount: 3,
       servicesListed: 3,
     });
@@ -124,6 +125,7 @@ describe('getMemberActivityCountsSupabase', () => {
       { column: 'created_by', table: 'events', value: 'user-other' },
       { column: 'user_id', table: 'event_joins', value: 'user-other' },
       { column: 'created_by', table: 'service_listings', value: 'user-other' },
+      { column: 'created_by', table: 'petitions', value: 'user-other' },
     ]);
   });
 });

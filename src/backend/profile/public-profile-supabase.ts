@@ -74,6 +74,7 @@ export async function getMemberActivityCountsSupabase(
     eventsCreatedRes,
     eventsAttendedRes,
     servicesListedRes,
+    petitionsStartedRes,
   ] = await Promise.all([
     supabase
       .from('posts')
@@ -95,6 +96,10 @@ export async function getMemberActivityCountsSupabase(
       .from('service_listings')
       .select('*', { count: 'exact', head: true })
       .eq('created_by', memberUserId),
+    supabase
+      .from('petitions')
+      .select('*', { count: 'exact', head: true })
+      .eq('created_by', memberUserId),
   ]);
   throwIfSupabaseError(postsRes.error, 'count member posts');
   throwIfSupabaseError(missionsRes.error, 'count member missions created');
@@ -107,10 +112,15 @@ export async function getMemberActivityCountsSupabase(
     servicesListedRes.error,
     'count member services listed',
   );
+  throwIfSupabaseError(
+    petitionsStartedRes.error,
+    'count member petitions started',
+  );
   return {
     eventsAttended: eventsAttendedRes.count ?? 0,
     eventsCreated: eventsCreatedRes.count ?? 0,
     missionsCreated: missionsRes.count ?? 0,
+    petitionsStarted: petitionsStartedRes.count ?? 0,
     postsCount: postsRes.count ?? 0,
     servicesListed: servicesListedRes.count ?? 0,
   };

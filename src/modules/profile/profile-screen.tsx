@@ -501,6 +501,11 @@ export function ProfileScreen() {
             onPress={() => router.push('/activity?filter=service')}
             value={String(activity.data?.stats.servicesListed ?? 0)}
           />
+          <StatCard
+            label="Petitions"
+            onPress={() => router.push('/activity?filter=petition')}
+            value={String(activity.data?.stats.petitionsStarted ?? 0)}
+          />
         </HStack>
 
         <SectionTitle>Privacy</SectionTitle>

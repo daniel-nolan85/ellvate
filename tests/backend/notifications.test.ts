@@ -15,8 +15,10 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../src/backend/notifications';
+import { toggleSignature } from '../../src/backend/petitions';
 import { updateProfile } from '../../src/backend/profile';
-import { DEMO_USER_ID, resetStore } from '../../src/backend/store';
+import { DEMO_USER_ID, resetStore, setState } from '../../src/backend/store';
+import type { StoredPetition } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -189,6 +191,54 @@ describe('createMissionComment notifies the mission author', () => {
     expect(result.ok).toBe(true);
 
     expect(await list('user-hoa')).toEqual([]);
+  });
+});
+
+describe('toggleSignature notifies signers when a petition succeeds', () => {
+  function seedPetition(overrides: Partial<StoredPetition> = {}): StoredPetition {
+    const stored: StoredPetition = {
+      category: 'safety',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      createdBy: 'user-hoa',
+      deadlineAt: '2026-12-31T00:00:00.000Z',
+      deadlineDays: 30,
+      description: 'A description of the issue.',
+      hoaEmailSentAt: null,
+      hoaResponse: null,
+      hoaResponseAt: null,
+      id: `fixture-petition-${Math.random().toString(36).slice(2)}`,
+      requiredSignatures: 1,
+      signatureCount: 0,
+      status: 'open',
+      succeededAt: null,
+      title: 'Fixture petition',
+      ...overrides,
+    };
+    setState((current) => ({ ...current, petitions: [...current.petitions, stored] }));
+    return stored;
+  }
+
+  test('creates a notification for the signer when crossing the threshold', async () => {
+    const petition = seedPetition();
+
+    const outcome = await toggleSignature(ctx('user-mia'), petition.id);
+    expect(outcome.ok && outcome.result.justSucceeded).toBe(true);
+
+    const notifications = await list('user-mia');
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ kind: 'petition', readAt: null });
+  });
+
+  test('does not notify a signer who has petition notifications off', async () => {
+    await updateProfile(ctx('user-mia'), {
+      notificationPrefs: { petitions: false },
+    });
+    const petition = seedPetition();
+
+    const outcome = await toggleSignature(ctx('user-mia'), petition.id);
+    expect(outcome.ok && outcome.result.justSucceeded).toBe(true);
+
+    expect(await list('user-mia')).toEqual([]);
   });
 });
 

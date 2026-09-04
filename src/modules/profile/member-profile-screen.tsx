@@ -266,6 +266,17 @@ export function MemberProfileScreen({
                   tone='accent'
                   value={String(member.data.stats?.servicesListed ?? 0)}
                 />
+                <StatCard
+                  icon='FileSignature'
+                  label='Petitions started'
+                  onPress={
+                    activityShared
+                      ? () => router.push(`/member/${userId}/activity?filter=petition`)
+                      : undefined
+                  }
+                  tone='plum'
+                  value={String(member.data.stats?.petitionsStarted ?? 0)}
+                />
               </HStack>
             </VStack>
 
