@@ -607,7 +607,7 @@ export function ProfileScreen() {
       </ScrollView>
 
       <Sheet onClose={() => setActiveSheet(null)} visible={activeSheet === 'edit'}>
-        {activeSheet === 'edit' ? (
+        {activeSheet === 'edit' ? (maxContentHeight: number) => (
           <VStack className="px-5 pb-2 pt-1" space="md">
             <Text className="font-inter-bold text-[17px] text-content">
               Edit profile
@@ -621,8 +621,24 @@ export function ProfileScreen() {
                 keyboard-height handling), the button has nowhere to render
                 and becomes permanently unreachable. Inside the scroll area,
                 it's always reachable by scrolling further, regardless of
-                how little vertical space ends up available. */}
-            <ScrollView style={{ maxHeight: 440 }}>
+                how little vertical space ends up available.
+                `maxContentHeight` comes from Sheet -- the space actually
+                left after the handle, safe area, and live keyboard height,
+                not a guessed constant. The old fixed 440 worked only until
+                the keyboard opened (autoFocus below makes that immediate)
+                and shrank the sheet below what 440 assumed -- with nothing
+                to clip or scroll the excess back into view, the ScrollView
+                rendered past the sheet's real bottom edge, which is exactly
+                the "Save button still partially hidden" report. The 56
+                below is this title row's own height (text + padding + the
+                gap above the ScrollView); 200 is a floor so a momentary
+                keyboard-transition measurement never collapses it to
+                nothing. */}
+            <ScrollView
+              style={{
+                maxHeight: Math.min(440, Math.max(200, maxContentHeight - 56)),
+              }}
+            >
               <VStack space="lg">
                 <VStack space="xs">
                   <Text className="font-inter-semibold text-content" size="sm">

@@ -22,4 +22,16 @@ export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   // native header bar overlapping this screen's own custom heading and the
   // first row of content beneath it.
   headerShown: false,
+  // On this react-native-screens version, a formSheet screen's own root
+  // `flex: 1` View does NOT reliably get stretched to the sheet's full
+  // allocated (detent) height on iOS -- it renders at its intrinsic content
+  // height instead and sticks to the top, leaving the rest of the visually
+  // full-height sheet blank below it. That reads as every screen's content
+  // being squeezed into a short strip at the top ("smushed"), which neither
+  // of this shared config's other two options (headerShown, and each
+  // screen's own collapsable={false} header fix) could touch -- both target
+  // a header/z-order problem, not a content-sizing one. Setting the content
+  // container's height explicitly (rather than depending on flex to resolve
+  // it) is react-native-screens' own documented workaround.
+  contentStyle: { height: '100%' },
 };

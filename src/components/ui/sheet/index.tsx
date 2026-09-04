@@ -31,11 +31,22 @@ const HIDDEN_OFFSET = 900;
 // Minimum clearance kept between the safe-area top (the notch/status bar)
 // and the sheet's own top edge, on top of insets.top itself.
 const MIN_TOP_GAP = 16;
+// Height of the drag-handle row above `children` (pt-4 + h-1 dot + pb-2.5),
+// subtracted from the panel's own maxHeight to get the space actually left
+// for content -- see `maxContentHeight` below.
+const HANDLE_AREA_HEIGHT = 30;
 
 interface SheetProps {
   readonly visible: boolean;
   readonly onClose: () => void;
-  readonly children: ReactNode;
+  // A plain node for content that's always short enough to fit. For content
+  // that can be long enough to need its own internal ScrollView (e.g. a
+  // form), pass a function instead: it receives the space actually left for
+  // content after the handle, safe area, and live keyboard height are all
+  // accounted for, so that inner ScrollView can be sized to exactly what's
+  // left rather than a guessed constant that stops working the moment the
+  // keyboard (or a taller header) eats into the room it assumed it had.
+  readonly children: ReactNode | ((maxContentHeight: number) => ReactNode);
   // False for a sheet the caller wants a deliberate in-content action to
   // dismiss (e.g. a required consent checkbox) -- blocks the backdrop tap,
   // drag-to-dismiss, and hardware back button that would otherwise close it.
@@ -179,6 +190,12 @@ export function Sheet({
     return null;
   }
 
+  const panelMaxHeight = windowHeight - insets.top - MIN_TOP_GAP - keyboardHeight;
+  const maxContentHeight = Math.max(
+    0,
+    panelMaxHeight - HANDLE_AREA_HEIGHT - insets.bottom - 12,
+  );
+
   return (
     <Modal
       animationType="none"
@@ -233,7 +250,7 @@ export function Sheet({
                 // still -- means the sheet can never physically extend past
                 // the safe area, whatever the content's height or whether
                 // the keyboard is open.
-                maxHeight: windowHeight - insets.top - MIN_TOP_GAP - keyboardHeight,
+                maxHeight: panelMaxHeight,
                 paddingBottom: insets.bottom + 12,
               },
             ]}
@@ -241,7 +258,9 @@ export function Sheet({
             <View className="items-center pb-2.5 pt-4">
               <View className="h-1 w-10 rounded-full bg-line" />
             </View>
-            {children}
+            {typeof children === 'function'
+              ? children(maxContentHeight)
+              : children}
           </Animated.View>
         </GestureDetector>
       </KeyboardAvoidingView>
