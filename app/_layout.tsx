@@ -99,10 +99,10 @@ function AppNavigator() {
           <Stack.Screen name="activity" options={{ animation: 'none' }} />
           <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
           <Stack.Screen name="blocked-users" options={{ animation: 'none' }} />
+          {/* Plain pushed screen, not modal/formSheet -- see notifications-screen.tsx. */}
+          <Stack.Screen name="notifications" options={{ animation: 'slide_from_bottom' }} />
           {/* Every dismissible overlay shares SHEET_SCREEN_OPTIONS except
-              notifications, digest, and member/[userId]/activity -- see
-              MODAL_SCREEN_OPTIONS for why. */}
-          <Stack.Screen name="notifications" options={MODAL_SCREEN_OPTIONS} />
+              digest/member/[userId]/activity -- see MODAL_SCREEN_OPTIONS. */}
           <Stack.Screen name="digest" options={MODAL_SCREEN_OPTIONS} />
           <Stack.Screen name="member/[userId]" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen

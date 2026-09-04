@@ -76,7 +76,23 @@ export function FilterChips({
             className={`shrink-0 rounded-full px-3.5 py-[7px] ${
               isActive ? 'bg-accent' : 'bg-secondary'
             }`}
-            key={filter.key}
+            // key includes `active`, not just filter.key: on-device
+            // screenshots show every *inactive* pill's text partially
+            // unrendered specifically (and only) when "All" is the active
+            // filter -- switching to any other filter, the exact same
+            // inactive pills (this one included) render perfectly, which
+            // rules out anything about this pill's own style or content
+            // (unchanged either way) and points at a stale paint carried
+            // over from a previous render instead. Keying on `active` forces
+            // React to tear down and recreate every pill's underlying native
+            // view on each filter change rather than restyle the existing
+            // one in place, which is a bit more churn but removes stale
+            // native-view reuse as a possible cause outright, whatever its
+            // exact mechanism -- the two previous fixes here (removing a
+            // fixed line-height, then forcing a sibling to stay unflattened)
+            // each targeted a real, different mechanism and neither held up
+            // against this exact "only All, only sometimes" report.
+            key={`${filter.key}-${active}`}
             onPress={() => onSelect(filter.key)}
           >
             {/* allowFontScaling={false}: a fixed leading-[18px] clipped the
