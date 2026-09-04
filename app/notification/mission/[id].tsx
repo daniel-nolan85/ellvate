@@ -6,5 +6,5 @@ import { MissionDetailScreen } from '@/src/modules/missions';
 export default function NotificationMissionDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  return <MissionDetailScreen missionId={id} onBack={() => router.back()} />;
+  return <MissionDetailScreen missionId={id} modal onBack={() => router.back()} />;
 }

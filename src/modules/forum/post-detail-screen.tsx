@@ -62,9 +62,16 @@ const COLOR_DESTRUCTIVE = 'rgb(231,0,11)';
 interface PostDetailScreenProps {
   readonly postId: string;
   readonly onBack: () => void;
+  // True when reached from Notifications (see app/notification/post/[id].tsx)
+  // -- see petition-detail-screen.tsx's identical prop for why.
+  readonly modal?: boolean;
 }
 
-export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
+export function PostDetailScreen({
+  modal = false,
+  onBack,
+  postId,
+}: PostDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
@@ -280,12 +287,15 @@ export function PostDetailScreen({ postId, onBack }: PostDetailScreenProps) {
   return (
     <View className='flex-1 bg-canvas'>
       <HStack
-        className='items-center gap-2 border-b border-line px-[18px] pb-3'
-        style={{ paddingTop: insets.top + 8 }}
+        className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
+        collapsable={false}
+        style={{ paddingTop: modal ? 24 : insets.top + 8 }}
       >
-        <Pressable accessibilityLabel='Back' onPress={onBack}>
-          <Icon name='ChevronLeft' size={22} />
-        </Pressable>
+        {modal ? null : (
+          <Pressable accessibilityLabel='Back' onPress={onBack}>
+            <Icon name='ChevronLeft' size={22} />
+          </Pressable>
+        )}
         <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
           Post
         </Heading>

@@ -1,11 +1,12 @@
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 
 // Shared options for the formSheet-presented dismissible overlays (Digest,
-// someone else's Profile) -- a native formSheet gets an OS-drawn grabber,
-// swipe-to-dismiss, and tap-outside-to-close for free, instead of each
-// screen hand-rolling an X button and its own insets.top math. 'large' is a
-// single tall detent (not resizable between sizes, just dismissible),
-// matching the feel of the Sheet component used everywhere else in the app.
+// someone else's Profile, the notification/... duplicates of Post/Event/
+// Mission/Petition) -- a native formSheet gets an OS-drawn grabber, swipe-
+// to-dismiss, and tap-outside-to-close for free, instead of each screen
+// hand-rolling an X button and its own insets.top math. 'large' is a single
+// tall detent (not resizable between sizes, just dismissible), matching the
+// feel of the Sheet component used everywhere else in the app.
 export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   presentation: 'formSheet',
   // A single full-height detent -- this version's types only accept an
@@ -35,29 +36,21 @@ export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   contentStyle: { height: '100%' },
 };
 
-// For a formSheet screen that used to always be reached by chaining
-// directly off another formSheet screen (Notifications -> Digest on every
-// notification tap; Member Profile -> Member Activity from its stat cards).
-// That combination -- a formSheet presented over another formSheet, with a
-// ScrollView inside -- hits a confirmed upstream bug (software-mansion/
-// react-native-screens#3569): the newly-presented sheet's content height
-// comes out wrong, reproducing exactly as this app's "smushed at the top"
-// reports, worsening rather than resolving on repeated back-and-forth.
-//
-// Notifications itself no longer uses this at all -- it's a plain pushed
-// screen now (see app/_layout.tsx), specifically so nothing it links to
-// ever presents over another presented screen, of any kind, rather than
-// narrowing the fix to "not over specifically another formSheet" and
-// re-litigating that scope every time a new destination turned out to
-// still be affected (which Digest was, even after Notifications alone
-// stopped being a formSheet). Digest and Member Activity keep this --
-// they're each still one formSheet deep from a plain screen (Notifications,
-// Member Profile), which was never the reported problem. Digest's other
-// entry point (a direct icon tap from Profile) gets a modal instead of a
-// formSheet too, a minor, acceptable style difference there. Member Profile
-// keeps the full formSheet treatment for its many other entry points
+// For Member Activity specifically, which is always reached by chaining
+// directly off Member Profile, an already-presented formSheet. A formSheet
+// presented over another formSheet, with a ScrollView inside, hits a
+// confirmed upstream bug (software-mansion/react-native-screens#3569): the
+// newly-presented sheet's content height comes out wrong, reproducing
+// exactly as this app's "smushed at the top" reports, worsening rather than
+// resolving on repeated back-and-forth. Member Profile keeps the full
+// formSheet treatment (SHEET_SCREEN_OPTIONS) for its many other entry points
 // (search, leaderboard, forum, ...), since only the Member Activity side of
-// that pair was ever reported broken.
+// that one pair was ever reported broken -- so Member Activity alone gets
+// this plain `modal` instead, avoiding the chain without touching Member
+// Profile's own presentation. Every other screen that used to need this
+// (Digest, the notification/... duplicates) is one formSheet deep from a
+// plain screen, not another formSheet, so it uses SHEET_SCREEN_OPTIONS
+// instead and gets the native grabber.
 export const MODAL_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   presentation: 'modal',
   headerShown: false,

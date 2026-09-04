@@ -6,5 +6,5 @@ import { EventDetailScreen } from '@/src/modules/events';
 export default function NotificationEventDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  return <EventDetailScreen eventId={id} onBack={() => router.back()} />;
+  return <EventDetailScreen eventId={id} modal onBack={() => router.back()} />;
 }

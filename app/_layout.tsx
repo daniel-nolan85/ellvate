@@ -72,12 +72,15 @@ function AppNavigator() {
           <Stack.Screen name="mission/[id]" />
           <Stack.Screen name="event/[id]" />
           <Stack.Screen name="service/[id]" />
-          {/* Modal duplicates of the 4 screens above, used only by
-              Notifications -- see app/notification/post/[id].tsx. */}
-          <Stack.Screen name="notification/post/[id]" options={MODAL_SCREEN_OPTIONS} />
-          <Stack.Screen name="notification/event/[id]" options={MODAL_SCREEN_OPTIONS} />
-          <Stack.Screen name="notification/mission/[id]" options={MODAL_SCREEN_OPTIONS} />
-          <Stack.Screen name="notification/petition/[id]" options={MODAL_SCREEN_OPTIONS} />
+          {/* formSheet duplicates of the 4 screens above, used only by
+              Notifications -- see app/notification/post/[id].tsx. formSheet
+              (not MODAL_SCREEN_OPTIONS) for the native grabber; safe here
+              since Notifications is a plain screen, not another formSheet
+              (the #3569 chaining bug MODAL_SCREEN_OPTIONS exists for). */}
+          <Stack.Screen name="notification/post/[id]" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen name="notification/event/[id]" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen name="notification/mission/[id]" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen name="notification/petition/[id]" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen name="protected" />
           {/* A native `presentation: 'modal'` screen isn't flush with the
               real screen origin (iOS presents it as an inset page sheet),
@@ -105,8 +108,10 @@ function AppNavigator() {
           {/* Plain pushed screen, not modal/formSheet -- see notifications-screen.tsx. */}
           <Stack.Screen name="notifications" options={{ animation: 'slide_from_bottom' }} />
           {/* Every dismissible overlay shares SHEET_SCREEN_OPTIONS except
-              digest/member/[userId]/activity -- see MODAL_SCREEN_OPTIONS. */}
-          <Stack.Screen name="digest" options={MODAL_SCREEN_OPTIONS} />
+              member/[userId]/activity -- see MODAL_SCREEN_OPTIONS. Digest's
+              two entry points (Notifications, a Profile icon tap) are both
+              plain screens, so formSheet is safe here too. */}
+          <Stack.Screen name="digest" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen name="member/[userId]" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen name="member/[userId]/activity" options={MODAL_SCREEN_OPTIONS} />
           {/* A summoned utility overlay (like `assistant`), not a drill-in
