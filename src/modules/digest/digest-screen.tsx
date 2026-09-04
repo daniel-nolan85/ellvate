@@ -261,18 +261,23 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
   return (
     <View className="flex-1 bg-canvas">
       {/* No manual close button -- this screen is presented as a native
-          formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
-          dismiss, and tap-outside already cover closing it. A `formSheet`
-          page's content starts well below the physical top edge, so this
-          only needs a small fixed gap, not insets.top -- unlike Sheet's
+          `presentation: 'modal'` screen (see app/_layout.tsx and
+          MODAL_SCREEN_OPTIONS -- not formSheet, specifically to dodge
+          react-native-screens#3569, a formSheet-presented-over-another-
+          formSheet content-height bug this screen used to trigger every
+          time a notification tap chained it in from Notifications), whose
+          own swipe-to-dismiss and tap-outside already cover closing it.
+          Like formSheet, this still presents as an inset page sheet rather
+          than flush with the physical top edge, so a small fixed gap is
+          enough here too, not insets.top -- unlike Sheet's
           statusBarTranslucent custom Modal, which spans behind the notch.
           collapsable={false} works around a real react-native-screens bug
-          (software-mansion/react-native-screens#3092): a formSheet screen
-          whose root View has a background color can have RN's view-
-          flattening optimization collapse this header's native view into
-          its parent, which then lets the content below render on top of
-          it instead of below it -- forcing this view to actually exist
-          natively is the documented fix. */}
+          (software-mansion/react-native-screens#3092): a screen whose root
+          View has a background color can have RN's view-flattening
+          optimization collapse this header's native view into its parent,
+          which then lets the content below render on top of it instead of
+          below it -- forcing this view to actually exist natively is the
+          documented fix. */}
       <HStack className="items-center justify-between px-5 pb-1 pt-6" collapsable={false}>
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap

@@ -100,10 +100,10 @@ function AppNavigator() {
           <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
           <Stack.Screen name="blocked-users" options={{ animation: 'none' }} />
           {/* Every dismissible overlay shares SHEET_SCREEN_OPTIONS except
-              notifications and member/[userId]/activity -- see
+              notifications, digest, and member/[userId]/activity -- see
               MODAL_SCREEN_OPTIONS for why. */}
           <Stack.Screen name="notifications" options={MODAL_SCREEN_OPTIONS} />
-          <Stack.Screen name="digest" options={SHEET_SCREEN_OPTIONS} />
+          <Stack.Screen name="digest" options={MODAL_SCREEN_OPTIONS} />
           <Stack.Screen name="member/[userId]" options={SHEET_SCREEN_OPTIONS} />
           <Stack.Screen
             name="member/[userId]/activity"
