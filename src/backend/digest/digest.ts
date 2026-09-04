@@ -141,9 +141,15 @@ export async function getWeeklyDigest(
     (event) => event.id,
   );
 
+  // PopularPostRow/PopularEventRow render only title/likes/replies and
+  // title/going (see digest-screen.tsx) -- never author, attendees, or a
+  // viewer's own liked/pinned state -- so both skip the extra queries their
+  // full versions would otherwise fire for data nothing here displays. See
+  // getPostsByIdsSupabase/getEventsByIdsSupabase for why that subrequest
+  // count matters.
   const [popularPosts, popularEvents] = await Promise.all([
-    getPostsByIds(ctx, popularPostIds),
-    getEventsByIds(ctx, popularEventIds),
+    getPostsByIds(ctx, popularPostIds, false),
+    getEventsByIds(ctx, popularEventIds, false),
   ]);
 
   return {

@@ -348,10 +348,20 @@ export async function getMyPostsSupabase(
 // filter listPostsSupabase does: mute is the app's one visibility rule, so a
 // muted author's post should stay hidden even if it was bookmarked before
 // the mute happened.
+// includeViewerState is false for a caller that only displays these posts
+// read-only (the weekly digest's "Popular Posts" preview, which renders
+// just title/like-count/reply-count -- see PopularPostRow) and never reads
+// `.liked`/`.pinned` off the result. Skipping the two queries that compute
+// them removes 2 of this function's 4 subrequests when they'd otherwise go
+// unused, which matters on a hosting platform that caps subrequests per
+// request (see missions-supabase.ts's MISSION_SELECT comment for the full
+// story). Mute-filtering always still applies -- that's content visibility,
+// not per-viewer UI state, so it's never worth skipping.
 export async function getPostsByIdsSupabase(
   supabase: SupabaseClient,
   userId: string,
   ids: readonly string[],
+  includeViewerState = true,
 ): Promise<readonly ForumPost[]> {
   const { data, error } = await supabase
     .from('posts')
@@ -359,9 +369,9 @@ export async function getPostsByIdsSupabase(
     .in('id', ids);
   throwIfSupabaseError(error, 'load posts by id');
   const [likedIds, mutedUserIds, viewerPinnedPostId] = await Promise.all([
-    likedPostIds(supabase, userId),
+    includeViewerState ? likedPostIds(supabase, userId) : Promise.resolve(new Set<string>()),
     getMutedUserIdsSupabase(supabase, userId),
-    getPinnedPostId(supabase, userId),
+    includeViewerState ? getPinnedPostId(supabase, userId) : Promise.resolve(null),
   ]);
   const mutedSet = new Set(mutedUserIds);
   return (data as unknown as PostRow[])

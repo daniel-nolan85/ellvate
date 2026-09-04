@@ -504,15 +504,20 @@ export async function getEventAttendeesPage(
     : getEventAttendeesPageMemory(eventId, limit, cursor);
 }
 
+// includeAttendeeDetails: false for a read-only listing that only shows a
+// going count, not attendee names/avatars (the weekly digest's "Popular
+// Events" preview) -- see getEventsByIdsSupabase for why that's worth a
+// dedicated flag rather than always paying for it.
 export async function getEventsByIds(
   ctx: RequestContext,
   ids: readonly string[],
+  includeAttendeeDetails = true,
 ): Promise<readonly CommunityEvent[]> {
   if (ids.length === 0) {
     return [];
   }
   return ctx.supabase
-    ? getEventsByIdsSupabase(ctx.supabase, ctx.userId, ids)
+    ? getEventsByIdsSupabase(ctx.supabase, ctx.userId, ids, includeAttendeeDetails)
     : getEventsByIdsMemory(ctx.userId, ids);
 }
 
