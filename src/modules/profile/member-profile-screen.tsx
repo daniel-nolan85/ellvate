@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActionSheetIOS, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -138,6 +138,48 @@ export function MemberProfileScreen({
     });
   };
 
+  // The "..." button lives in this screen's formSheet header. An inline
+  // dropdown replaced a Sheet here last round on the theory that a second
+  // native Modal on top of an already-presented formSheet was the problem
+  // -- but the dropdown still didn't respond to taps, which means that
+  // wasn't it (or wasn't the whole story): something about this screen's
+  // own view hierarchy is either not routing the touch to this button, or
+  // not painting/hit-testing the dropdown correctly once it did. Rather
+  // than debug a third theory blind, iOS's own action sheet sidesteps the
+  // question entirely -- it's UIKit's native menu, not an RN view in this
+  // screen's tree at all, so nothing this screen's rendering does to its
+  // own hierarchy can make it invisible or untappable. Android still gets
+  // the inline dropdown below (untested on-device so far, but not the one
+  // reported broken).
+  const openMenu = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          cancelButtonIndex: 2,
+          destructiveButtonIndex: 1,
+          options: [
+            isBlocked ? 'Unblock this neighbour' : 'Block this neighbour',
+            'Report this member',
+            'Cancel',
+          ],
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            if (isBlocked) {
+              handleUnblock();
+            } else {
+              openConfirmBlock();
+            }
+          } else if (buttonIndex === 1) {
+            handleReport();
+          }
+        },
+      );
+      return;
+    }
+    setMenuOpen(true);
+  };
+
   return (
     <View className='flex-1 bg-canvas'>
       {/* No manual close button -- this screen is presented as a native
@@ -161,7 +203,7 @@ export function MemberProfileScreen({
           <Pressable
             accessibilityLabel='More options'
             className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-            onPress={() => setMenuOpen(true)}
+            onPress={openMenu}
           >
             <Icon name='ThreeDots' size={18} />
           </Pressable>
