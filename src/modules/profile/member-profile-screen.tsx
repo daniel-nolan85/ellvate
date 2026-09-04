@@ -7,9 +7,11 @@ import { router } from 'expo-router';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { ConfirmModal } from '@/src/components/ui/confirm-modal';
+import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
+import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
@@ -20,7 +22,7 @@ import {
 } from '@/src/lib/category-accent';
 import { useSession } from '@/src/platform/session';
 
-import { useBlockUser, useBlockedUsers } from './use-block-user';
+import { useBlockUser, useBlockedUsers, useReportMember } from './use-block-user';
 import { useMemberProfile } from './use-profile';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -90,9 +92,11 @@ export function MemberProfileScreen({
   const isSelf = (session.userId ?? 'demo-user') === userId;
   const blockedUsers = useBlockedUsers();
   const blockUser = useBlockUser();
+  const reportMember = useReportMember();
   const isBlocked = blockedUsers.data?.blocked.some(
     (blocked) => blocked.userId === userId,
   ) ?? false;
+  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -110,9 +114,27 @@ export function MemberProfileScreen({
   };
 
   const handleUnblock = () => {
+    setMenuOpen(false);
     blockUser.mutate(userId, {
       onError: () => showToast('Couldn’t unblock this neighbour. Try again.'),
       onSuccess: () => showToast(`Unblocked ${displayName}`),
+    });
+  };
+
+  // Closes the menu sheet first and waits for its close animation before
+  // opening the confirm modal -- both are native Modals, so presenting one
+  // while the other is still mounted risks the same concurrent-modal
+  // freeze this app has hit before with two overlapping RN Modals.
+  const openConfirmBlock = () => {
+    setMenuOpen(false);
+    setTimeout(() => setConfirmBlockOpen(true), CLOSE_DURATION);
+  };
+
+  const handleReport = () => {
+    setMenuOpen(false);
+    reportMember.mutate(userId, {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
     });
   };
 
@@ -130,16 +152,11 @@ export function MemberProfileScreen({
         </Heading>
         {!isSelf && !blockedUsers.isPending ? (
           <Pressable
-            accessibilityLabel={
-              isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'
-            }
+            accessibilityLabel='More options'
             className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-            disabled={blockUser.isPending}
-            onPress={() =>
-              isBlocked ? handleUnblock() : setConfirmBlockOpen(true)
-            }
+            onPress={() => setMenuOpen(true)}
           >
-            <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
+            <Icon name='ThreeDots' size={18} />
           </Pressable>
         ) : null}
       </HStack>
@@ -312,6 +329,32 @@ export function MemberProfileScreen({
           </VStack>
         )}
       </ScrollView>
+
+      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
+        <View className='gap-1 px-[18px] pb-2'>
+          <Pressable
+            accessibilityRole='button'
+            className='flex-row items-center gap-3 px-1.5 py-3.5'
+            onPress={() => (isBlocked ? handleUnblock() : openConfirmBlock())}
+          >
+            <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={20} />
+            <Text className='text-[15px]'>
+              {isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'}
+            </Text>
+          </Pressable>
+          <Divider />
+          <Pressable
+            accessibilityRole='button'
+            className='flex-row items-center gap-3 px-1.5 py-3.5'
+            onPress={handleReport}
+          >
+            <Icon color='rgb(231,0,11)' name='AlertCircle' size={20} />
+            <Text className='text-[15px]' style={{ color: 'rgb(231,0,11)' }}>
+              Report this member
+            </Text>
+          </Pressable>
+        </View>
+      </Sheet>
 
       <ConfirmModal
         confirmLabel='Block'

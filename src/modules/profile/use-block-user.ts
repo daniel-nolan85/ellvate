@@ -49,3 +49,19 @@ export function useBlockUser() {
     },
   });
 }
+
+// Reports a member directly (distinct from reporting one of their posts/
+// comments/etc.) -- surfaces on their profile so a problem person can be
+// flagged to moderators even without any single piece of reportable content.
+export function useReportMember() {
+  const session = useSession();
+
+  return useMutation({
+    mutationFn: (reportedUserId: string) =>
+      requestJson<{ readonly reported: boolean }>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/users/${reportedUserId}/report`,
+      }),
+  });
+}

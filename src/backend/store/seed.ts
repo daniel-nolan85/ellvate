@@ -652,6 +652,7 @@ export const createSeedState = (): StoreState => {
     petitionReports: [],
     petitionCommentReports: [],
     bookmarks: [],
+    memberReports: [],
     users: seedUsers(),
     week: seedWeek(),
   };

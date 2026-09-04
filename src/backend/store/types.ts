@@ -332,6 +332,13 @@ export interface StoredPetitionCommentReport {
   readonly createdAt: string;
 }
 
+export interface StoredMemberReport {
+  readonly id: string;
+  readonly reporterId: string;
+  readonly reportedUserId: string;
+  readonly createdAt: string;
+}
+
 export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
 
 export interface StoredBookmark {
@@ -369,6 +376,7 @@ export interface StoreState {
   readonly petitionReports: readonly StoredPetitionReport[];
   readonly petitionCommentReports: readonly StoredPetitionCommentReport[];
   readonly bookmarks: readonly StoredBookmark[];
+  readonly memberReports: readonly StoredMemberReport[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];
 }

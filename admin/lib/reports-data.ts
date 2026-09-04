@@ -65,6 +65,7 @@ export async function loadReports(
     checkInReports,
     petitionReports,
     petitionCommentReports,
+    memberReports,
   ] = await Promise.all([
     markSeen,
     withReporterFilter(
@@ -151,6 +152,15 @@ export async function loadReports(
     )
       .order('created_at', { ascending: false })
       .limit(FETCH_CAP),
+    withReporterFilter(
+      admin
+        .from('member_reports')
+        .select(
+          'id, reported_user_id, created_at, reporter:app_users!member_reports_reporter_id_fkey!inner(name), reported:app_users!member_reports_reported_user_id_fkey(name)',
+        ),
+    )
+      .order('created_at', { ascending: false })
+      .limit(FETCH_CAP),
   ]);
 
   for (const result of [
@@ -164,6 +174,7 @@ export async function loadReports(
     checkInReports,
     petitionReports,
     petitionCommentReports,
+    memberReports,
   ]) {
     if (result.error) {
       throw result.error;
@@ -375,6 +386,26 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'petition_comments',
       deleteId: r.petition_comment_id,
+    });
+  }
+
+  for (const r of (memberReports.data ?? []) as unknown as readonly {
+    id: string;
+    reported_user_id: string;
+    created_at: string;
+    reporter: { name: string } | null;
+    reported: { name: string } | null;
+  }[]) {
+    rows.push({
+      id: r.id,
+      type: 'Member',
+      snippet: r.reported?.name ?? 'Unknown member',
+      photoUrl: null,
+      detailHref: `/users/${r.reported_user_id}`,
+      reporter: r.reporter?.name ?? 'Unknown',
+      created_at: r.created_at,
+      deleteTable: 'app_users',
+      deleteId: r.reported_user_id,
     });
   }
 
