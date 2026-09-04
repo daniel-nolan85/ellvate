@@ -91,8 +91,12 @@ function FilterChips({
             key={filter.key}
             onPress={() => onSelect(filter.key)}
           >
+            {/* allowFontScaling={false}: see activity-parts.tsx's FilterChips
+                (kept identical) -- a fixed leading-[18px] clipped these
+                glyphs' tops on a device with a larger OS text-size setting. */}
             <Text
-              className={`font-inter-medium text-[13px] leading-[18px] ${
+              allowFontScaling={false}
+              className={`font-inter-medium text-[13px] ${
                 isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
               }`}
             >

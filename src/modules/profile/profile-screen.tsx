@@ -168,13 +168,13 @@ function StatCard({
 }) {
   return (
     <Pressable
-      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper py-3.5 shadow-card"
+      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card"
       disabled={!onPress}
       onPress={onPress}
     >
       <VStack className="items-center" space="xs">
         <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
-        <Text className="text-text-muted" size="xs">
+        <Text className="text-center text-text-muted" size="xs">
           {label}
         </Text>
       </VStack>
