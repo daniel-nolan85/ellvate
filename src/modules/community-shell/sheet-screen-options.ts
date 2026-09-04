@@ -1,12 +1,11 @@
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 
-// Shared options for every dismissible-overlay screen (Notifications,
-// Digest, someone else's Profile/Activity) -- a native formSheet gets an
-// OS-drawn grabber, swipe-to-dismiss, and tap-outside-to-close for free,
-// instead of each screen hand-rolling an X button and its own insets.top
-// math. 'large' is a single tall detent (not resizable between sizes, just
-// dismissible), matching the feel of the Sheet component used everywhere
-// else in the app.
+// Shared options for the formSheet-presented dismissible overlays (Digest,
+// someone else's Profile) -- a native formSheet gets an OS-drawn grabber,
+// swipe-to-dismiss, and tap-outside-to-close for free, instead of each
+// screen hand-rolling an X button and its own insets.top math. 'large' is a
+// single tall detent (not resizable between sizes, just dismissible),
+// matching the feel of the Sheet component used everywhere else in the app.
 export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   presentation: 'formSheet',
   // A single full-height detent -- this version's types only accept an
@@ -44,20 +43,21 @@ export const SHEET_SCREEN_OPTIONS: NativeStackNavigationOptions = {
 // react-native-screens#3569): the newly-presented sheet's content height
 // comes out wrong, reproducing exactly as this app's "smushed at the top"
 // reports, worsening rather than resolving on repeated back-and-forth.
-// Notifications and Member Activity were switched to this (see below) to
-// remove one formSheet from each pair -- but Digest kept getting reported
-// smushed via the notification tap even after that, and after two rounds of
-// re-sequencing the navigation call around it (a straight back()+push(),
-// then back() with a wait before push()) that assumed the two navigation
-// calls racing was the (whole) problem. Since Notifications no longer being
-// a formSheet didn't fully close it out on its own, Digest is switched too
-// -- removing formSheet from *both* ends of this specific pair, rather than
-// continuing to assume which one specific mechanism was left. Digest's
-// other entry points (a direct icon tap from Profile) get a modal instead
-// of a formSheet now too, which is a minor, acceptable style difference
-// there. Member Profile keeps the full formSheet treatment for its many
-// other entry points (search, leaderboard, forum, ...), since only the
-// Member Activity side of that pair was ever reported broken.
+//
+// Notifications itself no longer uses this at all -- it's a plain pushed
+// screen now (see app/_layout.tsx), specifically so nothing it links to
+// ever presents over another presented screen, of any kind, rather than
+// narrowing the fix to "not over specifically another formSheet" and
+// re-litigating that scope every time a new destination turned out to
+// still be affected (which Digest was, even after Notifications alone
+// stopped being a formSheet). Digest and Member Activity keep this --
+// they're each still one formSheet deep from a plain screen (Notifications,
+// Member Profile), which was never the reported problem. Digest's other
+// entry point (a direct icon tap from Profile) gets a modal instead of a
+// formSheet too, a minor, acceptable style difference there. Member Profile
+// keeps the full formSheet treatment for its many other entry points
+// (search, leaderboard, forum, ...), since only the Member Activity side of
+// that pair was ever reported broken.
 export const MODAL_SCREEN_OPTIONS: NativeStackNavigationOptions = {
   presentation: 'modal',
   headerShown: false,

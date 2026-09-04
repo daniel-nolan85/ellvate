@@ -96,45 +96,46 @@ export function NotificationsScreen() {
     }
     const route = resolveNotificationRoute(notification.data);
     if (route) {
-      // Plain push, not a dismiss-then-present: this screen is no longer
-      // the formSheet it used to be (see MODAL_SCREEN_OPTIONS), so it no
-      // longer needs to get out of the way before the destination can
-      // present correctly -- two earlier attempts at sequencing that
+      // Plain push, not a dismiss-then-present: this screen is a plain
+      // pushed screen now (see app/_layout.tsx), not a formSheet or modal,
+      // so it no longer needs to get out of the way before the destination
+      // can present correctly -- two earlier attempts at sequencing that
       // dismiss (a straight back()+push(), then back() with a delay before
       // push()) both still left the destination squashed, because
       // react-native-screens#3569's real precondition turned out not to be
       // "two navigation calls fired close together" but "a formSheet
       // presented directly over another still-transitioning presentation"
-      // -- which no longer describes this screen at all now that it's a
-      // modal, so there's nothing left to sequence around. The destination
-      // simply stacks on top of this screen; swiping it away reveals
-      // Notifications again, same as swiping away any other screen reached
-      // by drilling into something.
+      // -- which no longer describes this screen at all now that it isn't
+      // presented natively in any special way, so there's nothing left to
+      // sequence around. The destination simply pushes on top; going back
+      // reveals Notifications again, same as going back from anything else
+      // reached by drilling into something.
       router.push(route);
     }
   };
 
   return (
     <View className="flex-1 bg-canvas">
-      {/* No manual close button -- this screen is presented as a native
-          native `presentation: 'modal'` screen (see app/_layout.tsx and
-          MODAL_SCREEN_OPTIONS -- not formSheet like most of this app's
-          other overlays, specifically to dodge react-native-screens#3569,
-          a formSheet-presented-over-another-formSheet content-height bug
-          this screen used to trigger every time a notification tap chained
-          it into another formSheet), whose own swipe-to-dismiss and
-          tap-outside already cover closing it. Like formSheet, this still
-          presents as an inset page sheet rather than flush with the
-          physical top edge, so a small fixed gap is enough here too, not
-          insets.top -- unlike Sheet's statusBarTranslucent custom Modal,
-          which spans behind the notch. collapsable={false} works around a
-          real react-native-screens bug (software-mansion/react-native-
-          screens#3092): a screen whose root View has a background color
-          can have RN's view-flattening optimization collapse this header's
-          native view into its parent, which then lets the ScrollView below
-          render on top of it instead of below it -- forcing this view to
-          actually exist natively is the documented fix. */}
-      <HStack className="items-center justify-between px-5 pb-3 pt-6" collapsable={false}>
+      {/* No manual close button -- summoned like `assistant` (see
+          app/_layout.tsx), a plain pushed screen with a slide-up
+          transition, not a modal or formSheet -- keeping Notifications
+          specifically out of any special native presentation means
+          whatever it links to never presents over another presented
+          screen. A plain push renders flush with the physical top edge
+          (unlike modal/formSheet's own inset page-sheet behavior), so this
+          needs real insets.top, matching assistant-screen.tsx's own header.
+          collapsable={false} works around a real react-native-screens bug
+          (software-mansion/react-native-screens#3092): a screen whose root
+          View has a background color can have RN's view-flattening
+          optimization collapse this header's native view into its parent,
+          which then lets the ScrollView below render on top of it instead
+          of below it -- forcing this view to actually exist natively is
+          the documented fix. */}
+      <HStack
+        className="items-center justify-between px-5 pb-3"
+        collapsable={false}
+        style={{ paddingTop: insets.top + 16 }}
+      >
         <Heading className="font-inter-bold" size="xl">
           Notifications
         </Heading>

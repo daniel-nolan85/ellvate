@@ -88,7 +88,10 @@ function FilterChips({
             className={`shrink-0 rounded-full px-3.5 py-[7px] ${
               isActive ? 'bg-accent' : 'bg-secondary'
             }`}
-            key={filter.key}
+            // key includes `active`: see activity-parts.tsx's FilterChips
+            // (kept identical) for why -- forces every pill to remount on
+            // each filter change instead of restyling in place.
+            key={`${filter.key}-${active}`}
             onPress={() => onSelect(filter.key)}
           >
             {/* allowFontScaling={false}: see activity-parts.tsx's FilterChips
