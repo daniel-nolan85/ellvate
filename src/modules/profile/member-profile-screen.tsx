@@ -138,19 +138,13 @@ export function MemberProfileScreen({
     });
   };
 
-  // The "..." button lives in this screen's formSheet header. An inline
-  // dropdown replaced a Sheet here last round on the theory that a second
-  // native Modal on top of an already-presented formSheet was the problem
-  // -- but the dropdown still didn't respond to taps, which means that
-  // wasn't it (or wasn't the whole story): something about this screen's
-  // own view hierarchy is either not routing the touch to this button, or
-  // not painting/hit-testing the dropdown correctly once it did. Rather
-  // than debug a third theory blind, iOS's own action sheet sidesteps the
-  // question entirely -- it's UIKit's native menu, not an RN view in this
-  // screen's tree at all, so nothing this screen's rendering does to its
-  // own hierarchy can make it invisible or untappable. Android still gets
-  // the inline dropdown below (untested on-device so far, but not the one
-  // reported broken).
+  // iOS gets its own native action sheet, not an RN view rendered into this
+  // screen's tree at all -- see the header's own comment above for why an
+  // in-tree dropdown menu (tried previously) is specifically risky on this
+  // formSheet screen. Android still gets the inline dropdown below
+  // (untested on-device so far, but not the one reported broken, and
+  // Android's formSheet implementation doesn't share iOS's 2-subview
+  // constraint).
   const openMenu = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -194,35 +188,34 @@ export function MemberProfileScreen({
           flattening optimization collapse this header's native view into
           its parent, which then lets the ScrollView below render on top of
           it instead of below it -- forcing this view to actually exist
-          natively is the documented fix. */}
+          natively is the documented fix.
+
+          The "..." button lives IN this row, not as its own sibling below
+          it -- react-native-screens' own formSheet+ScrollView content view
+          on iOS only expects 2 direct children (see software-mansion/
+          react-native-screens#2992, "FormSheet with ScrollView expects at
+          most 2 subviews. Got N. This might result in incorrect layout.");
+          this screen's only two are meant to be this header and the
+          ScrollView below. A previous round moved the button out to its
+          own independent, absolutely-positioned sibling specifically to
+          get it away from this header -- which instead made it the 3rd
+          direct child, squarely inside that undocumented-behavior zone,
+          and never fixed the reported "does nothing". Keeping it here
+          keeps this screen's own direct children at exactly 2. */}
       <HStack className='items-center justify-between px-5 pb-3 pt-6' collapsable={false}>
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
+        {!isSelf && !blockedUsers.isPending ? (
+          <Pressable
+            accessibilityLabel='More options'
+            className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
+            onPress={openMenu}
+          >
+            <Icon name='ThreeDots' size={18} />
+          </Pressable>
+        ) : null}
       </HStack>
-
-      {/* Rendered outside the collapsable={false} header above, not as its
-          child -- two rounds of fixes at *what the button opens* (a Sheet,
-          then an inline dropdown, then ActionSheetIOS -- iOS's own native
-          menu, which App code cannot make invisible) all failed to fix
-          "the ellipsis does nothing", which only makes sense if the tap was
-          never reaching the button at all. This button was the one thing
-          every attempt left unchanged: the only interactive element inside
-          this screen's forced-native (collapsable={false}) header, unlike
-          every sibling formSheet screen's header, which holds only text.
-          Moving it out to its own independent, absolutely-positioned layer
-          removes forcing-a-view-real from the equation for its own touch
-          handling, whatever exactly that combination was doing to it. */}
-      {!isSelf && !blockedUsers.isPending ? (
-        <Pressable
-          accessibilityLabel='More options'
-          className='absolute right-5 h-9 w-9 items-center justify-center rounded-full bg-secondary'
-          onPress={openMenu}
-          style={{ top: 20 }}
-        >
-          <Icon name='ThreeDots' size={18} />
-        </Pressable>
-      ) : null}
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
         <VStack className='items-center px-5 pb-2 pt-6' space='sm'>
