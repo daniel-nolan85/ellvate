@@ -2,6 +2,7 @@ import { getEventsByIds } from '@/src/backend/events';
 import { getPostsByIds } from '@/src/backend/forum';
 import type { RequestContext } from '@/src/backend/http';
 import { getMissionsByIds } from '@/src/backend/missions';
+import { getPetitionsByIds } from '@/src/backend/petitions';
 import { getServicesByIds } from '@/src/backend/services';
 import {
   getState,
@@ -33,6 +34,7 @@ const TARGET_TYPES: readonly BookmarkTargetType[] = [
   'event',
   'mission',
   'service',
+  'petition',
 ];
 
 const isBookmarkTargetType = (value: unknown): value is BookmarkTargetType =>
@@ -53,6 +55,8 @@ function targetExistsMemory(targetType: BookmarkTargetType, targetId: string): b
       return state.missions.some((mission) => mission.id === targetId);
     case 'service':
       return state.serviceListings.some((listing) => listing.id === targetId);
+    case 'petition':
+      return state.petitions.some((petition) => petition.id === targetId);
   }
 }
 
@@ -151,16 +155,18 @@ async function hydrateBookmarks(
       .filter((record) => record.targetType === targetType)
       .map((record) => record.targetId);
 
-  const [posts, events, missions, services] = await Promise.all([
+  const [posts, events, missions, services, petitions] = await Promise.all([
     getPostsByIds(ctx, idsFor('post')),
     getEventsByIds(ctx, idsFor('event')),
     getMissionsByIds(ctx, idsFor('mission')),
     getServicesByIds(ctx, idsFor('service')),
+    getPetitionsByIds(ctx, idsFor('petition')),
   ]);
   const postById = new Map(posts.map((post) => [post.id, post]));
   const eventById = new Map(events.map((event) => [event.id, event]));
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
   const serviceById = new Map(services.map((listing) => [listing.id, listing]));
+  const petitionById = new Map(petitions.map((petition) => [petition.id, petition]));
 
   return records.flatMap((record): readonly HydratedBookmark[] => {
     if (record.targetType === 'post') {
@@ -196,11 +202,32 @@ async function hydrateBookmarks(
           ]
         : [];
     }
-    const listing = serviceById.get(record.targetId);
-    return listing
+    if (record.targetType === 'service') {
+      const listing = serviceById.get(record.targetId);
+      return listing
+        ? [
+            {
+              item: {
+                bookmarkedAt: record.createdAt,
+                bookmarkId: record.id,
+                kind: 'service',
+                listing,
+              },
+              record,
+            },
+          ]
+        : [];
+    }
+    const petition = petitionById.get(record.targetId);
+    return petition
       ? [
           {
-            item: { bookmarkedAt: record.createdAt, bookmarkId: record.id, kind: 'service', listing },
+            item: {
+              bookmarkedAt: record.createdAt,
+              bookmarkId: record.id,
+              kind: 'petition',
+              petition,
+            },
             record,
           },
         ]
@@ -228,6 +255,8 @@ async function targetExists(
       return (await getMissionsByIds(ctx, [targetId])).length > 0;
     case 'service':
       return (await getServicesByIds(ctx, [targetId])).length > 0;
+    case 'petition':
+      return (await getPetitionsByIds(ctx, [targetId])).length > 0;
   }
 }
 
@@ -245,7 +274,8 @@ export async function toggleBookmark(
   if (!isBookmarkTargetType(targetType) || typeof targetId !== 'string' || !targetId) {
     return {
       code: 'invalid_target',
-      message: 'targetType must be one of post, event, mission, service and targetId is required.',
+      message:
+        'targetType must be one of post, event, mission, service, petition and targetId is required.',
       ok: false,
     };
   }

@@ -68,7 +68,7 @@ describe('toggleBookmark', () => {
     expect(result).toMatchObject({ code: 'target_not_found', ok: false });
   });
 
-  test('allows bookmarking events, missions, and service listings as well as posts', async () => {
+  test('allows bookmarking events, missions, service listings, and petitions as well as posts', async () => {
     const event = await toggleBookmark(ctx(DEMO_USER_ID), {
       targetId: 'event-1',
       targetType: 'event',
@@ -87,10 +87,17 @@ describe('toggleBookmark', () => {
     });
     expect(service).toEqual({ bookmarked: true, ok: true });
 
+    const petition = await toggleBookmark(ctx(DEMO_USER_ID), {
+      targetId: 'petition-marina-lighting',
+      targetType: 'petition',
+    });
+    expect(petition).toEqual({ bookmarked: true, ok: true });
+
     const page = await listBookmarks(ctx(DEMO_USER_ID));
     expect(page.items.map((item) => item.kind).sort()).toEqual([
       'event',
       'mission',
+      'petition',
       'service',
     ]);
   });
@@ -185,6 +192,23 @@ describe('listBookmarks', () => {
     await toggleBookmark(ctx(DEMO_USER_ID), { targetId: 'service-1', targetType: 'service' });
     // service-1 is authored by user-riley (seeded).
     expect(await deleteServiceListing(ctx('user-riley'), 'service-1')).toBe(true);
+
+    expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toEqual([]);
+  });
+
+  test('drops an orphaned petition bookmark the same way', async () => {
+    await toggleBookmark(ctx(DEMO_USER_ID), {
+      targetId: 'petition-marina-lighting',
+      targetType: 'petition',
+    });
+    // Petitions have no delete API (moderation-only content) — remove it from
+    // the store directly to simulate the target having since disappeared.
+    setState((current) => ({
+      ...current,
+      petitions: current.petitions.filter(
+        (petition) => petition.id !== 'petition-marina-lighting',
+      ),
+    }));
 
     expect((await listBookmarks(ctx(DEMO_USER_ID))).items).toEqual([]);
   });

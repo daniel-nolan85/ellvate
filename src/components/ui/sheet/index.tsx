@@ -54,10 +54,36 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const translateY = useSharedValue(HIDDEN_OFFSET);
   const height = useSharedValue(HIDDEN_OFFSET);
 
   const unmount = useCallback(() => setMounted(false), []);
+
+  // iOS's KeyboardAvoidingView (behavior 'padding' below) pushes this whole
+  // bottom-anchored panel further up by the keyboard's height on top of
+  // whatever height it already has -- a panel already sized close to
+  // `maxHeight` (e.g. Edit Profile's long form, with an autoFocus field that
+  // opens the keyboard immediately) then gets shoved up past the safe area
+  // entirely, hiding the drag handle and making the sheet impossible to
+  // dismiss. Tracking the keyboard's own height and subtracting it from
+  // maxHeight below keeps the panel's top edge pinned at the same safe
+  // distance from the top regardless of whether the keyboard is open.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+    const showSub = Keyboard.addListener('keyboardWillShow', (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -201,10 +227,13 @@ export function Sheet({
                 // the top regardless of device -- not guaranteed to clear the
                 // real safe-area inset. Unusually tall content (e.g. Edit
                 // Profile's form) could then render its drag handle under the
-                // notch. Bounding by the actual inset plus a fixed margin
-                // means the sheet can never physically extend past the safe
-                // area, whatever the content's height.
-                maxHeight: windowHeight - insets.top - MIN_TOP_GAP,
+                // notch. Bounding by the actual inset plus a fixed margin --
+                // and by the live keyboard height, since the keyboard-
+                // avoiding padding below pushes this same panel further up
+                // still -- means the sheet can never physically extend past
+                // the safe area, whatever the content's height or whether
+                // the keyboard is open.
+                maxHeight: windowHeight - insets.top - MIN_TOP_GAP - keyboardHeight,
                 paddingBottom: insets.bottom + 12,
               },
             ]}

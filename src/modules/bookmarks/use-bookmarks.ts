@@ -8,11 +8,12 @@ import {
 import type { CommunityEvent } from '@/src/modules/events';
 import type { ForumPost } from '@/src/modules/forum';
 import type { Mission } from '@/src/modules/missions';
+import type { Petition } from '@/src/modules/petitions';
 import type { ServiceListing } from '@/src/modules/services';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
-export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service';
+export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
 
 export type BookmarkedItem =
   | {
@@ -38,6 +39,12 @@ export type BookmarkedItem =
       readonly bookmarkId: string;
       readonly bookmarkedAt: string;
       readonly listing: ServiceListing;
+    }
+  | {
+      readonly kind: 'petition';
+      readonly bookmarkId: string;
+      readonly bookmarkedAt: string;
+      readonly petition: Petition;
     };
 
 export interface BookmarksPage {

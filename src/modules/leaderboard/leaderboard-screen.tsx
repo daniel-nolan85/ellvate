@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { SearchSheet } from '@/src/components/shared/search-sheet';
@@ -57,6 +58,7 @@ function RangeTabs({
 }
 
 export function LeaderboardScreen() {
+  const insets = useSafeAreaInsets();
   const [range, setRange] = useState<LeaderboardRange>('all');
   const leaderboard = useLeaderboard(range);
   const leaders = leaderboard.data?.pages.flatMap((page) => page.leaders) ?? [];
@@ -79,11 +81,17 @@ export function LeaderboardScreen() {
       scrollEventThrottle={100}
     >
       <VStack space="md">
-        <ScreenTitle
-          eyebrow={RANGE_TABS.find((tab) => tab.value === range)?.label ?? 'All time'}
-          onSearch={leaders.length > 0 ? () => setIsSearching(true) : undefined}
-          title="Leaderboard"
-        />
+        {/* Leaderboard is a plain pushed screen (not a tab), so unlike the
+            tab bar's own screens it needs its own top safe-area padding --
+            matching Profile/Activity/Bookmarks, which already wrap
+            ScreenTitle the same way. */}
+        <View style={{ paddingTop: insets.top }}>
+          <ScreenTitle
+            eyebrow={RANGE_TABS.find((tab) => tab.value === range)?.label ?? 'All time'}
+            onSearch={leaders.length > 0 ? () => setIsSearching(true) : undefined}
+            title="Leaderboard"
+          />
+        </View>
         <RangeTabs active={range} onSelect={setRange} />
         {leaderboard.isPending ? (
           <Box className="items-center justify-center py-24">

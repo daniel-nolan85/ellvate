@@ -58,52 +58,88 @@ export async function getWeeklyDigestRawSupabase(
   const upcomingStartDate = upcomingStartIso.slice(0, 10);
   const upcomingEndDate = upcomingEndIso.slice(0, 10);
 
-  const [postsRes, eventsRes, completedProgressRes, commentsRes] = await Promise.all([
-    supabase
-      .from('posts')
-      .select('id,like_count,reply_count,author_id')
-      .gte('created_at', startIso)
-      .lt('created_at', endIso),
-    supabase
-      .from('events')
-      .select('id,going_base,created_by')
-      .gte('starts_at', startIso)
-      .lt('starts_at', endIso),
-    // Not a plain table select: mission_progress's only RLS policy scopes
-    // SELECT to the caller's own rows (0003_rls_policies_and_triggers.sql),
-    // which would silently return just the viewer's own completions here.
-    // This RPC is SECURITY DEFINER specifically to read across every
-    // member's completions for the digest window -- see 0042_digest_fixes.sql.
-    supabase.rpc('digest_mission_completions', {
-      window_end: endIso,
-      window_start: startIso,
-    }),
-    supabase.from('comments').select('author_id').gte('created_at', startIso).lt('created_at', endIso),
-  ]);
+  // All six queries below fire in one round trip: the four "last week" ones
+  // and the two "coming up" ones are mutually independent (the latter only
+  // depend on upcomingStart/upcomingEnd, computed from this function's own
+  // params, not on anything the first four return) -- they were previously
+  // split into two sequential phases for no real dependency reason. Digest
+  // was the slowest thing in the app precisely because of round-trip count.
+  // A community this size doesn't have enough rows for any one query to be
+  // slow; what was slow was doing four-plus round trips back-to-back,
+  // compounded by a cold serverless function, until the request timed out
+  // outright rather than merely feeling slow.
+  const [postsRes, eventsRes, completedProgressRes, commentsRes, upcomingEventsRes, upcomingMissionsRes] =
+    await Promise.all([
+      supabase
+        .from('posts')
+        .select('id,like_count,reply_count,author_id')
+        .gte('created_at', startIso)
+        .lt('created_at', endIso),
+      supabase
+        .from('events')
+        .select('id,going_base,created_by')
+        .gte('starts_at', startIso)
+        .lt('starts_at', endIso),
+      // Not a plain table select: mission_progress's only RLS policy scopes
+      // SELECT to the caller's own rows (0003_rls_policies_and_triggers.sql),
+      // which would silently return just the viewer's own completions here.
+      // This RPC is SECURITY DEFINER specifically to read across every
+      // member's completions for the digest window -- see 0042_digest_fixes.sql.
+      supabase.rpc('digest_mission_completions', {
+        window_end: endIso,
+        window_start: startIso,
+      }),
+      supabase
+        .from('comments')
+        .select('author_id')
+        .gte('created_at', startIso)
+        .lt('created_at', endIso),
+      supabase
+        .from('events')
+        .select('id,title,day_label,date_label,time_label')
+        .gte('starts_at', upcomingStartIso)
+        .lt('starts_at', upcomingEndIso)
+        .order('starts_at', { ascending: true })
+        .limit(COMING_UP_LIMIT),
+      supabase
+        .from('missions')
+        .select('id,title,scheduled_for')
+        .not('scheduled_for', 'is', null)
+        .gte('scheduled_for', upcomingStartDate)
+        .lt('scheduled_for', upcomingEndDate)
+        .order('scheduled_for', { ascending: true })
+        .limit(COMING_UP_LIMIT),
+    ]);
   throwIfSupabaseError(postsRes.error, 'load digest posts');
   throwIfSupabaseError(eventsRes.error, 'load digest events');
   throwIfSupabaseError(completedProgressRes.error, 'load digest mission completions');
   throwIfSupabaseError(commentsRes.error, 'load digest comments');
+  throwIfSupabaseError(upcomingEventsRes.error, 'load digest upcoming events');
+  throwIfSupabaseError(upcomingMissionsRes.error, 'load digest upcoming missions');
 
   const postRows = (postsRes.data ?? []) as unknown as PostRow[];
   const eventRows = (eventsRes.data ?? []) as unknown as EventRow[];
   const completedRows = (completedProgressRes.data ?? []) as unknown as CompletedProgressRow[];
   const commentRows = (commentsRes.data ?? []) as { author_id: string }[];
 
+  // Both of these depend on the batch above (event/mission ids to look up)
+  // but not on each other, so they run together as one round trip instead
+  // of two sequential ones.
   const eventIds = eventRows.map((row) => row.id);
-  const joinsRes = eventIds.length
-    ? await supabase.from('event_joins').select('event_id,user_id').in('event_id', eventIds)
-    : { data: [] as { event_id: string; user_id: string }[], error: null };
+  const missionIds = [...new Set(completedRows.map((row) => row.mission_id))];
+  const [joinsRes, missionsRes] = await Promise.all([
+    eventIds.length
+      ? supabase.from('event_joins').select('event_id,user_id').in('event_id', eventIds)
+      : Promise.resolve({ data: [] as { event_id: string; user_id: string }[], error: null }),
+    missionIds.length
+      ? supabase.from('missions').select('id,title,xp').in('id', missionIds)
+      : Promise.resolve({ data: [] as MissionSummaryRow[], error: null }),
+  ]);
   throwIfSupabaseError(joinsRes.error, 'load digest event joins');
+  throwIfSupabaseError(missionsRes.error, 'load digest completed missions');
   const joinRows = (joinsRes.data ?? []) as { event_id: string; user_id: string }[];
   const goingCountFor = (eventId: string): number =>
     joinRows.filter((row) => row.event_id === eventId).length;
-
-  const missionIds = [...new Set(completedRows.map((row) => row.mission_id))];
-  const missionsRes = missionIds.length
-    ? await supabase.from('missions').select('id,title,xp').in('id', missionIds)
-    : { data: [] as MissionSummaryRow[], error: null };
-  throwIfSupabaseError(missionsRes.error, 'load digest completed missions');
   const missionById = new Map(
     ((missionsRes.data ?? []) as unknown as MissionSummaryRow[]).map((row) => [row.id, row]),
   );
@@ -129,26 +165,6 @@ export async function getWeeklyDigestRawSupabase(
     ...completedRows.map((row) => row.user_id),
     ...commentRows.map((row) => row.author_id),
   ]);
-
-  const [upcomingEventsRes, upcomingMissionsRes] = await Promise.all([
-    supabase
-      .from('events')
-      .select('id,title,day_label,date_label,time_label')
-      .gte('starts_at', upcomingStartIso)
-      .lt('starts_at', upcomingEndIso)
-      .order('starts_at', { ascending: true })
-      .limit(COMING_UP_LIMIT),
-    supabase
-      .from('missions')
-      .select('id,title,scheduled_for')
-      .not('scheduled_for', 'is', null)
-      .gte('scheduled_for', upcomingStartDate)
-      .lt('scheduled_for', upcomingEndDate)
-      .order('scheduled_for', { ascending: true })
-      .limit(COMING_UP_LIMIT),
-  ]);
-  throwIfSupabaseError(upcomingEventsRes.error, 'load digest upcoming events');
-  throwIfSupabaseError(upcomingMissionsRes.error, 'load digest upcoming missions');
 
   return {
     activeMemberCount: activeMemberIds.size,

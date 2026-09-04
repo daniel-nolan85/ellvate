@@ -44,6 +44,7 @@ const NOTIFICATION_PREF_BY_KIND: Readonly<Record<string, keyof NotificationPrefs
   event: 'events',
   like: 'replies',
   mission: 'missions',
+  petition: 'petitions',
 };
 
 // WHY: called directly by other memory-mode modules (comments, event-comments)

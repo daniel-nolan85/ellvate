@@ -1,6 +1,7 @@
 import type { CommunityEvent } from '@/src/backend/events';
 import type { ForumPost } from '@/src/backend/forum';
 import type { Mission } from '@/src/backend/missions';
+import type { Petition } from '@/src/backend/petitions';
 import type { ServiceListing } from '@/src/backend/services';
 import type { BookmarkTargetType } from '@/src/backend/store';
 
@@ -30,6 +31,12 @@ export type BookmarkedItem =
       readonly bookmarkId: string;
       readonly bookmarkedAt: string;
       readonly listing: ServiceListing;
+    }
+  | {
+      readonly kind: 'petition';
+      readonly bookmarkId: string;
+      readonly bookmarkedAt: string;
+      readonly petition: Petition;
     };
 
 export interface BookmarksPage {

@@ -9,6 +9,7 @@ import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import {
   computeRequiredSignatures,
   createPetition,
+  getMyPetitionsView,
   getPetition,
   getPetitionsGate,
   listPetitionsPage,
@@ -219,6 +220,48 @@ describe('listPetitionsPage', () => {
 
     const page = await listPetitionsPage(ctx(), { status: 'open' });
     expect(page.petitions.map((p) => p.id)).toEqual(['p-mine']);
+  });
+});
+
+describe('getMyPetitionsView', () => {
+  test('includes petitions the caller started and petitions they only signed', async () => {
+    setState((current) => ({ ...current, petitions: [] }));
+    const started = seedPetition({ createdBy: DEMO_USER_ID, id: 'p-started' });
+    const signedOnly = seedPetition({ createdBy: 'user-mia', id: 'p-signed' });
+    seedPetition({ createdBy: 'user-mia', id: 'p-unrelated' });
+    setState((current) => ({
+      ...current,
+      petitionSignatures: [
+        ...current.petitionSignatures,
+        { createdAt: '2026-01-02T00:00:00.000Z', petitionId: signedOnly.id, userId: DEMO_USER_ID },
+      ],
+    }));
+
+    const page = await getMyPetitionsView(ctx(DEMO_USER_ID));
+    expect(page.petitions.map((p) => p.id).sort()).toEqual([started.id, signedOnly.id].sort());
+  });
+
+  test('does not duplicate a petition the caller both started and signed', async () => {
+    setState((current) => ({ ...current, petitions: [] }));
+    const petition = seedPetition({ createdBy: DEMO_USER_ID, id: 'p-both' });
+    setState((current) => ({
+      ...current,
+      petitionSignatures: [
+        ...current.petitionSignatures,
+        { createdAt: '2026-01-02T00:00:00.000Z', petitionId: petition.id, userId: DEMO_USER_ID },
+      ],
+    }));
+
+    const page = await getMyPetitionsView(ctx(DEMO_USER_ID));
+    expect(page.petitions.map((p) => p.id)).toEqual([petition.id]);
+  });
+
+  test('returns an empty page when the caller has neither started nor signed anything', async () => {
+    setState((current) => ({ ...current, petitions: [] }));
+    seedPetition({ createdBy: 'user-mia', id: 'p-not-mine' });
+
+    const page = await getMyPetitionsView(ctx(DEMO_USER_ID));
+    expect(page.petitions).toEqual([]);
   });
 });
 

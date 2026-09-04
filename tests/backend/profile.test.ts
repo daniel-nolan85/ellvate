@@ -17,6 +17,7 @@ import {
   DEMO_USER_ID,
   getState,
   resetStore,
+  setState,
 } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -131,6 +132,7 @@ describe('getPublicProfile (requester differs from member)', () => {
       eventsCreated: 1,
       eventsAttended: 0,
       missionsCreated: 0,
+      petitionsStarted: 0,
     });
 
     await toggleJoin(ctx('user-mia'), 'event-1');
@@ -140,7 +142,37 @@ describe('getPublicProfile (requester differs from member)', () => {
       eventsCreated: 1,
       eventsAttended: 1,
       missionsCreated: 0,
+      petitionsStarted: 0,
     });
+  });
+
+  test('counts petitions the member started', async () => {
+    setState((current) => ({
+      ...current,
+      petitions: [
+        ...current.petitions,
+        {
+          category: 'safety',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          createdBy: 'user-mia',
+          deadlineAt: '2026-12-31T00:00:00.000Z',
+          deadlineDays: 30,
+          description: 'A description.',
+          hoaEmailSentAt: null,
+          hoaResponse: null,
+          hoaResponseAt: null,
+          id: 'fixture-petition-mia',
+          requiredSignatures: 3,
+          signatureCount: 0,
+          status: 'open',
+          succeededAt: null,
+          title: 'Fixture petition',
+        },
+      ],
+    }));
+
+    const summary = await getPublicProfile(ctx(), 'user-mia');
+    expect(summary?.stats).toMatchObject({ petitionsStarted: 1 });
   });
 
   test('returns null for an unknown member and creates no ghost user', async () => {

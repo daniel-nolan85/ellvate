@@ -265,7 +265,7 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
           page's content starts well below the physical top edge, so this
           only needs a small fixed gap, not insets.top -- unlike Sheet's
           statusBarTranslucent custom Modal, which spans behind the notch. */}
-      <HStack className="items-center justify-between px-5 pb-1 pt-3">
+      <HStack className="items-center justify-between px-5 pb-1 pt-6">
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap
         </Heading>

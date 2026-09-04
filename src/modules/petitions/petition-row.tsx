@@ -10,6 +10,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime, formatRelativeTimeUntil } from '@/src/lib/relative-time';
+import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useOpenProfile } from '@/src/modules/profile';
 
 import { useReportPetition } from './use-petitions';
@@ -80,6 +81,7 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
             {petition.status === 'succeeded' ? <Badge variant="success">Succeeded</Badge> : null}
             {petition.status === 'expired' ? <Badge variant="destructive">Expired</Badge> : null}
           </HStack>
+          <BookmarkButton targetId={petition.id} targetType="petition" />
           <Pressable
             accessibilityLabel="More options"
             accessibilityRole="button"

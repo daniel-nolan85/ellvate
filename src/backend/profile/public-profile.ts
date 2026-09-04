@@ -37,6 +37,7 @@ export interface PublicMemberStats {
   readonly eventsCreated: number;
   readonly eventsAttended: number;
   readonly servicesListed: number;
+  readonly petitionsStarted: number;
 }
 
 export interface MemberActivityCounts {
@@ -45,6 +46,7 @@ export interface MemberActivityCounts {
   readonly eventsCreated: number;
   readonly eventsAttended: number;
   readonly servicesListed: number;
+  readonly petitionsStarted: number;
 }
 
 export interface PublicMemberSummary {
@@ -91,7 +93,7 @@ export async function getMemberActivitySharing(
 function getMemberActivityCountsMemory(
   memberUserId: string,
 ): MemberActivityCounts {
-  const { events, missions, posts, serviceListings } = getState();
+  const { events, missions, petitions, posts, serviceListings } = getState();
   return {
     eventsAttended: events.filter((event) =>
       event.joinedBy.includes(memberUserId),
@@ -101,6 +103,9 @@ function getMemberActivityCountsMemory(
     ).length,
     missionsCreated: missions.filter(
       (mission) => mission.authorId === memberUserId,
+    ).length,
+    petitionsStarted: petitions.filter(
+      (petition) => petition.createdBy === memberUserId,
     ).length,
     postsCount: posts.filter((post) => post.authorId === memberUserId).length,
     servicesListed: serviceListings.filter(

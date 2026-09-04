@@ -12,12 +12,13 @@ import { VStack } from '@/src/components/ui/vstack';
 // (a read-only view of someone else's) so both render posts/events/missions/
 // services the same way — only where the data comes from differs.
 
-export type ActivityKind = 'post' | 'event' | 'mission' | 'service';
+export type ActivityKind = 'post' | 'event' | 'mission' | 'service' | 'petition';
 export type ActivityFilter = 'all' | ActivityKind;
 
 export const KIND_ICON: Readonly<Record<ActivityKind, AppIconName>> = {
   event: 'CalendarDays',
   mission: 'Star',
+  petition: 'FileSignature',
   post: 'MessageCircle',
   service: 'Store',
 };
@@ -28,6 +29,7 @@ export const FILTERS: readonly { readonly key: ActivityFilter; readonly label: s
   { key: 'event', label: 'Events' },
   { key: 'mission', label: 'Missions' },
   { key: 'service', label: 'Services' },
+  { key: 'petition', label: 'Petitions' },
 ];
 
 export const isActivityFilter = (
@@ -37,7 +39,8 @@ export const isActivityFilter = (
   value === 'post' ||
   value === 'event' ||
   value === 'mission' ||
-  value === 'service';
+  value === 'service' ||
+  value === 'petition';
 
 export function FilterChips({
   active,
@@ -62,33 +65,19 @@ export function FilterChips({
         const isActive = filter.key === active;
         return (
           <Pressable
-            className={`shrink-0 items-center justify-center rounded-full px-3.5 ${
+            // Deliberately identical to Bookmarks' own FilterChips (same
+            // filter count, same label set) -- padding-only sizing, no
+            // minWidth/height override. Two earlier rounds here (a minHeight
+            // floor, then a fixed height) each still left "All" visibly
+            // shorter than the other filters on-device; Bookmarks' chips
+            // never show that mismatch at all, so matching its real, working
+            // implementation exactly is more trustworthy than a third
+            // unverified theory about what a style override should be.
+            className={`shrink-0 rounded-full px-3.5 py-[7px] ${
               isActive ? 'bg-accent' : 'bg-secondary'
             }`}
             key={filter.key}
             onPress={() => onSelect(filter.key)}
-            // minWidth is sized to the row's longest label ("Missions"/
-            // "Services") so every pill reads as the same size -- a flat
-            // 64px floor stopped "All" from shrink-wrapping to a near-
-            // circular blob, but still left it and "Posts" looking visibly
-            // smaller than their longer-labeled neighbors.
-            //
-            // height is a fixed value, not a minHeight floor derived from
-            // padding + line-height (7+7+18=32): that floor had zero margin
-            // over a "healthy" pill's own natural rendered height (font-metric
-            // leading alone commonly renders a couple px taller than the
-            // exact line-height asked for), so it never actually engaged for
-            // correctly-rendered pills -- only for whatever undersized frame
-            // "All" was committing (selecting it mounts all four activity
-            // sections below this row at once, a much larger simultaneous
-            // layout commit than any other filter), which clamped to exactly
-            // that floor and rendered visibly shorter than its healthy
-            // siblings. A fixed height removes the pill's size from that
-            // content-driven measurement entirely -- Yoga can't render it at
-            // any height but this one, whatever else is mounting alongside
-            // it -- with justifyContent/alignItems centering the label
-            // inside it instead of relying on padding to do that centering.
-            style={{ height: 36, minWidth: 92 }}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${
