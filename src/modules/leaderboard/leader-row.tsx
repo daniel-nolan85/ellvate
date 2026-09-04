@@ -1,3 +1,5 @@
+import { Pressable } from 'react-native';
+
 import { Avatar } from '@/src/components/ui/avatar';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -11,45 +13,52 @@ const DESTRUCTIVE_COLOR = 'rgb(231,0,11)';
 
 interface LeaderRowProps {
   readonly entry: LeaderboardEntry;
+  readonly onPress: (entry: LeaderboardEntry) => void;
 }
 
-export function LeaderRow({ entry }: LeaderRowProps) {
+export function LeaderRow({ entry, onPress }: LeaderRowProps) {
   const me = entry.isMe;
 
   return (
-    <HStack
-      className={`items-center gap-3 rounded-[16px] px-3.5 py-3 shadow-card ${me ? 'bg-accent' : 'border border-surface-hairline bg-paper'}`}
+    <Pressable
+      accessibilityLabel={`Open profile: ${me ? 'You' : entry.user.name}`}
+      accessibilityRole="button"
+      onPress={() => onPress(entry)}
     >
-      <Text
-        className={`w-5 text-center font-inter-bold text-[14px] leading-[18px] ${me ? 'text-accent-foreground' : 'text-text-muted'}`}
+      <HStack
+        className={`items-center gap-3 rounded-[16px] px-3.5 py-3 shadow-card ${me ? 'bg-accent' : 'border border-surface-hairline bg-paper'}`}
       >
-        {entry.rank}
-      </Text>
-      <Avatar name={entry.user.name} size="sm" src={entry.user.avatarUrl ?? undefined} />
-      <VStack className="flex-1" space="xs">
         <Text
-          className={`font-inter-semibold text-[14px] leading-[18px] ${me ? 'text-accent-foreground' : 'text-content'}`}
+          className={`w-5 text-center font-inter-bold text-[14px] leading-[18px] ${me ? 'text-accent-foreground' : 'text-text-muted'}`}
         >
-          {me ? 'You' : entry.user.name}
+          {entry.rank}
         </Text>
+        <Avatar name={entry.user.name} size="sm" src={entry.user.avatarUrl ?? undefined} />
+        <VStack className="flex-1" space="xs">
+          <Text
+            className={`font-inter-semibold text-[14px] leading-[18px] ${me ? 'text-accent-foreground' : 'text-content'}`}
+          >
+            {me ? 'You' : entry.user.name}
+          </Text>
+          <Text
+            className={`text-[11px] leading-[14px] ${me ? 'text-[rgba(255,255,255,0.75)]' : 'text-text-subtle'}`}
+          >
+            {`${entry.xp.toLocaleString()} XP`}
+          </Text>
+        </VStack>
+        {entry.rankDelta !== 0 ? (
+          <Icon
+            color={entry.rankDelta > 0 ? SUCCESS_COLOR : DESTRUCTIVE_COLOR}
+            name={entry.rankDelta > 0 ? 'ArrowUp' : 'ArrowDown'}
+            size={14}
+          />
+        ) : null}
         <Text
-          className={`text-[11px] leading-[14px] ${me ? 'text-[rgba(255,255,255,0.75)]' : 'text-text-subtle'}`}
+          className={`font-inter-bold text-[15px] leading-[19px] ${me ? 'text-accent-foreground' : 'text-content'}`}
         >
-          {`${entry.xp.toLocaleString()} XP`}
+          {entry.missionsCompleted}
         </Text>
-      </VStack>
-      {entry.rankDelta !== 0 ? (
-        <Icon
-          color={entry.rankDelta > 0 ? SUCCESS_COLOR : DESTRUCTIVE_COLOR}
-          name={entry.rankDelta > 0 ? 'ArrowUp' : 'ArrowDown'}
-          size={14}
-        />
-      ) : null}
-      <Text
-        className={`font-inter-bold text-[15px] leading-[19px] ${me ? 'text-accent-foreground' : 'text-content'}`}
-      >
-        {entry.missionsCompleted}
-      </Text>
-    </HStack>
+      </HStack>
+    </Pressable>
   );
 }

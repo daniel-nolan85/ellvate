@@ -21,6 +21,7 @@ import {
   type CategoryAccent,
 } from '@/src/lib/category-accent';
 import { useSession } from '@/src/platform/session';
+import { ApiError } from '@/src/services/api';
 
 import { useBlockUser, useBlockedUsers, useReportMember } from './use-block-user';
 import { useMemberProfile } from './use-profile';
@@ -145,8 +146,15 @@ export function MemberProfileScreen({
           dismiss, and tap-outside already cover closing it. A `formSheet`
           page's content starts well below the physical top edge, so this
           only needs a small fixed gap, not insets.top -- unlike Sheet's
-          statusBarTranslucent custom Modal, which spans behind the notch. */}
-      <HStack className='items-center justify-between px-5 pb-3 pt-6'>
+          statusBarTranslucent custom Modal, which spans behind the notch.
+          collapsable={false} works around a real react-native-screens bug
+          (software-mansion/react-native-screens#3092): a formSheet screen
+          whose root View has a background color can have RN's view-
+          flattening optimization collapse this header's native view into
+          its parent, which then lets the ScrollView below render on top of
+          it instead of below it -- forcing this view to actually exist
+          natively is the documented fix. */}
+      <HStack className='items-center justify-between px-5 pb-3 pt-6' collapsable={false}>
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
@@ -178,9 +186,22 @@ export function MemberProfileScreen({
             <Spinner size='xlarge' />
           </View>
         ) : member.isError ? (
-          <Text className='px-5 text-center text-text-muted' size='sm'>
-            Couldn&apos;t load this profile.
-          </Text>
+          <VStack className='gap-1 px-5' space='xs'>
+            <Text className='text-center text-text-muted' size='sm'>
+              Couldn&apos;t load this profile.
+            </Text>
+            {/* Surfaces the actual failure instead of a silent dead end --
+                this has come back reported as "not loading" with no further
+                detail to diagnose from; showing the real status/message
+                here means the next report can include it. */}
+            <Text className='text-center text-[11px] text-text-subtle'>
+              {member.error instanceof ApiError
+                ? `Error ${member.error.status}${member.error.code ? ` (${member.error.code})` : ''}: ${member.error.message}`
+                : member.error instanceof Error
+                  ? member.error.message
+                  : String(member.error)}
+            </Text>
+          </VStack>
         ) : (
           <VStack className='gap-4 px-5 pt-4'>
             <HStack space='sm'>

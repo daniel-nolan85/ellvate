@@ -180,7 +180,9 @@ function LeaderboardArt() {
   return (
     <VStack space="sm">
       {LEADERBOARD_PREVIEW.map((entry) => (
-        <LeaderRow entry={entry} key={entry.user.id} />
+        // Decorative preview shown during onboarding, before the viewer has
+        // a session or community access -- nothing real to navigate to yet.
+        <LeaderRow entry={entry} key={entry.user.id} onPress={() => {}} />
       ))}
       <HStack className="items-center gap-1.5 self-start rounded-full bg-amber-subtle px-3 py-[7px]">
         <Icon color={AMBER} fill={AMBER} name="Star" size={12} />
