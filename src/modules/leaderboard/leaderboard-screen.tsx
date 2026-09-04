@@ -123,10 +123,17 @@ export function LeaderboardScreen() {
           </VStack>
         ) : (
           <>
-            <Podium leaders={leaders} />
+            <Podium
+              leaders={leaders}
+              onPress={(entry) => openProfile(entry.user.id, entry.user.name)}
+            />
             <VStack className="px-5 pt-1.5" space="xs">
               {leaders.map((entry) => (
-                <LeaderRow entry={entry} key={entry.rank} />
+                <LeaderRow
+                  entry={entry}
+                  key={entry.rank}
+                  onPress={(pressed) => openProfile(pressed.user.id, pressed.user.name)}
+                />
               ))}
             </VStack>
             {leaderboard.hasNextPage ? (

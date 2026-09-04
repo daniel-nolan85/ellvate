@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Avatar } from '@/src/components/ui/avatar';
 import { HStack } from '@/src/components/ui/hstack';
@@ -15,6 +15,7 @@ const MEDAL_CLASS_BY_RANK: Readonly<Record<number, string>> = {
 
 interface PodiumProps {
   readonly leaders: readonly LeaderboardEntry[];
+  readonly onPress: (entry: LeaderboardEntry) => void;
 }
 
 function PodiumAvatar({ entry }: { readonly entry: LeaderboardEntry }) {
@@ -46,28 +47,40 @@ function PodiumAvatar({ entry }: { readonly entry: LeaderboardEntry }) {
   );
 }
 
-function PodiumColumn({ entry }: { readonly entry: LeaderboardEntry }) {
+function PodiumColumn({
+  entry,
+  onPress,
+}: {
+  readonly entry: LeaderboardEntry;
+  readonly onPress: (entry: LeaderboardEntry) => void;
+}) {
   const first = entry.rank === 1;
 
   return (
-    <VStack className="w-[100px] items-center" space="xs">
-      <PodiumAvatar entry={entry} />
-      <Text className="mt-1 font-inter-bold text-content" size="sm">
-        {entry.user.name}
-      </Text>
-      <Text
-        className={`font-inter-bold text-content ${first ? 'text-[20px] leading-[24px] tracking-[-0.4px]' : 'text-[16px] leading-[20px] tracking-[-0.32px]'}`}
-      >
-        {entry.missionsCompleted}
-      </Text>
-      <Text className="-mt-1 text-muted-foreground" size="xs">
-        missions
-      </Text>
-    </VStack>
+    <Pressable
+      accessibilityLabel={`Open profile: ${entry.user.name}`}
+      accessibilityRole="button"
+      onPress={() => onPress(entry)}
+    >
+      <VStack className="w-[100px] items-center" space="xs">
+        <PodiumAvatar entry={entry} />
+        <Text className="mt-1 font-inter-bold text-content" size="sm">
+          {entry.user.name}
+        </Text>
+        <Text
+          className={`font-inter-bold text-content ${first ? 'text-[20px] leading-[24px] tracking-[-0.4px]' : 'text-[16px] leading-[20px] tracking-[-0.32px]'}`}
+        >
+          {entry.missionsCompleted}
+        </Text>
+        <Text className="-mt-1 text-muted-foreground" size="xs">
+          missions
+        </Text>
+      </VStack>
+    </Pressable>
   );
 }
 
-export function Podium({ leaders }: PodiumProps) {
+export function Podium({ leaders, onPress }: PodiumProps) {
   const topThree = [...leaders]
     .sort((a, b) => a.rank - b.rank)
     .slice(0, 3);
@@ -81,7 +94,7 @@ export function Podium({ leaders }: PodiumProps) {
   return (
     <HStack className="items-end justify-center px-5 pt-2.5" space="sm">
       {arranged.map((entry) => (
-        <PodiumColumn entry={entry} key={entry.rank} />
+        <PodiumColumn entry={entry} key={entry.rank} onPress={onPress} />
       ))}
     </HStack>
   );

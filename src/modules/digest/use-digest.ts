@@ -57,5 +57,11 @@ export function useWeeklyDigest(weekStart?: string) {
         signal,
       }),
     queryKey: ['digest', userId, weekStart ?? 'latest'] as const,
+    // The default retry:2 means a genuinely failing request stays isPending
+    // through up to 3 attempts plus backoff (~30s+) before ever surfacing as
+    // isError -- reads as "stuck loading forever" rather than a fast, clear
+    // failure. This screen's own query is the one repeatedly reported as
+    // "won't load", so cut that wait down to a single retry.
+    retry: 1,
   });
 }

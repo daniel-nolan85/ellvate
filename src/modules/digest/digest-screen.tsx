@@ -15,6 +15,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { EventSummaryCard, type CommunityEvent } from '@/src/modules/events';
 import { PostCard, useToggleLike, type ForumPost } from '@/src/modules/forum';
+import { ApiError } from '@/src/services/api';
 
 import {
   useWeeklyDigest,
@@ -264,8 +265,15 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
           dismiss, and tap-outside already cover closing it. A `formSheet`
           page's content starts well below the physical top edge, so this
           only needs a small fixed gap, not insets.top -- unlike Sheet's
-          statusBarTranslucent custom Modal, which spans behind the notch. */}
-      <HStack className="items-center justify-between px-5 pb-1 pt-6">
+          statusBarTranslucent custom Modal, which spans behind the notch.
+          collapsable={false} works around a real react-native-screens bug
+          (software-mansion/react-native-screens#3092): a formSheet screen
+          whose root View has a background color can have RN's view-
+          flattening optimization collapse this header's native view into
+          its parent, which then lets the content below render on top of
+          it instead of below it -- forcing this view to actually exist
+          natively is the documented fix. */}
+      <HStack className="items-center justify-between px-5 pb-1 pt-6" collapsable={false}>
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap
         </Heading>
@@ -283,6 +291,19 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
           <Text className="text-center text-[14px] text-text-muted">
             Couldn’t load this week’s recap. Try again shortly.
           </Text>
+          {/* Surfaces the actual failure instead of a silent dead end -- this
+              screen has repeatedly come back reported as "won't load" with
+              no further detail to diagnose from; showing the real status/
+              message here means the next report can include it. */}
+          {digest.error ? (
+            <Text className="text-center text-[11px] text-text-subtle">
+              {digest.error instanceof ApiError
+                ? `Error ${digest.error.status}${digest.error.code ? ` (${digest.error.code})` : ''}: ${digest.error.message}`
+                : digest.error instanceof Error
+                  ? digest.error.message
+                  : String(digest.error)}
+            </Text>
+          ) : null}
         </VStack>
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>

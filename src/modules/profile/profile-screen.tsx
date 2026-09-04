@@ -612,6 +612,16 @@ export function ProfileScreen() {
             <Text className="font-inter-bold text-[17px] text-content">
               Edit profile
             </Text>
+            {/* The Save button lives INSIDE this ScrollView (as its last
+                item) rather than as a fixed sibling below it -- a fixed
+                sibling has no scroll container of its own, so once the
+                sheet's total content (title + this box + button) exceeds
+                whatever height is actually available (a small device, or
+                the keyboard open and shrinking the sheet -- see Sheet's own
+                keyboard-height handling), the button has nowhere to render
+                and becomes permanently unreachable. Inside the scroll area,
+                it's always reachable by scrolling further, regardless of
+                how little vertical space ends up available. */}
             <ScrollView style={{ maxHeight: 440 }}>
               <VStack space="lg">
                 <VStack space="xs">
@@ -713,18 +723,19 @@ export function ProfileScreen() {
                     })}
                   </View>
                 </VStack>
+
+                <Button
+                  className="h-[52px] rounded-2xl bg-accent"
+                  isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
+                  onPress={saveProfile}
+                  size="lg"
+                >
+                  <ButtonText className="font-inter-semibold text-accent-foreground">
+                    {updateProfile.isPending ? 'Saving…' : 'Save'}
+                  </ButtonText>
+                </Button>
               </VStack>
             </ScrollView>
-            <Button
-              className="h-[52px] rounded-2xl bg-accent"
-              isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
-              onPress={saveProfile}
-              size="lg"
-            >
-              <ButtonText className="font-inter-semibold text-accent-foreground">
-                {updateProfile.isPending ? 'Saving…' : 'Save'}
-              </ButtonText>
-            </Button>
           </VStack>
         ) : null}
       </Sheet>

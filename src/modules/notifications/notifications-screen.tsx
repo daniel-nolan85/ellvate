@@ -112,8 +112,15 @@ export function NotificationsScreen({ onClose }: NotificationsScreenProps) {
           dismiss, and tap-outside already cover closing it. A `formSheet`
           page's content starts well below the physical top edge, so this
           only needs a small fixed gap, not insets.top -- unlike Sheet's
-          statusBarTranslucent custom Modal, which spans behind the notch. */}
-      <HStack className="items-center justify-between px-5 pb-3 pt-6">
+          statusBarTranslucent custom Modal, which spans behind the notch.
+          collapsable={false} works around a real react-native-screens bug
+          (software-mansion/react-native-screens#3092): a formSheet screen
+          whose root View has a background color can have RN's view-
+          flattening optimization collapse this header's native view into
+          its parent, which then lets the ScrollView below render on top of
+          it instead of below it -- forcing this view to actually exist
+          natively is the documented fix. */}
+      <HStack className="items-center justify-between px-5 pb-3 pt-6" collapsable={false}>
         <Heading className="font-inter-bold" size="xl">
           Notifications
         </Heading>

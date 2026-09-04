@@ -113,6 +113,12 @@ export function useMemberProfile(userId: string) {
         signal,
       }),
     queryKey: ['profile', 'member', userId],
+    // The default retry:2 means a genuinely failing request stays isPending
+    // through up to 3 attempts plus backoff (~30s+) before ever surfacing as
+    // isError -- reads as "stuck/not loading" rather than a fast, clear
+    // failure. This screen has been reported that way, so cut the wait down
+    // to a single retry.
+    retry: 1,
   });
 }
 
