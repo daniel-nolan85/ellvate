@@ -89,8 +89,9 @@
     },
     "updates": {
       "checkAutomatically": "ON_LOAD",
-      "enabled": false,
-      "fallbackToCacheTimeout": 3000
+      "enabled": true,
+      "fallbackToCacheTimeout": 3000,
+      "url": "https://u.expo.dev/cb2fe50f-0723-4522-b836-cb0895e1b18c"
     },
     "extra": {
       "router": {},
