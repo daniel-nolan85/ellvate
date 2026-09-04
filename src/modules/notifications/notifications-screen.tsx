@@ -31,6 +31,19 @@ const ICON_BY_KIND: Readonly<Record<string, AppIconName>> = {
 
 const iconForKind = (kind: string): AppIconName => ICON_BY_KIND[kind] ?? 'Bell';
 
+// A single router.replace() (tried after a straight back()+push() first
+// raced) still left the destination -- and this screen, on returning to it
+// -- with squashed/overlapping content. Both of those assumed the two
+// formSheet presentations (this screen, and most destinations) could be
+// swapped as one instantaneous transition; this instead dismisses first and
+// waits for that native transition to actually finish before presenting
+// the destination, so the new screen's content never gets laid out while
+// the old sheet is still mid-transition. Matches the CLOSE_DURATION-then-
+// open pattern already used elsewhere in this app for the same class of
+// problem (see src/components/ui/sheet), just against formSheet's own
+// (longer, OS-driven) transition instead of that custom sheet's.
+const FORM_SHEET_TRANSITION_MS = 400;
+
 function NotificationRow({
   notification,
   onPress,
@@ -96,17 +109,8 @@ export function NotificationsScreen() {
     }
     const route = resolveNotificationRoute(notification.data);
     if (route) {
-      // router.replace, not router.back() + router.push(): both are native
-      // formSheet presentations, and dismissing this one while immediately
-      // presenting a new one as two separate, back-to-back navigation calls
-      // raced on-device -- the destination screen (and this one, on
-      // returning to it later) rendered with squashed/overlapping content,
-      // consistent with its layout being computed mid-transition rather
-      // than after either transition actually settled. replace swaps the
-      // route in one transition instead of two overlapping ones, and ends
-      // at the same place in history back() + push() did (this screen
-      // popped, the destination in its place).
-      router.replace(route);
+      router.back();
+      setTimeout(() => router.push(route), FORM_SHEET_TRANSITION_MS);
     }
   };
 
