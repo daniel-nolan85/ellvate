@@ -31,19 +31,6 @@ const ICON_BY_KIND: Readonly<Record<string, AppIconName>> = {
 
 const iconForKind = (kind: string): AppIconName => ICON_BY_KIND[kind] ?? 'Bell';
 
-// A single router.replace() (tried after a straight back()+push() first
-// raced) still left the destination -- and this screen, on returning to it
-// -- with squashed/overlapping content. Both of those assumed the two
-// formSheet presentations (this screen, and most destinations) could be
-// swapped as one instantaneous transition; this instead dismisses first and
-// waits for that native transition to actually finish before presenting
-// the destination, so the new screen's content never gets laid out while
-// the old sheet is still mid-transition. Matches the CLOSE_DURATION-then-
-// open pattern already used elsewhere in this app for the same class of
-// problem (see src/components/ui/sheet), just against formSheet's own
-// (longer, OS-driven) transition instead of that custom sheet's.
-const FORM_SHEET_TRANSITION_MS = 400;
-
 function NotificationRow({
   notification,
   onPress,
@@ -109,8 +96,21 @@ export function NotificationsScreen() {
     }
     const route = resolveNotificationRoute(notification.data);
     if (route) {
-      router.back();
-      setTimeout(() => router.push(route), FORM_SHEET_TRANSITION_MS);
+      // Plain push, not a dismiss-then-present: this screen is no longer
+      // the formSheet it used to be (see MODAL_SCREEN_OPTIONS), so it no
+      // longer needs to get out of the way before the destination can
+      // present correctly -- two earlier attempts at sequencing that
+      // dismiss (a straight back()+push(), then back() with a delay before
+      // push()) both still left the destination squashed, because
+      // react-native-screens#3569's real precondition turned out not to be
+      // "two navigation calls fired close together" but "a formSheet
+      // presented directly over another still-transitioning presentation"
+      // -- which no longer describes this screen at all now that it's a
+      // modal, so there's nothing left to sequence around. The destination
+      // simply stacks on top of this screen; swiping it away reveals
+      // Notifications again, same as swiping away any other screen reached
+      // by drilling into something.
+      router.push(route);
     }
   };
 
