@@ -10,5 +10,5 @@ import { PostDetailScreen } from '@/src/modules/forum';
 export default function NotificationPostDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  return <PostDetailScreen onBack={() => router.back()} postId={id} />;
+  return <PostDetailScreen modal onBack={() => router.back()} postId={id} />;
 }

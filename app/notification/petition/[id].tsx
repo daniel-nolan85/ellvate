@@ -6,5 +6,5 @@ import { PetitionDetailScreen } from '@/src/modules/petitions';
 export default function NotificationPetitionDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  return <PetitionDetailScreen onBack={() => router.back()} petitionId={id} />;
+  return <PetitionDetailScreen modal onBack={() => router.back()} petitionId={id} />;
 }

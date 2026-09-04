@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActionSheetIOS, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -100,7 +100,6 @@ export function MemberProfileScreen({
   const isBlocked = blockedUsers.data?.blocked.some(
     (blocked) => blocked.userId === userId,
   ) ?? false;
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -118,60 +117,19 @@ export function MemberProfileScreen({
   };
 
   const handleUnblock = () => {
-    setMenuOpen(false);
     blockUser.mutate(userId, {
       onError: () => showToast('Couldn’t unblock this neighbour. Try again.'),
       onSuccess: () => showToast(`Unblocked ${displayName}`),
     });
   };
 
-  const openConfirmBlock = () => {
-    setMenuOpen(false);
-    setConfirmBlockOpen(true);
-  };
+  const openConfirmBlock = () => setConfirmBlockOpen(true);
 
   const handleReport = () => {
-    setMenuOpen(false);
     reportMember.mutate(userId, {
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => showToast('Thanks — our moderators will take a look.'),
     });
-  };
-
-  // iOS gets its own native action sheet, not an RN view rendered into this
-  // screen's tree at all -- see the header's own comment above for why an
-  // in-tree dropdown menu (tried previously) is specifically risky on this
-  // formSheet screen. Android still gets the inline dropdown below
-  // (untested on-device so far, but not the one reported broken, and
-  // Android's formSheet implementation doesn't share iOS's 2-subview
-  // constraint).
-  const openMenu = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          cancelButtonIndex: 2,
-          destructiveButtonIndex: 1,
-          options: [
-            isBlocked ? 'Unblock this neighbour' : 'Block this neighbour',
-            'Report this member',
-            'Cancel',
-          ],
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 0) {
-            if (isBlocked) {
-              handleUnblock();
-            } else {
-              openConfirmBlock();
-            }
-          } else if (buttonIndex === 1) {
-            handleReport();
-          }
-        },
-      );
-      return;
-    }
-    setMenuOpen(true);
   };
 
   return (
@@ -190,31 +148,24 @@ export function MemberProfileScreen({
           it instead of below it -- forcing this view to actually exist
           natively is the documented fix.
 
-          The "..." button lives IN this row, not as its own sibling below
-          it -- react-native-screens' own formSheet+ScrollView content view
-          on iOS only expects 2 direct children (see software-mansion/
-          react-native-screens#2992, "FormSheet with ScrollView expects at
-          most 2 subviews. Got N. This might result in incorrect layout.");
-          this screen's only two are meant to be this header and the
-          ScrollView below. A previous round moved the button out to its
-          own independent, absolutely-positioned sibling specifically to
-          get it away from this header -- which instead made it the 3rd
-          direct child, squarely inside that undocumented-behavior zone,
-          and never fixed the reported "does nothing". Keeping it here
-          keeps this screen's own direct children at exactly 2. */}
+          Block/Report used to live behind a "..." button in this header, in
+          four different implementations (a Sheet, an inline dropdown,
+          ActionSheetIOS as this header's own 3rd child, then ActionSheetIOS
+          moved back into this row as the header's 2nd child) -- every one
+          reported as still doing nothing on-device, including the two that
+          changed nothing about *what* opened the actions, only where the
+          button itself lived. That rules out the button's rendering
+          mechanism and points at touch handling specific to this general
+          screen area instead: near the very top of a formSheet is also
+          where UIKit's own interactive-dismiss gesture for the sheet lives,
+          and it can claim touches ahead of this screen's own views without
+          any RN-visible trace of doing so. Rather than try a fifth variant
+          in the same zone, Block/Report now live as plain rows near the
+          bottom of the ScrollView below instead, see there. */}
       <HStack className='items-center justify-between px-5 pb-3 pt-6' collapsable={false}>
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
-        {!isSelf && !blockedUsers.isPending ? (
-          <Pressable
-            accessibilityLabel='More options'
-            className='h-9 w-9 items-center justify-center rounded-full bg-secondary'
-            onPress={openMenu}
-          >
-            <Icon name='ThreeDots' size={18} />
-          </Pressable>
-        ) : null}
       </HStack>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
@@ -395,58 +346,36 @@ export function MemberProfileScreen({
                 </Text>
               )}
             </VStack>
+
+            {!isSelf && !blockedUsers.isPending ? (
+              <VStack className='pt-2'>
+                <Divider />
+                <Pressable
+                  accessibilityRole='button'
+                  className='flex-row items-center gap-3 py-3.5'
+                  onPress={isBlocked ? handleUnblock : openConfirmBlock}
+                >
+                  <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
+                  <Text className='text-[14px] text-content'>
+                    {isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'}
+                  </Text>
+                </Pressable>
+                <Divider />
+                <Pressable
+                  accessibilityRole='button'
+                  className='flex-row items-center gap-3 py-3.5'
+                  onPress={handleReport}
+                >
+                  <Icon color='rgb(231,0,11)' name='AlertCircle' size={18} />
+                  <Text className='text-[14px]' style={{ color: 'rgb(231,0,11)' }}>
+                    Report this member
+                  </Text>
+                </Pressable>
+              </VStack>
+            ) : null}
           </VStack>
         )}
       </ScrollView>
-
-      {menuOpen ? (
-        <>
-          {/* An inline dropdown, not a Sheet (a second native Modal) -- a
-              Modal opened from this button, which lives in this screen's
-              own formSheet header, has been reported as silently doing
-              nothing on-device. RN's <Modal> presenting on top of a screen
-              that's itself already natively presented (formSheet) is a
-              known bad combination on iOS (see software-mansion/
-              react-native-screens#2048, #1356, #525) -- content-triggered
-              Sheets elsewhere on this same formSheet screen type (digest,
-              member-activity) work fine, but this one opens from the
-              collapsable={false} header rather than from within the
-              ScrollView, which is the one thing different about it.
-              Rendering the menu inline, in this screen's own view tree,
-              sidesteps the whole question of why. */}
-          <Pressable
-            accessibilityLabel='Close menu'
-            className='absolute inset-0'
-            onPress={() => setMenuOpen(false)}
-          />
-          <View
-            className='absolute right-5 min-w-[220px] gap-1 rounded-2xl border border-surface-hairline bg-paper py-1 shadow-card'
-            style={{ top: 76 }}
-          >
-            <Pressable
-              accessibilityRole='button'
-              className='flex-row items-center gap-3 px-4 py-3'
-              onPress={() => (isBlocked ? handleUnblock() : openConfirmBlock())}
-            >
-              <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
-              <Text className='text-[14px]'>
-                {isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'}
-              </Text>
-            </Pressable>
-            <Divider />
-            <Pressable
-              accessibilityRole='button'
-              className='flex-row items-center gap-3 px-4 py-3'
-              onPress={handleReport}
-            >
-              <Icon color='rgb(231,0,11)' name='AlertCircle' size={18} />
-              <Text className='text-[14px]' style={{ color: 'rgb(231,0,11)' }}>
-                Report this member
-              </Text>
-            </Pressable>
-          </View>
-        </>
-      ) : null}
 
       <ConfirmModal
         confirmLabel='Block'

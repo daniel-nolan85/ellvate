@@ -41,9 +41,20 @@ const categoryLabel = (value: string): string =>
 interface PetitionDetailScreenProps {
   readonly petitionId: string;
   readonly onBack: () => void;
+  // True when reached from Notifications (see
+  // app/notification/petition/[id].tsx), presented as a formSheet whose own
+  // grabber, swipe-to-dismiss, and tap-outside already cover closing it --
+  // hides the back button and swaps insets.top for a small fixed gap,
+  // matching every other formSheet header in this app (Digest, Member
+  // Profile, ...) instead of double-padding under the sheet's own inset.
+  readonly modal?: boolean;
 }
 
-export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScreenProps) {
+export function PetitionDetailScreen({
+  modal = false,
+  onBack,
+  petitionId,
+}: PetitionDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
@@ -162,12 +173,15 @@ export function PetitionDetailScreen({ petitionId, onBack }: PetitionDetailScree
   return (
     <View className="flex-1 bg-canvas">
       <HStack
-        className="items-center gap-2 border-b border-line px-[18px] pb-3"
-        style={{ paddingTop: insets.top + 8 }}
+        className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
+        collapsable={false}
+        style={{ paddingTop: modal ? 24 : insets.top + 8 }}
       >
-        <Pressable accessibilityLabel="Back" onPress={onBack}>
-          <Icon name="ChevronLeft" size={22} />
-        </Pressable>
+        {modal ? null : (
+          <Pressable accessibilityLabel="Back" onPress={onBack}>
+            <Icon name="ChevronLeft" size={22} />
+          </Pressable>
+        )}
         <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
           Petition
         </Heading>
