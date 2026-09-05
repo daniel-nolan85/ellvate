@@ -3,9 +3,15 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { POST as postReportMember } from '../../app/api/users/[userId]/report+api';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { reportMember } from '../../src/backend/member-reports';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -14,7 +20,7 @@ afterEach(() => {
 
 describe('reportMember', () => {
   test('reports an existing member', async () => {
-    const result = await reportMember(ctx(), 'user-jordan');
+    const result = await reportMember(ctx(), 'user-jordan', TEST_REPORT_SUBMISSION);
 
     expect(result).toEqual({ ok: true, reported: true });
     expect(
@@ -26,8 +32,8 @@ describe('reportMember', () => {
   });
 
   test('is idempotent — reporting the same member twice records one report', async () => {
-    await reportMember(ctx(), 'user-jordan');
-    await reportMember(ctx(), 'user-jordan');
+    await reportMember(ctx(), 'user-jordan', TEST_REPORT_SUBMISSION);
+    await reportMember(ctx(), 'user-jordan', TEST_REPORT_SUBMISSION);
 
     expect(
       getState().memberReports.filter(
@@ -38,21 +44,21 @@ describe('reportMember', () => {
   });
 
   test('rejects reporting yourself', async () => {
-    const result = await reportMember(ctx(DEMO_USER_ID), DEMO_USER_ID);
+    const result = await reportMember(ctx(DEMO_USER_ID), DEMO_USER_ID, TEST_REPORT_SUBMISSION);
 
     expect(result).toMatchObject({ code: 'cannot_report_self', ok: false });
     expect(getState().memberReports).toEqual([]);
   });
 
   test('rejects reporting an unknown member', async () => {
-    const result = await reportMember(ctx(), 'user-does-not-exist');
+    const result = await reportMember(ctx(), 'user-does-not-exist', TEST_REPORT_SUBMISSION);
 
     expect(result).toMatchObject({ code: 'member_not_found', ok: false });
   });
 
   test('two different reporters can each report the same member', async () => {
-    await reportMember(ctx(DEMO_USER_ID), 'user-jordan');
-    await reportMember(ctx('user-mia'), 'user-jordan');
+    await reportMember(ctx(DEMO_USER_ID), 'user-jordan', TEST_REPORT_SUBMISSION);
+    await reportMember(ctx('user-mia'), 'user-jordan', TEST_REPORT_SUBMISSION);
 
     expect(
       getState().memberReports.filter((report) => report.reportedUserId === 'user-jordan'),
@@ -61,9 +67,15 @@ describe('reportMember', () => {
 });
 
 describe('member report route', () => {
+  const reportBody = () => ({
+    body: JSON.stringify({ reason: 'other' }),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+  });
+
   test('POST /api/users/[userId]/report round-trips through the route', async () => {
     const response = await postReportMember(
-      new Request('http://test/report', { method: 'POST' }),
+      new Request('http://test/report', reportBody()),
       { userId: 'user-jordan' },
     );
     expect(response.status).toBe(200);
@@ -72,7 +84,7 @@ describe('member report route', () => {
 
   test('POST rejects reporting yourself with 400', async () => {
     const response = await postReportMember(
-      new Request('http://test/report', { method: 'POST' }),
+      new Request('http://test/report', reportBody()),
       { userId: DEMO_USER_ID },
     );
     expect(response.status).toBe(400);
@@ -80,7 +92,7 @@ describe('member report route', () => {
 
   test('POST returns 404 for an unknown member', async () => {
     const response = await postReportMember(
-      new Request('http://test/report', { method: 'POST' }),
+      new Request('http://test/report', reportBody()),
       { userId: 'user-does-not-exist' },
     );
     expect(response.status).toBe(404);

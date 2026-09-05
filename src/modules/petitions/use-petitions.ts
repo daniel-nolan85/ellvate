@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
+import type { ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -248,8 +249,9 @@ export function useReportPetition() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: (petitionId: string) =>
+    mutationFn: ({ petitionId, ...submission }: { petitionId: string } & ReportSubmission) =>
       requestJson<{ readonly reported: boolean }>({
+        body: submission,
         getAccessToken: session.getToken,
         method: 'POST',
         path: `/api/petitions/${petitionId}/report`,

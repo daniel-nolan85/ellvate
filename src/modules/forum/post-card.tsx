@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -19,7 +20,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -93,6 +94,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   const deletePost = useDeletePost();
   const blockUser = useBlockUser();
   const reportPost = useReportPost();
+  const reportMember = useReportMember();
   const togglePin = useTogglePin();
   const pinExplainer = usePinExplainerDismissed();
   const subforums = useSubforums();
@@ -108,8 +110,11 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   // card permanently unresponsive. One Sheet mounted at a time can never
   // race itself this way -- mirrors the same fix in post-detail-screen.tsx.
   const [cardSheetMode, setCardSheetMode] = useState<
-    'menu' | 'edit' | 'confirm-delete' | null
+    'menu' | 'edit' | 'confirm-delete' | 'report' | null
   >(null);
+  // Which target a 'report' cardSheetMode is for -- the post itself, or its
+  // author -- since both now go through the same ReportSheetContent form.
+  const [reportTarget, setReportTarget] = useState<'post' | 'user' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
@@ -195,13 +200,29 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
     });
   };
 
-  const handleReport = () => {
-    setCardSheetMode(null);
-    reportPost.mutate(post.id, {
-      onSuccess: () =>
-        showToast('Thanks — our moderators will take a look.'),
+  const openReportPost = () => {
+    setReportTarget('post');
+    setCardSheetMode('report');
+  };
+
+  const openReportUser = () => {
+    setReportTarget('user');
+    setCardSheetMode('report');
+  };
+
+  const handleReportSubmit = (submission: ReportSubmission) => {
+    const onSettled = {
       onError: () => showToast('Couldn’t submit your report. Try again.'),
-    });
+      onSuccess: () => {
+        setCardSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (reportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: post.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportPost.mutate({ postId: post.id, ...submission }, onSettled);
   };
 
   return (
@@ -367,6 +388,12 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
             subforums={subforumNames}
             submitLabel='Save'
           />
+        ) : cardSheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={reportTarget === 'user' ? reportMember.isPending : reportPost.isPending}
+            onSubmit={handleReportSubmit}
+            title={reportTarget === 'user' ? `Report ${post.author.name}` : 'Report post'}
+          />
         ) : cardSheetMode === 'confirm-delete' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -414,9 +441,16 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
                 <Divider />
                 <PostMenuRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportUser}
+                />
+                <Divider />
+                <PostMenuRow
+                  destructive
                   icon='AlertCircle'
                   label='Report post'
-                  onPress={handleReport}
+                  onPress={openReportPost}
                 />
               </>
             )}

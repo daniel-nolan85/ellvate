@@ -6,6 +6,7 @@ import { defaultDisplayName } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import type {
   CreatePetitionCommentResult,
   PetitionComment,
@@ -201,6 +202,7 @@ export async function reportPetitionCommentSupabase(
   supabase: SupabaseClient,
   userId: string,
   commentId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportPetitionCommentResult> {
   const { data: comment, error: commentError } = await supabase
     .from('petition_comments')
@@ -216,10 +218,21 @@ export async function reportPetitionCommentSupabase(
     };
   }
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   const { error } = await supabase
     .from('petition_comment_reports')
     .upsert(
-      { petition_comment_id: commentId, reporter_id: userId },
+      {
+        details: submission.details,
+        evidence_image_url: evidenceImageUrl,
+        petition_comment_id: commentId,
+        reason: submission.reason,
+        reporter_id: userId,
+      },
       { ignoreDuplicates: true, onConflict: 'petition_comment_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report petition comment');

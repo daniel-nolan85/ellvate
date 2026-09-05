@@ -7,6 +7,7 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import type {
   CommunityEvent,
   CreateEventResult,
@@ -844,6 +845,7 @@ export async function reportEventSupabase(
   supabase: SupabaseClient,
   userId: string,
   eventId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportEventResult> {
   const { data: event, error: eventError } = await supabase
     .from('events')
@@ -856,12 +858,23 @@ export async function reportEventSupabase(
   }
 
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   // Idempotent: a unique (event_id, reporter_id) constraint on event_reports
   // means a repeat report from the same user is a silent no-op, not an error.
   const { error } = await supabase
     .from('event_reports')
     .upsert(
-      { event_id: eventId, reporter_id: userId },
+      {
+        details: submission.details,
+        event_id: eventId,
+        evidence_image_url: evidenceImageUrl,
+        reason: submission.reason,
+        reporter_id: userId,
+      },
       { ignoreDuplicates: true, onConflict: 'event_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report event');

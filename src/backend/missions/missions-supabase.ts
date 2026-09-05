@@ -12,6 +12,7 @@ import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import { defaultDisplayName, type MissionStatus, type MissionTheme } from '@/src/backend/store';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import type {
   AcceptMissionResult,
   CheckInResult,
@@ -848,6 +849,7 @@ export async function reportMissionSupabase(
   supabase: SupabaseClient,
   userId: string,
   missionId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportMissionResult> {
   const { data: mission, error: missionError } = await supabase
     .from('missions')
@@ -860,13 +862,24 @@ export async function reportMissionSupabase(
   }
 
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   // Idempotent: a unique (mission_id, reporter_id) constraint on
   // mission_reports means a repeat report from the same user is a silent
   // no-op, not an error.
   const { error } = await supabase
     .from('mission_reports')
     .upsert(
-      { mission_id: missionId, reporter_id: userId },
+      {
+        details: submission.details,
+        evidence_image_url: evidenceImageUrl,
+        mission_id: missionId,
+        reason: submission.reason,
+        reporter_id: userId,
+      },
       { ignoreDuplicates: true, onConflict: 'mission_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report mission');

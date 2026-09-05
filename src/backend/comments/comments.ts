@@ -8,6 +8,7 @@ import {
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   createCommentSupabase,
   deleteCommentSupabase,
@@ -226,6 +227,7 @@ function deleteCommentMemory(userId: string, commentId: string): boolean {
 function reportCommentMemory(
   userId: string,
   commentId: string,
+  submission: ValidReportSubmission,
 ): ReportCommentResult {
   if (!getState().comments.some((comment) => comment.id === commentId)) {
     return { code: 'comment_not_found', message: 'Comment not found.', ok: false };
@@ -242,7 +244,10 @@ function reportCommentMemory(
         {
           commentId,
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `comment-report-${crypto.randomUUID()}`,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -322,8 +327,9 @@ export async function deleteComment(
 export async function reportComment(
   ctx: RequestContext,
   commentId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportCommentResult> {
   return ctx.supabase
-    ? reportCommentSupabase(ctx.supabase, ctx.userId, commentId)
-    : reportCommentMemory(ctx.userId, commentId);
+    ? reportCommentSupabase(ctx.supabase, ctx.userId, commentId, submission)
+    : reportCommentMemory(ctx.userId, commentId, submission);
 }

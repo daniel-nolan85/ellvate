@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
+import type { ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -447,8 +448,9 @@ export function useReportCheckIn() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: (checkInId: string) =>
+    mutationFn: ({ checkInId, ...submission }: { checkInId: string } & ReportSubmission) =>
       requestJson<{ reported: boolean }>({
+        body: submission,
         getAccessToken: session.getToken,
         method: 'POST',
         path: `/api/mission-check-ins/${checkInId}/report`,
@@ -460,8 +462,9 @@ export function useReportMission() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: (missionId: string) =>
+    mutationFn: ({ missionId, ...submission }: { missionId: string } & ReportSubmission) =>
       requestJson<{ reported: boolean }>({
+        body: submission,
         getAccessToken: session.getToken,
         method: 'POST',
         path: `/api/missions/${missionId}/report`,

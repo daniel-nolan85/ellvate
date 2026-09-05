@@ -16,6 +16,7 @@ import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
@@ -28,7 +29,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
@@ -122,6 +123,7 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const deleteReview = useDeleteServiceReview(listingId);
   const reportReview = useReportServiceReview();
   const blockUser = useBlockUser();
+  const reportMember = useReportMember();
 
   // A single Sheet whose content switches by mode, rather than separate
   // Sheet/Modal instances -- closing one and opening another in the same
@@ -134,9 +136,12 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
     'menu' | 'edit' | 'confirm-delete' | null
   >(null);
   const [actionsFor, setActionsFor] = useState<ServiceReview | null>(null);
-  const [reviewSheetMode, setReviewSheetMode] = useState<'actions' | 'edit' | null>(
+  const [reviewSheetMode, setReviewSheetMode] = useState<'actions' | 'edit' | 'report' | null>(
     null,
   );
+  // Which target a reviewSheetMode of 'report' is for -- the review itself,
+  // or its author.
+  const [reviewReportTarget, setReviewReportTarget] = useState<'review' | 'user' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // Forces the create-review composer to remount (fresh, empty state) only
   // once a submission actually succeeds — see the WHY comment in
@@ -149,6 +154,35 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 2200);
+  };
+
+  const openReportReview = () => {
+    setReviewReportTarget('review');
+    setReviewSheetMode('report');
+  };
+
+  const openReportReviewAuthor = () => {
+    setReviewReportTarget('user');
+    setReviewSheetMode('report');
+  };
+
+  const handleReviewReportSubmit = (submission: ReportSubmission) => {
+    const target = actionsFor;
+    if (!target) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setReviewSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (reviewReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportReview.mutate({ reviewId: target.id, ...submission }, onSettled);
   };
 
   const handleDeleteListing = () => {
@@ -495,7 +529,19 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
         onClose={() => setReviewSheetMode(null)}
         visible={reviewSheetMode !== null}
       >
-        {reviewSheetMode === 'edit' && actionsFor ? (
+        {reviewSheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              reviewReportTarget === 'user' ? reportMember.isPending : reportReview.isPending
+            }
+            onSubmit={handleReviewReportSubmit}
+            title={
+              reviewReportTarget === 'user' && actionsFor
+                ? `Report ${actionsFor.author.name}`
+                : 'Report review'
+            }
+          />
+        ) : reviewSheetMode === 'edit' && actionsFor ? (
           <View className="px-[18px] pb-2">
             <ServiceReviewComposer
               initialBody={actionsFor.body}
@@ -564,19 +610,16 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                 <Divider />
                 <ListingMenuRow
                   destructive
+                  icon="Flag"
+                  label="Report this user"
+                  onPress={openReportReviewAuthor}
+                />
+                <Divider />
+                <ListingMenuRow
+                  destructive
                   icon="AlertCircle"
                   label="Report review"
-                  onPress={() => {
-                    const target = actionsFor;
-                    setReviewSheetMode(null);
-                    if (!target) return;
-                    reportReview.mutate(target.id, {
-                      onError: () =>
-                        showToast('Couldn’t report this review. Try again.'),
-                      onSuccess: () =>
-                        showToast('Thanks — our moderators will take a look.'),
-                    });
-                  }}
+                  onPress={openReportReview}
                 />
               </>
             )}

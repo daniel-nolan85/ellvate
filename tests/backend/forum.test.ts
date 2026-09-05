@@ -27,9 +27,15 @@ import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { getMutedUserIds, toggleMute } from '../../src/backend/mutes';
 import { updateProfile } from '../../src/backend/profile';
 import { reportPost } from '../../src/backend/reports';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -935,7 +941,7 @@ describe('mute this neighbour', () => {
 
 describe('report post', () => {
   test('reports an existing post', async () => {
-    const result = await reportPost(ctx(), 'post-1');
+    const result = await reportPost(ctx(), 'post-1', TEST_REPORT_SUBMISSION);
 
     expect(result).toEqual({ ok: true, reported: true });
     expect(
@@ -947,8 +953,8 @@ describe('report post', () => {
   });
 
   test('is idempotent — reporting the same post twice records one report', async () => {
-    await reportPost(ctx(), 'post-1');
-    await reportPost(ctx(), 'post-1');
+    await reportPost(ctx(), 'post-1', TEST_REPORT_SUBMISSION);
+    await reportPost(ctx(), 'post-1', TEST_REPORT_SUBMISSION);
 
     expect(
       getState().postReports.filter(
@@ -959,7 +965,7 @@ describe('report post', () => {
   });
 
   test('rejects reporting an unknown post', async () => {
-    const result = await reportPost(ctx(), 'post-nope');
+    const result = await reportPost(ctx(), 'post-nope', TEST_REPORT_SUBMISSION);
 
     expect(result).toMatchObject({ ok: false, code: 'post_not_found' });
   });

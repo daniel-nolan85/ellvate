@@ -27,9 +27,15 @@ import {
 } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
 import { computeProgress } from '../../src/backend/progress';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -929,8 +935,8 @@ describe('POST /api/missions/:id/check-in', () => {
 
 describe('reportMission', () => {
   test('is idempotent -- reporting twice records one report', async () => {
-    await reportMission(ctx(), 'mission-1');
-    await reportMission(ctx(), 'mission-1');
+    await reportMission(ctx(), 'mission-1', TEST_REPORT_SUBMISSION);
+    await reportMission(ctx(), 'mission-1', TEST_REPORT_SUBMISSION);
 
     expect(
       getState().missionReports.filter((report) => report.missionId === 'mission-1'),
@@ -938,7 +944,7 @@ describe('reportMission', () => {
   });
 
   test('returns mission_not_found for an unknown mission', async () => {
-    const result = await reportMission(ctx(), 'does-not-exist');
+    const result = await reportMission(ctx(), 'does-not-exist', TEST_REPORT_SUBMISSION);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('mission_not_found');
@@ -947,7 +953,11 @@ describe('reportMission', () => {
 
   test('POST /api/missions/:id/report reports a mission', async () => {
     const response = await postReport(
-      new Request('http://localhost/api/missions/mission-1/report', { method: 'POST' }),
+      new Request('http://localhost/api/missions/mission-1/report', {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }),
       { id: 'mission-1' },
     );
     expect(response.status).toBe(200);

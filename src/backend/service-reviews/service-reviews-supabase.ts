@@ -5,6 +5,7 @@ import { defaultDisplayName } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import type {
   CreateServiceReviewResult,
   ReportServiceReviewResult,
@@ -304,6 +305,7 @@ export async function reportServiceReviewSupabase(
   supabase: SupabaseClient,
   userId: string,
   reviewId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportServiceReviewResult> {
   const { data: review, error: reviewError } = await supabase
     .from('service_reviews')
@@ -319,13 +321,24 @@ export async function reportServiceReviewSupabase(
     };
   }
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   // Idempotent: a unique (service_review_id, reporter_id) constraint on
   // service_review_reports means a repeat report from the same user is a
   // silent no-op, not an error.
   const { error } = await supabase
     .from('service_review_reports')
     .upsert(
-      { reporter_id: userId, service_review_id: reviewId },
+      {
+        details: submission.details,
+        evidence_image_url: evidenceImageUrl,
+        reason: submission.reason,
+        reporter_id: userId,
+        service_review_id: reviewId,
+      },
       { ignoreDuplicates: true, onConflict: 'service_review_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report service review');

@@ -4,6 +4,7 @@ import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   createEventSupabase,
   deleteEventSupabase,
@@ -392,7 +393,11 @@ function deleteEventMemory(userId: string, eventId: string): boolean {
   return true;
 }
 
-function reportEventMemory(userId: string, eventId: string): ReportEventResult {
+function reportEventMemory(
+  userId: string,
+  eventId: string,
+  submission: ValidReportSubmission,
+): ReportEventResult {
   if (!getState().events.some((event) => event.id === eventId)) {
     return { code: 'event_not_found', message: 'Event not found.', ok: false };
   }
@@ -407,8 +412,11 @@ function reportEventMemory(userId: string, eventId: string): ReportEventResult {
         ...current.eventReports,
         {
           createdAt: new Date().toISOString(),
-          id: `event-report-${crypto.randomUUID()}`,
+          details: submission.details,
           eventId,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
+          id: `event-report-${crypto.randomUUID()}`,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -566,10 +574,11 @@ export async function updateEvent(
 export async function reportEvent(
   ctx: RequestContext,
   eventId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportEventResult> {
   return ctx.supabase
-    ? reportEventSupabase(ctx.supabase, ctx.userId, eventId)
-    : reportEventMemory(ctx.userId, eventId);
+    ? reportEventSupabase(ctx.supabase, ctx.userId, eventId, submission)
+    : reportEventMemory(ctx.userId, eventId, submission);
 }
 
 export async function deleteEvent(

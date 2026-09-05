@@ -20,6 +20,7 @@ import {
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { createMission, deleteMission } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import {
   DEMO_USER_ID,
   getState,
@@ -28,6 +29,11 @@ import {
 } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -215,7 +221,11 @@ describe('reportMissionComment', () => {
       throw new Error('setup failed');
     }
 
-    const result = await reportMissionComment(ctx('user-mia'), created.comment.id);
+    const result = await reportMissionComment(
+      ctx('user-mia'),
+      created.comment.id,
+      TEST_REPORT_SUBMISSION,
+    );
 
     expect(result).toEqual({ ok: true, reported: true });
     expect(
@@ -233,8 +243,8 @@ describe('reportMissionComment', () => {
       throw new Error('setup failed');
     }
 
-    await reportMissionComment(ctx('user-mia'), created.comment.id);
-    await reportMissionComment(ctx('user-mia'), created.comment.id);
+    await reportMissionComment(ctx('user-mia'), created.comment.id, TEST_REPORT_SUBMISSION);
+    await reportMissionComment(ctx('user-mia'), created.comment.id, TEST_REPORT_SUBMISSION);
 
     expect(
       getState().missionCommentReports.filter(
@@ -246,7 +256,11 @@ describe('reportMissionComment', () => {
   });
 
   test('rejects reporting an unknown comment', async () => {
-    const result = await reportMissionComment(ctx(), 'mission-comment-nope');
+    const result = await reportMissionComment(
+      ctx(),
+      'mission-comment-nope',
+      TEST_REPORT_SUBMISSION,
+    );
 
     expect(result).toMatchObject({ ok: false, code: 'mission_comment_not_found' });
   });
@@ -271,7 +285,7 @@ describe('deleteMission cascade', () => {
     if (!comment.ok) {
       throw new Error('setup failed');
     }
-    await reportMissionComment(ctx('user-andre'), comment.comment.id);
+    await reportMissionComment(ctx('user-andre'), comment.comment.id, TEST_REPORT_SUBMISSION);
 
     expect(await deleteMission(ctx(), created.mission.id)).toBe(true);
     expect(await listMissionComments(ctx(), created.mission.id)).toEqual([]);
@@ -307,6 +321,8 @@ describe('mission comment routes', () => {
 
     const reported = await reportRoute(
       new Request(`http://localhost/api/mission-comments/${comment.id}/report`, {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       }),
       { id: comment.id },

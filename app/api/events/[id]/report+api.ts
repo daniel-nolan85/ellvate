@@ -6,6 +6,7 @@ import {
   WRITE_RATE_LIMIT_POLICIES,
 } from '@/src/backend/http';
 import { reportEvent } from '@/src/backend/events';
+import { parseReportSubmission } from '@/src/backend/reports';
 
 export async function POST(
   request: Request,
@@ -20,7 +21,13 @@ export async function POST(
       return jsonError(429, 'rate_limited', 'Too many reports. Try again shortly.');
     }
 
-    const result = await reportEvent(ctx, id);
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+    const submission = parseReportSubmission(body ?? {});
+    if (!submission.ok) {
+      return jsonError(400, submission.code, submission.message);
+    }
+
+    const result = await reportEvent(ctx, id, submission.submission);
     if (!result.ok) {
       return jsonError(404, result.code, result.message);
     }

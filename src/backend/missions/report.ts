@@ -1,12 +1,14 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, setState } from '@/src/backend/store';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import { reportMissionSupabase } from './missions-supabase';
 import type { ReportMissionResult } from './types';
 
 function reportMissionMemory(
   userId: string,
   missionId: string,
+  submission: ValidReportSubmission,
 ): ReportMissionResult {
   if (!getState().missions.some((mission) => mission.id === missionId)) {
     return {
@@ -26,8 +28,11 @@ function reportMissionMemory(
         ...current.missionReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `mission-report-${crypto.randomUUID()}`,
           missionId,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -40,8 +45,9 @@ function reportMissionMemory(
 export async function reportMission(
   ctx: RequestContext,
   missionId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportMissionResult> {
   return ctx.supabase
-    ? reportMissionSupabase(ctx.supabase, ctx.userId, missionId)
-    : reportMissionMemory(ctx.userId, missionId);
+    ? reportMissionSupabase(ctx.supabase, ctx.userId, missionId, submission)
+    : reportMissionMemory(ctx.userId, missionId, submission);
 }

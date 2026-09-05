@@ -7,6 +7,7 @@ import {
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   createServiceReviewSupabase,
   deleteServiceReviewSupabase,
@@ -274,6 +275,7 @@ function deleteServiceReviewMemory(userId: string, reviewId: string): boolean {
 function reportServiceReviewMemory(
   userId: string,
   reviewId: string,
+  submission: ValidReportSubmission,
 ): ReportServiceReviewResult {
   if (!getState().serviceReviews.some((review) => review.id === reviewId)) {
     return {
@@ -294,7 +296,10 @@ function reportServiceReviewMemory(
         ...current.serviceReviewReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `svc-review-report-${crypto.randomUUID()}`,
+          reason: submission.reason,
           reporterId: userId,
           serviceReviewId: reviewId,
         },
@@ -366,8 +371,9 @@ export async function deleteServiceReview(
 export async function reportServiceReview(
   ctx: RequestContext,
   reviewId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportServiceReviewResult> {
   return ctx.supabase
-    ? reportServiceReviewSupabase(ctx.supabase, ctx.userId, reviewId)
-    : reportServiceReviewMemory(ctx.userId, reviewId);
+    ? reportServiceReviewSupabase(ctx.supabase, ctx.userId, reviewId, submission)
+    : reportServiceReviewMemory(ctx.userId, reviewId, submission);
 }

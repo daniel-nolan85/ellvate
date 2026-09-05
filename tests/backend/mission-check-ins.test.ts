@@ -11,9 +11,15 @@ import {
   listMissionCheckIns,
   reportCheckIn,
 } from '../../src/backend/missions';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 const PHOTO = {
   checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
@@ -111,7 +117,7 @@ describe('reportCheckIn', () => {
       throw new Error('setup failed');
     }
 
-    const result = await reportCheckIn(ctx('user-andre'), entry.id);
+    const result = await reportCheckIn(ctx('user-andre'), entry.id, TEST_REPORT_SUBMISSION);
 
     expect(result).toEqual({ ok: true, reported: true });
     expect(
@@ -131,8 +137,8 @@ describe('reportCheckIn', () => {
       throw new Error('setup failed');
     }
 
-    await reportCheckIn(ctx('user-andre'), entry.id);
-    await reportCheckIn(ctx('user-andre'), entry.id);
+    await reportCheckIn(ctx('user-andre'), entry.id, TEST_REPORT_SUBMISSION);
+    await reportCheckIn(ctx('user-andre'), entry.id, TEST_REPORT_SUBMISSION);
 
     expect(
       getState().missionCheckInReports.filter(
@@ -142,7 +148,7 @@ describe('reportCheckIn', () => {
   });
 
   test('rejects reporting an unknown check-in', async () => {
-    const result = await reportCheckIn(ctx(), 'check-in-nope');
+    const result = await reportCheckIn(ctx(), 'check-in-nope', TEST_REPORT_SUBMISSION);
 
     expect(result).toMatchObject({ ok: false, code: 'check_in_not_found' });
   });
@@ -169,7 +175,7 @@ describe('deleteMission cascade', () => {
     if (!entry) {
       throw new Error('setup failed');
     }
-    await reportCheckIn(ctx('user-andre'), entry.id);
+    await reportCheckIn(ctx('user-andre'), entry.id, TEST_REPORT_SUBMISSION);
 
     expect(await deleteMission(ctx(), created.mission.id)).toBe(true);
     expect(await listMissionCheckIns(ctx(), created.mission.id)).toEqual([]);
@@ -204,6 +210,8 @@ describe('mission check-in routes', () => {
 
     const response = await reportRoute(
       new Request(`http://localhost/api/mission-check-ins/${entry.id}/report`, {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       }),
       { id: entry.id },
@@ -215,6 +223,8 @@ describe('mission check-in routes', () => {
   test('POST /api/mission-check-ins/:id/report returns 404 for an unknown check-in', async () => {
     const response = await reportRoute(
       new Request('http://localhost/api/mission-check-ins/check-in-nope/report', {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       }),
       { id: 'check-in-nope' },

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -57,8 +58,12 @@ export function useReportMember() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: (reportedUserId: string) =>
+    mutationFn: ({
+      reportedUserId,
+      ...submission
+    }: { reportedUserId: string } & ReportSubmission) =>
       requestJson<{ readonly reported: boolean }>({
+        body: submission,
         getAccessToken: session.getToken,
         method: 'POST',
         path: `/api/users/${reportedUserId}/report`,

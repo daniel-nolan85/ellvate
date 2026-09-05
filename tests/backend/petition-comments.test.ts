@@ -19,10 +19,16 @@ import {
 } from '../../src/backend/petition-comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { toggleMute } from '../../src/backend/mutes';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
 import type { StoredPetition } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -238,8 +244,8 @@ describe('reportPetitionComment', () => {
     const created = await createPetitionComment(ctx(), petition.id, { body: 'reported' });
     if (!created.ok) throw new Error('setup failed');
 
-    await reportPetitionComment(ctx('user-mia'), created.comment.id);
-    await reportPetitionComment(ctx('user-mia'), created.comment.id);
+    await reportPetitionComment(ctx('user-mia'), created.comment.id, TEST_REPORT_SUBMISSION);
+    await reportPetitionComment(ctx('user-mia'), created.comment.id, TEST_REPORT_SUBMISSION);
 
     expect(
       getState().petitionCommentReports.filter(
@@ -253,9 +259,14 @@ describe('reportPetitionComment', () => {
     const created = await createPetitionComment(ctx(), petition.id, { body: 'reported' });
     if (!created.ok) throw new Error('setup failed');
 
-    const response = await reportRoute(new Request('http://test/x', { method: 'POST' }), {
-      id: created.comment.id,
-    });
+    const response = await reportRoute(
+      new Request('http://test/x', {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }),
+      { id: created.comment.id },
+    );
     expect(response.status).toBe(200);
   });
 });

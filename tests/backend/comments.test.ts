@@ -19,9 +19,15 @@ import {
 } from '../../src/backend/comments';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { toggleMute } from '../../src/backend/mutes';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 const replyCount = (postId: string): number =>
   getState().posts.find((post) => post.id === postId)?.replies ?? -1;
 
@@ -208,7 +214,11 @@ describe('reportComment', () => {
       throw new Error('setup failed');
     }
 
-    const result = await reportComment(ctx('user-mia'), created.comment.id);
+    const result = await reportComment(
+      ctx('user-mia'),
+      created.comment.id,
+      TEST_REPORT_SUBMISSION,
+    );
 
     expect(result).toEqual({ ok: true, reported: true });
     expect(
@@ -226,8 +236,8 @@ describe('reportComment', () => {
       throw new Error('setup failed');
     }
 
-    await reportComment(ctx('user-mia'), created.comment.id);
-    await reportComment(ctx('user-mia'), created.comment.id);
+    await reportComment(ctx('user-mia'), created.comment.id, TEST_REPORT_SUBMISSION);
+    await reportComment(ctx('user-mia'), created.comment.id, TEST_REPORT_SUBMISSION);
 
     expect(
       getState().commentReports.filter(
@@ -239,7 +249,7 @@ describe('reportComment', () => {
   });
 
   test('rejects reporting an unknown comment', async () => {
-    const result = await reportComment(ctx(), 'comment-nope');
+    const result = await reportComment(ctx(), 'comment-nope', TEST_REPORT_SUBMISSION);
 
     expect(result).toMatchObject({ ok: false, code: 'comment_not_found' });
   });
@@ -269,6 +279,8 @@ describe('comment routes', () => {
 
     const reported = await reportRoute(
       new Request(`http://localhost/api/comments/${comment.id}/report`, {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       }),
       { id: comment.id },

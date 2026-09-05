@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { defaultDisplayName } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import { CHECK_INS_LIST_LIMIT, type CheckInEntry, type ReportCheckInResult } from './types';
 
 const CHECK_IN_SELECT =
@@ -72,6 +73,7 @@ export async function reportCheckInSupabase(
   supabase: SupabaseClient,
   userId: string,
   checkInId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportCheckInResult> {
   const { data: checkIn, error: checkInError } = await supabase
     .from('mission_check_ins')
@@ -88,13 +90,24 @@ export async function reportCheckInSupabase(
   }
 
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   // Idempotent: a unique (check_in_id, reporter_id) constraint on
   // mission_check_in_reports means a repeat report from the same user is a
   // silent no-op, not an error.
   const { error } = await supabase
     .from('mission_check_in_reports')
     .upsert(
-      { check_in_id: checkInId, reporter_id: userId },
+      {
+        check_in_id: checkInId,
+        details: submission.details,
+        evidence_image_url: evidenceImageUrl,
+        reason: submission.reason,
+        reporter_id: userId,
+      },
       { ignoreDuplicates: true, onConflict: 'check_in_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report mission check-in');
