@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { getCurrentAdminEmail } from '@/lib/auth';
 import { formatDate } from '@/lib/format-date';
+import { reportReasonLabel } from '@/lib/report-reasons';
 import { loadReports } from '@/lib/reports-data';
 
 import { DeleteButton } from '../delete-button';
@@ -19,7 +20,7 @@ export default async function ReportsPage({
   const qSuffix = query ? `&q=${encodeURIComponent(query)}` : '';
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-content">Reports</h1>
         <p className="text-sm text-muted">
@@ -52,6 +53,7 @@ export default async function ReportsPage({
           <tr className="border-b border-border text-left text-xs text-muted">
             <th className="pb-2 font-normal">Type</th>
             <th className="pb-2 font-normal">Content</th>
+            <th className="pb-2 font-normal">Reason</th>
             <th className="pb-2 font-normal">Reported by</th>
             <th className="pb-2 font-normal">Reported</th>
             <th className="pb-2 font-normal text-right">Actions</th>
@@ -60,7 +62,7 @@ export default async function ReportsPage({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td className="py-4 text-sm text-muted" colSpan={5}>
+              <td className="py-4 text-sm text-muted" colSpan={6}>
                 {query ? `No reports from a reporter matching "${query}".` : 'No reports filed yet.'}
               </td>
             </tr>
@@ -85,6 +87,31 @@ export default async function ReportsPage({
                   ) : (
                     <span className="block truncate">{row.snippet}</span>
                   )}
+                </td>
+                <td className="max-w-xs py-2 pr-4 text-xs text-content">
+                  <span className="block font-medium text-content">
+                    {reportReasonLabel(row.reason)}
+                  </span>
+                  {row.details ? (
+                    <span className="mt-0.5 block truncate text-muted" title={row.details}>
+                      {row.details}
+                    </span>
+                  ) : null}
+                  {row.evidenceImageUrl ? (
+                    <a
+                      className="mt-1 inline-block"
+                      href={row.evidenceImageUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL */}
+                      <img
+                        alt="Report evidence"
+                        className="h-10 w-10 rounded object-cover"
+                        src={row.evidenceImageUrl}
+                      />
+                    </a>
+                  ) : null}
                 </td>
                 <td className="py-2 pr-4 text-xs text-muted">{row.reporter}</td>
                 <td className="py-2 pr-4 text-xs text-muted">

@@ -1,5 +1,9 @@
 import { createSupabaseAdminClient } from './supabase/admin';
 
+// All 11 report tables -- this list was missing event_reports/
+// mission_reports/member_reports (added later, in migrations 0046/0052,
+// after this file was written), which meant reports on events, missions,
+// or members directly never counted toward this badge.
 const REPORT_TABLES = [
   'post_reports',
   'comment_reports',
@@ -9,6 +13,9 @@ const REPORT_TABLES = [
   'mission_check_in_reports',
   'petition_reports',
   'petition_comment_reports',
+  'event_reports',
+  'mission_reports',
+  'member_reports',
 ] as const;
 
 const EPOCH = new Date(0).toISOString();

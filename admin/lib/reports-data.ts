@@ -21,6 +21,12 @@ export interface ReportRow {
   readonly created_at: string;
   readonly deleteTable: DeletableTable;
   readonly deleteId: string;
+  // Null on reports filed before this feature (migration
+  // 0053_report_reasons_and_evidence.sql) -- shown as "No reason given"
+  // rather than a fabricated default.
+  readonly reason: string | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface ReportsResult {
@@ -71,7 +77,9 @@ export async function loadReports(
     withReporterFilter(
       admin
         .from('post_reports')
-        .select('id, post_id, created_at, reporter:app_users!inner(name), post:posts(title)'),
+        .select(
+          'id, post_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), post:posts(title)',
+        ),
     )
       .order('created_at', { ascending: false })
       .limit(FETCH_CAP),
@@ -79,7 +87,7 @@ export async function loadReports(
       admin
         .from('comment_reports')
         .select(
-          'id, comment_id, created_at, reporter:app_users!inner(name), comment:comments(body)',
+          'id, comment_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), comment:comments(body)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -87,7 +95,9 @@ export async function loadReports(
     withReporterFilter(
       admin
         .from('event_reports')
-        .select('id, event_id, created_at, reporter:app_users!inner(name), event:events(title)'),
+        .select(
+          'id, event_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), event:events(title)',
+        ),
     )
       .order('created_at', { ascending: false })
       .limit(FETCH_CAP),
@@ -95,7 +105,7 @@ export async function loadReports(
       admin
         .from('event_comment_reports')
         .select(
-          'id, event_comment_id, created_at, reporter:app_users!inner(name), event_comment:event_comments(body)',
+          'id, event_comment_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), event_comment:event_comments(body)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -104,7 +114,7 @@ export async function loadReports(
       admin
         .from('mission_reports')
         .select(
-          'id, mission_id, created_at, reporter:app_users!inner(name), mission:missions(title)',
+          'id, mission_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), mission:missions(title)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -113,7 +123,7 @@ export async function loadReports(
       admin
         .from('mission_comment_reports')
         .select(
-          'id, mission_comment_id, created_at, reporter:app_users!inner(name), mission_comment:mission_comments(body)',
+          'id, mission_comment_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), mission_comment:mission_comments(body)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -122,7 +132,7 @@ export async function loadReports(
       admin
         .from('service_review_reports')
         .select(
-          'id, service_review_id, created_at, reporter:app_users!inner(name), service_review:service_reviews(body, rating)',
+          'id, service_review_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), service_review:service_reviews(body, rating)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -131,7 +141,7 @@ export async function loadReports(
       admin
         .from('mission_check_in_reports')
         .select(
-          'id, check_in_id, created_at, reporter:app_users!inner(name), check_in:mission_check_ins(stop_index, photo_url)',
+          'id, check_in_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), check_in:mission_check_ins(stop_index, photo_url)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -139,7 +149,9 @@ export async function loadReports(
     withReporterFilter(
       admin
         .from('petition_reports')
-        .select('id, petition_id, created_at, reporter:app_users!inner(name), petition:petitions(title)'),
+        .select(
+          'id, petition_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), petition:petitions(title)',
+        ),
     )
       .order('created_at', { ascending: false })
       .limit(FETCH_CAP),
@@ -147,7 +159,7 @@ export async function loadReports(
       admin
         .from('petition_comment_reports')
         .select(
-          'id, petition_comment_id, created_at, reporter:app_users!inner(name), petition_comment:petition_comments(body)',
+          'id, petition_comment_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), petition_comment:petition_comments(body)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -156,7 +168,7 @@ export async function loadReports(
       admin
         .from('member_reports')
         .select(
-          'id, reported_user_id, created_at, reporter:app_users!member_reports_reporter_id_fkey!inner(name), reported:app_users!member_reports_reported_user_id_fkey(name)',
+          'id, reported_user_id, created_at, reason, details, evidence_image_url, reporter:app_users!member_reports_reporter_id_fkey!inner(name), reported:app_users!member_reports_reported_user_id_fkey(name)',
         ),
     )
       .order('created_at', { ascending: false })
@@ -187,6 +199,9 @@ export async function loadReports(
     id: string;
     post_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     post: { title: string } | null;
   }[]) {
@@ -200,6 +215,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'posts',
       deleteId: r.post_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -207,6 +225,9 @@ export async function loadReports(
     id: string;
     comment_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     comment: { body: string } | null;
   }[]) {
@@ -220,6 +241,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'comments',
       deleteId: r.comment_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -227,6 +251,9 @@ export async function loadReports(
     id: string;
     event_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     event: { title: string } | null;
   }[]) {
@@ -240,6 +267,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'events',
       deleteId: r.event_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -247,6 +277,9 @@ export async function loadReports(
     id: string;
     event_comment_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     event_comment: { body: string } | null;
   }[]) {
@@ -260,6 +293,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'event_comments',
       deleteId: r.event_comment_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -267,6 +303,9 @@ export async function loadReports(
     id: string;
     mission_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     mission: { title: string } | null;
   }[]) {
@@ -280,6 +319,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'missions',
       deleteId: r.mission_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -287,6 +329,9 @@ export async function loadReports(
     id: string;
     mission_comment_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     mission_comment: { body: string } | null;
   }[]) {
@@ -300,6 +345,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'mission_comments',
       deleteId: r.mission_comment_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -307,6 +355,9 @@ export async function loadReports(
     id: string;
     service_review_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     service_review: { body: string | null; rating: number } | null;
   }[]) {
@@ -326,6 +377,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'service_reviews',
       deleteId: r.service_review_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -333,6 +387,9 @@ export async function loadReports(
     id: string;
     check_in_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     check_in: { stop_index: number; photo_url: string | null } | null;
   }[]) {
@@ -346,6 +403,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'mission_check_ins',
       deleteId: r.check_in_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -353,6 +413,9 @@ export async function loadReports(
     id: string;
     petition_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     petition: { title: string } | null;
   }[]) {
@@ -366,6 +429,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'petitions',
       deleteId: r.petition_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -373,6 +439,9 @@ export async function loadReports(
     id: string;
     petition_comment_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     petition_comment: { body: string } | null;
   }[]) {
@@ -386,6 +455,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'petition_comments',
       deleteId: r.petition_comment_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
@@ -393,6 +465,9 @@ export async function loadReports(
     id: string;
     reported_user_id: string;
     created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
     reporter: { name: string } | null;
     reported: { name: string } | null;
   }[]) {
@@ -406,6 +481,9 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'app_users',
       deleteId: r.reported_user_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
     });
   }
 
