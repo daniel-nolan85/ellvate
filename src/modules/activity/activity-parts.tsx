@@ -56,7 +56,19 @@ export function FilterChips({
   return (
     <ScrollView
       contentContainerStyle={{
-        alignItems: 'center',
+        // stretch, not center: each pill's height was previously left to its
+        // own natural content measurement, with nothing forcing them equal.
+        // Different labels (different glyph mixes) can measure a pixel or
+        // two apart, and on "All" -- the one filter where every pill's
+        // native view mounts/re-measures in the same pass as a much heavier
+        // sibling commit below -- that per-pill variance is what surfaced as
+        // visibly uneven/"squished" pills. stretch makes every pill match
+        // the row's own cross-axis size instead of guessing a fixed number
+        // (two earlier attempts hardcoded a height/minHeight on individual
+        // pills and consistently left "All" shorter than its neighbors,
+        // because a guessed constant doesn't necessarily match what the
+        // other pills actually need).
+        alignItems: 'stretch',
         gap: 8,
         paddingHorizontal: 20,
         paddingVertical: 2,
