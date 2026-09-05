@@ -6,6 +6,7 @@ import {
   type InfiniteData,
 } from '@tanstack/react-query';
 
+import type { ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -344,8 +345,9 @@ export function useReportPost() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: (postId: string) =>
+    mutationFn: ({ postId, ...submission }: { postId: string } & ReportSubmission) =>
       requestJson<{ reported: boolean }>({
+        body: submission,
         getAccessToken: session.getToken,
         method: 'POST',
         path: `/api/forum/posts/${postId}/report`,

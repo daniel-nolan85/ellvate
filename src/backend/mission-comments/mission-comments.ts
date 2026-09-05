@@ -9,6 +9,7 @@ import {
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   createMissionCommentSupabase,
   deleteMissionCommentSupabase,
@@ -206,6 +207,7 @@ function deleteMissionCommentMemory(userId: string, commentId: string): boolean 
 function reportMissionCommentMemory(
   userId: string,
   commentId: string,
+  submission: ValidReportSubmission,
 ): ReportMissionCommentResult {
   if (!getState().missionComments.some((comment) => comment.id === commentId)) {
     return {
@@ -226,8 +228,11 @@ function reportMissionCommentMemory(
         ...current.missionCommentReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `mission-comment-report-${crypto.randomUUID()}`,
           missionCommentId: commentId,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -299,8 +304,9 @@ export async function deleteMissionComment(
 export async function reportMissionComment(
   ctx: RequestContext,
   commentId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportMissionCommentResult> {
   return ctx.supabase
-    ? reportMissionCommentSupabase(ctx.supabase, ctx.userId, commentId)
-    : reportMissionCommentMemory(ctx.userId, commentId);
+    ? reportMissionCommentSupabase(ctx.supabase, ctx.userId, commentId, submission)
+    : reportMissionCommentMemory(ctx.userId, commentId, submission);
 }

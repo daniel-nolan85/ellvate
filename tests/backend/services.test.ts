@@ -37,9 +37,15 @@ import {
   listServicesPage,
   updateServiceListing,
 } from '../../src/backend/services';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -806,7 +812,11 @@ describe('reportServiceReview', () => {
     });
     if (!created.ok) throw new Error('setup failed');
 
-    const result = await reportServiceReview(ctx('user-mia'), created.review.id);
+    const result = await reportServiceReview(
+      ctx('user-mia'),
+      created.review.id,
+      TEST_REPORT_SUBMISSION,
+    );
 
     expect(result).toEqual({ ok: true, reported: true });
     expect(
@@ -825,8 +835,8 @@ describe('reportServiceReview', () => {
     });
     if (!created.ok) throw new Error('setup failed');
 
-    await reportServiceReview(ctx('user-mia'), created.review.id);
-    await reportServiceReview(ctx('user-mia'), created.review.id);
+    await reportServiceReview(ctx('user-mia'), created.review.id, TEST_REPORT_SUBMISSION);
+    await reportServiceReview(ctx('user-mia'), created.review.id, TEST_REPORT_SUBMISSION);
 
     expect(
       getState().serviceReviewReports.filter(
@@ -838,7 +848,7 @@ describe('reportServiceReview', () => {
   });
 
   test('rejects reporting an unknown review', async () => {
-    const result = await reportServiceReview(ctx(), 'svc-review-nope');
+    const result = await reportServiceReview(ctx(), 'svc-review-nope', TEST_REPORT_SUBMISSION);
 
     expect(result).toMatchObject({ ok: false, code: 'service_review_not_found' });
   });
@@ -917,6 +927,8 @@ describe('service routes', () => {
 
     const reported = await reportReviewRoute(
       new Request(`http://localhost/api/service-reviews/${review.id}/report`, {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       }),
       { id: review.id },

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
+import { ReportSheet, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { ConfirmModal } from '@/src/components/ui/confirm-modal';
@@ -101,6 +102,7 @@ export function MemberProfileScreen({
     (blocked) => blocked.userId === userId,
   ) ?? false;
   const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
+  const [reportSheetOpen, setReportSheetOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (message: string) => {
@@ -125,11 +127,17 @@ export function MemberProfileScreen({
 
   const openConfirmBlock = () => setConfirmBlockOpen(true);
 
-  const handleReport = () => {
-    reportMember.mutate(userId, {
-      onError: () => showToast('Couldn’t submit your report. Try again.'),
-      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-    });
+  const handleReportSubmit = (submission: ReportSubmission) => {
+    reportMember.mutate(
+      { reportedUserId: userId, ...submission },
+      {
+        onError: () => showToast('Couldn’t submit your report. Try again.'),
+        onSuccess: () => {
+          setReportSheetOpen(false);
+          showToast('Thanks — our moderators will take a look.');
+        },
+      },
+    );
   };
 
   return (
@@ -364,7 +372,7 @@ export function MemberProfileScreen({
                 <Pressable
                   accessibilityRole='button'
                   className='flex-row items-center gap-3 py-3.5'
-                  onPress={handleReport}
+                  onPress={() => setReportSheetOpen(true)}
                 >
                   <Icon color='rgb(231,0,11)' name='AlertCircle' size={18} />
                   <Text className='text-[14px]' style={{ color: 'rgb(231,0,11)' }}>
@@ -385,6 +393,20 @@ export function MemberProfileScreen({
         onConfirm={handleBlock}
         title={`Block ${displayName}?`}
         visible={confirmBlockOpen}
+      />
+
+      {/* This screen's own Sheet/dropdown/ActionSheetIOS attempts for the
+          old "..." menu all failed near the top of this formSheet screen
+          (see the header's own comment above) -- this ReportSheet is
+          triggered from a row near the bottom of the ScrollView instead, and
+          is the only Sheet this screen ever mounts, so neither of those
+          failure modes applies here. */}
+      <ReportSheet
+        isSubmitting={reportMember.isPending}
+        onClose={() => setReportSheetOpen(false)}
+        onSubmit={handleReportSubmit}
+        title={`Report ${displayName}`}
+        visible={reportSheetOpen}
       />
 
       {toast ? (

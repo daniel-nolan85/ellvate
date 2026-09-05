@@ -10,6 +10,7 @@ import {
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import { countAppUsers } from './gate';
 import {
   createPetitionSupabase,
@@ -303,7 +304,11 @@ function toggleSignatureMemory(userId: string, petitionId: string): ToggleSignat
   };
 }
 
-function reportPetitionMemory(userId: string, petitionId: string): ReportPetitionResult {
+function reportPetitionMemory(
+  userId: string,
+  petitionId: string,
+  submission: ValidReportSubmission,
+): ReportPetitionResult {
   if (!getState().petitions.some((petition) => petition.id === petitionId)) {
     return { code: 'petition_not_found', message: 'Petition not found.', ok: false };
   }
@@ -317,8 +322,11 @@ function reportPetitionMemory(userId: string, petitionId: string): ReportPetitio
         ...current.petitionReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `petition-report-${crypto.randomUUID()}`,
           petitionId,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -428,8 +436,9 @@ export async function toggleSignature(
 export async function reportPetition(
   ctx: RequestContext,
   petitionId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportPetitionResult> {
   return ctx.supabase
-    ? reportPetitionSupabase(ctx.supabase, ctx.userId, petitionId)
-    : reportPetitionMemory(ctx.userId, petitionId);
+    ? reportPetitionSupabase(ctx.supabase, ctx.userId, petitionId, submission)
+    : reportPetitionMemory(ctx.userId, petitionId, submission);
 }

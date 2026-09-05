@@ -9,6 +9,7 @@ import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -21,7 +22,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime, formatRelativeTimeUntil } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import {
@@ -65,6 +66,7 @@ export function PetitionDetailScreen({
   const toggleSignature = useToggleSignature();
   const reportPetition = useReportPetition();
   const blockUser = useBlockUser();
+  const reportMember = useReportMember();
 
   const comments = usePetitionComments(petitionId);
   const createComment = useCreatePetitionComment(petitionId);
@@ -73,11 +75,22 @@ export function PetitionDetailScreen({
   const reportComment = useReportPetitionComment();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  // Which content the petition-options Sheet shows -- the block/report menu,
+  // or the report form for whichever target was picked from it.
+  const [petitionSheetView, setPetitionSheetView] = useState<'menu' | 'report'>('menu');
+  const [petitionReportTarget, setPetitionReportTarget] = useState<'petition' | 'user' | null>(
+    null,
+  );
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<PetitionComment | null>(null);
   const [actionsFor, setActionsFor] = useState<PetitionComment | null>(null);
   const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
+  // Which content the comment-actions Sheet shows -- see petitionSheetView.
+  const [commentSheetView, setCommentSheetView] = useState<'actions' | 'report'>('actions');
+  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
+    null,
+  );
   const [commentPendingDelete, setCommentPendingDelete] = useState<PetitionComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -132,9 +145,42 @@ export function PetitionDetailScreen({
 
   const openCommentActions = (comment: PetitionComment) => {
     setActionsFor(comment);
+    setCommentSheetView('actions');
     setActionsSheetOpen(true);
   };
-  const closeCommentActions = () => setActionsSheetOpen(false);
+  const closeCommentActions = () => {
+    setActionsSheetOpen(false);
+    setCommentSheetView('actions');
+  };
+
+  const openReportComment = () => {
+    setCommentReportTarget('comment');
+    setCommentSheetView('report');
+  };
+
+  const openReportCommentAuthor = () => {
+    setCommentReportTarget('user');
+    setCommentSheetView('report');
+  };
+
+  const handleCommentReportSubmit = (submission: ReportSubmission) => {
+    const target = actionsFor;
+    if (!target) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        closeCommentActions();
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (commentReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
+  };
 
   const handleStartEditComment = (comment: PetitionComment) => {
     setActionsSheetOpen(false);
@@ -162,12 +208,32 @@ export function PetitionDetailScreen({
     });
   };
 
-  const handleReportPetition = () => {
-    setMenuOpen(false);
-    reportPetition.mutate(petitionId, {
-      onError: () => showToast('Couldn’t report this petition. Try again.'),
-      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-    });
+  const openReportPetition = () => {
+    setPetitionReportTarget('petition');
+    setPetitionSheetView('report');
+  };
+
+  const openReportPetitionAuthor = () => {
+    setPetitionReportTarget('user');
+    setPetitionSheetView('report');
+  };
+
+  const handlePetitionReportSubmit = (submission: ReportSubmission) => {
+    if (!petition) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setMenuOpen(false);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (petitionReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: petition.createdBy.id, ...submission }, onSettled);
+      return;
+    }
+    reportPetition.mutate({ petitionId, ...submission }, onSettled);
   };
 
   return (
@@ -378,38 +444,83 @@ export function PetitionDetailScreen({
         ) : null}
       </KeyboardAvoidingView>
 
-      {/* Petition options menu */}
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className="gap-1 px-[18px] pb-2">
-          {petition && petition.createdBy.id !== userId ? (
-            <>
-              <Pressable
-                className="flex-row items-center gap-3 px-1.5 py-3.5"
-                onPress={() => {
-                  setMenuOpen(false);
-                  blockUser.mutate(petition.createdBy.id, {
-                    onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                    onSuccess: () => showToast(`Blocked ${petition.createdBy.name}`),
-                  });
-                }}
-              >
-                <Icon name="EyeOff" size={20} />
-                <Text className="text-[15px]">Block this neighbour</Text>
-              </Pressable>
-              <Divider />
-            </>
-          ) : null}
-          <Pressable className="flex-row items-center gap-3 px-1.5 py-3.5" onPress={handleReportPetition}>
-            <Icon color="rgb(231,0,11)" name="AlertCircle" size={20} />
-            <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
-              Report petition
-            </Text>
-          </Pressable>
-        </View>
+      {/* Petition options menu -- one Sheet, content switches by view (see
+          petitionSheetView) rather than a second Sheet instance, matching
+          this screen's other Sheets. */}
+      <Sheet
+        onClose={() => {
+          setMenuOpen(false);
+          setPetitionSheetView('menu');
+        }}
+        visible={menuOpen}
+      >
+        {petitionSheetView === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              petitionReportTarget === 'user' ? reportMember.isPending : reportPetition.isPending
+            }
+            onSubmit={handlePetitionReportSubmit}
+            title={
+              petitionReportTarget === 'user' && petition
+                ? `Report ${petition.createdBy.name}`
+                : 'Report petition'
+            }
+          />
+        ) : (
+          <View className="gap-1 px-[18px] pb-2">
+            {petition && petition.createdBy.id !== userId ? (
+              <>
+                <Pressable
+                  className="flex-row items-center gap-3 px-1.5 py-3.5"
+                  onPress={() => {
+                    setMenuOpen(false);
+                    blockUser.mutate(petition.createdBy.id, {
+                      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () => showToast(`Blocked ${petition.createdBy.name}`),
+                    });
+                  }}
+                >
+                  <Icon name="EyeOff" size={20} />
+                  <Text className="text-[15px]">Block this neighbour</Text>
+                </Pressable>
+                <Divider />
+                <Pressable
+                  className="flex-row items-center gap-3 px-1.5 py-3.5"
+                  onPress={openReportPetitionAuthor}
+                >
+                  <Icon color="rgb(231,0,11)" name="Flag" size={20} />
+                  <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
+                    Report this user
+                  </Text>
+                </Pressable>
+                <Divider />
+              </>
+            ) : null}
+            <Pressable className="flex-row items-center gap-3 px-1.5 py-3.5" onPress={openReportPetition}>
+              <Icon color="rgb(231,0,11)" name="AlertCircle" size={20} />
+              <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
+                Report petition
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </Sheet>
 
       {/* Comment actions */}
       <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
+        {commentSheetView === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+            }
+            onSubmit={handleCommentReportSubmit}
+            title={
+              commentReportTarget === 'user' && actionsFor
+                ? `Report ${actionsFor.author.name}`
+                : 'Report comment'
+            }
+          />
+        ) : (
         <View className="gap-1 px-[18px] pb-2">
           {actionsFor && actionsFor.author.id === userId ? (
             <>
@@ -451,15 +562,17 @@ export function PetitionDetailScreen({
               <Divider />
               <Pressable
                 className="flex-row items-center gap-3 px-1.5 py-3.5"
-                onPress={() => {
-                  const target = actionsFor;
-                  closeCommentActions();
-                  if (!target) return;
-                  reportComment.mutate(target.id, {
-                    onError: () => showToast('Couldn’t report this comment. Try again.'),
-                    onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-                  });
-                }}
+                onPress={openReportCommentAuthor}
+              >
+                <Icon color="rgb(231,0,11)" name="Flag" size={20} />
+                <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
+                  Report this user
+                </Text>
+              </Pressable>
+              <Divider />
+              <Pressable
+                className="flex-row items-center gap-3 px-1.5 py-3.5"
+                onPress={openReportComment}
               >
                 <Icon color="rgb(231,0,11)" name="AlertCircle" size={20} />
                 <Text className="text-[15px]" style={{ color: 'rgb(231,0,11)' }}>
@@ -469,6 +582,7 @@ export function PetitionDetailScreen({
             </>
           )}
         </View>
+        )}
       </Sheet>
 
       {/* Delete-comment confirmation */}

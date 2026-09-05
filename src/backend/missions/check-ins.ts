@@ -6,6 +6,7 @@ import {
   type StoredUser,
 } from '@/src/backend/store';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   listMissionCheckInsSupabase,
   reportCheckInSupabase,
@@ -49,6 +50,7 @@ function listMissionCheckInsMemory(missionId: string): readonly CheckInEntry[] {
 function reportCheckInMemory(
   userId: string,
   checkInId: string,
+  submission: ValidReportSubmission,
 ): ReportCheckInResult {
   if (!getState().missionCheckIns.some((checkIn) => checkIn.id === checkInId)) {
     return {
@@ -67,9 +69,12 @@ function reportCheckInMemory(
       missionCheckInReports: [
         ...current.missionCheckInReports,
         {
-          createdAt: new Date().toISOString(),
-          id: `mission-check-in-report-${crypto.randomUUID()}`,
           checkInId,
+          createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
+          id: `mission-check-in-report-${crypto.randomUUID()}`,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -91,8 +96,9 @@ export async function listMissionCheckIns(
 export async function reportCheckIn(
   ctx: RequestContext,
   checkInId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportCheckInResult> {
   return ctx.supabase
-    ? reportCheckInSupabase(ctx.supabase, ctx.userId, checkInId)
-    : reportCheckInMemory(ctx.userId, checkInId);
+    ? reportCheckInSupabase(ctx.supabase, ctx.userId, checkInId, submission)
+    : reportCheckInMemory(ctx.userId, checkInId, submission);
 }

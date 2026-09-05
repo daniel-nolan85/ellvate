@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import type { ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -118,8 +119,9 @@ export function useReportPetitionComment() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: (commentId: string) =>
+    mutationFn: ({ commentId, ...submission }: { commentId: string } & ReportSubmission) =>
       requestJson<{ reported: boolean }>({
+        body: submission,
         getAccessToken: session.getToken,
         method: 'POST',
         path: `/api/petition-comments/${commentId}/report`,

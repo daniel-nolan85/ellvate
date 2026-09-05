@@ -18,10 +18,16 @@ import {
   toggleSignature,
 } from '../../src/backend/petitions';
 import { toggleMute } from '../../src/backend/mutes';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
 import type { StoredPetition, StoredUser } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 afterEach(() => {
   resetStore();
@@ -385,8 +391,8 @@ describe('reportPetition', () => {
   test('is idempotent -- reporting twice records one report', async () => {
     const petition = seedPetition();
 
-    await reportPetition(ctx(), petition.id);
-    await reportPetition(ctx(), petition.id);
+    await reportPetition(ctx(), petition.id, TEST_REPORT_SUBMISSION);
+    await reportPetition(ctx(), petition.id, TEST_REPORT_SUBMISSION);
 
     expect(
       getState().petitionReports.filter((report) => report.petitionId === petition.id),
@@ -394,7 +400,7 @@ describe('reportPetition', () => {
   });
 
   test('returns petition_not_found for an unknown petition', async () => {
-    const result = await reportPetition(ctx(), 'does-not-exist');
+    const result = await reportPetition(ctx(), 'does-not-exist', TEST_REPORT_SUBMISSION);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('petition_not_found');
@@ -403,9 +409,14 @@ describe('reportPetition', () => {
 
   test('POST /api/petitions/[id]/report round-trips through the route', async () => {
     const petition = seedPetition();
-    const response = await postReport(new Request('http://test/report', { method: 'POST' }), {
-      id: petition.id,
-    });
+    const response = await postReport(
+      new Request('http://test/report', {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }),
+      { id: petition.id },
+    );
     expect(response.status).toBe(200);
   });
 });

@@ -17,13 +17,14 @@ import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
-import { Icon } from '@/src/components/ui/icon';
+import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
@@ -31,7 +32,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -91,6 +92,7 @@ export function PostDetailScreen({
   const deletePost = useDeletePost();
   const blockUser = useBlockUser();
   const reportPost = useReportPost();
+  const reportMember = useReportMember();
   const subforums = useSubforums();
   const subforumNames = (subforums.data?.subforums ?? []).filter(
     (name) => name !== 'All',
@@ -110,11 +112,19 @@ export function PostDetailScreen({
   // can never race itself this way -- applies to both the post's own
   // menu/edit/delete-confirm flow and the comment actions/delete-confirm flow.
   const [postSheetMode, setPostSheetMode] = useState<
-    'menu' | 'edit' | 'confirm-delete' | null
+    'menu' | 'edit' | 'confirm-delete' | 'report' | null
   >(null);
+  // Which target a postSheetMode of 'report' is for -- the post itself, or
+  // its author.
+  const [postReportTarget, setPostReportTarget] = useState<'post' | 'user' | null>(null);
   const [commentSheetMode, setCommentSheetMode] = useState<
-    'actions' | 'confirm-delete' | null
+    'actions' | 'confirm-delete' | 'report' | null
   >(null);
+  // Which target a commentSheetMode of 'report' is for -- the comment
+  // itself, or its author.
+  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
+    null,
+  );
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const isOwnPost = post !== undefined && userId === post.author.id;
@@ -186,16 +196,32 @@ export function PostDetailScreen({
     });
   };
 
-  const handleReportPost = () => {
+  const openReportPost = () => {
+    setPostReportTarget('post');
+    setPostSheetMode('report');
+  };
+
+  const openReportPostAuthor = () => {
+    setPostReportTarget('user');
+    setPostSheetMode('report');
+  };
+
+  const handlePostReportSubmit = (submission: ReportSubmission) => {
     if (!post) {
       return;
     }
-    setPostSheetMode(null);
-    reportPost.mutate(post.id, {
-      onSuccess: () =>
-        showToast('Thanks — our moderators will take a look.'),
+    const onSettled = {
       onError: () => showToast('Couldn’t submit your report. Try again.'),
-    });
+      onSuccess: () => {
+        setPostSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (postReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: post.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportPost.mutate({ postId: post.id, ...submission }, onSettled);
   };
 
   const handleReply = (name: string) => {
@@ -236,6 +262,35 @@ export function PostDetailScreen({
   const openCommentActions = (comment: ForumComment) => {
     setActionsFor(comment);
     setCommentSheetMode('actions');
+  };
+
+  const openReportComment = () => {
+    setCommentReportTarget('comment');
+    setCommentSheetMode('report');
+  };
+
+  const openReportCommentAuthor = () => {
+    setCommentReportTarget('user');
+    setCommentSheetMode('report');
+  };
+
+  const handleCommentReportSubmit = (submission: ReportSubmission) => {
+    const target = actionsFor;
+    if (!target) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setCommentSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (commentReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
   };
 
   const closeCommentActions = () => setCommentSheetMode(null);
@@ -504,7 +559,19 @@ export function PostDetailScreen({
       </KeyboardAvoidingView>
 
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {commentSheetMode === 'confirm-delete' ? (
+        {commentSheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+            }
+            onSubmit={handleCommentReportSubmit}
+            title={
+              commentReportTarget === 'user' && actionsFor
+                ? `Report ${actionsFor.author.name}`
+                : 'Report comment'
+            }
+          />
+        ) : commentSheetMode === 'confirm-delete' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete comment?
@@ -573,19 +640,16 @@ export function PostDetailScreen({
                 <Divider />
                 <SheetRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportCommentAuthor}
+                />
+                <Divider />
+                <SheetRow
+                  destructive
                   icon='AlertCircle'
                   label='Report comment'
-                  onPress={() => {
-                    const target = actionsFor;
-                    closeCommentActions();
-                    if (!target) return;
-                    reportComment.mutate(target.id, {
-                      onError: () =>
-                        showToast('Couldn’t report this comment. Try again.'),
-                      onSuccess: () =>
-                        showToast('Thanks — our moderators will take a look.'),
-                    });
-                  }}
+                  onPress={openReportComment}
                 />
               </>
             )}
@@ -629,6 +693,18 @@ export function PostDetailScreen({
             }
             subforums={subforumNames}
             submitLabel='Save'
+          />
+        ) : postSheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              postReportTarget === 'user' ? reportMember.isPending : reportPost.isPending
+            }
+            onSubmit={handlePostReportSubmit}
+            title={
+              postReportTarget === 'user' && post
+                ? `Report ${post.author.name}`
+                : 'Report post'
+            }
           />
         ) : postSheetMode === 'confirm-delete' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
@@ -677,9 +753,16 @@ export function PostDetailScreen({
                 <Divider />
                 <SheetRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportPostAuthor}
+                />
+                <Divider />
+                <SheetRow
+                  destructive
                   icon='AlertCircle'
                   label='Report post'
-                  onPress={handleReportPost}
+                  onPress={openReportPost}
                 />
               </>
             )}
@@ -709,7 +792,7 @@ export function PostDetailScreen({
 }
 
 interface SheetRowProps {
-  readonly icon: 'Link' | 'EyeOff' | 'AlertCircle' | 'Edit';
+  readonly icon: AppIconName;
   readonly label: string;
   readonly onPress: () => void;
   readonly destructive?: boolean;

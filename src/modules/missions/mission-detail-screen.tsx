@@ -19,11 +19,11 @@ import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { ReportSheet, ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
-import { ConfirmModal } from '@/src/components/ui/confirm-modal';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
@@ -34,7 +34,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
 import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
@@ -133,6 +133,7 @@ export function MissionDetailScreen({
   const deleteMission = useDeleteMission();
   const blockUser = useBlockUser();
   const reportMission = useReportMission();
+  const reportMember = useReportMember();
   const comments = useMissionComments(missionId);
   const createComment = useCreateMissionComment(missionId);
   const updateComment = useUpdateMissionComment(missionId);
@@ -150,17 +151,31 @@ export function MissionDetailScreen({
   // screen permanently unresponsive. Applies to both the mission's own
   // menu/edit/delete-confirm flow and the comment actions/delete-confirm flow.
   const [sheetMode, setSheetMode] = useState<
-    'menu' | 'edit' | 'confirm-delete' | null
+    'menu' | 'edit' | 'confirm-delete' | 'report' | null
   >(null);
+  // Which target a sheetMode of 'report' is for -- the mission itself, or
+  // its author.
+  const [missionReportTarget, setMissionReportTarget] = useState<'mission' | 'user' | null>(
+    null,
+  );
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<MissionComment | null>(null);
   const [actionsFor, setActionsFor] = useState<MissionComment | null>(null);
   const [commentSheetMode, setCommentSheetMode] = useState<
-    'actions' | 'confirm-delete' | null
+    'actions' | 'confirm-delete' | 'report' | null
   >(null);
+  // Which target a commentSheetMode of 'report' is for -- the comment
+  // itself, or its author.
+  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
+    null,
+  );
   const [toast, setToast] = useState<string | null>(null);
   const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(null);
+  // The check-in photo currently open for report -- a standalone ReportSheet
+  // (see below), not part of the sheetMode/commentSheetMode state machines
+  // above, since it's reached from its own icon in the check-in photos list,
+  // never simultaneously with either of those.
   const [reportTarget, setReportTarget] = useState<CheckInEntry | null>(null);
 
   const mission = missionQuery.data?.mission;
@@ -236,16 +251,78 @@ export function MissionDetailScreen({
     });
   };
 
-  const handleConfirmReportCheckIn = () => {
+  const handleReportCheckInSubmit = (submission: ReportSubmission) => {
     const target = reportTarget;
-    setReportTarget(null);
     if (!target) {
       return;
     }
-    reportCheckIn.mutate(target.id, {
-      onError: () => showToast('Couldn’t report this check-in. Try again.'),
-      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-    });
+    reportCheckIn.mutate(
+      { checkInId: target.id, ...submission },
+      {
+        onError: () => showToast('Couldn’t report this check-in. Try again.'),
+        onSuccess: () => {
+          setReportTarget(null);
+          showToast('Thanks — our moderators will take a look.');
+        },
+      },
+    );
+  };
+
+  const openReportMission = () => {
+    setMissionReportTarget('mission');
+    setSheetMode('report');
+  };
+
+  const openReportMissionAuthor = () => {
+    setMissionReportTarget('user');
+    setSheetMode('report');
+  };
+
+  const handleMissionReportSubmit = (submission: ReportSubmission) => {
+    if (!mission) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (missionReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: mission.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportMission.mutate({ missionId: mission.id, ...submission }, onSettled);
+  };
+
+  const openReportComment = () => {
+    setCommentReportTarget('comment');
+    setCommentSheetMode('report');
+  };
+
+  const openReportCommentAuthor = () => {
+    setCommentReportTarget('user');
+    setCommentSheetMode('report');
+  };
+
+  const handleCommentReportSubmit = (submission: ReportSubmission) => {
+    const target = actionsFor;
+    if (!target) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setCommentSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (commentReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
   };
 
   const handleReply = (name: string) => {
@@ -686,6 +763,18 @@ export function MissionDetailScreen({
             }
             submitLabel='Save'
           />
+        ) : sheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              missionReportTarget === 'user' ? reportMember.isPending : reportMission.isPending
+            }
+            onSubmit={handleMissionReportSubmit}
+            title={
+              missionReportTarget === 'user' && mission
+                ? `Report ${mission.author.name}`
+                : 'Report mission'
+            }
+          />
         ) : sheetMode === 'confirm-delete' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -744,16 +833,16 @@ export function MissionDetailScreen({
                 <Divider />
                 <MissionMenuRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportMissionAuthor}
+                />
+                <Divider />
+                <MissionMenuRow
+                  destructive
                   icon='AlertCircle'
                   label='Report mission'
-                  onPress={() => {
-                    setSheetMode(null);
-                    if (!mission) return;
-                    reportMission.mutate(mission.id, {
-                      onError: () => showToast('Couldn’t report this mission. Try again.'),
-                      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-                    });
-                  }}
+                  onPress={openReportMission}
                 />
               </>
             )}
@@ -763,7 +852,19 @@ export function MissionDetailScreen({
 
       {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {commentSheetMode === 'confirm-delete' ? (
+        {commentSheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+            }
+            onSubmit={handleCommentReportSubmit}
+            title={
+              commentReportTarget === 'user' && actionsFor
+                ? `Report ${actionsFor.author.name}`
+                : 'Report comment'
+            }
+          />
+        ) : commentSheetMode === 'confirm-delete' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete comment?
@@ -823,19 +924,16 @@ export function MissionDetailScreen({
                 <Divider />
                 <MissionMenuRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportCommentAuthor}
+                />
+                <Divider />
+                <MissionMenuRow
+                  destructive
                   icon='AlertCircle'
                   label='Report comment'
-                  onPress={() => {
-                    const target = actionsFor;
-                    closeCommentActions();
-                    if (!target) return;
-                    reportComment.mutate(target.id, {
-                      onError: () =>
-                        showToast('Couldn’t report this comment. Try again.'),
-                      onSuccess: () =>
-                        showToast('Thanks — our moderators will take a look.'),
-                    });
-                  }}
+                  onPress={openReportComment}
                 />
               </>
             )}
@@ -878,14 +976,11 @@ export function MissionDetailScreen({
         </Pressable>
       </Modal>
 
-      <ConfirmModal
-        cancelLabel='Cancel'
-        confirmLabel='Report'
-        destructive
-        message="Let our moderators know this check-in photo looks fake or doesn't match the mission."
+      <ReportSheet
+        isSubmitting={reportCheckIn.isPending}
         onClose={() => setReportTarget(null)}
-        onConfirm={handleConfirmReportCheckIn}
-        title='Report this photo?'
+        onSubmit={handleReportCheckInSubmit}
+        title="Report this check-in"
         visible={reportTarget !== null}
       />
 

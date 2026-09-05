@@ -8,6 +8,7 @@ import {
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   createPetitionCommentSupabase,
   deletePetitionCommentSupabase,
@@ -175,6 +176,7 @@ function deletePetitionCommentMemory(userId: string, commentId: string): boolean
 function reportPetitionCommentMemory(
   userId: string,
   commentId: string,
+  submission: ValidReportSubmission,
 ): ReportPetitionCommentResult {
   if (!getState().petitionComments.some((comment) => comment.id === commentId)) {
     return {
@@ -193,8 +195,11 @@ function reportPetitionCommentMemory(
         ...current.petitionCommentReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `petition-comment-report-${crypto.randomUUID()}`,
           petitionCommentId: commentId,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -263,8 +268,9 @@ export async function deletePetitionComment(
 export async function reportPetitionComment(
   ctx: RequestContext,
   commentId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportPetitionCommentResult> {
   return ctx.supabase
-    ? reportPetitionCommentSupabase(ctx.supabase, ctx.userId, commentId)
-    : reportPetitionCommentMemory(ctx.userId, commentId);
+    ? reportPetitionCommentSupabase(ctx.supabase, ctx.userId, commentId, submission)
+    : reportPetitionCommentMemory(ctx.userId, commentId, submission);
 }

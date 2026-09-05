@@ -3,7 +3,9 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdminBadge } from '@/src/components/shared/admin-badge';
+import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { Badge } from '@/src/components/ui/badge';
+import { Divider } from '@/src/components/ui/divider';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -11,7 +13,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime, formatRelativeTimeUntil } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useOpenProfile } from '@/src/modules/profile';
+import { useOpenProfile, useReportMember } from '@/src/modules/profile';
 
 import { useReportPetition } from './use-petitions';
 import { PETITION_CATEGORIES, type Petition } from './petitions-types';
@@ -50,8 +52,13 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
   const insets = useSafeAreaInsets();
   const openProfile = useOpenProfile();
   const reportPetition = useReportPetition();
+  const reportMember = useReportMember();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  // Which content the options Sheet shows -- the menu, or the report form
+  // for whichever target was picked from it.
+  const [sheetView, setSheetView] = useState<'menu' | 'report'>('menu');
+  const [reportTarget, setReportTarget] = useState<'petition' | 'user' | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (message: string) => {
@@ -59,12 +66,29 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
     setTimeout(() => setToast(null), 2200);
   };
 
-  const handleReport = () => {
-    setMenuOpen(false);
-    reportPetition.mutate(petition.id, {
+  const openReportPetition = () => {
+    setReportTarget('petition');
+    setSheetView('report');
+  };
+
+  const openReportPetitionAuthor = () => {
+    setReportTarget('user');
+    setSheetView('report');
+  };
+
+  const handleReportSubmit = (submission: ReportSubmission) => {
+    const onSettled = {
       onError: () => showToast('Couldn’t submit your report. Try again.'),
-      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-    });
+      onSuccess: () => {
+        setMenuOpen(false);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (reportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: petition.createdBy.id, ...submission }, onSettled);
+      return;
+    }
+    reportPetition.mutate({ petitionId: petition.id, ...submission }, onSettled);
   };
 
   return (
@@ -127,19 +151,50 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
         </HStack>
       </Pressable>
 
-      <Sheet onClose={() => setMenuOpen(false)} visible={menuOpen}>
-        <View className="gap-1 px-[18px] pb-2">
-          <Pressable
-            accessibilityRole="button"
-            className="flex-row items-center gap-3 px-1.5 py-3.5"
-            onPress={handleReport}
-          >
-            <Icon color={COLOR_DESTRUCTIVE} name="AlertCircle" size={20} />
-            <Text className="text-[15px]" style={{ color: COLOR_DESTRUCTIVE, fontWeight: '500' }}>
-              Report petition
-            </Text>
-          </Pressable>
-        </View>
+      <Sheet
+        onClose={() => {
+          setMenuOpen(false);
+          setSheetView('menu');
+        }}
+        visible={menuOpen}
+      >
+        {sheetView === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              reportTarget === 'user' ? reportMember.isPending : reportPetition.isPending
+            }
+            onSubmit={handleReportSubmit}
+            title={
+              reportTarget === 'user'
+                ? `Report ${petition.createdBy.name}`
+                : 'Report petition'
+            }
+          />
+        ) : (
+          <View className="gap-1 px-[18px] pb-2">
+            <Pressable
+              accessibilityRole="button"
+              className="flex-row items-center gap-3 px-1.5 py-3.5"
+              onPress={openReportPetitionAuthor}
+            >
+              <Icon color={COLOR_DESTRUCTIVE} name="Flag" size={20} />
+              <Text className="text-[15px]" style={{ color: COLOR_DESTRUCTIVE, fontWeight: '500' }}>
+                Report this user
+              </Text>
+            </Pressable>
+            <Divider />
+            <Pressable
+              accessibilityRole="button"
+              className="flex-row items-center gap-3 px-1.5 py-3.5"
+              onPress={openReportPetition}
+            >
+              <Icon color={COLOR_DESTRUCTIVE} name="AlertCircle" size={20} />
+              <Text className="text-[15px]" style={{ color: COLOR_DESTRUCTIVE, fontWeight: '500' }}>
+                Report petition
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </Sheet>
 
       {toast ? (

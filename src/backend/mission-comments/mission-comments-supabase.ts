@@ -6,6 +6,7 @@ import { defaultDisplayName } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import type {
   CreateMissionCommentResult,
   MissionComment,
@@ -215,6 +216,7 @@ export async function reportMissionCommentSupabase(
   supabase: SupabaseClient,
   userId: string,
   commentId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportMissionCommentResult> {
   const { data: comment, error: commentError } = await supabase
     .from('mission_comments')
@@ -231,13 +233,24 @@ export async function reportMissionCommentSupabase(
   }
 
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   // Idempotent: a unique (mission_comment_id, reporter_id) constraint on
   // mission_comment_reports means a repeat report from the same user is a
   // silent no-op, not an error.
   const { error } = await supabase
     .from('mission_comment_reports')
     .upsert(
-      { mission_comment_id: commentId, reporter_id: userId },
+      {
+        details: submission.details,
+        evidence_image_url: evidenceImageUrl,
+        mission_comment_id: commentId,
+        reason: submission.reason,
+        reporter_id: userId,
+      },
       { ignoreDuplicates: true, onConflict: 'mission_comment_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report mission comment');

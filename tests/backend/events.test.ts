@@ -25,9 +25,15 @@ import {
 } from '../../src/backend/events';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { toggleMute } from '../../src/backend/mutes';
+import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
+const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
+  details: null,
+  evidenceImageDataUrl: null,
+  reason: 'other',
+};
 
 // getEventsView hides past events (see events.ts), so a fixture date used to
 // assert presence in that view must always be in the future relative to
@@ -802,8 +808,8 @@ describe('GET /api/events/:id/attendees', () => {
 
 describe('reportEvent', () => {
   test('is idempotent -- reporting twice records one report', async () => {
-    await reportEvent(ctx(), 'event-1');
-    await reportEvent(ctx(), 'event-1');
+    await reportEvent(ctx(), 'event-1', TEST_REPORT_SUBMISSION);
+    await reportEvent(ctx(), 'event-1', TEST_REPORT_SUBMISSION);
 
     expect(
       getState().eventReports.filter((report) => report.eventId === 'event-1'),
@@ -811,7 +817,7 @@ describe('reportEvent', () => {
   });
 
   test('returns event_not_found for an unknown event', async () => {
-    const result = await reportEvent(ctx(), 'does-not-exist');
+    const result = await reportEvent(ctx(), 'does-not-exist', TEST_REPORT_SUBMISSION);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('event_not_found');
@@ -820,7 +826,11 @@ describe('reportEvent', () => {
 
   test('POST /api/events/:id/report reports an event', async () => {
     const response = await postReport(
-      new Request('http://localhost/api/events/event-1/report', { method: 'POST' }),
+      new Request('http://localhost/api/events/event-1/report', {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }),
       { id: 'event-1' },
     );
     expect(response.status).toBe(200);

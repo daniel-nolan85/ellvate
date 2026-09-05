@@ -1,10 +1,15 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, setState } from '@/src/backend/store';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import { reportMemberSupabase } from './member-reports-supabase';
 import type { ReportMemberResult } from './types';
 
-function reportMemberMemory(userId: string, reportedUserId: string): ReportMemberResult {
+function reportMemberMemory(
+  userId: string,
+  reportedUserId: string,
+  submission: ValidReportSubmission,
+): ReportMemberResult {
   if (!getState().users.some((user) => user.id === reportedUserId)) {
     return { code: 'member_not_found', message: 'Member not found.', ok: false };
   }
@@ -19,7 +24,10 @@ function reportMemberMemory(userId: string, reportedUserId: string): ReportMembe
         ...current.memberReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `member-report-${crypto.randomUUID()}`,
+          reason: submission.reason,
           reportedUserId,
           reporterId: userId,
         },
@@ -33,11 +41,12 @@ function reportMemberMemory(userId: string, reportedUserId: string): ReportMembe
 export async function reportMember(
   ctx: RequestContext,
   reportedUserId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportMemberResult> {
   if (ctx.userId === reportedUserId) {
     return { code: 'cannot_report_self', message: 'You can’t report yourself.', ok: false };
   }
   return ctx.supabase
-    ? reportMemberSupabase(ctx.supabase, ctx.userId, reportedUserId)
-    : reportMemberMemory(ctx.userId, reportedUserId);
+    ? reportMemberSupabase(ctx.supabase, ctx.userId, reportedUserId, submission)
+    : reportMemberMemory(ctx.userId, reportedUserId, submission);
 }

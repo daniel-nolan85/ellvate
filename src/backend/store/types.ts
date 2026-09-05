@@ -1,3 +1,5 @@
+import type { ReportReason } from '@/src/lib/report-reasons';
+
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
@@ -76,6 +78,9 @@ export interface StoredPostReport {
   readonly postId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredCommentReport {
@@ -83,6 +88,9 @@ export interface StoredCommentReport {
   readonly commentId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredEventComment {
@@ -99,6 +107,9 @@ export interface StoredEventCommentReport {
   readonly eventCommentId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredMissionComment {
@@ -115,6 +126,9 @@ export interface StoredMissionCommentReport {
   readonly missionCommentId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredMissionCheckIn {
@@ -131,6 +145,9 @@ export interface StoredMissionCheckInReport {
   readonly checkInId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredEvent {
@@ -157,6 +174,9 @@ export interface StoredEventReport {
   readonly eventId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface MissionUserProgress {
@@ -192,6 +212,9 @@ export interface StoredMissionReport {
   readonly missionId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export type ServiceCategory =
@@ -243,6 +266,9 @@ export interface StoredServiceReviewReport {
   readonly serviceReviewId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredWeekDay {
@@ -323,6 +349,9 @@ export interface StoredPetitionReport {
   readonly petitionId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredPetitionCommentReport {
@@ -330,6 +359,9 @@ export interface StoredPetitionCommentReport {
   readonly petitionCommentId: string;
   readonly reporterId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredMemberReport {
@@ -337,6 +369,9 @@ export interface StoredMemberReport {
   readonly reporterId: string;
   readonly reportedUserId: string;
   readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';

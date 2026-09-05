@@ -9,6 +9,7 @@ import {
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import type { ValidReportSubmission } from '../reports/report-submission';
 import {
   createEventCommentSupabase,
   deleteEventCommentSupabase,
@@ -197,6 +198,7 @@ function deleteEventCommentMemory(userId: string, commentId: string): boolean {
 function reportEventCommentMemory(
   userId: string,
   commentId: string,
+  submission: ValidReportSubmission,
 ): ReportEventCommentResult {
   if (!getState().eventComments.some((comment) => comment.id === commentId)) {
     return {
@@ -217,8 +219,11 @@ function reportEventCommentMemory(
         ...current.eventCommentReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
           eventCommentId: commentId,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `event-comment-report-${crypto.randomUUID()}`,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -289,8 +294,9 @@ export async function deleteEventComment(
 export async function reportEventComment(
   ctx: RequestContext,
   commentId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportEventCommentResult> {
   return ctx.supabase
-    ? reportEventCommentSupabase(ctx.supabase, ctx.userId, commentId)
-    : reportEventCommentMemory(ctx.userId, commentId);
+    ? reportEventCommentSupabase(ctx.supabase, ctx.userId, commentId, submission)
+    : reportEventCommentMemory(ctx.userId, commentId, submission);
 }

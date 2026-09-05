@@ -1,10 +1,15 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, setState } from '@/src/backend/store';
 
+import type { ValidReportSubmission } from './report-submission';
 import { reportPostSupabase } from './reports-supabase';
 import type { ReportPostResult } from './types';
 
-function reportPostMemory(userId: string, postId: string): ReportPostResult {
+function reportPostMemory(
+  userId: string,
+  postId: string,
+  submission: ValidReportSubmission,
+): ReportPostResult {
   if (!getState().posts.some((post) => post.id === postId)) {
     return { code: 'post_not_found', message: 'Post not found.', ok: false };
   }
@@ -19,8 +24,11 @@ function reportPostMemory(userId: string, postId: string): ReportPostResult {
         ...current.postReports,
         {
           createdAt: new Date().toISOString(),
+          details: submission.details,
+          evidenceImageUrl: submission.evidenceImageDataUrl,
           id: `report-${crypto.randomUUID()}`,
           postId,
+          reason: submission.reason,
           reporterId: userId,
         },
       ],
@@ -33,8 +41,9 @@ function reportPostMemory(userId: string, postId: string): ReportPostResult {
 export async function reportPost(
   ctx: RequestContext,
   postId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportPostResult> {
   return ctx.supabase
-    ? reportPostSupabase(ctx.supabase, ctx.userId, postId)
-    : reportPostMemory(ctx.userId, postId);
+    ? reportPostSupabase(ctx.supabase, ctx.userId, postId, submission)
+    : reportPostMemory(ctx.userId, postId, submission);
 }

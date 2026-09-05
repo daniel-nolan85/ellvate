@@ -17,6 +17,7 @@ import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
+import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
@@ -30,7 +31,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile } from '@/src/modules/profile';
+import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { EventComposer } from './event-composer';
@@ -110,6 +111,7 @@ export function EventDetailScreen({
   const deleteEvent = useDeleteEvent();
   const blockUser = useBlockUser();
   const reportEvent = useReportEvent();
+  const reportMember = useReportMember();
 
   const comments = useEventComments(eventId);
   const createComment = useCreateEventComment(eventId);
@@ -125,16 +127,26 @@ export function EventDetailScreen({
   // screen permanently unresponsive. Applies to both the event's own
   // menu/edit/cancel-confirm flow and the comment actions/delete-confirm flow.
   const [sheetMode, setSheetMode] = useState<
-    'menu' | 'edit' | 'confirm-cancel' | null
+    'menu' | 'edit' | 'confirm-cancel' | 'report' | null
   >(null);
+  // Which target a sheetMode of 'report' is for -- the event itself, or its
+  // author.
+  const [eventReportTarget, setEventReportTarget] = useState<'event' | 'user' | null>(
+    null,
+  );
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<EventComment | null>(null);
   const [actionsFor, setActionsFor] = useState<EventComment | null>(null);
   const [commentSheetMode, setCommentSheetMode] = useState<
-    'actions' | 'confirm-delete' | null
+    'actions' | 'confirm-delete' | 'report' | null
   >(null);
+  // Which target a commentSheetMode of 'report' is for -- the comment
+  // itself, or its author.
+  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
+    null,
+  );
   const [toast, setToast] = useState<string | null>(null);
 
   const attendees = useEventAttendees(eventId, attendeesOpen);
@@ -230,6 +242,63 @@ export function EventDetailScreen({
       },
       onError: () => showToast('Couldn’t cancel this event. Try again.'),
     });
+  };
+
+  const openReportEvent = () => {
+    setEventReportTarget('event');
+    setSheetMode('report');
+  };
+
+  const openReportEventAuthor = () => {
+    setEventReportTarget('user');
+    setSheetMode('report');
+  };
+
+  const handleEventReportSubmit = (submission: ReportSubmission) => {
+    if (!event) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (eventReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: event.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportEvent.mutate({ eventId: event.id, ...submission }, onSettled);
+  };
+
+  const openReportComment = () => {
+    setCommentReportTarget('comment');
+    setCommentSheetMode('report');
+  };
+
+  const openReportCommentAuthor = () => {
+    setCommentReportTarget('user');
+    setCommentSheetMode('report');
+  };
+
+  const handleCommentReportSubmit = (submission: ReportSubmission) => {
+    const target = actionsFor;
+    if (!target) {
+      return;
+    }
+    const onSettled = {
+      onError: () => showToast('Couldn’t submit your report. Try again.'),
+      onSuccess: () => {
+        setCommentSheetMode(null);
+        showToast('Thanks — our moderators will take a look.');
+      },
+    };
+    if (commentReportTarget === 'user') {
+      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      return;
+    }
+    reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
   };
 
   const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
@@ -478,6 +547,18 @@ export function EventDetailScreen({
             }
             submitLabel='Save'
           />
+        ) : sheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              eventReportTarget === 'user' ? reportMember.isPending : reportEvent.isPending
+            }
+            onSubmit={handleEventReportSubmit}
+            title={
+              eventReportTarget === 'user' && event
+                ? `Report ${event.author.name}`
+                : 'Report event'
+            }
+          />
         ) : sheetMode === 'confirm-cancel' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
@@ -536,16 +617,16 @@ export function EventDetailScreen({
                 <Divider />
                 <EventMenuRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportEventAuthor}
+                />
+                <Divider />
+                <EventMenuRow
+                  destructive
                   icon='AlertCircle'
                   label='Report event'
-                  onPress={() => {
-                    setSheetMode(null);
-                    if (!event) return;
-                    reportEvent.mutate(event.id, {
-                      onError: () => showToast('Couldn’t report this event. Try again.'),
-                      onSuccess: () => showToast('Thanks — our moderators will take a look.'),
-                    });
-                  }}
+                  onPress={openReportEvent}
                 />
               </>
             )}
@@ -603,7 +684,19 @@ export function EventDetailScreen({
 
       {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {commentSheetMode === 'confirm-delete' ? (
+        {commentSheetMode === 'report' ? (
+          <ReportSheetContent
+            isSubmitting={
+              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+            }
+            onSubmit={handleCommentReportSubmit}
+            title={
+              commentReportTarget === 'user' && actionsFor
+                ? `Report ${actionsFor.author.name}`
+                : 'Report comment'
+            }
+          />
+        ) : commentSheetMode === 'confirm-delete' ? (
           <View className='gap-1 px-[18px] pb-4 pt-1'>
             <Text className='font-inter-bold text-[17px] text-content'>
               Delete comment?
@@ -663,19 +756,16 @@ export function EventDetailScreen({
                 <Divider />
                 <EventMenuRow
                   destructive
+                  icon='Flag'
+                  label='Report this user'
+                  onPress={openReportCommentAuthor}
+                />
+                <Divider />
+                <EventMenuRow
+                  destructive
                   icon='AlertCircle'
                   label='Report comment'
-                  onPress={() => {
-                    const target = actionsFor;
-                    closeCommentActions();
-                    if (!target) return;
-                    reportComment.mutate(target.id, {
-                      onError: () =>
-                        showToast('Couldn’t report this comment. Try again.'),
-                      onSuccess: () =>
-                        showToast('Thanks — our moderators will take a look.'),
-                    });
-                  }}
+                  onPress={openReportComment}
                 />
               </>
             )}

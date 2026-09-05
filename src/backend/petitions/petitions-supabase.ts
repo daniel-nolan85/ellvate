@@ -7,6 +7,7 @@ import { decodeCursor, encodeCursor, paginateInMemory } from '@/src/lib/cursor-p
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
+import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import { computeRequiredSignatures } from './types';
 import type {
   CreatePetitionResult,
@@ -387,6 +388,7 @@ export async function reportPetitionSupabase(
   supabase: SupabaseClient,
   userId: string,
   petitionId: string,
+  submission: ValidReportSubmission,
 ): Promise<ReportPetitionResult> {
   const { data: petition, error: petitionError } = await supabase
     .from('petitions')
@@ -398,12 +400,23 @@ export async function reportPetitionSupabase(
     return { code: 'petition_not_found', message: 'Petition not found.', ok: false };
   }
   await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
   // Idempotent: a unique (petition_id, reporter_id) constraint means a
   // repeat report from the same user is a silent no-op, not an error.
   const { error } = await supabase
     .from('petition_reports')
     .upsert(
-      { petition_id: petitionId, reporter_id: userId },
+      {
+        details: submission.details,
+        evidence_image_url: evidenceImageUrl,
+        petition_id: petitionId,
+        reason: submission.reason,
+        reporter_id: userId,
+      },
       { ignoreDuplicates: true, onConflict: 'petition_id,reporter_id' },
     );
   throwIfSupabaseError(error, 'report petition');
