@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -273,17 +273,29 @@ export function ActivityScreen() {
     myServiceItems.length > 0 ||
     myPetitionItems.length > 0;
 
-  // Deferred, not `filter` directly: switching to "All" mounts (at most
-  // ALL_FILTER_PREVIEW_COUNT rows of, see below) five SectionCards in the
-  // ScrollView below, in the same commit as the pills row restyling above.
-  // useDeferredValue lets the pills' own restyle (driven by `filter`, not
-  // `deferredFilter`) commit and paint on its own first. Kept as a real,
-  // if modest, optimization even though it turned out not to be *the* fix
-  // for the pills' clipping on "All" -- that's addressed below instead,
-  // once it became clear (on-device, reproducible on load and every return
-  // to "All", never mid-transition) that the actual correlation was steady-
-  // state content size, not commit timing.
-  const deferredFilter = useDeferredValue(filter);
+  // Deferred, not `filter` directly, and NOT via useDeferredValue -- a
+  // screen recording (7th attempt) showed the actual failure mode: it's not
+  // uniform clipping, it's individual glyphs of the *inactive* pills coming
+  // out as near-invisible slivers after the first character or two, i.e. a
+  // torn/incomplete native text draw. That happens exactly when "All" mounts
+  // (at most ALL_FILTER_PREVIEW_COUNT rows of, see below) five SectionCards
+  // in the ScrollView below in the SAME native commit as the pills row --
+  // and once torn, the pills' native layer never repaints on its own, since
+  // nothing about it changes again afterward, so the corruption just sits
+  // there indefinitely (matching "reproducible on load and every return to
+  // All, and never self-corrects until a different filter's smaller commit
+  // replaces it"). useDeferredValue was tried here before and didn't help --
+  // plausibly because it only changes when in React's JS scheduler this
+  // update is processed, not whether the resulting native mount is its own
+  // separate commit once it does run. requestAnimationFrame forces that: the
+  // heavy section content commits to native strictly one frame after the
+  // pills, on mount and on every filter change, so the two commits can never
+  // contend for the same frame.
+  const [deferredFilter, setDeferredFilter] = useState<ActivityFilter | null>(null);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setDeferredFilter(filter));
+    return () => cancelAnimationFrame(raf);
+  }, [filter]);
   const isAllPreview = deferredFilter === 'all';
   const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
   const showEvents = deferredFilter === 'all' || deferredFilter === 'event';
@@ -388,8 +400,8 @@ export function ActivityScreen() {
               app (see e.g. notifications-screen.tsx) -- kept here as a
               defensive measure against that class of bug, though the pills
               row's own "smushed on All" report is addressed instead by
-              deferredFilter below, decoupling this row's restyle from the
-              much heavier 1-to-5-section ScrollView commit underneath it. */}
+              deferredFilter above, forcing the 1-to-5-section ScrollView
+              below to commit to native strictly one frame after this row. */}
           <HStack className="px-5 pb-3" collapsable={false} space="sm">
             <StatBox label="Posts" value={myPostItems.length} />
             <StatBox label="Events" value={myEventItems.length} />
@@ -407,16 +419,10 @@ export function ActivityScreen() {
           >
             {/* "All" previews at most ALL_FILTER_PREVIEW_COUNT rows per
                 section instead of every row from all 5 sources at once --
-                see activity-parts.tsx's ALL_FILTER_PREVIEW_COUNT. On-device
-                reports (screenshots, then confirmed reproducible on load and
-                on every return to "All", never on a single filter) pointed
-                at "All" mounting five full, independently-paginated lists
-                at once as the one real difference from every other filter,
-                not any rendering-timing mechanism -- three earlier fixes
-                aimed at timing (a remount key, then useDeferredValue) left
-                this exact pattern unchanged. Bookmarks' identical pills
-                never show this because its own "all" is one already-
-                paginated feed, never a client-side union of several. */}
+                see activity-parts.tsx's ALL_FILTER_PREVIEW_COUNT. Reduces
+                how much this ScrollView mounts at once, independent of (and
+                on top of) the deferredFilter commit-splitting above, which
+                is what actually addresses the pills' own corruption. */}
             {showPosts ? (
               <>
                 <SectionHeader
