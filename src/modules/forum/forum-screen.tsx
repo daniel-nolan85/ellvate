@@ -69,11 +69,21 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   // covers that case honestly, rather than hiding the tab with no explanation.
   const showForYou = (profile.data?.profile.interests.length ?? 0) > 0;
 
-  const subforumNames = subforums.data?.subforums ?? FALLBACK_SUBFORUMS;
-  const chipNames = showForYou ? [FOR_YOU, ...subforumNames] : subforumNames;
+  // 'All' is a synthetic, app-level filter, not a real forum -- the backend
+  // returns actual forum names only (from a real `subforums` table in
+  // production; the local demo store's seed data happens to also include a
+  // literal 'All' row, which masked this during earlier testing). Always
+  // prepend it here instead of relying on the backend to include it, so
+  // there's always a way back to the unfiltered feed after picking a chip.
+  const realSubforumNames = (subforums.data?.subforums ?? FALLBACK_SUBFORUMS).filter(
+    (name) => name !== 'All',
+  );
+  const chipNames = showForYou
+    ? ['All', FOR_YOU, ...realSubforumNames]
+    : ['All', ...realSubforumNames];
   const composerForum =
     activeForum === 'All' || activeForum === FOR_YOU
-      ? (subforumNames.find((name) => name !== 'All') ?? 'Announcements')
+      ? (realSubforumNames[0] ?? 'Announcements')
       : activeForum;
 
   const displayedPosts = useMemo((): readonly ForumPost[] => {
@@ -199,6 +209,8 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           }
         }}
         onEndReachedThreshold={0.5}
+        onRefresh={() => void posts.refetch()}
+        refreshing={posts.isRefetching}
         renderItem={({ item }) => (
           <View className="mx-5 mb-2">
             <PostCard
@@ -219,7 +231,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           isSubmitting={createPost.isPending}
           onDismiss={() => setIsComposing(false)}
           onSubmit={handleCreatePost}
-          subforums={subforumNames.filter((name) => name !== 'All')}
+          subforums={realSubforumNames}
         />
         {createPost.isError ? (
           <Text className="px-5 pb-2 text-destructive" size="xs">

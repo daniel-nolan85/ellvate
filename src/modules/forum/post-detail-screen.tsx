@@ -585,6 +585,11 @@ export function PostDetailScreen({
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => {
+            void postQuery.refetch();
+            void comments.refetch();
+          }}
+          refreshing={postQuery.isRefetching || comments.isRefetching}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <CommentItem

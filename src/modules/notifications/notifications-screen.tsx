@@ -185,6 +185,8 @@ export function NotificationsScreen() {
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => void notifications.refetch()}
+          refreshing={notifications.isRefetching}
           renderItem={({ item }) => (
             <NotificationRow notification={item} onPress={handlePress} />
           )}

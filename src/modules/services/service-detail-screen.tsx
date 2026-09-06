@@ -463,6 +463,11 @@ export function ServiceDetailScreen({
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => {
+            void listingQuery.refetch();
+            void reviews.refetch();
+          }}
+          refreshing={listingQuery.isRefetching || reviews.isRefetching}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <ServiceReviewItem

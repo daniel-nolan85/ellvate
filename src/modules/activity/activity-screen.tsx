@@ -341,6 +341,24 @@ export function ActivityScreen() {
     missions.isPending ||
     services.isPending ||
     petitions.isPending;
+  // Refreshes every kind together, not just the active filter -- switching
+  // filters shows already-fetched data instantly, so a stale filter you
+  // haven't looked at yet would otherwise never get pulled fresh.
+  const isRefreshing =
+    posts.isRefetching ||
+    comments.isRefetching ||
+    events.isRefetching ||
+    missions.isRefetching ||
+    services.isRefetching ||
+    petitions.isRefetching;
+  const refreshAll = () => {
+    void posts.refetch();
+    void comments.refetch();
+    void events.refetch();
+    void missions.refetch();
+    void services.refetch();
+    void petitions.refetch();
+  };
   const hasAnything =
     myPostItems.length > 0 ||
     myEventItems.length > 0 ||
@@ -488,6 +506,8 @@ export function ActivityScreen() {
           <ActivitySectionList
             contentContainerStyle={{ paddingBottom: 130 }}
             loadMore={loadMore}
+            onRefresh={refreshAll}
+            refreshing={isRefreshing}
             sections={sections}
           />
         </>

@@ -494,6 +494,11 @@ export function PetitionDetailScreen({
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => {
+            void petitionQuery.refetch();
+            void comments.refetch();
+          }}
+          refreshing={petitionQuery.isRefetching || comments.isRefetching}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <CommentItem

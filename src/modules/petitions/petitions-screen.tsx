@@ -180,6 +180,8 @@ export function PetitionsScreen() {
           }
         }}
         onEndReachedThreshold={0.5}
+        onRefresh={() => void petitions.refetch()}
+        refreshing={petitions.isRefetching}
         renderItem={({ item }) => (
           <View className="mx-5 mb-2">
             <PetitionRow

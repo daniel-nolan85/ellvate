@@ -218,6 +218,7 @@ export function LeaderboardScreen() {
           }
         }}
         onEndReachedThreshold={0.5}
+        onRefresh={() => void leaderboard.refetch()}
         onScrollToIndexFailed={(info) => {
           setTimeout(() => {
             listRef.current?.scrollToOffset({
@@ -234,6 +235,7 @@ export function LeaderboardScreen() {
           }, 50);
         }}
         ref={listRef}
+        refreshing={leaderboard.isRefetching}
         renderItem={({ item }) => (
           <View
             className={`mx-5 mb-1 rounded-[18px] border-2 ${
