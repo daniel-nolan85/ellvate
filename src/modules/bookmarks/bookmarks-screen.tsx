@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, type Href } from 'expo-router';
 
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
@@ -314,7 +314,7 @@ export function BookmarksScreen() {
         ) : null}
       </Sheet>
 
-      <SearchSheet
+      <ScopedSearchScreen
         getKey={(item) => item.bookmarkId}
         getSubtitle={subtitleFor}
         getTitle={titleFor}

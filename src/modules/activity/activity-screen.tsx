@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Icon } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
@@ -672,7 +672,7 @@ export function ActivityScreen() {
         ) : null}
       </Sheet>
 
-      <SearchSheet
+      <ScopedSearchScreen
         getKey={(item) => item.key}
         getSubtitle={(item) => item.subtitle}
         getTitle={(item) => item.title}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -106,7 +106,7 @@ export function BlockedUsersScreen() {
         </ScrollView>
       )}
 
-      <SearchSheet
+      <ScopedSearchScreen
         getKey={(member) => member.userId}
         getTitle={(member) => member.name}
         items={items}
