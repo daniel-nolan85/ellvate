@@ -19,7 +19,9 @@ export const PETITION_DEADLINE_OPTIONS: readonly (7 | 14 | 30 | 60 | 90)[] = [7,
 // nobody's signature to succeed a petition, so this floor exists to make
 // sure "20% of the community" means something before the feature is even
 // offered, not to guarantee some other number is reachable.
-export const PETITIONS_UNLOCK_MIN_USERS = 200;
+// Screenshot-only override -- see App Store screenshot prep notes; revert to
+// 200 if this branch is ever reused for anything other than screenshots.
+export const PETITIONS_UNLOCK_MIN_USERS = 1;
 export const PETITIONS_SIGNATURE_PERCENT = 0.2;
 
 // Computed once at creation and frozen on the row -- never recalculated as
