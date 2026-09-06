@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { InteractionManager, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -281,23 +281,27 @@ export function ActivityScreen() {
   // it's confirmed, not theorized: the pills corrupt because up to five
   // SectionCards commit to native in the exact same pass as this row.
   //
-  // The 7th attempt already tried deferring that commit by one frame via
-  // requestAnimationFrame, and it made no visible difference at all --
-  // confirmed on-device against the exact shipped code. A single rAF tick
-  // is a weak guarantee: React 18's automatic batching (and Fabric's own
-  // commit scheduling) can still fold a state update made inside it into
-  // the same native commit as whatever's already pending, so the two
-  // commits were plausibly never actually separated at all.
-  // InteractionManager.runAfterInteractions is the stronger, RN-native tool
-  // for exactly this: it explicitly waits for any in-flight interactions/
-  // animations to fully finish before running, which is a real commit
-  // boundary rather than a single scheduler tick.
+  // Two prior attempts at deferring that commit (requestAnimationFrame,
+  // then InteractionManager.runAfterInteractions) both made no on-device
+  // difference at all, confirmed against the exact shipped code each time.
+  // Both share the same flaw: they're "run on the next available idle
+  // moment" primitives, not real elapsed-time guarantees. rAF ties to the
+  // next vsync, which React 18's automatic batching (and Fabric's own
+  // commit scheduling) can still fold into the same native commit as
+  // whatever's already pending. InteractionManager only waits if something
+  // has registered an active interaction handle via
+  // InteractionManager.createInteractionHandle() -- nothing anywhere in
+  // this codebase ever does, so its queue is always empty and it fires
+  // essentially immediately, no more separated than rAF was.
+  //
+  // A plain setTimeout with a real, non-zero delay is the one primitive
+  // here that forces the JS thread to actually yield for a measured amount
+  // of wall-clock time, guaranteeing the pills' own commit has long since
+  // reached the screen before the heavy section content is even scheduled.
   const [deferredFilter, setDeferredFilter] = useState<ActivityFilter | null>(null);
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      setDeferredFilter(filter);
-    });
-    return () => task.cancel();
+    const timeout = setTimeout(() => setDeferredFilter(filter), 100);
+    return () => clearTimeout(timeout);
   }, [filter]);
   const isAllPreview = deferredFilter === 'all';
   const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
