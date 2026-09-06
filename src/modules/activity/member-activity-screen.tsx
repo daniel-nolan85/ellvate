@@ -1,5 +1,5 @@
-import { useDeferredValue, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -34,15 +34,14 @@ import {
 } from '@/src/modules/services';
 
 import {
-  ActivityRow,
-  EmptyHint,
+  ActivitySectionList,
   FilterChips,
-  SectionCard,
-  SectionHeader,
   StatBox,
   isActivityFilter,
   ALL_FILTER_PREVIEW_COUNT,
   type ActivityFilter,
+  type ActivityListItem,
+  type ActivitySection,
 } from './activity-parts';
 import { useMemberActivity } from './use-member-activity';
 
@@ -204,6 +203,84 @@ export function MemberActivityScreen({
     [activity.data, userId],
   );
 
+  // Flattened to one shared shape for ActivitySectionList (see
+  // activity-parts.tsx and its identical use in activity-screen.tsx) --
+  // each of the 5 sources above carries its own typed entity plus a couple
+  // of flags, but the list only ever needs a title/label/subtitle/press-
+  // handler regardless of which kind of thing it is.
+  const postListItems = useMemo(
+    (): readonly ActivityListItem[] =>
+      postItems.map(
+        (item): ActivityListItem => ({
+          key: item.key,
+          kind: 'post',
+          label: item.label,
+          onPress: item.onPress,
+          subtitle: item.subtitle,
+          title: item.title,
+        }),
+      ),
+    [postItems],
+  );
+  const eventListItems = useMemo(
+    (): readonly ActivityListItem[] =>
+      eventItems.map(
+        ({ event, going, key }): ActivityListItem => ({
+          key,
+          kind: 'event',
+          label: going ? EVENT_GOING_LABEL : KIND_LABEL.event,
+          onPress: () => setOpenEvent(event),
+          subtitle: `${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`,
+          title: event.title,
+        }),
+      ),
+    [eventItems],
+  );
+  const missionListItems = useMemo(
+    (): readonly ActivityListItem[] =>
+      missionItems.map(
+        ({ completed, key, mission }): ActivityListItem => ({
+          key,
+          kind: 'mission',
+          label: completed ? MISSION_COMPLETED_LABEL : KIND_LABEL.mission,
+          onPress: () => setOpenMission(mission),
+          subtitle: mission.scheduledFor
+            ? formatDateOnly(mission.scheduledFor)
+            : `${mission.stopsDone}/${mission.stopsTotal} stops`,
+          title: mission.title,
+        }),
+      ),
+    [missionItems],
+  );
+  const serviceListItems = useMemo(
+    (): readonly ActivityListItem[] =>
+      serviceItems.map(
+        ({ key, listing }): ActivityListItem => ({
+          key,
+          kind: 'service',
+          label: KIND_LABEL.service,
+          onPress: () => setOpenService(listing),
+          subtitle: SERVICE_CATEGORY_LABEL[listing.category],
+          title: listing.businessName,
+        }),
+      ),
+    [serviceItems],
+  );
+  const petitionListItems = useMemo(
+    (): readonly ActivityListItem[] =>
+      petitionItems.map(
+        ({ key, petition, signedOnly }): ActivityListItem => ({
+          key,
+          kind: 'petition',
+          label: signedOnly ? PETITION_SIGNED_LABEL : KIND_LABEL.petition,
+          onPress: () => setOpenPetition(petition),
+          subtitle: `${petition.signatureCount} of ${petition.requiredSignatures} signatures`,
+          title: petition.title,
+        }),
+      ),
+    [petitionItems],
+  );
+
   const hasAnything =
     postItems.length > 0 ||
     eventItems.length > 0 ||
@@ -211,16 +288,65 @@ export function MemberActivityScreen({
     serviceItems.length > 0 ||
     petitionItems.length > 0;
 
-  // See activity-screen.tsx's identical deferredFilter and isAllPreview for
-  // why -- this screen shares the same stat row + FilterChips + 1-to-5-
-  // section ScrollView shape, so it's the same latent bug.
-  const deferredFilter = useDeferredValue(filter);
-  const isAllPreview = deferredFilter === 'all';
-  const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
-  const showEvents = deferredFilter === 'all' || deferredFilter === 'event';
-  const showMissions = deferredFilter === 'all' || deferredFilter === 'mission';
-  const showServices = deferredFilter === 'all' || deferredFilter === 'service';
-  const showPetitions = deferredFilter === 'all' || deferredFilter === 'petition';
+  // See activity-screen.tsx's identical isAllPreview for why: a diagnostic
+  // build proved the "All" pills corruption was caused by up to five
+  // sections' worth of rows all mounting as real native views at once via
+  // a plain ScrollView + `.map()` -- this screen shares that exact shape,
+  // so it's the same latent bug even though it hadn't been reported here
+  // yet. ActivitySectionList actually virtualizes (only rows on screen
+  // exist as real views), which is what fixes it.
+  const isAllPreview = filter === 'all';
+  const showPosts = filter === 'all' || filter === 'post';
+  const showEvents = filter === 'all' || filter === 'event';
+  const showMissions = filter === 'all' || filter === 'mission';
+  const showServices = filter === 'all' || filter === 'service';
+  const showPetitions = filter === 'all' || filter === 'petition';
+
+  const sections = useMemo((): readonly ActivitySection[] => {
+    const toSection = (
+      key: ActivitySection['key'],
+      title: string,
+      items: readonly ActivityListItem[],
+      emptyLabel: string,
+    ): ActivitySection => ({
+      count: items.length,
+      data: isAllPreview ? items.slice(0, ALL_FILTER_PREVIEW_COUNT) : items,
+      emptyLabel,
+      key,
+      onSeeAll:
+        isAllPreview && items.length > ALL_FILTER_PREVIEW_COUNT
+          ? () => setFilter(key)
+          : undefined,
+      title,
+    });
+    return [
+      showPosts ? toSection('post', 'Posts', postListItems, 'No posts or comments yet.') : null,
+      showEvents
+        ? toSection('event', 'Events', eventListItems, 'No events created or joined yet.')
+        : null,
+      showMissions
+        ? toSection('mission', 'Missions', missionListItems, 'No missions created or completed yet.')
+        : null,
+      showServices
+        ? toSection('service', 'Services', serviceListItems, 'No services listed yet.')
+        : null,
+      showPetitions
+        ? toSection('petition', 'Petitions', petitionListItems, 'No petitions started or signed yet.')
+        : null,
+    ].filter((section): section is ActivitySection => section !== null);
+  }, [
+    eventListItems,
+    isAllPreview,
+    missionListItems,
+    petitionListItems,
+    postListItems,
+    serviceListItems,
+    showEvents,
+    showMissions,
+    showPetitions,
+    showPosts,
+    showServices,
+  ]);
 
   return (
     <View className="flex-1 bg-canvas">
@@ -269,10 +395,7 @@ export function MemberActivityScreen({
         <>
           {/* collapsable={false}: same fix, same reasoning as
               activity-screen.tsx's identical stat-box row (see its own
-              comment) -- this screen shares that exact structure (stat
-              row + FilterChips + a ScrollView that goes from one section
-              to five depending on the filter), so it's the same latent
-              bug even though it hadn't been reported here yet. */}
+              comment). */}
           <HStack className="px-5 pb-3" collapsable={false} space="sm">
             <StatBox label="Posts" value={postItems.length} />
             <StatBox label="Events" value={eventItems.length} />
@@ -283,177 +406,10 @@ export function MemberActivityScreen({
 
           <FilterChips active={filter} onSelect={setFilter} />
 
-          <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
-            {/* "All" previews at most ALL_FILTER_PREVIEW_COUNT rows per
-                section -- see activity-screen.tsx's identical comment for
-                why. */}
-            {showPosts ? (
-              <>
-                <SectionHeader
-                  count={postItems.length}
-                  onSeeAll={
-                    isAllPreview && postItems.length > ALL_FILTER_PREVIEW_COUNT
-                      ? () => setFilter('post')
-                      : undefined
-                  }
-                  title="Posts"
-                />
-                {postItems.length === 0 ? (
-                  <EmptyHint label="No posts or comments yet." />
-                ) : (
-                  <SectionCard>
-                    {(isAllPreview ? postItems.slice(0, ALL_FILTER_PREVIEW_COUNT) : postItems).map(
-                      (item) => (
-                        <ActivityRow
-                          key={item.key}
-                          kind="post"
-                          label={item.label}
-                          onPress={item.onPress}
-                          subtitle={item.subtitle}
-                          title={item.title}
-                        />
-                      ),
-                    )}
-                  </SectionCard>
-                )}
-              </>
-            ) : null}
-
-            {showEvents ? (
-              <>
-                <SectionHeader
-                  count={eventItems.length}
-                  onSeeAll={
-                    isAllPreview && eventItems.length > ALL_FILTER_PREVIEW_COUNT
-                      ? () => setFilter('event')
-                      : undefined
-                  }
-                  title="Events"
-                />
-                {eventItems.length === 0 ? (
-                  <EmptyHint label="No events created or joined yet." />
-                ) : (
-                  <SectionCard>
-                    {(isAllPreview ? eventItems.slice(0, ALL_FILTER_PREVIEW_COUNT) : eventItems).map(
-                      ({ event, going, key }) => (
-                        <ActivityRow
-                          key={key}
-                          kind="event"
-                          label={going ? EVENT_GOING_LABEL : KIND_LABEL.event}
-                          onPress={() => setOpenEvent(event)}
-                          subtitle={`${event.dayLabel} ${event.dateLabel} · ${event.timeLabel}`}
-                          title={event.title}
-                        />
-                      ),
-                    )}
-                  </SectionCard>
-                )}
-              </>
-            ) : null}
-
-            {showMissions ? (
-              <>
-                <SectionHeader
-                  count={missionItems.length}
-                  onSeeAll={
-                    isAllPreview && missionItems.length > ALL_FILTER_PREVIEW_COUNT
-                      ? () => setFilter('mission')
-                      : undefined
-                  }
-                  title="Missions"
-                />
-                {missionItems.length === 0 ? (
-                  <EmptyHint label="No missions created or completed yet." />
-                ) : (
-                  <SectionCard>
-                    {(isAllPreview
-                      ? missionItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
-                      : missionItems
-                    ).map(({ completed, key, mission }) => (
-                      <ActivityRow
-                        key={key}
-                        kind="mission"
-                        label={completed ? MISSION_COMPLETED_LABEL : KIND_LABEL.mission}
-                        onPress={() => setOpenMission(mission)}
-                        subtitle={
-                          mission.scheduledFor
-                            ? formatDateOnly(mission.scheduledFor)
-                            : `${mission.stopsDone}/${mission.stopsTotal} stops`
-                        }
-                        title={mission.title}
-                      />
-                    ))}
-                  </SectionCard>
-                )}
-              </>
-            ) : null}
-
-            {showServices ? (
-              <>
-                <SectionHeader
-                  count={serviceItems.length}
-                  onSeeAll={
-                    isAllPreview && serviceItems.length > ALL_FILTER_PREVIEW_COUNT
-                      ? () => setFilter('service')
-                      : undefined
-                  }
-                  title="Services"
-                />
-                {serviceItems.length === 0 ? (
-                  <EmptyHint label="No services listed yet." />
-                ) : (
-                  <SectionCard>
-                    {(isAllPreview
-                      ? serviceItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
-                      : serviceItems
-                    ).map(({ key, listing }) => (
-                      <ActivityRow
-                        key={key}
-                        kind="service"
-                        label={KIND_LABEL.service}
-                        onPress={() => setOpenService(listing)}
-                        subtitle={SERVICE_CATEGORY_LABEL[listing.category]}
-                        title={listing.businessName}
-                      />
-                    ))}
-                  </SectionCard>
-                )}
-              </>
-            ) : null}
-
-            {showPetitions ? (
-              <>
-                <SectionHeader
-                  count={petitionItems.length}
-                  onSeeAll={
-                    isAllPreview && petitionItems.length > ALL_FILTER_PREVIEW_COUNT
-                      ? () => setFilter('petition')
-                      : undefined
-                  }
-                  title="Petitions"
-                />
-                {petitionItems.length === 0 ? (
-                  <EmptyHint label="No petitions started or signed yet." />
-                ) : (
-                  <SectionCard>
-                    {(isAllPreview
-                      ? petitionItems.slice(0, ALL_FILTER_PREVIEW_COUNT)
-                      : petitionItems
-                    ).map(({ key, petition, signedOnly }) => (
-                      <ActivityRow
-                        key={key}
-                        kind="petition"
-                        label={signedOnly ? PETITION_SIGNED_LABEL : KIND_LABEL.petition}
-                        onPress={() => setOpenPetition(petition)}
-                        subtitle={`${petition.signatureCount} of ${petition.requiredSignatures} signatures`}
-                        title={petition.title}
-                      />
-                    ))}
-                  </SectionCard>
-                )}
-              </>
-            ) : null}
-          </ScrollView>
+          <ActivitySectionList
+            contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+            sections={sections}
+          />
         </>
       )}
 
