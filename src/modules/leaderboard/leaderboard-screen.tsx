@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { findNodeHandle, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -78,15 +78,32 @@ export function LeaderboardScreen() {
   // through the app-wide search, and would throw away the one thing this
   // scoped search can show that the app-wide one can't: where they stand.
   // From their row, the existing LeaderRow onPress still opens the profile
-  // the normal way.
+  // the normal way. highlightedRank briefly outlines that row so it's
+  // clear which one search actually landed on, since scrolling alone
+  // doesn't say which of several visible rows was the target.
   const scrollViewRef = useRef<ScrollView>(null);
   const rowRefs = useRef(new Map<number, View>());
+  const [highlightedRank, setHighlightedRank] = useState<number | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    },
+    [],
+  );
   const handleSelectFromSearch = (entry: LeaderboardEntry) => {
     setIsSearching(false);
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
     requestAnimationFrame(() => {
       const rowNode = rowRefs.current.get(entry.rank);
       const scrollNode = scrollViewRef.current;
       const scrollHandle = scrollNode ? findNodeHandle(scrollNode) : null;
+      setHighlightedRank(entry.rank);
+      highlightTimeoutRef.current = setTimeout(() => setHighlightedRank(null), 2500);
       if (!rowNode || !scrollNode || !scrollHandle) {
         return;
       }
@@ -157,6 +174,9 @@ export function LeaderboardScreen() {
             <VStack className="px-5 pt-1.5" space="xs">
               {leaders.map((entry) => (
                 <View
+                  className={`rounded-[18px] border-2 ${
+                    entry.rank === highlightedRank ? 'border-accent' : 'border-transparent'
+                  }`}
                   key={entry.rank}
                   ref={(node) => {
                     if (node) {
