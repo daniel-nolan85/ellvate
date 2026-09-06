@@ -20,7 +20,8 @@ import { VStack } from '@/src/components/ui/vstack';
 // services the same way — only where the data comes from differs.
 
 export type ActivityKind = 'post' | 'event' | 'mission' | 'service' | 'petition';
-export type ActivityFilter = 'all' | ActivityKind;
+// No 'all' option -- see FILTERS below for why.
+export type ActivityFilter = ActivityKind;
 
 export const KIND_ICON: Readonly<Record<ActivityKind, AppIconName>> = {
   event: 'CalendarDays',
@@ -30,8 +31,22 @@ export const KIND_ICON: Readonly<Record<ActivityKind, AppIconName>> = {
   service: 'Store',
 };
 
+// Deliberately no "All" option combining every kind into one screen. That
+// combined view (up to five sections' worth of rows all mounting alongside
+// this pill row) was the confirmed, reproducible cause of a real on-device
+// bug: the inactive pills' text corrupting whenever "All" was selected.
+// Eleven separate attempts at fixing it -- resizing pills, remounting them,
+// deferring the section content's commit via requestAnimationFrame /
+// InteractionManager / setTimeout, capping preview rows, and finally
+// actually virtualizing the list -- each ruled out one mechanism without
+// fixing it, while a diagnostic build proved conclusively that content
+// volume in this area (however it's mounted) is the real trigger. Rather
+// than keep guessing at how much volume is safe, removing the one filter
+// that combines multiple sections at once removes the precondition
+// entirely: every remaining filter here shows exactly one kind, one
+// properly paginated and virtualized list, which has never shown any sign
+// of this bug in any of the above attempts.
 export const FILTERS: readonly { readonly key: ActivityFilter; readonly label: string }[] = [
-  { key: 'all', label: 'All' },
   { key: 'post', label: 'Posts' },
   { key: 'event', label: 'Events' },
   { key: 'mission', label: 'Missions' },
@@ -39,14 +54,9 @@ export const FILTERS: readonly { readonly key: ActivityFilter; readonly label: s
   { key: 'petition', label: 'Petitions' },
 ];
 
-// How many rows each section shows when "All" is selected -- see
-// SectionHeader's onSeeAll and activity-screen.tsx for why.
-export const ALL_FILTER_PREVIEW_COUNT = 5;
-
 export const isActivityFilter = (
   value: string | undefined,
 ): value is ActivityFilter =>
-  value === 'all' ||
   value === 'post' ||
   value === 'event' ||
   value === 'mission' ||
@@ -136,15 +146,10 @@ export function StatBox({ label, value }: { readonly label: string; readonly val
 
 export function SectionHeader({
   count,
-  onSeeAll,
   title,
 }: {
   readonly count: number;
   readonly title: string;
-  // Present only when "All" is selected and this section has more rows than
-  // ALL_FILTER_PREVIEW_COUNT -- switches straight to this section's own
-  // filter, which shows every row (see activity-screen.tsx).
-  readonly onSeeAll?: () => void;
 }) {
   return (
     <HStack className="items-center justify-between px-5 pb-1.5 pt-6">
@@ -154,13 +159,6 @@ export function SectionHeader({
         </Text>
         <Badge variant="muted">{count}</Badge>
       </HStack>
-      {onSeeAll ? (
-        <Pressable accessibilityRole="button" onPress={onSeeAll}>
-          <Text className="font-inter-semibold text-[12px] text-accent">
-            See all
-          </Text>
-        </Pressable>
-      ) : null}
     </HStack>
   );
 }
@@ -202,19 +200,15 @@ export interface ActivityListItem {
 }
 
 // One entry in ActivitySectionList's `sections` prop below -- a thin
-// SectionList-shaped wrapper around each of Posts/Events/Missions/Services/
-// Petitions, capped or not depending on whether the caller is previewing
-// "All" or showing a single filter in full.
+// SectionList-shaped wrapper around one of Posts/Events/Missions/Services/
+// Petitions. In practice there's always exactly one visible section: there's
+// no "All" filter combining several at once (see FILTERS above for why).
 export interface ActivitySection {
   readonly key: ActivityKind;
   readonly title: string;
   readonly count: number;
   readonly data: readonly ActivityListItem[];
   readonly emptyLabel: string;
-  // Present only when previewing "All" and this section has more rows than
-  // fit in the preview -- switches straight to this section's own filter,
-  // which shows every row.
-  readonly onSeeAll?: () => void;
 }
 
 export interface ActivityLoadMoreTarget {
@@ -314,7 +308,7 @@ export function ActivitySectionList({
         section.data.length === 0 ? <EmptyHint label={section.emptyLabel} /> : null
       }
       renderSectionHeader={({ section }) => (
-        <SectionHeader count={section.count} onSeeAll={section.onSeeAll} title={section.title} />
+        <SectionHeader count={section.count} title={section.title} />
       )}
       sections={sections}
       stickySectionHeadersEnabled={false}
