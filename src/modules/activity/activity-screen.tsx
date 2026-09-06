@@ -49,7 +49,6 @@ import {
   FilterChips,
   StatBox,
   isActivityFilter,
-  ALL_FILTER_PREVIEW_COUNT,
   type ActivityFilter,
   type ActivityListItem,
   type ActivityLoadMoreTarget,
@@ -127,11 +126,11 @@ export function ActivityScreen() {
 
   // Lets a link (e.g. a tappable stat on the profile screen) land directly
   // on one section — /activity?filter=event — instead of always opening on
-  // "All". Only read once on mount: this screen owns `filter` afterward, so
+  // Posts. Only read once on mount: this screen owns `filter` afterward, so
   // the chips stay responsive rather than snapping back if the param is
   // still present on a later re-render.
   const [filter, setFilter] = useState<ActivityFilter>(() =>
-    isActivityFilter(filterParam) ? filterParam : 'all',
+    isActivityFilter(filterParam) ? filterParam : 'post',
   );
   const [openPost, setOpenPost] = useState<ForumPost | null>(null);
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
@@ -349,95 +348,50 @@ export function ActivityScreen() {
     myServiceItems.length > 0 ||
     myPetitionItems.length > 0;
 
-  const isAllPreview = filter === 'all';
-  const showPosts = filter === 'all' || filter === 'post';
-  const showEvents = filter === 'all' || filter === 'event';
-  const showMissions = filter === 'all' || filter === 'mission';
-  const showServices = filter === 'all' || filter === 'service';
-  const showPetitions = filter === 'all' || filter === 'petition';
-
-  // ActivitySectionList (see activity-parts.tsx) actually virtualizes --
-  // only the rows on screen exist as real native views -- which is what
-  // fixed the "All" filter pills corrupting (a diagnostic build proved the
-  // cause was up to five sections' worth of rows all mounting as real
-  // views at once via a plain ScrollView + `.map()`, regardless of what
-  // was actually visible; three separate attempts at delaying *when* that
-  // mounted never helped, since once mounted it stayed mounted for as long
-  // as "All" was selected). One real consequence: "All" caps each section
-  // to ALL_FILTER_PREVIEW_COUNT rows and never needs to fetch further
-  // pages, so pagination only applies to a single selected filter's own
-  // full list.
+  // ActivitySectionList (see activity-parts.tsx) always renders exactly one
+  // section here -- there's no "All" filter combining several at once (see
+  // FILTERS in activity-parts.tsx for why) -- and it actually virtualizes,
+  // so only the rows on screen exist as real native views no matter how
+  // large this one list grows.
   const sections = useMemo((): readonly ActivitySection[] => {
-    const toSection = (
-      key: ActivitySection['key'],
-      title: string,
-      items: readonly ActivityListItem[],
-      emptyLabel: string,
-    ): ActivitySection => ({
-      count: items.length,
-      data: isAllPreview ? items.slice(0, ALL_FILTER_PREVIEW_COUNT) : items,
-      emptyLabel,
-      key,
-      onSeeAll:
-        isAllPreview && items.length > ALL_FILTER_PREVIEW_COUNT
-          ? () => setFilter(key)
-          : undefined,
-      title,
-    });
+    const activeSection: { readonly title: string; readonly items: readonly ActivityListItem[]; readonly emptyLabel: string } =
+      filter === 'post'
+        ? { emptyLabel: "You haven't posted or commented in the forum yet.", items: myPostListItems, title: 'Posts' }
+        : filter === 'event'
+          ? { emptyLabel: "You haven't created or gone to an event yet.", items: myEventListItems, title: 'Events' }
+          : filter === 'mission'
+            ? {
+                emptyLabel: "You haven't created or completed a mission yet.",
+                items: myMissionListItems,
+                title: 'Missions',
+              }
+            : filter === 'service'
+              ? { emptyLabel: "You haven't listed a service yet.", items: myServiceListItems, title: 'Services' }
+              : {
+                  emptyLabel: "You haven't started or signed a petition yet.",
+                  items: myPetitionListItems,
+                  title: 'Petitions',
+                };
     return [
-      showPosts
-        ? toSection(
-            'post',
-            'Posts',
-            myPostListItems,
-            "You haven't posted or commented in the forum yet.",
-          )
-        : null,
-      showEvents
-        ? toSection(
-            'event',
-            'Events',
-            myEventListItems,
-            "You haven't created or gone to an event yet.",
-          )
-        : null,
-      showMissions
-        ? toSection(
-            'mission',
-            'Missions',
-            myMissionListItems,
-            "You haven't created or completed a mission yet.",
-          )
-        : null,
-      showServices
-        ? toSection('service', 'Services', myServiceListItems, "You haven't listed a service yet.")
-        : null,
-      showPetitions
-        ? toSection(
-            'petition',
-            'Petitions',
-            myPetitionListItems,
-            "You haven't started or signed a petition yet.",
-          )
-        : null,
-    ].filter((section): section is ActivitySection => section !== null);
+      {
+        count: activeSection.items.length,
+        data: activeSection.items,
+        emptyLabel: activeSection.emptyLabel,
+        key: filter,
+        title: activeSection.title,
+      },
+    ];
   }, [
-    isAllPreview,
+    filter,
+    myPostListItems,
     myEventListItems,
     myMissionListItems,
-    myPetitionListItems,
-    myPostListItems,
     myServiceListItems,
-    showEvents,
-    showMissions,
-    showPetitions,
-    showPosts,
-    showServices,
+    myPetitionListItems,
   ]);
 
-  const loadMore: ActivityLoadMoreTarget | undefined = isAllPreview
-    ? undefined
-    : filter === 'post'
+  const loadMore: ActivityLoadMoreTarget =
+    filter === 'post'
       ? posts
       : filter === 'event'
         ? events

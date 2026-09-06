@@ -38,7 +38,6 @@ import {
   FilterChips,
   StatBox,
   isActivityFilter,
-  ALL_FILTER_PREVIEW_COUNT,
   type ActivityFilter,
   type ActivityListItem,
   type ActivitySection,
@@ -108,7 +107,7 @@ export function MemberActivityScreen({
   const displayName = member.data?.profile.name ?? loadingName ?? 'Neighbour';
 
   const [filter, setFilter] = useState<ActivityFilter>(() =>
-    isActivityFilter(filterParam) ? filterParam : 'all',
+    isActivityFilter(filterParam) ? filterParam : 'post',
   );
   const [openPost, setOpenPost] = useState<ForumPost | null>(null);
   const [openEvent, setOpenEvent] = useState<CommunityEvent | null>(null);
@@ -288,65 +287,40 @@ export function MemberActivityScreen({
     serviceItems.length > 0 ||
     petitionItems.length > 0;
 
-  // See activity-screen.tsx's identical isAllPreview for why: a diagnostic
-  // build proved the "All" pills corruption was caused by up to five
-  // sections' worth of rows all mounting as real native views at once via
-  // a plain ScrollView + `.map()` -- this screen shares that exact shape,
-  // so it's the same latent bug even though it hadn't been reported here
-  // yet. ActivitySectionList actually virtualizes (only rows on screen
-  // exist as real views), which is what fixes it.
-  const isAllPreview = filter === 'all';
-  const showPosts = filter === 'all' || filter === 'post';
-  const showEvents = filter === 'all' || filter === 'event';
-  const showMissions = filter === 'all' || filter === 'mission';
-  const showServices = filter === 'all' || filter === 'service';
-  const showPetitions = filter === 'all' || filter === 'petition';
-
+  // ActivitySectionList (see activity-parts.tsx) always renders exactly one
+  // section here -- there's no "All" filter combining several at once (see
+  // FILTERS in activity-parts.tsx for why) -- and it actually virtualizes,
+  // so only the rows on screen exist as real native views no matter how
+  // large this one list grows.
   const sections = useMemo((): readonly ActivitySection[] => {
-    const toSection = (
-      key: ActivitySection['key'],
-      title: string,
-      items: readonly ActivityListItem[],
-      emptyLabel: string,
-    ): ActivitySection => ({
-      count: items.length,
-      data: isAllPreview ? items.slice(0, ALL_FILTER_PREVIEW_COUNT) : items,
-      emptyLabel,
-      key,
-      onSeeAll:
-        isAllPreview && items.length > ALL_FILTER_PREVIEW_COUNT
-          ? () => setFilter(key)
-          : undefined,
-      title,
-    });
+    const activeSection: { readonly title: string; readonly items: readonly ActivityListItem[]; readonly emptyLabel: string } =
+      filter === 'post'
+        ? { emptyLabel: 'No posts or comments yet.', items: postListItems, title: 'Posts' }
+        : filter === 'event'
+          ? { emptyLabel: 'No events created or joined yet.', items: eventListItems, title: 'Events' }
+          : filter === 'mission'
+            ? {
+                emptyLabel: 'No missions created or completed yet.',
+                items: missionListItems,
+                title: 'Missions',
+              }
+            : filter === 'service'
+              ? { emptyLabel: 'No services listed yet.', items: serviceListItems, title: 'Services' }
+              : {
+                  emptyLabel: 'No petitions started or signed yet.',
+                  items: petitionListItems,
+                  title: 'Petitions',
+                };
     return [
-      showPosts ? toSection('post', 'Posts', postListItems, 'No posts or comments yet.') : null,
-      showEvents
-        ? toSection('event', 'Events', eventListItems, 'No events created or joined yet.')
-        : null,
-      showMissions
-        ? toSection('mission', 'Missions', missionListItems, 'No missions created or completed yet.')
-        : null,
-      showServices
-        ? toSection('service', 'Services', serviceListItems, 'No services listed yet.')
-        : null,
-      showPetitions
-        ? toSection('petition', 'Petitions', petitionListItems, 'No petitions started or signed yet.')
-        : null,
-    ].filter((section): section is ActivitySection => section !== null);
-  }, [
-    eventListItems,
-    isAllPreview,
-    missionListItems,
-    petitionListItems,
-    postListItems,
-    serviceListItems,
-    showEvents,
-    showMissions,
-    showPetitions,
-    showPosts,
-    showServices,
-  ]);
+      {
+        count: activeSection.items.length,
+        data: activeSection.items,
+        emptyLabel: activeSection.emptyLabel,
+        key: filter,
+        title: activeSection.title,
+      },
+    ];
+  }, [filter, postListItems, eventListItems, missionListItems, serviceListItems, petitionListItems]);
 
   return (
     <View className="flex-1 bg-canvas">
