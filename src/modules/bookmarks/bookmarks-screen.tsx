@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, type Href } from 'expo-router';
 
 import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
@@ -163,7 +162,7 @@ function BookmarkRow({
     <Pressable
       accessibilityLabel={`${KIND_LABEL[item.kind]}: ${titleFor(item)}`}
       accessibilityRole="button"
-      className="flex-row items-center gap-3 border-b border-surface-hairline px-4 py-3.5"
+      className="mx-5 mb-2 flex-row items-center gap-3 rounded-[14px] border border-surface-hairline bg-paper px-4 py-3.5 shadow-card"
       onPress={onPress}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
@@ -215,14 +214,6 @@ export function BookmarksScreen() {
     [bookmarks.data],
   );
 
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: bookmarks.fetchNextPage,
-      hasNextPage: bookmarks.hasNextPage,
-      isFetchingNextPage: bookmarks.isFetchingNextPage,
-    },
-  ]);
-
   return (
     <View className="flex-1 bg-canvas">
       <View style={{ paddingTop: insets.top }}>
@@ -248,22 +239,25 @@ export function BookmarksScreen() {
           </Text>
         </VStack>
       ) : (
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 130 }}
-          onScroll={onScroll}
-          scrollEventThrottle={100}
-        >
-          <VStack className="mx-5 mt-2 overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
-            {items.map((item) => (
-              <BookmarkRow
-                item={item}
-                key={item.bookmarkId}
-                onPress={() => setOpenItem(item)}
-              />
-            ))}
-            <LoadMoreFooter isLoading={bookmarks.isFetchingNextPage} />
-          </VStack>
-        </ScrollView>
+        // FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+        // ActivitySectionList for why: only mounting rows actually on
+        // screen (rather than every bookmark ever loaded, forever) is what
+        // fixed My Activity's "All" filter pills corrupting under enough
+        // simultaneous content, and this list has the same unbounded-growth
+        // shape as that one did.
+        <FlatList
+          contentContainerStyle={{ paddingBottom: 130, paddingTop: 8 }}
+          data={items}
+          keyExtractor={(item) => item.bookmarkId}
+          ListFooterComponent={<LoadMoreFooter isLoading={bookmarks.isFetchingNextPage} />}
+          onEndReached={() => {
+            if (bookmarks.hasNextPage && !bookmarks.isFetchingNextPage) {
+              void bookmarks.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item }) => <BookmarkRow item={item} onPress={() => setOpenItem(item)} />}
+        />
       )}
 
       <Sheet onClose={() => setOpenItem(null)} visible={openItem !== null}>

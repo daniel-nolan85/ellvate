@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  SectionList,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
@@ -185,6 +192,37 @@ export function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
   );
 }
 
+export interface ActivityListItem {
+  readonly key: string;
+  readonly kind: ActivityKind;
+  readonly label: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly onPress: () => void;
+}
+
+// One entry in ActivitySectionList's `sections` prop below -- a thin
+// SectionList-shaped wrapper around each of Posts/Events/Missions/Services/
+// Petitions, capped or not depending on whether the caller is previewing
+// "All" or showing a single filter in full.
+export interface ActivitySection {
+  readonly key: ActivityKind;
+  readonly title: string;
+  readonly count: number;
+  readonly data: readonly ActivityListItem[];
+  readonly emptyLabel: string;
+  // Present only when previewing "All" and this section has more rows than
+  // fit in the preview -- switches straight to this section's own filter,
+  // which shows every row.
+  readonly onSeeAll?: () => void;
+}
+
+export interface ActivityLoadMoreTarget {
+  readonly hasNextPage: boolean | undefined;
+  readonly isFetchingNextPage: boolean;
+  readonly fetchNextPage: () => unknown;
+}
+
 export function ActivityRow({
   kind,
   label,
@@ -202,7 +240,7 @@ export function ActivityRow({
     <Pressable
       accessibilityLabel={`${label}: ${title}`}
       accessibilityRole="button"
-      className="flex-row items-center gap-3 border-b border-surface-hairline px-4 py-3.5"
+      className="mx-5 mb-2 flex-row items-center gap-3 rounded-[14px] border border-surface-hairline bg-paper px-4 py-3.5 shadow-card"
       onPress={onPress}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-secondary">
@@ -220,5 +258,66 @@ export function ActivityRow({
       </VStack>
       <Icon color="rgb(169,156,139)" name="ChevronRight" size={16} />
     </Pressable>
+  );
+}
+
+// The real fix for the "All" filter pills corrupting: a diagnostic build
+// proved (not just theorized) that up to five SectionCards' worth of rows
+// -- previously all mounted as real native views at once via a plain
+// ScrollView + `.map()`, regardless of what's actually on screen -- is what
+// caused it. Delaying *when* that content mounted (three separate attempts:
+// requestAnimationFrame, InteractionManager, setTimeout) never changed
+// anything, because once mounted it stayed mounted for as long as "All" was
+// selected -- delaying the mount doesn't reduce how much of it coexists in
+// steady state. SectionList actually virtualizes: only the rows currently
+// on screen exist as real native views, no matter how large any one
+// section's data grows, which is what a delay could never achieve. Shared
+// between ActivityScreen and MemberActivityScreen (see their own callers)
+// since both have this exact shape, and it's the template any other
+// screen combining a filter-pill row with a growing list should follow
+// rather than a plain ScrollView + `.map()`.
+export function ActivitySectionList({
+  contentContainerStyle,
+  loadMore,
+  sections,
+}: {
+  readonly sections: readonly ActivitySection[];
+  readonly contentContainerStyle?: StyleProp<ViewStyle>;
+  // Omit entirely for a preview (e.g. "All") that caps its own row count
+  // and never needs more; pass the active single filter's own paginated
+  // query to fetch further pages as the user scrolls.
+  readonly loadMore?: ActivityLoadMoreTarget;
+}) {
+  return (
+    <SectionList<ActivityListItem, ActivitySection>
+      contentContainerStyle={contentContainerStyle}
+      keyExtractor={(item) => item.key}
+      ListFooterComponent={
+        loadMore ? <LoadMoreFooter isLoading={loadMore.isFetchingNextPage} /> : null
+      }
+      onEndReached={() => {
+        if (loadMore?.hasNextPage && !loadMore.isFetchingNextPage) {
+          void loadMore.fetchNextPage();
+        }
+      }}
+      onEndReachedThreshold={0.5}
+      renderItem={({ item }) => (
+        <ActivityRow
+          kind={item.kind}
+          label={item.label}
+          onPress={item.onPress}
+          subtitle={item.subtitle}
+          title={item.title}
+        />
+      )}
+      renderSectionFooter={({ section }) =>
+        section.data.length === 0 ? <EmptyHint label={section.emptyLabel} /> : null
+      }
+      renderSectionHeader={({ section }) => (
+        <SectionHeader count={section.count} onSeeAll={section.onSeeAll} title={section.title} />
+      )}
+      sections={sections}
+      stickySectionHeadersEnabled={false}
+    />
   );
 }
