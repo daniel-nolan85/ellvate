@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { findNodeHandle, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { SearchSheet } from '@/src/components/shared/search-sheet';
+import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -16,7 +16,7 @@ import { useOpenProfile } from '@/src/modules/profile';
 
 import { LeaderRow } from './leader-row';
 import { Podium } from './podium';
-import { useLeaderboard, type LeaderboardRange } from './use-leaderboard';
+import { useLeaderboard, type LeaderboardEntry, type LeaderboardRange } from './use-leaderboard';
 
 const RANGE_TABS: readonly { readonly value: LeaderboardRange; readonly label: string }[] = [
   { value: 'week', label: 'This week' },
@@ -72,12 +72,39 @@ export function LeaderboardScreen() {
     },
   ]);
 
+  // Selecting a search result jumps to that person's row in the actual
+  // ranking instead of opening their profile directly -- opening the
+  // profile straight from search would be no different from finding them
+  // through the app-wide search, and would throw away the one thing this
+  // scoped search can show that the app-wide one can't: where they stand.
+  // From their row, the existing LeaderRow onPress still opens the profile
+  // the normal way.
+  const scrollViewRef = useRef<ScrollView>(null);
+  const rowRefs = useRef(new Map<number, View>());
+  const handleSelectFromSearch = (entry: LeaderboardEntry) => {
+    setIsSearching(false);
+    requestAnimationFrame(() => {
+      const rowNode = rowRefs.current.get(entry.rank);
+      const scrollNode = scrollViewRef.current;
+      const scrollHandle = scrollNode ? findNodeHandle(scrollNode) : null;
+      if (!rowNode || !scrollNode || !scrollHandle) {
+        return;
+      }
+      rowNode.measureLayout(
+        scrollHandle,
+        (_x, y) => scrollNode.scrollTo({ animated: true, y: Math.max(0, y - 24) }),
+        () => {},
+      );
+    });
+  };
+
   return (
     <>
       <ScrollView
       className="flex-1 bg-canvas"
       contentContainerStyle={{ paddingBottom: 130 }}
       onScroll={onScroll}
+      ref={scrollViewRef}
       scrollEventThrottle={100}
     >
       <VStack space="md">
@@ -129,11 +156,21 @@ export function LeaderboardScreen() {
             />
             <VStack className="px-5 pt-1.5" space="xs">
               {leaders.map((entry) => (
-                <LeaderRow
-                  entry={entry}
+                <View
                   key={entry.rank}
-                  onPress={(pressed) => openProfile(pressed.user.id, pressed.user.name)}
-                />
+                  ref={(node) => {
+                    if (node) {
+                      rowRefs.current.set(entry.rank, node);
+                    } else {
+                      rowRefs.current.delete(entry.rank);
+                    }
+                  }}
+                >
+                  <LeaderRow
+                    entry={entry}
+                    onPress={(pressed) => openProfile(pressed.user.id, pressed.user.name)}
+                  />
+                </View>
               ))}
             </VStack>
             {leaderboard.hasNextPage ? (
@@ -150,13 +187,13 @@ export function LeaderboardScreen() {
       </VStack>
     </ScrollView>
 
-      <SearchSheet
+      <ScopedSearchScreen
         getKey={(entry) => entry.user.id}
-        getSubtitle={(entry) => `${entry.xp.toLocaleString()} XP`}
+        getSubtitle={(entry) => `#${entry.rank} · ${entry.xp.toLocaleString()} XP`}
         getTitle={(entry) => entry.user.name}
         items={leaders}
         onClose={() => setIsSearching(false)}
-        onSelect={(entry) => openProfile(entry.user.id, entry.user.name)}
+        onSelect={handleSelectFromSearch}
         placeholder="Search the leaderboard"
         visible={isSearching}
       />

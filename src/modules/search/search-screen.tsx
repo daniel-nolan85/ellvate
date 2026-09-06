@@ -15,11 +15,9 @@ import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
 // Community-wide search across posts/events/missions/services/petitions --
-// unlike SearchSheet (filters a list the screen already has client-side),
-// this queries the backend directly, so it can find things regardless of
-// which tab the user happens to be on. A full screen (not a small sheet)
-// since results can span five different content types at once and deserve
-// real room, rather than a cramped scrollable panel over the calling screen.
+// unlike ScopedSearchScreen (filters a list the screen already has
+// client-side), this queries the backend directly, so it can find things
+// regardless of which tab the user happens to be on.
 
 interface SearchResultItem {
   readonly id: string;
