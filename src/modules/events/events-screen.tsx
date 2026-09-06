@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 
 import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -17,6 +16,7 @@ import { ScreenTitle } from '@/src/modules/community-shell';
 import { EventComposer } from './event-composer';
 import { EventRow } from './event-row';
 import { EventsCalendar } from './events-calendar';
+import type { CommunityEvent } from './events-types';
 import { FeaturedEventCard } from './featured-event-card';
 import {
   useCreateEvent,
@@ -71,43 +71,28 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   // is always the one to pull out for the hero card.
   const featured = events[0]?.featured ? events[0] : undefined;
   const rest = featured ? events.slice(1) : events;
+  const restToRender: readonly CommunityEvent[] =
+    eventsView.isPending || eventsView.isError ? [] : rest;
 
   const handleToggleJoin = (eventId: string) => {
     toggleJoin.mutate(eventId);
   };
 
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: eventsView.fetchNextPage,
-      hasNextPage: eventsView.hasNextPage,
-      isFetchingNextPage: eventsView.isFetchingNextPage,
-    },
-  ]);
-
   return (
     <>
-      <ScrollView
+      {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+          ActivitySectionList for why: this screen pairs a calendar widget
+          (EventsCalendar) with a growing list, the same shape that caused
+          My Activity's "All" filter pills to corrupt under enough
+          simultaneous content. Only rows actually on/near screen mount as
+          real native views here, no matter how many events load. */}
+      <FlatList
         className="flex-1 bg-canvas"
-        contentContainerClassName="pb-[130px]"
-        onScroll={onScroll}
-        scrollEventThrottle={100}
-        showsVerticalScrollIndicator={false}
-      >
-        <VStack space="md">
-          <ScreenTitle
-            eyebrow="This week at the lake"
-            onSearch={() => router.push('/search')}
-            right={<CreateButton onPress={() => setComposing(true)} />}
-            title="Events"
-          />
-
-          <EventsCalendar
-            dates={dates.data ?? []}
-            onSelectedDateChange={setSelectedDate}
-            selectedDate={selectedDate}
-          />
-
-          {eventsView.isPending ? (
+        contentContainerStyle={{ paddingBottom: 130 }}
+        data={restToRender}
+        keyExtractor={(event) => event.id}
+        ListEmptyComponent={
+          eventsView.isPending ? (
             <Box className="items-center justify-center py-24">
               <Spinner size="xlarge" />
             </Box>
@@ -126,46 +111,75 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
               </Button>
             </VStack>
           ) : (
-            <>
-              {featured ? (
-                <FeaturedEventCard
-                  event={featured}
-                  onOpen={onOpenEvent}
-                  onToggleJoin={handleToggleJoin}
-                />
-              ) : null}
-              <VStack className="px-5 pt-1" space="xs">
-                <Text className="py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-                  Coming up
-                </Text>
-                {events.length === 0 ? (
-                  <Text className="py-2 text-muted-foreground" size="sm">
-                    {selectedDate
-                      ? 'Nothing scheduled for this day.'
-                      : 'Nothing on the calendar yet. Tap + to add the first one.'}
+            <Text className="px-5 py-2 text-muted-foreground" size="sm">
+              {selectedDate
+                ? 'Nothing scheduled for this day.'
+                : 'Nothing on the calendar yet. Tap + to add the first one.'}
+            </Text>
+          )
+        }
+        ListFooterComponent={
+          events.length === 0 ? null : eventsView.hasNextPage ? (
+            <LoadMoreFooter isLoading={eventsView.isFetchingNextPage} />
+          ) : (
+            <AllCaughtUp />
+          )
+        }
+        ListHeaderComponent={
+          <VStack className="pb-1" space="md">
+            <ScreenTitle
+              eyebrow="This week at the lake"
+              onSearch={() => router.push('/search')}
+              right={<CreateButton onPress={() => setComposing(true)} />}
+              title="Events"
+            />
+
+            <EventsCalendar
+              dates={dates.data ?? []}
+              onSelectedDateChange={setSelectedDate}
+              selectedDate={selectedDate}
+            />
+
+            {eventsView.isPending || eventsView.isError ? null : (
+              <>
+                {featured ? (
+                  <FeaturedEventCard
+                    event={featured}
+                    onOpen={onOpenEvent}
+                    onToggleJoin={handleToggleJoin}
+                  />
+                ) : null}
+                {events.length === 0 ? null : (
+                  <Text className="px-5 py-1 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                    Coming up
                   </Text>
-                ) : (
-                  <VStack space="sm">
-                    {rest.map((event) => (
-                      <EventRow
-                        event={event}
-                        key={event.id}
-                        onOpen={onOpenEvent}
-                        onToggleJoin={handleToggleJoin}
-                      />
-                    ))}
-                    {eventsView.hasNextPage ? (
-                      <LoadMoreFooter isLoading={eventsView.isFetchingNextPage} />
-                    ) : (
-                      <AllCaughtUp />
-                    )}
-                  </VStack>
                 )}
-              </VStack>
-            </>
-          )}
-        </VStack>
-      </ScrollView>
+              </>
+            )}
+          </VStack>
+        }
+        onEndReached={() => {
+          if (eventsView.hasNextPage && !eventsView.isFetchingNextPage) {
+            void eventsView.fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        onRefresh={() => {
+          void eventsView.refetch();
+          void dates.refetch();
+        }}
+        refreshing={eventsView.isRefetching || dates.isRefetching}
+        renderItem={({ item }) => (
+          <View className="mx-5 mb-2">
+            <EventRow
+              event={item}
+              onOpen={onOpenEvent}
+              onToggleJoin={handleToggleJoin}
+            />
+          </View>
+        )}
+        showsVerticalScrollIndicator={false}
+      />
 
       <Sheet onClose={() => setComposing(false)} visible={composing}>
         <EventComposer
