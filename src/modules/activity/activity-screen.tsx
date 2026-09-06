@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { InteractionManager, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -273,28 +273,31 @@ export function ActivityScreen() {
     myServiceItems.length > 0 ||
     myPetitionItems.length > 0;
 
-  // Deferred, not `filter` directly, and NOT via useDeferredValue -- a
-  // screen recording (7th attempt) showed the actual failure mode: it's not
-  // uniform clipping, it's individual glyphs of the *inactive* pills coming
-  // out as near-invisible slivers after the first character or two, i.e. a
-  // torn/incomplete native text draw. That happens exactly when "All" mounts
-  // (at most ALL_FILTER_PREVIEW_COUNT rows of, see below) five SectionCards
-  // in the ScrollView below in the SAME native commit as the pills row --
-  // and once torn, the pills' native layer never repaints on its own, since
-  // nothing about it changes again afterward, so the corruption just sits
-  // there indefinitely (matching "reproducible on load and every return to
-  // All, and never self-corrects until a different filter's smaller commit
-  // replaces it"). useDeferredValue was tried here before and didn't help --
-  // plausibly because it only changes when in React's JS scheduler this
-  // update is processed, not whether the resulting native mount is its own
-  // separate commit once it does run. requestAnimationFrame forces that: the
-  // heavy section content commits to native strictly one frame after the
-  // pills, on mount and on every filter change, so the two commits can never
-  // contend for the same frame.
+  // Deferred, not `filter` directly. A diagnostic build (9th attempt) proved
+  // the actual mechanism directly rather than guessing at it: with "All"'s
+  // section list replaced by a static placeholder -- so literally nothing
+  // else mounted alongside the pills -- the pills rendered perfectly on the
+  // same device that had reproduced the corruption every time before. So
+  // it's confirmed, not theorized: the pills corrupt because up to five
+  // SectionCards commit to native in the exact same pass as this row.
+  //
+  // The 7th attempt already tried deferring that commit by one frame via
+  // requestAnimationFrame, and it made no visible difference at all --
+  // confirmed on-device against the exact shipped code. A single rAF tick
+  // is a weak guarantee: React 18's automatic batching (and Fabric's own
+  // commit scheduling) can still fold a state update made inside it into
+  // the same native commit as whatever's already pending, so the two
+  // commits were plausibly never actually separated at all.
+  // InteractionManager.runAfterInteractions is the stronger, RN-native tool
+  // for exactly this: it explicitly waits for any in-flight interactions/
+  // animations to fully finish before running, which is a real commit
+  // boundary rather than a single scheduler tick.
   const [deferredFilter, setDeferredFilter] = useState<ActivityFilter | null>(null);
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setDeferredFilter(filter));
-    return () => cancelAnimationFrame(raf);
+    const task = InteractionManager.runAfterInteractions(() => {
+      setDeferredFilter(filter);
+    });
+    return () => task.cancel();
   }, [filter]);
   const isAllPreview = deferredFilter === 'all';
   const showPosts = deferredFilter === 'all' || deferredFilter === 'post';
@@ -412,24 +415,6 @@ export function ActivityScreen() {
 
           <FilterChips active={filter} onSelect={setFilter} />
 
-          {/* DIAGNOSTIC (temporary): isAllPreview's entire section list
-              replaced with a placeholder, to test in isolation whether the
-              pills row corrupts even with zero other content mounting
-              alongside it. Neither reducing that content's volume (6th
-              attempt) nor shifting its timing by a frame (7th attempt)
-              changed the on-device result at all, which means the "heavy
-              simultaneous commit" theory driving every attempt since the
-              4th has never actually been confirmed -- this isolates that
-              one variable directly instead of adjusting it indirectly
-              again. Revert this block once the pills are confirmed broken
-              or fixed with nothing else on screen. */}
-          {isAllPreview ? (
-            <VStack className="items-center py-16">
-              <Text className="text-[14px] text-text-muted">
-                (diagnostic: section list hidden for this test)
-              </Text>
-            </VStack>
-          ) : (
           <ScrollView
             contentContainerStyle={{ paddingBottom: 130 }}
             onScroll={onScroll}
@@ -623,7 +608,6 @@ export function ActivityScreen() {
               </>
             ) : null}
           </ScrollView>
-          )}
         </>
       )}
 
