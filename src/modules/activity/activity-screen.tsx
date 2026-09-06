@@ -412,6 +412,24 @@ export function ActivityScreen() {
 
           <FilterChips active={filter} onSelect={setFilter} />
 
+          {/* DIAGNOSTIC (temporary): isAllPreview's entire section list
+              replaced with a placeholder, to test in isolation whether the
+              pills row corrupts even with zero other content mounting
+              alongside it. Neither reducing that content's volume (6th
+              attempt) nor shifting its timing by a frame (7th attempt)
+              changed the on-device result at all, which means the "heavy
+              simultaneous commit" theory driving every attempt since the
+              4th has never actually been confirmed -- this isolates that
+              one variable directly instead of adjusting it indirectly
+              again. Revert this block once the pills are confirmed broken
+              or fixed with nothing else on screen. */}
+          {isAllPreview ? (
+            <VStack className="items-center py-16">
+              <Text className="text-[14px] text-text-muted">
+                (diagnostic: section list hidden for this test)
+              </Text>
+            </VStack>
+          ) : (
           <ScrollView
             contentContainerStyle={{ paddingBottom: 130 }}
             onScroll={onScroll}
@@ -605,6 +623,7 @@ export function ActivityScreen() {
               </>
             ) : null}
           </ScrollView>
+          )}
         </>
       )}
 
