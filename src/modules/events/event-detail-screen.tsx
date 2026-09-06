@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +18,10 @@ import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
-import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
+import {
+  ReportSheetContent,
+  type ReportSubmission,
+} from '@/src/components/shared/report-sheet';
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
@@ -31,7 +35,11 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
+import {
+  useBlockUser,
+  useOpenProfile,
+  useReportMember,
+} from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { EventComposer } from './event-composer';
@@ -77,13 +85,13 @@ function EventMenuRow({
   const color = destructive ? 'rgb(231,0,11)' : 'rgb(37,30,23)';
   return (
     <Pressable
-      accessibilityRole='button'
-      className='flex-row items-center gap-3 px-1.5 py-3.5'
+      accessibilityRole="button"
+      className="flex-row items-center gap-3 px-1.5 py-3.5"
       onPress={onPress}
     >
       <Icon color={color} name={icon} size={20} />
       <Text
-        className='text-[15px]'
+        className="text-[15px]"
         style={{ color, fontWeight: destructive ? '500' : '400' }}
       >
         {label}
@@ -131,26 +139,29 @@ export function EventDetailScreen({
   >(null);
   // Which target a sheetMode of 'report' is for -- the event itself, or its
   // author.
-  const [eventReportTarget, setEventReportTarget] = useState<'event' | 'user' | null>(
-    null,
-  );
+  const [eventReportTarget, setEventReportTarget] = useState<
+    'event' | 'user' | null
+  >(null);
   const [attendeesOpen, setAttendeesOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [editingComment, setEditingComment] = useState<EventComment | null>(null);
+  const [editingComment, setEditingComment] = useState<EventComment | null>(
+    null,
+  );
   const [actionsFor, setActionsFor] = useState<EventComment | null>(null);
   const [commentSheetMode, setCommentSheetMode] = useState<
     'actions' | 'confirm-delete' | 'report' | null
   >(null);
   // Which target a commentSheetMode of 'report' is for -- the comment
   // itself, or its author.
-  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
-    null,
-  );
+  const [commentReportTarget, setCommentReportTarget] = useState<
+    'comment' | 'user' | null
+  >(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const attendees = useEventAttendees(eventId, attendeesOpen);
-  const attendeeList = attendees.data?.pages.flatMap((page) => page.attendees) ?? [];
+  const attendeeList =
+    attendees.data?.pages.flatMap((page) => page.attendees) ?? [];
   const onAttendeesScroll = useLoadMoreOnScroll([
     {
       fetchNextPage: attendees.fetchNextPage,
@@ -237,7 +248,9 @@ export function EventDetailScreen({
     setSheetMode(null);
     deleteEvent.mutate(eventId, {
       onSuccess: () => {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
         onBack();
       },
       onError: () => showToast('Couldn’t cancel this event. Try again.'),
@@ -266,7 +279,10 @@ export function EventDetailScreen({
       },
     };
     if (eventReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: event.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: event.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportEvent.mutate({ eventId: event.id, ...submission }, onSettled);
@@ -295,40 +311,39 @@ export function EventDetailScreen({
       },
     };
     if (commentReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: target.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
   };
 
-  const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: comments.fetchNextPage,
-      hasNextPage: comments.hasNextPage,
-      isFetchingNextPage: comments.isFetchingNextPage,
-    },
-  ]);
+  const commentList =
+    comments.data?.pages.flatMap((page) => page.comments) ?? [];
+  const commentsToRender =
+    !comments.isPending && !comments.isError ? commentList : [];
 
   return (
-    <View className='flex-1 bg-canvas'>
+    <View className="flex-1 bg-canvas">
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}
         style={{ paddingTop: modal ? 24 : insets.top + 8 }}
       >
         {modal ? null : (
-          <Pressable accessibilityLabel='Back' onPress={onBack}>
-            <Icon name='ChevronLeft' size={22} />
+          <Pressable accessibilityLabel="Back" onPress={onBack}>
+            <Icon name="ChevronLeft" size={22} />
           </Pressable>
         )}
-        <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
+        <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
           Event
         </Heading>
-        <BookmarkButton size={18} targetId={eventId} targetType='event' />
+        <BookmarkButton size={18} targetId={eventId} targetType="event" />
         <Pressable
-          accessibilityLabel='Share event'
-          accessibilityRole='button'
+          accessibilityLabel="Share event"
+          accessibilityRole="button"
           onPress={() => {
             if (!event) {
               return;
@@ -338,178 +353,226 @@ export function EventDetailScreen({
             });
           }}
         >
-          <Icon color='rgb(120,108,94)' name='Share' size={18} />
+          <Icon color="rgb(120,108,94)" name="Share" size={18} />
         </Pressable>
         <Pressable
-          accessibilityLabel='More options'
-          accessibilityRole='button'
+          accessibilityLabel="More options"
+          accessibilityRole="button"
           hitSlop={8}
           onPress={() => setSheetMode('menu')}
         >
-          <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
+          <Icon color="rgb(120,108,94)" name="ThreeDots" size={18} />
         </Pressable>
       </HStack>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className='flex-1'
+        className="flex-1"
       >
-        <ScrollView
-          className='flex-1'
-          contentContainerClassName='gap-4 px-[18px] py-4'
-          onScroll={onScroll}
-          scrollEventThrottle={100}
-        >
-          {event ? (
-            <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
-              {event.media && event.media.length > 0 && (
-                <MediaGallery media={event.media} />
+        {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+            ActivitySectionList for why: only comment rows actually on/near
+            screen mount as real native views here, no matter how long the
+            discussion under an event grows. The event card and comments
+            header render once as ListHeaderComponent. */}
+        <FlatList
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 16 }}
+          data={commentsToRender}
+          keyExtractor={(comment) => comment.id}
+          ListFooterComponent={
+            commentsToRender.length === 0 ? null : (
+              <View className="px-[18px]">
+                {comments.hasNextPage ? (
+                  comments.isFetchingNextPage ? (
+                    <View
+                      className="items-center py-3"
+                      testID="event-comments-load-more"
+                    >
+                      <Spinner size="small" />
+                    </View>
+                  ) : null
+                ) : (
+                  <AllCaughtUp />
+                )}
+              </View>
+            )
+          }
+          ListHeaderComponent={
+            <VStack className="gap-4 px-[18px] pt-4">
+              {event ? (
+                <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
+                  {event.media && event.media.length > 0 && (
+                    <MediaGallery media={event.media} />
+                  )}
+
+                  <Pressable
+                    accessibilityLabel={`Organised by ${event.author.name}`}
+                    accessibilityRole="button"
+                    className="flex-row items-center gap-2"
+                    onPress={() =>
+                      openProfile(event.author.id, event.author.name)
+                    }
+                  >
+                    <Avatar
+                      name={event.author.name}
+                      size="sm"
+                      src={event.author.avatarUrl ?? undefined}
+                    />
+                    <Text className="text-[13px] text-text-muted">
+                      Organised by{' '}
+                      <Text className="font-inter-semibold text-content">
+                        {event.author.name}
+                      </Text>
+                    </Text>
+                    <AdminBadge isAdmin={event.author.isAdmin} />
+                  </Pressable>
+
+                  <HStack className="items-center" space="xs">
+                    <Badge variant={categoryAccent(event.tag)}>
+                      {event.tag}
+                    </Badge>
+                    {event.featured ? (
+                      <Badge variant="amber">Featured</Badge>
+                    ) : null}
+                  </HStack>
+
+                  <Heading className="font-inter-bold text-[22px]" size="lg">
+                    {event.title}
+                  </Heading>
+
+                  <HStack className="items-center gap-1.5">
+                    <Icon color="rgb(120,108,94)" name="Clock" size={16} />
+                    <Text className="text-[14px] text-text-muted">
+                      {formatDayLabel(event.dayLabel)} {event.dateLabel} ·{' '}
+                      {event.timeLabel}
+                    </Text>
+                    <EditedMark editedAt={event.editedAt} />
+                  </HStack>
+                  <HStack className="items-center gap-1.5">
+                    <Icon color="rgb(120,108,94)" name="Globe" size={16} />
+                    <Text className="text-[14px] text-text-muted">
+                      {event.place}
+                    </Text>
+                  </HStack>
+
+                  <Divider />
+
+                  <HStack className="items-center" space="sm">
+                    <HStack>
+                      {event.attendees.map((attendee, index) => (
+                        <Pressable
+                          accessibilityLabel={`Open ${attendee.name}'s profile`}
+                          accessibilityRole="button"
+                          className={`rounded-full border-2 border-paper ${index > 0 ? '-ml-[9px]' : ''}`}
+                          key={attendee.id}
+                          onPress={() =>
+                            openProfile(attendee.id, attendee.name)
+                          }
+                        >
+                          <Avatar
+                            name={attendee.name}
+                            size="xs"
+                            src={attendee.avatarUrl ?? undefined}
+                          />
+                        </Pressable>
+                      ))}
+                    </HStack>
+                    <Pressable
+                      accessibilityLabel={`See everyone going — ${event.going} people`}
+                      accessibilityRole="button"
+                      className="flex-1"
+                      onPress={() => setAttendeesOpen(true)}
+                    >
+                      <Text className="text-text-muted underline" size="sm">
+                        {event.going} going
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      className={`rounded-full px-5 py-2.5 ${
+                        event.joined ? 'bg-success' : 'bg-accent'
+                      }`}
+                      onPress={() => toggleJoin.mutate(event.id)}
+                    >
+                      <Text className="font-inter-semibold text-[13px] text-accent-foreground">
+                        {event.joined ? 'Going ✓' : 'Join event'}
+                      </Text>
+                    </Pressable>
+                  </HStack>
+                </VStack>
+              ) : eventQuery.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : (
+                <Text className="text-text-muted" size="sm">
+                  This event is no longer available.
+                </Text>
               )}
-
-              <Pressable
-                accessibilityLabel={`Organised by ${event.author.name}`}
-                accessibilityRole='button'
-                className='flex-row items-center gap-2'
-                onPress={() => openProfile(event.author.id, event.author.name)}
-              >
-                <Avatar name={event.author.name} size='sm' src={event.author.avatarUrl ?? undefined} />
-                <Text className='text-[13px] text-text-muted'>
-                  Organised by{' '}
-                  <Text className='font-inter-semibold text-content'>
-                    {event.author.name}
-                  </Text>
-                </Text>
-                <AdminBadge isAdmin={event.author.isAdmin} />
-              </Pressable>
-
-              <HStack className='items-center' space='xs'>
-                <Badge variant={categoryAccent(event.tag)}>{event.tag}</Badge>
-                {event.featured ? <Badge variant='amber'>Featured</Badge> : null}
-              </HStack>
-
-              <Heading className='font-inter-bold text-[22px]' size='lg'>
-                {event.title}
-              </Heading>
-
-              <HStack className='items-center gap-1.5'>
-                <Icon color='rgb(120,108,94)' name='Clock' size={16} />
-                <Text className='text-[14px] text-text-muted'>
-                  {formatDayLabel(event.dayLabel)} {event.dateLabel} · {event.timeLabel}
-                </Text>
-                <EditedMark editedAt={event.editedAt} />
-              </HStack>
-              <HStack className='items-center gap-1.5'>
-                <Icon color='rgb(120,108,94)' name='Globe' size={16} />
-                <Text className='text-[14px] text-text-muted'>{event.place}</Text>
-              </HStack>
 
               <Divider />
-
-              <HStack className='items-center' space='sm'>
-                <HStack>
-                  {event.attendees.map((attendee, index) => (
-                    <Pressable
-                      accessibilityLabel={`Open ${attendee.name}'s profile`}
-                      accessibilityRole='button'
-                      className={`rounded-full border-2 border-paper ${index > 0 ? '-ml-[9px]' : ''}`}
-                      key={attendee.id}
-                      onPress={() => openProfile(attendee.id, attendee.name)}
-                    >
-                      <Avatar name={attendee.name} size='xs' src={attendee.avatarUrl ?? undefined} />
-                    </Pressable>
-                  ))}
-                </HStack>
-                <Pressable
-                  accessibilityLabel={`See everyone going — ${event.going} people`}
-                  accessibilityRole='button'
-                  className='flex-1'
-                  onPress={() => setAttendeesOpen(true)}
-                >
-                  <Text className='text-text-muted underline' size='sm'>
-                    {event.going} going
-                  </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole='button'
-                  className={`rounded-full px-5 py-2.5 ${
-                    event.joined ? 'bg-success' : 'bg-accent'
-                  }`}
-                  onPress={() => toggleJoin.mutate(event.id)}
-                >
-                  <Text className='font-inter-semibold text-[13px] text-accent-foreground'>
-                    {event.joined ? 'Going ✓' : 'Join event'}
-                  </Text>
-                </Pressable>
-              </HStack>
-            </VStack>
-          ) : eventQuery.isPending ? (
-            <View className='items-center py-10'>
-              <Spinner size='xlarge' />
-            </View>
-          ) : (
-            <Text className='text-text-muted' size='sm'>
-              This event is no longer available.
-            </Text>
-          )}
-
-          <Divider />
-          <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
-            {commentList.length} comments
-          </Text>
-
-          {comments.isPending ? (
-            <View className='items-center py-10'>
-              <Spinner size='xlarge' />
-            </View>
-          ) : comments.isError ? (
-            <VStack className='items-start gap-2 py-2' testID='event-comments-error'>
-              <Text className='text-text-muted' size='sm'>
-                Couldn&apos;t load comments.
+              <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                {commentList.length} comments
               </Text>
-              <Pressable
-                accessibilityRole='button'
-                className='rounded-full border border-line px-3 py-2'
-                onPress={() => void comments.refetch()}
-                testID='event-comments-retry'
-              >
-                <Text className='font-inter-semibold text-content' size='xs'>
-                  Retry
+
+              {comments.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : comments.isError ? (
+                <VStack
+                  className="items-start gap-2 py-2"
+                  testID="event-comments-error"
+                >
+                  <Text className="text-text-muted" size="sm">
+                    Couldn&apos;t load comments.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    className="rounded-full border border-line px-3 py-2"
+                    onPress={() => void comments.refetch()}
+                    testID="event-comments-retry"
+                  >
+                    <Text
+                      className="font-inter-semibold text-content"
+                      size="xs"
+                    >
+                      Retry
+                    </Text>
+                  </Pressable>
+                </VStack>
+              ) : commentList.length === 0 ? (
+                <Text className="py-2 text-text-muted" size="sm">
+                  No comments yet — start the conversation.
                 </Text>
-              </Pressable>
+              ) : null}
             </VStack>
-          ) : commentList.length === 0 ? (
-            <Text className='py-2 text-text-muted' size='sm'>
-              No comments yet — start the conversation.
-            </Text>
-          ) : (
-            <VStack className='gap-4'>
-              {commentList.map((comment) => (
-                <CommentItem
-                  comment={comment}
-                  key={comment.id}
-                  onActions={openCommentActions}
-                  onOpenAuthor={(authorId) =>
-                    openProfile(authorId, comment.author.name)
-                  }
-                  onReply={handleReply}
-                />
-              ))}
-              {comments.hasNextPage ? (
-                comments.isFetchingNextPage ? (
-                  <View className='items-center py-3' testID='event-comments-load-more'>
-                    <Spinner size='small' />
-                  </View>
-                ) : null
-              ) : (
-                <AllCaughtUp />
-              )}
-            </VStack>
+          }
+          onEndReached={() => {
+            if (comments.hasNextPage && !comments.isFetchingNextPage) {
+              void comments.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item }) => (
+            <View className="mb-4 px-[18px]">
+              <CommentItem
+                comment={item}
+                onActions={openCommentActions}
+                onOpenAuthor={(authorId) =>
+                  openProfile(authorId, item.author.name)
+                }
+                onReply={handleReply}
+              />
+            </View>
           )}
-        </ScrollView>
+        />
 
         <CommentComposer
           editing={editingComment !== null}
-          isSending={editingComment ? updateComment.isPending : createComment.isPending}
+          isSending={
+            editingComment ? updateComment.isPending : createComment.isPending
+          }
           onCancelEdit={handleCancelEditComment}
           onChangeText={setDraft}
           onClearReply={() => setReplyTo(null)}
@@ -545,12 +608,14 @@ export function EventDetailScreen({
                 },
               )
             }
-            submitLabel='Save'
+            submitLabel="Save"
           />
         ) : sheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              eventReportTarget === 'user' ? reportMember.isPending : reportEvent.isPending
+              eventReportTarget === 'user'
+                ? reportMember.isPending
+                : reportEvent.isPending
             }
             onSubmit={handleEventReportSubmit}
             title={
@@ -560,22 +625,22 @@ export function EventDetailScreen({
             }
           />
         ) : sheetMode === 'confirm-cancel' ? (
-          <View className='gap-1 px-[18px] pb-4 pt-1'>
-            <Text className='font-inter-bold text-[17px] text-content'>
+          <View className="gap-1 px-[18px] pb-4 pt-1">
+            <Text className="font-inter-bold text-[17px] text-content">
               Cancel this event?
             </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
+            <Text className="pb-3 text-text-muted" size="sm">
               This can’t be undone. Everyone who joined will lose their spot.
             </Text>
-            <HStack className='justify-end gap-3'>
+            <HStack className="justify-end gap-3">
               <Pressable onPress={() => setSheetMode(null)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
+                <Text className="font-inter-semibold text-[15px] text-content">
                   Keep event
                 </Text>
               </Pressable>
               <Pressable onPress={handleCancelEvent}>
                 <Text
-                  className='font-inter-semibold text-[15px]'
+                  className="font-inter-semibold text-[15px]"
                   style={{ color: 'rgb(231,0,11)' }}
                 >
                   Cancel event
@@ -584,48 +649,50 @@ export function EventDetailScreen({
             </HStack>
           </View>
         ) : (
-          <View className='gap-1 px-[18px] pb-2'>
+          <View className="gap-1 px-[18px] pb-2">
             {isOwnEvent ? (
               <>
                 <EventMenuRow
-                  icon='Edit'
-                  label='Edit event'
+                  icon="Edit"
+                  label="Edit event"
                   onPress={() => setSheetMode('edit')}
                 />
                 <Divider />
                 <EventMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Cancel event'
+                  icon="AlertCircle"
+                  label="Cancel event"
                   onPress={() => setSheetMode('confirm-cancel')}
                 />
               </>
             ) : (
               <>
                 <EventMenuRow
-                  icon='EyeOff'
-                  label='Block this neighbour'
+                  icon="EyeOff"
+                  label="Block this neighbour"
                   onPress={() => {
                     setSheetMode(null);
                     if (!event) return;
                     blockUser.mutate(event.author.id, {
-                      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () => showToast(`Blocked ${event.author.name}`),
+                      onError: () =>
+                        showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () =>
+                        showToast(`Blocked ${event.author.name}`),
                     });
                   }}
                 />
                 <Divider />
                 <EventMenuRow
                   destructive
-                  icon='Flag'
-                  label='Report this user'
+                  icon="Flag"
+                  label="Report this user"
                   onPress={openReportEventAuthor}
                 />
                 <Divider />
                 <EventMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Report event'
+                  icon="AlertCircle"
+                  label="Report event"
                   onPress={openReportEvent}
                 />
               </>
@@ -636,17 +703,17 @@ export function EventDetailScreen({
 
       {/* Attendee list */}
       <Sheet onClose={() => setAttendeesOpen(false)} visible={attendeesOpen}>
-        <VStack className='gap-1 px-[18px] pb-4' space='xs'>
-          <Text className='pb-2 font-inter-bold text-[17px] text-content'>
+        <VStack className="gap-1 px-[18px] pb-4" space="xs">
+          <Text className="pb-2 font-inter-bold text-[17px] text-content">
             {event?.going ?? 0} going
           </Text>
           {attendees.isPending ? (
-            <View className='items-center py-8'>
+            <View className="items-center py-8">
               <Spinner />
             </View>
           ) : attendeeList.length > 0 ? (
             <ScrollView
-              contentContainerClassName='gap-1'
+              contentContainerClassName="gap-1"
               onScroll={onAttendeesScroll}
               scrollEventThrottle={100}
               style={{ maxHeight: 420 }}
@@ -654,28 +721,35 @@ export function EventDetailScreen({
               {attendeeList.map((attendee) => (
                 <Pressable
                   accessibilityLabel={`Open ${attendee.name}'s profile`}
-                  accessibilityRole='button'
-                  className='flex-row items-center gap-3 py-2.5'
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-3 py-2.5"
                   key={attendee.id}
                   onPress={() => {
                     setAttendeesOpen(false);
                     openProfile(attendee.id, attendee.name);
                   }}
                 >
-                  <Avatar name={attendee.name} size='sm' src={attendee.avatarUrl ?? undefined} />
-                  <Text className='font-inter-medium text-[14px] text-content'>
+                  <Avatar
+                    name={attendee.name}
+                    size="sm"
+                    src={attendee.avatarUrl ?? undefined}
+                  />
+                  <Text className="font-inter-medium text-[14px] text-content">
                     {attendee.name}
                   </Text>
                 </Pressable>
               ))}
               {attendees.isFetchingNextPage && (
-                <View className='items-center py-3' testID='attendees-load-more'>
-                  <Spinner size='small' />
+                <View
+                  className="items-center py-3"
+                  testID="attendees-load-more"
+                >
+                  <Spinner size="small" />
                 </View>
               )}
             </ScrollView>
           ) : (
-            <Text className='py-2 text-text-muted' size='sm'>
+            <Text className="py-2 text-text-muted" size="sm">
               No one has joined yet.
             </Text>
           )}
@@ -687,7 +761,9 @@ export function EventDetailScreen({
         {commentSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+              commentReportTarget === 'user'
+                ? reportMember.isPending
+                : reportComment.isPending
             }
             onSubmit={handleCommentReportSubmit}
             title={
@@ -697,22 +773,22 @@ export function EventDetailScreen({
             }
           />
         ) : commentSheetMode === 'confirm-delete' ? (
-          <View className='gap-1 px-[18px] pb-4 pt-1'>
-            <Text className='font-inter-bold text-[17px] text-content'>
+          <View className="gap-1 px-[18px] pb-4 pt-1">
+            <Text className="font-inter-bold text-[17px] text-content">
               Delete comment?
             </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
+            <Text className="pb-3 text-text-muted" size="sm">
               This can’t be undone.
             </Text>
-            <HStack className='justify-end gap-3'>
+            <HStack className="justify-end gap-3">
               <Pressable onPress={() => setCommentSheetMode(null)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
+                <Text className="font-inter-semibold text-[15px] text-content">
                   Cancel
                 </Text>
               </Pressable>
               <Pressable onPress={confirmDeleteComment}>
                 <Text
-                  className='font-inter-semibold text-[15px]'
+                  className="font-inter-semibold text-[15px]"
                   style={{ color: 'rgb(231,0,11)' }}
                 >
                   Delete
@@ -721,27 +797,29 @@ export function EventDetailScreen({
             </HStack>
           </View>
         ) : (
-          <View className='gap-1 px-[18px] pb-2'>
+          <View className="gap-1 px-[18px] pb-2">
             {actionsFor && actionsFor.author.id === userId ? (
               <>
                 <EventMenuRow
-                  icon='Edit'
-                  label='Edit comment'
-                  onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+                  icon="Edit"
+                  label="Edit comment"
+                  onPress={() =>
+                    actionsFor && handleStartEditComment(actionsFor)
+                  }
                 />
                 <Divider />
                 <EventMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Delete comment'
+                  icon="AlertCircle"
+                  label="Delete comment"
                   onPress={handleRequestDeleteComment}
                 />
               </>
             ) : (
               <>
                 <EventMenuRow
-                  icon='EyeOff'
-                  label='Block this neighbour'
+                  icon="EyeOff"
+                  label="Block this neighbour"
                   onPress={() => {
                     const target = actionsFor;
                     closeCommentActions();
@@ -749,22 +827,23 @@ export function EventDetailScreen({
                     blockUser.mutate(target.author.id, {
                       onError: () =>
                         showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                      onSuccess: () =>
+                        showToast(`Blocked ${target.author.name}`),
                     });
                   }}
                 />
                 <Divider />
                 <EventMenuRow
                   destructive
-                  icon='Flag'
-                  label='Report this user'
+                  icon="Flag"
+                  label="Report this user"
                   onPress={openReportCommentAuthor}
                 />
                 <Divider />
                 <EventMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Report comment'
+                  icon="AlertCircle"
+                  label="Report comment"
                   onPress={openReportComment}
                 />
               </>
@@ -775,11 +854,11 @@ export function EventDetailScreen({
 
       {toast ? (
         <View
-          className='absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3'
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
           style={{ bottom: insets.bottom + 96 }}
         >
-          <Icon color='rgb(250,250,250)' name='CheckCircle' size={16} />
-          <Text className='flex-1 text-[14px] text-primary-foreground'>
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
             {toast}
           </Text>
         </View>

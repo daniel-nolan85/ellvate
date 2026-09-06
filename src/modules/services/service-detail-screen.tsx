@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
+  FlatList,
   KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
-  ScrollView,
   Share,
   View,
 } from 'react-native';
@@ -16,8 +16,10 @@ import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
-import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
+import {
+  ReportSheetContent,
+  type ReportSubmission,
+} from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -29,11 +31,18 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
+import {
+  useBlockUser,
+  useOpenProfile,
+  useReportMember,
+} from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
-import { SERVICE_CATEGORY_LABEL, serviceCategoryAccent } from './service-category';
+import {
+  SERVICE_CATEGORY_LABEL,
+  serviceCategoryAccent,
+} from './service-category';
 import { ServiceComposer } from './service-composer';
 import { ServiceReviewComposer } from './service-review-composer';
 import { ServiceReviewItem } from './service-review-item';
@@ -108,7 +117,10 @@ function ContactRow({
   );
 }
 
-export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenProps) {
+export function ServiceDetailScreen({
+  listingId,
+  onBack,
+}: ServiceDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
@@ -136,12 +148,14 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
     'menu' | 'edit' | 'confirm-delete' | null
   >(null);
   const [actionsFor, setActionsFor] = useState<ServiceReview | null>(null);
-  const [reviewSheetMode, setReviewSheetMode] = useState<'actions' | 'edit' | 'report' | null>(
-    null,
-  );
+  const [reviewSheetMode, setReviewSheetMode] = useState<
+    'actions' | 'edit' | 'report' | null
+  >(null);
   // Which target a reviewSheetMode of 'report' is for -- the review itself,
   // or its author.
-  const [reviewReportTarget, setReviewReportTarget] = useState<'review' | 'user' | null>(null);
+  const [reviewReportTarget, setReviewReportTarget] = useState<
+    'review' | 'user' | null
+  >(null);
   const [toast, setToast] = useState<string | null>(null);
   // Forces the create-review composer to remount (fresh, empty state) only
   // once a submission actually succeeds — see the WHY comment in
@@ -179,7 +193,10 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
       },
     };
     if (reviewReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: target.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportReview.mutate({ reviewId: target.id, ...submission }, onSettled);
@@ -192,7 +209,9 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
     setSheetMode(null);
     deleteListing.mutate(listing.id, {
       onSuccess: () => {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
         onBack();
       },
       onError: () => showToast('Couldn’t delete this listing. Try again.'),
@@ -200,13 +219,8 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
   };
 
   const reviewList = reviews.data?.pages.flatMap((page) => page.reviews) ?? [];
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: reviews.fetchNextPage,
-      hasNextPage: reviews.hasNextPage,
-      isFetchingNextPage: reviews.isFetchingNextPage,
-    },
-  ]);
+  const reviewsToRender =
+    !reviews.isPending && !reviews.isError ? reviewList : [];
 
   return (
     <View className="flex-1 bg-canvas">
@@ -251,177 +265,217 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <ScrollView
+        {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+            ActivitySectionList for why: only review rows actually on/near
+            screen mount as real native views here, no matter how many
+            reviews a listing accumulates. The listing card and reviews
+            header render once as ListHeaderComponent. */}
+        <FlatList
           className="flex-1"
-          contentContainerClassName="gap-4 px-[18px] py-4"
-          onScroll={onScroll}
-          scrollEventThrottle={100}
-        >
-        {listing ? (
-          <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
-            {listing.media && listing.media.length > 0 && (
-              <MediaGallery media={listing.media} />
-            )}
+          contentContainerStyle={{ paddingBottom: 16 }}
+          data={reviewsToRender}
+          keyExtractor={(review) => review.id}
+          ListFooterComponent={
+            reviewsToRender.length === 0 ? null : (
+              <View className="px-[18px]">
+                {reviews.hasNextPage ? (
+                  reviews.isFetchingNextPage ? (
+                    <View
+                      className="items-center py-3"
+                      testID="service-reviews-load-more"
+                    >
+                      <Spinner size="small" />
+                    </View>
+                  ) : null
+                ) : (
+                  <AllCaughtUp />
+                )}
+              </View>
+            )
+          }
+          ListHeaderComponent={
+            <VStack className="gap-4 px-[18px] pt-4">
+              {listing ? (
+                <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
+                  {listing.media && listing.media.length > 0 && (
+                    <MediaGallery media={listing.media} />
+                  )}
 
-            <Pressable
-              accessibilityLabel={`Listed by ${listing.author.name}`}
-              accessibilityRole="button"
-              className="flex-row items-center gap-2"
-              onPress={() => openProfile(listing.author.id, listing.author.name)}
-            >
-              <Avatar
-                name={listing.author.name}
-                size="sm"
-                src={listing.author.avatarUrl ?? undefined}
-              />
-              <Text className="text-[13px] text-text-muted">
-                Listed by{' '}
-                <Text className="font-inter-semibold text-content">
-                  {listing.author.name}
-                </Text>
-              </Text>
-              <AdminBadge isAdmin={listing.author.isAdmin} />
-            </Pressable>
+                  <Pressable
+                    accessibilityLabel={`Listed by ${listing.author.name}`}
+                    accessibilityRole="button"
+                    className="flex-row items-center gap-2"
+                    onPress={() =>
+                      openProfile(listing.author.id, listing.author.name)
+                    }
+                  >
+                    <Avatar
+                      name={listing.author.name}
+                      size="sm"
+                      src={listing.author.avatarUrl ?? undefined}
+                    />
+                    <Text className="text-[13px] text-text-muted">
+                      Listed by{' '}
+                      <Text className="font-inter-semibold text-content">
+                        {listing.author.name}
+                      </Text>
+                    </Text>
+                    <AdminBadge isAdmin={listing.author.isAdmin} />
+                  </Pressable>
 
-            <HStack className="items-center gap-2">
-              <Badge variant={serviceCategoryAccent(listing.category)}>
-                {SERVICE_CATEGORY_LABEL[listing.category]}
-              </Badge>
-              {listing.averageRating !== null ? (
-                <HStack className="items-center gap-1">
-                  <Icon color={COLOR_STAR} fill={COLOR_STAR} name="Star" size={13} />
-                  <Text className="font-inter-semibold text-[13px] text-content">
-                    {listing.averageRating.toFixed(1)}
+                  <HStack className="items-center gap-2">
+                    <Badge variant={serviceCategoryAccent(listing.category)}>
+                      {SERVICE_CATEGORY_LABEL[listing.category]}
+                    </Badge>
+                    {listing.averageRating !== null ? (
+                      <HStack className="items-center gap-1">
+                        <Icon
+                          color={COLOR_STAR}
+                          fill={COLOR_STAR}
+                          name="Star"
+                          size={13}
+                        />
+                        <Text className="font-inter-semibold text-[13px] text-content">
+                          {listing.averageRating.toFixed(1)}
+                        </Text>
+                        <Text className="text-text-muted" size="xs">
+                          ({listing.reviewCount})
+                        </Text>
+                      </HStack>
+                    ) : (
+                      <Text className="text-text-muted" size="xs">
+                        No reviews yet
+                      </Text>
+                    )}
+                  </HStack>
+
+                  <HStack className="items-center gap-1.5">
+                    <Heading className="font-inter-bold text-[22px]" size="lg">
+                      {listing.businessName}
+                    </Heading>
+                    <EditedMark editedAt={listing.editedAt} />
+                  </HStack>
+                  <Text className="text-[15px] leading-[22px] text-muted-foreground">
+                    {listing.description}
                   </Text>
-                  <Text className="text-text-muted" size="xs">
-                    ({listing.reviewCount})
-                  </Text>
-                </HStack>
+
+                  {listing.serviceArea ? (
+                    <HStack className="items-center gap-1.5">
+                      <Icon color="rgb(120,108,94)" name="Globe" size={16} />
+                      <Text className="text-[14px] text-text-muted">
+                        {listing.serviceArea}
+                      </Text>
+                    </HStack>
+                  ) : null}
+
+                  {listing.hours ? (
+                    <HStack className="items-center gap-1.5">
+                      <Icon color="rgb(120,108,94)" name="Clock" size={16} />
+                      <Text className="text-[14px] text-text-muted">
+                        {listing.hours}
+                      </Text>
+                    </HStack>
+                  ) : null}
+
+                  <Divider />
+
+                  <VStack space="xs">
+                    {listing.contactPhone ? (
+                      <ContactRow
+                        icon="Phone"
+                        label={listing.contactPhone}
+                        onPress={() =>
+                          void Linking.openURL(`tel:${listing.contactPhone}`)
+                        }
+                      />
+                    ) : null}
+                    {listing.contactEmail ? (
+                      <ContactRow
+                        icon="Mail"
+                        label={listing.contactEmail}
+                        onPress={() =>
+                          void Linking.openURL(`mailto:${listing.contactEmail}`)
+                        }
+                      />
+                    ) : null}
+                    {listing.contactWebsite ? (
+                      <ContactRow
+                        icon="Globe"
+                        label={listing.contactWebsite}
+                        onPress={() =>
+                          void Linking.openURL(listing.contactWebsite ?? '')
+                        }
+                      />
+                    ) : null}
+                  </VStack>
+                </VStack>
+              ) : listingQuery.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
               ) : (
-                <Text className="text-text-muted" size="xs">
-                  No reviews yet
+                <Text className="text-text-muted" size="sm">
+                  This listing is no longer available.
                 </Text>
               )}
-            </HStack>
 
-            <HStack className="items-center gap-1.5">
-              <Heading className="font-inter-bold text-[22px]" size="lg">
-                {listing.businessName}
-              </Heading>
-              <EditedMark editedAt={listing.editedAt} />
-            </HStack>
-            <Text className="text-[15px] leading-[22px] text-muted-foreground">
-              {listing.description}
-            </Text>
+              <Divider />
+              <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                {reviewList.length} reviews
+              </Text>
 
-            {listing.serviceArea ? (
-              <HStack className="items-center gap-1.5">
-                <Icon color="rgb(120,108,94)" name="Globe" size={16} />
-                <Text className="text-[14px] text-text-muted">
-                  {listing.serviceArea}
+              {reviews.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : reviews.isError ? (
+                <VStack
+                  className="items-start gap-2 py-2"
+                  testID="service-reviews-error"
+                >
+                  <Text className="text-text-muted" size="sm">
+                    Couldn&apos;t load reviews.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    className="rounded-full border border-line px-3 py-2"
+                    onPress={() => void reviews.refetch()}
+                    testID="service-reviews-retry"
+                  >
+                    <Text
+                      className="font-inter-semibold text-content"
+                      size="xs"
+                    >
+                      Retry
+                    </Text>
+                  </Pressable>
+                </VStack>
+              ) : reviewList.length === 0 ? (
+                <Text className="py-2 text-text-muted" size="sm">
+                  No reviews yet — be the first to share how it went.
                 </Text>
-              </HStack>
-            ) : null}
-
-            {listing.hours ? (
-              <HStack className="items-center gap-1.5">
-                <Icon color="rgb(120,108,94)" name="Clock" size={16} />
-                <Text className="text-[14px] text-text-muted">
-                  {listing.hours}
-                </Text>
-              </HStack>
-            ) : null}
-
-            <Divider />
-
-            <VStack space="xs">
-              {listing.contactPhone ? (
-                <ContactRow
-                  icon="Phone"
-                  label={listing.contactPhone}
-                  onPress={() => void Linking.openURL(`tel:${listing.contactPhone}`)}
-                />
-              ) : null}
-              {listing.contactEmail ? (
-                <ContactRow
-                  icon="Mail"
-                  label={listing.contactEmail}
-                  onPress={() => void Linking.openURL(`mailto:${listing.contactEmail}`)}
-                />
-              ) : null}
-              {listing.contactWebsite ? (
-                <ContactRow
-                  icon="Globe"
-                  label={listing.contactWebsite}
-                  onPress={() => void Linking.openURL(listing.contactWebsite ?? '')}
-                />
               ) : null}
             </VStack>
-          </VStack>
-        ) : listingQuery.isPending ? (
-          <View className="items-center py-10">
-            <Spinner size="xlarge" />
-          </View>
-        ) : (
-          <Text className="text-text-muted" size="sm">
-            This listing is no longer available.
-          </Text>
-        )}
-
-        <Divider />
-        <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-          {reviewList.length} reviews
-        </Text>
-
-        {reviews.isPending ? (
-          <View className="items-center py-10">
-            <Spinner size="xlarge" />
-          </View>
-        ) : reviews.isError ? (
-          <VStack className="items-start gap-2 py-2" testID="service-reviews-error">
-            <Text className="text-text-muted" size="sm">
-              Couldn&apos;t load reviews.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              className="rounded-full border border-line px-3 py-2"
-              onPress={() => void reviews.refetch()}
-              testID="service-reviews-retry"
-            >
-              <Text className="font-inter-semibold text-content" size="xs">
-                Retry
-              </Text>
-            </Pressable>
-          </VStack>
-        ) : reviewList.length === 0 ? (
-          <Text className="py-2 text-text-muted" size="sm">
-            No reviews yet — be the first to share how it went.
-          </Text>
-        ) : (
-          <VStack className="gap-4">
-            {reviewList.map((review) => (
+          }
+          onEndReached={() => {
+            if (reviews.hasNextPage && !reviews.isFetchingNextPage) {
+              void reviews.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item }) => (
+            <View className="mb-4 px-[18px]">
               <ServiceReviewItem
-                key={review.id}
                 onActions={(review) => {
                   setActionsFor(review);
                   setReviewSheetMode('actions');
                 }}
                 onOpenAuthor={openProfile}
-                review={review}
+                review={item}
               />
-            ))}
-            {reviews.hasNextPage ? (
-              reviews.isFetchingNextPage ? (
-                <View className="items-center py-3" testID="service-reviews-load-more">
-                  <Spinner size="small" />
-                </View>
-              ) : null
-            ) : (
-              <AllCaughtUp />
-            )}
-          </VStack>
-        )}
-        </ScrollView>
+            </View>
+          )}
+        />
 
         {/* Pinned footer, not part of the scroll -- KeyboardAvoidingView only
             resizes its flex-1 sibling above, it doesn't scroll to a focused
@@ -532,7 +586,9 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
         {reviewSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              reviewReportTarget === 'user' ? reportMember.isPending : reportReview.isPending
+              reviewReportTarget === 'user'
+                ? reportMember.isPending
+                : reportReview.isPending
             }
             onSubmit={handleReviewReportSubmit}
             title={
@@ -603,7 +659,8 @@ export function ServiceDetailScreen({ listingId, onBack }: ServiceDetailScreenPr
                     blockUser.mutate(target.author.id, {
                       onError: () =>
                         showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                      onSuccess: () =>
+                        showToast(`Blocked ${target.author.name}`),
                     });
                   }}
                 />

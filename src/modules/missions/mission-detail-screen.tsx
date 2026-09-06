@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import {
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   Share,
   View,
 } from 'react-native';
@@ -19,8 +19,11 @@ import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
-import { ReportSheet, ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
+import {
+  ReportSheet,
+  ReportSheetContent,
+  type ReportSubmission,
+} from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge, type BadgeVariant } from '@/src/components/ui/badge';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -34,8 +37,15 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
-import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
+import {
+  useBlockUser,
+  useOpenProfile,
+  useReportMember,
+} from '@/src/modules/profile';
+import {
+  pickGalleryImages,
+  type PickedImage,
+} from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
@@ -77,10 +87,12 @@ const ACCENT = 'rgb(181,80,44)';
 const AMBER = 'rgb(217,123,41)';
 const WHITE = 'rgb(255,255,255)';
 
-const STATUS_BADGE: Readonly<Record<
-  MissionStatus,
-  { readonly variant: BadgeVariant; readonly label: string }
->> = {
+const STATUS_BADGE: Readonly<
+  Record<
+    MissionStatus,
+    { readonly variant: BadgeVariant; readonly label: string }
+  >
+> = {
   active: { label: 'In progress', variant: 'accent' },
   done: { label: 'Complete', variant: 'success' },
 };
@@ -99,13 +111,13 @@ function MissionMenuRow({
   const color = destructive ? 'rgb(231,0,11)' : 'rgb(37,30,23)';
   return (
     <Pressable
-      accessibilityRole='button'
-      className='flex-row items-center gap-3 px-1.5 py-3.5'
+      accessibilityRole="button"
+      className="flex-row items-center gap-3 px-1.5 py-3.5"
       onPress={onPress}
     >
       <Icon color={color} name={icon} size={20} />
       <Text
-        className='text-[15px]'
+        className="text-[15px]"
         style={{ color, fontWeight: destructive ? '500' : '400' }}
       >
         {label}
@@ -124,7 +136,9 @@ export function MissionDetailScreen({
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
-  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
+  const [celebration, setCelebration] = useState<CheckInCelebration | null>(
+    null,
+  );
 
   const missionQuery = useMission(missionId);
   const acceptMission = useAcceptMission();
@@ -155,23 +169,27 @@ export function MissionDetailScreen({
   >(null);
   // Which target a sheetMode of 'report' is for -- the mission itself, or
   // its author.
-  const [missionReportTarget, setMissionReportTarget] = useState<'mission' | 'user' | null>(
-    null,
-  );
+  const [missionReportTarget, setMissionReportTarget] = useState<
+    'mission' | 'user' | null
+  >(null);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [editingComment, setEditingComment] = useState<MissionComment | null>(null);
+  const [editingComment, setEditingComment] = useState<MissionComment | null>(
+    null,
+  );
   const [actionsFor, setActionsFor] = useState<MissionComment | null>(null);
   const [commentSheetMode, setCommentSheetMode] = useState<
     'actions' | 'confirm-delete' | 'report' | null
   >(null);
   // Which target a commentSheetMode of 'report' is for -- the comment
   // itself, or its author.
-  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
+  const [commentReportTarget, setCommentReportTarget] = useState<
+    'comment' | 'user' | null
+  >(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(
     null,
   );
-  const [toast, setToast] = useState<string | null>(null);
-  const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(null);
   // The check-in photo currently open for report -- a standalone ReportSheet
   // (see below), not part of the sheetMode/commentSheetMode state machines
   // above, since it's reached from its own icon in the check-in photos list,
@@ -244,7 +262,9 @@ export function MissionDetailScreen({
     setSheetMode(null);
     deleteMission.mutate(mission.id, {
       onSuccess: () => {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
         onBack();
       },
       onError: () => showToast('Couldn’t delete this mission. Try again.'),
@@ -290,7 +310,10 @@ export function MissionDetailScreen({
       },
     };
     if (missionReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: mission.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: mission.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportMission.mutate({ missionId: mission.id, ...submission }, onSettled);
@@ -319,7 +342,10 @@ export function MissionDetailScreen({
       },
     };
     if (commentReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: target.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
@@ -394,34 +420,30 @@ export function MissionDetailScreen({
     });
   };
 
-  const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: comments.fetchNextPage,
-      hasNextPage: comments.hasNextPage,
-      isFetchingNextPage: comments.isFetchingNextPage,
-    },
-  ]);
+  const commentList =
+    comments.data?.pages.flatMap((page) => page.comments) ?? [];
+  const commentsToRender =
+    !comments.isPending && !comments.isError ? commentList : [];
 
   return (
-    <View className='flex-1 bg-canvas'>
+    <View className="flex-1 bg-canvas">
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}
         style={{ paddingTop: modal ? 24 : insets.top + 8 }}
       >
         {modal ? null : (
-          <Pressable accessibilityLabel='Back' onPress={onBack}>
-            <Icon name='ChevronLeft' size={22} />
+          <Pressable accessibilityLabel="Back" onPress={onBack}>
+            <Icon name="ChevronLeft" size={22} />
           </Pressable>
         )}
-        <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
+        <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
           Mission
         </Heading>
-        <BookmarkButton size={18} targetId={missionId} targetType='mission' />
+        <BookmarkButton size={18} targetId={missionId} targetType="mission" />
         <Pressable
-          accessibilityLabel='Share mission'
-          accessibilityRole='button'
+          accessibilityLabel="Share mission"
+          accessibilityRole="button"
           onPress={() => {
             if (!mission) {
               return;
@@ -431,299 +453,363 @@ export function MissionDetailScreen({
             });
           }}
         >
-          <Icon color='rgb(120,108,94)' name='Share' size={18} />
+          <Icon color="rgb(120,108,94)" name="Share" size={18} />
         </Pressable>
         <Pressable
-          accessibilityLabel='More options'
-          accessibilityRole='button'
+          accessibilityLabel="More options"
+          accessibilityRole="button"
           hitSlop={8}
           onPress={() => setSheetMode('menu')}
         >
-          <Icon color='rgb(120,108,94)' name='ThreeDots' size={18} />
+          <Icon color="rgb(120,108,94)" name="ThreeDots" size={18} />
         </Pressable>
       </HStack>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className='flex-1'
+        className="flex-1"
       >
-        <ScrollView
-          className='flex-1'
-          contentContainerClassName='gap-4 px-[18px] py-4'
-          onScroll={onScroll}
-          scrollEventThrottle={100}
-        >
-        {mission && badge ? (
-          <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
-            {mission.media && mission.media.length > 0 && (
-              <MediaGallery media={mission.media} />
-            )}
-
-            <Pressable
-              accessibilityLabel={`Created by ${mission.author.name}`}
-              accessibilityRole='button'
-              className='flex-row items-center gap-2'
-              onPress={() => openProfile(mission.author.id, mission.author.name)}
-            >
-              <Avatar
-                name={mission.author.name}
-                size='sm'
-                src={mission.author.avatarUrl ?? undefined}
-              />
-              <Text className='text-[13px] text-text-muted'>
-                Created by{' '}
-                <Text className='font-inter-semibold text-content'>
-                  {mission.author.name}
-                </Text>
-              </Text>
-              <AdminBadge isAdmin={mission.author.isAdmin} />
-            </Pressable>
-
-            <HStack className='items-center gap-3'>
-              <View
-                className={`h-11 w-11 items-center justify-center rounded-[14px] ${
-                  done ? 'bg-success' : 'bg-accent-subtle'
-                }`}
-              >
-                <Icon
-                  color={done ? WHITE : ACCENT}
-                  name={done ? 'Check' : missionThemeIcon(mission.theme)}
-                  size={20}
-                />
+        {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+            ActivitySectionList for why: only comment rows actually on/near
+            screen mount as real native views here, no matter how long the
+            discussion under a mission grows. The mission card (including
+            its own bounded check-in-photos list, capped by participant
+            count rather than independently growable) and the comments
+            header render once as ListHeaderComponent. */}
+        <FlatList
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 16 }}
+          data={commentsToRender}
+          keyExtractor={(comment) => comment.id}
+          ListFooterComponent={
+            commentsToRender.length === 0 ? null : (
+              <View className="px-[18px]">
+                {comments.hasNextPage ? (
+                  comments.isFetchingNextPage ? (
+                    <View
+                      className="items-center py-3"
+                      testID="mission-comments-load-more"
+                    >
+                      <Spinner size="small" />
+                    </View>
+                  ) : null
+                ) : (
+                  <AllCaughtUp />
+                )}
               </View>
-              <Badge variant={badge.variant}>{badge.label}</Badge>
-            </HStack>
+            )
+          }
+          ListHeaderComponent={
+            <VStack className="gap-4 px-[18px] pt-4">
+              {mission && badge ? (
+                <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
+                  {mission.media && mission.media.length > 0 && (
+                    <MediaGallery media={mission.media} />
+                  )}
 
-            <HStack className='items-center gap-1.5'>
-              <Heading className='font-inter-bold text-[22px]' size='lg'>
-                {mission.title}
-              </Heading>
-              <EditedMark editedAt={mission.editedAt} />
-            </HStack>
-            <Text className='text-[15px] leading-[22px] text-muted-foreground'>
-              {mission.description}
-            </Text>
-
-            {mission.scheduledFor ? (
-              <HStack className='items-center gap-1.5'>
-                <Icon color='rgb(120,108,94)' name='CalendarDays' size={16} />
-                <Text className='text-[14px] text-text-muted'>
-                  {formatDateOnly(mission.scheduledFor)}
-                </Text>
-              </HStack>
-            ) : null}
-
-            <Divider />
-
-            <HStack className='items-center gap-2'>
-              <HStack className='flex-1 gap-1'>
-                {Array.from({ length: mission.stopsTotal }, (_, index) => (
-                  <View
-                    className={`h-[5px] flex-1 rounded-full ${
-                      index < mission.stopsDone
-                        ? done
-                          ? 'bg-success'
-                          : 'bg-accent'
-                        : 'bg-muted'
-                    }`}
-                    key={index}
-                  />
-                ))}
-              </HStack>
-              <Text className='shrink-0 text-muted-foreground' size='xs'>
-                {mission.stopsDone}/{mission.stopsTotal} stops
-              </Text>
-              <Badge leftIcon={<Icon color={AMBER} name='Star' size={11} />} variant='amber'>
-                {mission.xp} XP
-              </Badge>
-            </HStack>
-
-            {mission.status === 'active' && mission.accepted && mission.stops[mission.stopsDone] ? (
-              <Text className='text-[13px] text-text-muted'>
-                <Text className='font-inter-semibold text-content' size='xs'>
-                  Next:{' '}
-                </Text>
-                {mission.stops[mission.stopsDone]}
-              </Text>
-            ) : null}
-
-            {mission.status === 'active' && !mission.accepted ? (
-              <Button
-                className='self-start rounded-full bg-accent'
-                isDisabled={acceptMission.isPending}
-                onPress={handleAccept}
-                size='sm'
-              >
-                <Icon color={WHITE} name='Favourite' size={15} />
-                <ButtonText className='font-inter-semibold text-accent-foreground'>
-                  Accept challenge
-                </ButtonText>
-              </Button>
-            ) : null}
-
-            {mission.status === 'active' && mission.accepted ? (
-              <VStack className='gap-2.5'>
-                {checkInPhoto ? (
-                  <HStack className='items-center gap-2.5'>
-                    <Image
-                      source={{ uri: checkInPhoto.uri }}
-                      style={{ borderRadius: 10, height: 44, width: 44 }}
-                    />
-                    <Text className='flex-1 text-text-muted' size='xs'>
-                      Photo attached
-                    </Text>
-                    <Pressable
-                      accessibilityLabel='Remove photo'
-                      accessibilityRole='button'
-                      hitSlop={8}
-                      onPress={() => setCheckInPhoto(null)}
-                    >
-                      <Icon color='rgb(120,108,94)' name='Close' size={16} />
-                    </Pressable>
-                  </HStack>
-                ) : null}
-                <HStack className='items-center gap-2.5'>
-                  <Button
-                    className='self-start rounded-full bg-accent'
-                    isDisabled={checkIn.isPending}
-                    onPress={handleCheckIn}
-                    size='sm'
+                  <Pressable
+                    accessibilityLabel={`Created by ${mission.author.name}`}
+                    accessibilityRole="button"
+                    className="flex-row items-center gap-2"
+                    onPress={() =>
+                      openProfile(mission.author.id, mission.author.name)
+                    }
                   >
-                    <Icon color={WHITE} name='CheckCircle' size={15} />
-                    <ButtonText className='font-inter-semibold text-accent-foreground'>
-                      {isFinalStop
-                        ? checkInPhoto
-                          ? 'Finish mission'
-                          : 'Add photo to finish'
-                        : 'Check in'}
-                    </ButtonText>
-                  </Button>
-                  {!isFinalStop && !checkInPhoto ? (
-                    <Pressable
-                      accessibilityLabel='Attach a photo (optional)'
-                      accessibilityRole='button'
-                      className='h-9 w-9 items-center justify-center rounded-full bg-accent-subtle'
-                      hitSlop={8}
-                      onPress={() => void handleAttachPhoto()}
-                    >
-                      <Icon color={ACCENT} name='Image' size={16} />
-                    </Pressable>
-                  ) : null}
-                </HStack>
-              </VStack>
-            ) : null}
+                    <Avatar
+                      name={mission.author.name}
+                      size="sm"
+                      src={mission.author.avatarUrl ?? undefined}
+                    />
+                    <Text className="text-[13px] text-text-muted">
+                      Created by{' '}
+                      <Text className="font-inter-semibold text-content">
+                        {mission.author.name}
+                      </Text>
+                    </Text>
+                    <AdminBadge isAdmin={mission.author.isAdmin} />
+                  </Pressable>
 
-            {checkIns.data && checkIns.data.some((entry) => entry.photoUrl) ? (
-              <>
-                <Divider />
-                <VStack className='gap-3'>
-                  <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
-                    Check-in photos
+                  <HStack className="items-center gap-3">
+                    <View
+                      className={`h-11 w-11 items-center justify-center rounded-[14px] ${
+                        done ? 'bg-success' : 'bg-accent-subtle'
+                      }`}
+                    >
+                      <Icon
+                        color={done ? WHITE : ACCENT}
+                        name={done ? 'Check' : missionThemeIcon(mission.theme)}
+                        size={20}
+                      />
+                    </View>
+                    <Badge variant={badge.variant}>{badge.label}</Badge>
+                  </HStack>
+
+                  <HStack className="items-center gap-1.5">
+                    <Heading className="font-inter-bold text-[22px]" size="lg">
+                      {mission.title}
+                    </Heading>
+                    <EditedMark editedAt={mission.editedAt} />
+                  </HStack>
+                  <Text className="text-[15px] leading-[22px] text-muted-foreground">
+                    {mission.description}
                   </Text>
-                  {checkIns.data
-                    .filter((entry) => entry.photoUrl)
-                    .map((entry) => (
-                      <HStack className='items-center gap-2.5' key={entry.id}>
-                        <Pressable
-                          accessibilityLabel={`View ${entry.user.name}'s check-in photo`}
-                          accessibilityRole='button'
-                          onPress={() => setExpandedCheckIn(entry)}
-                        >
+
+                  {mission.scheduledFor ? (
+                    <HStack className="items-center gap-1.5">
+                      <Icon
+                        color="rgb(120,108,94)"
+                        name="CalendarDays"
+                        size={16}
+                      />
+                      <Text className="text-[14px] text-text-muted">
+                        {formatDateOnly(mission.scheduledFor)}
+                      </Text>
+                    </HStack>
+                  ) : null}
+
+                  <Divider />
+
+                  <HStack className="items-center gap-2">
+                    <HStack className="flex-1 gap-1">
+                      {Array.from(
+                        { length: mission.stopsTotal },
+                        (_, index) => (
+                          <View
+                            className={`h-[5px] flex-1 rounded-full ${
+                              index < mission.stopsDone
+                                ? done
+                                  ? 'bg-success'
+                                  : 'bg-accent'
+                                : 'bg-muted'
+                            }`}
+                            key={index}
+                          />
+                        ),
+                      )}
+                    </HStack>
+                    <Text className="shrink-0 text-muted-foreground" size="xs">
+                      {mission.stopsDone}/{mission.stopsTotal} stops
+                    </Text>
+                    <Badge
+                      leftIcon={<Icon color={AMBER} name="Star" size={11} />}
+                      variant="amber"
+                    >
+                      {mission.xp} XP
+                    </Badge>
+                  </HStack>
+
+                  {mission.status === 'active' &&
+                  mission.accepted &&
+                  mission.stops[mission.stopsDone] ? (
+                    <Text className="text-[13px] text-text-muted">
+                      <Text
+                        className="font-inter-semibold text-content"
+                        size="xs"
+                      >
+                        Next:{' '}
+                      </Text>
+                      {mission.stops[mission.stopsDone]}
+                    </Text>
+                  ) : null}
+
+                  {mission.status === 'active' && !mission.accepted ? (
+                    <Button
+                      className="self-start rounded-full bg-accent"
+                      isDisabled={acceptMission.isPending}
+                      onPress={handleAccept}
+                      size="sm"
+                    >
+                      <Icon color={WHITE} name="Favourite" size={15} />
+                      <ButtonText className="font-inter-semibold text-accent-foreground">
+                        Accept challenge
+                      </ButtonText>
+                    </Button>
+                  ) : null}
+
+                  {mission.status === 'active' && mission.accepted ? (
+                    <VStack className="gap-2.5">
+                      {checkInPhoto ? (
+                        <HStack className="items-center gap-2.5">
                           <Image
-                            source={{ uri: entry.photoUrl ?? '' }}
+                            source={{ uri: checkInPhoto.uri }}
                             style={{ borderRadius: 10, height: 44, width: 44 }}
                           />
-                        </Pressable>
-                        <VStack className='flex-1 gap-0.5'>
-                          <Text className='font-inter-semibold text-[13px] text-content'>
-                            {entry.user.name}
+                          <Text className="flex-1 text-text-muted" size="xs">
+                            Photo attached
                           </Text>
-                          <Text className='text-text-muted' size='xs'>
-                            Stop {entry.stopIndex + 1}
-                          </Text>
-                        </VStack>
-                        <Pressable
-                          accessibilityLabel='Report check-in'
-                          accessibilityRole='button'
-                          hitSlop={8}
-                          onPress={() => setReportTarget(entry)}
+                          <Pressable
+                            accessibilityLabel="Remove photo"
+                            accessibilityRole="button"
+                            hitSlop={8}
+                            onPress={() => setCheckInPhoto(null)}
+                          >
+                            <Icon
+                              color="rgb(120,108,94)"
+                              name="Close"
+                              size={16}
+                            />
+                          </Pressable>
+                        </HStack>
+                      ) : null}
+                      <HStack className="items-center gap-2.5">
+                        <Button
+                          className="self-start rounded-full bg-accent"
+                          isDisabled={checkIn.isPending}
+                          onPress={handleCheckIn}
+                          size="sm"
                         >
-                          <Icon color='rgb(120,108,94)' name='Flag' size={16} />
-                        </Pressable>
+                          <Icon color={WHITE} name="CheckCircle" size={15} />
+                          <ButtonText className="font-inter-semibold text-accent-foreground">
+                            {isFinalStop
+                              ? checkInPhoto
+                                ? 'Finish mission'
+                                : 'Add photo to finish'
+                              : 'Check in'}
+                          </ButtonText>
+                        </Button>
+                        {!isFinalStop && !checkInPhoto ? (
+                          <Pressable
+                            accessibilityLabel="Attach a photo (optional)"
+                            accessibilityRole="button"
+                            className="h-9 w-9 items-center justify-center rounded-full bg-accent-subtle"
+                            hitSlop={8}
+                            onPress={() => void handleAttachPhoto()}
+                          >
+                            <Icon color={ACCENT} name="Image" size={16} />
+                          </Pressable>
+                        ) : null}
                       </HStack>
-                    ))}
+                    </VStack>
+                  ) : null}
+
+                  {checkIns.data &&
+                  checkIns.data.some((entry) => entry.photoUrl) ? (
+                    <>
+                      <Divider />
+                      <VStack className="gap-3">
+                        <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                          Check-in photos
+                        </Text>
+                        {checkIns.data
+                          .filter((entry) => entry.photoUrl)
+                          .map((entry) => (
+                            <HStack
+                              className="items-center gap-2.5"
+                              key={entry.id}
+                            >
+                              <Pressable
+                                accessibilityLabel={`View ${entry.user.name}'s check-in photo`}
+                                accessibilityRole="button"
+                                onPress={() => setExpandedCheckIn(entry)}
+                              >
+                                <Image
+                                  source={{ uri: entry.photoUrl ?? '' }}
+                                  style={{
+                                    borderRadius: 10,
+                                    height: 44,
+                                    width: 44,
+                                  }}
+                                />
+                              </Pressable>
+                              <VStack className="flex-1 gap-0.5">
+                                <Text className="font-inter-semibold text-[13px] text-content">
+                                  {entry.user.name}
+                                </Text>
+                                <Text className="text-text-muted" size="xs">
+                                  Stop {entry.stopIndex + 1}
+                                </Text>
+                              </VStack>
+                              <Pressable
+                                accessibilityLabel="Report check-in"
+                                accessibilityRole="button"
+                                hitSlop={8}
+                                onPress={() => setReportTarget(entry)}
+                              >
+                                <Icon
+                                  color="rgb(120,108,94)"
+                                  name="Flag"
+                                  size={16}
+                                />
+                              </Pressable>
+                            </HStack>
+                          ))}
+                      </VStack>
+                    </>
+                  ) : null}
                 </VStack>
-              </>
-            ) : null}
-          </VStack>
-        ) : missionQuery.isPending ? (
-          <View className='items-center py-10'>
-            <Spinner size='xlarge' />
-          </View>
-        ) : (
-          <Text className='text-text-muted' size='sm'>
-            This mission is no longer available.
-          </Text>
-        )}
+              ) : missionQuery.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : (
+                <Text className="text-text-muted" size="sm">
+                  This mission is no longer available.
+                </Text>
+              )}
 
-        <Divider />
-        <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
-          {commentList.length} comments
-        </Text>
-
-        {comments.isPending ? (
-          <View className='items-center py-10'>
-            <Spinner size='xlarge' />
-          </View>
-        ) : comments.isError ? (
-          <VStack className='items-start gap-2 py-2' testID='mission-comments-error'>
-            <Text className='text-text-muted' size='sm'>
-              Couldn&apos;t load comments.
-            </Text>
-            <Pressable
-              accessibilityRole='button'
-              className='rounded-full border border-line px-3 py-2'
-              onPress={() => void comments.refetch()}
-              testID='mission-comments-retry'
-            >
-              <Text className='font-inter-semibold text-content' size='xs'>
-                Retry
+              <Divider />
+              <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                {commentList.length} comments
               </Text>
-            </Pressable>
-          </VStack>
-        ) : commentList.length === 0 ? (
-          <Text className='py-2 text-text-muted' size='sm'>
-            No comments yet — start the conversation.
-          </Text>
-        ) : (
-          <VStack className='gap-4'>
-            {commentList.map((comment) => (
+
+              {comments.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : comments.isError ? (
+                <VStack
+                  className="items-start gap-2 py-2"
+                  testID="mission-comments-error"
+                >
+                  <Text className="text-text-muted" size="sm">
+                    Couldn&apos;t load comments.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    className="rounded-full border border-line px-3 py-2"
+                    onPress={() => void comments.refetch()}
+                    testID="mission-comments-retry"
+                  >
+                    <Text
+                      className="font-inter-semibold text-content"
+                      size="xs"
+                    >
+                      Retry
+                    </Text>
+                  </Pressable>
+                </VStack>
+              ) : commentList.length === 0 ? (
+                <Text className="py-2 text-text-muted" size="sm">
+                  No comments yet — start the conversation.
+                </Text>
+              ) : null}
+            </VStack>
+          }
+          onEndReached={() => {
+            if (comments.hasNextPage && !comments.isFetchingNextPage) {
+              void comments.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item }) => (
+            <View className="mb-4 px-[18px]">
               <CommentItem
-                comment={comment}
-                key={comment.id}
+                comment={item}
                 onActions={openCommentActions}
                 onOpenAuthor={(authorId) =>
-                  openProfile(authorId, comment.author.name)
+                  openProfile(authorId, item.author.name)
                 }
                 onReply={handleReply}
               />
-            ))}
-            {comments.hasNextPage ? (
-              comments.isFetchingNextPage ? (
-                <View className='items-center py-3' testID='mission-comments-load-more'>
-                  <Spinner size='small' />
-                </View>
-              ) : null
-            ) : (
-              <AllCaughtUp />
-            )}
-          </VStack>
-        )}
-        </ScrollView>
+            </View>
+          )}
+        />
 
         <CommentComposer
           editing={editingComment !== null}
-          isSending={editingComment ? updateComment.isPending : createComment.isPending}
+          isSending={
+            editingComment ? updateComment.isPending : createComment.isPending
+          }
           onCancelEdit={handleCancelEditComment}
           onChangeText={setDraft}
           onClearReply={() => setReplyTo(null)}
@@ -761,12 +847,14 @@ export function MissionDetailScreen({
                 },
               )
             }
-            submitLabel='Save'
+            submitLabel="Save"
           />
         ) : sheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              missionReportTarget === 'user' ? reportMember.isPending : reportMission.isPending
+              missionReportTarget === 'user'
+                ? reportMember.isPending
+                : reportMission.isPending
             }
             onSubmit={handleMissionReportSubmit}
             title={
@@ -776,22 +864,22 @@ export function MissionDetailScreen({
             }
           />
         ) : sheetMode === 'confirm-delete' ? (
-          <View className='gap-1 px-[18px] pb-4 pt-1'>
-            <Text className='font-inter-bold text-[17px] text-content'>
+          <View className="gap-1 px-[18px] pb-4 pt-1">
+            <Text className="font-inter-bold text-[17px] text-content">
               Delete this mission?
             </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
+            <Text className="pb-3 text-text-muted" size="sm">
               This can’t be undone. Everyone’s progress on it will be lost.
             </Text>
-            <HStack className='justify-end gap-3'>
+            <HStack className="justify-end gap-3">
               <Pressable onPress={() => setSheetMode(null)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
+                <Text className="font-inter-semibold text-[15px] text-content">
                   Cancel
                 </Text>
               </Pressable>
               <Pressable onPress={handleDeleteMission}>
                 <Text
-                  className='font-inter-semibold text-[15px]'
+                  className="font-inter-semibold text-[15px]"
                   style={{ color: 'rgb(231,0,11)' }}
                 >
                   Delete
@@ -800,48 +888,50 @@ export function MissionDetailScreen({
             </HStack>
           </View>
         ) : (
-          <View className='gap-1 px-[18px] pb-2'>
+          <View className="gap-1 px-[18px] pb-2">
             {isOwnMission ? (
               <>
                 <MissionMenuRow
-                  icon='Edit'
-                  label='Edit mission'
+                  icon="Edit"
+                  label="Edit mission"
                   onPress={() => setSheetMode('edit')}
                 />
                 <Divider />
                 <MissionMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Delete mission'
+                  icon="AlertCircle"
+                  label="Delete mission"
                   onPress={() => setSheetMode('confirm-delete')}
                 />
               </>
             ) : (
               <>
                 <MissionMenuRow
-                  icon='EyeOff'
-                  label='Block this neighbour'
+                  icon="EyeOff"
+                  label="Block this neighbour"
                   onPress={() => {
                     setSheetMode(null);
                     if (!mission) return;
                     blockUser.mutate(mission.author.id, {
-                      onError: () => showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () => showToast(`Blocked ${mission.author.name}`),
+                      onError: () =>
+                        showToast('Couldn’t block this neighbour. Try again.'),
+                      onSuccess: () =>
+                        showToast(`Blocked ${mission.author.name}`),
                     });
                   }}
                 />
                 <Divider />
                 <MissionMenuRow
                   destructive
-                  icon='Flag'
-                  label='Report this user'
+                  icon="Flag"
+                  label="Report this user"
                   onPress={openReportMissionAuthor}
                 />
                 <Divider />
                 <MissionMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Report mission'
+                  icon="AlertCircle"
+                  label="Report mission"
                   onPress={openReportMission}
                 />
               </>
@@ -855,7 +945,9 @@ export function MissionDetailScreen({
         {commentSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+              commentReportTarget === 'user'
+                ? reportMember.isPending
+                : reportComment.isPending
             }
             onSubmit={handleCommentReportSubmit}
             title={
@@ -865,22 +957,22 @@ export function MissionDetailScreen({
             }
           />
         ) : commentSheetMode === 'confirm-delete' ? (
-          <View className='gap-1 px-[18px] pb-4 pt-1'>
-            <Text className='font-inter-bold text-[17px] text-content'>
+          <View className="gap-1 px-[18px] pb-4 pt-1">
+            <Text className="font-inter-bold text-[17px] text-content">
               Delete comment?
             </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
+            <Text className="pb-3 text-text-muted" size="sm">
               This can’t be undone.
             </Text>
-            <HStack className='justify-end gap-3'>
+            <HStack className="justify-end gap-3">
               <Pressable onPress={() => setCommentSheetMode(null)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
+                <Text className="font-inter-semibold text-[15px] text-content">
                   Cancel
                 </Text>
               </Pressable>
               <Pressable onPress={confirmDeleteComment}>
                 <Text
-                  className='font-inter-semibold text-[15px]'
+                  className="font-inter-semibold text-[15px]"
                   style={{ color: 'rgb(231,0,11)' }}
                 >
                   Delete
@@ -889,27 +981,29 @@ export function MissionDetailScreen({
             </HStack>
           </View>
         ) : (
-          <View className='gap-1 px-[18px] pb-2'>
+          <View className="gap-1 px-[18px] pb-2">
             {actionsFor && actionsFor.author.id === userId ? (
               <>
                 <MissionMenuRow
-                  icon='Edit'
-                  label='Edit comment'
-                  onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+                  icon="Edit"
+                  label="Edit comment"
+                  onPress={() =>
+                    actionsFor && handleStartEditComment(actionsFor)
+                  }
                 />
                 <Divider />
                 <MissionMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Delete comment'
+                  icon="AlertCircle"
+                  label="Delete comment"
                   onPress={handleRequestDeleteComment}
                 />
               </>
             ) : (
               <>
                 <MissionMenuRow
-                  icon='EyeOff'
-                  label='Block this neighbour'
+                  icon="EyeOff"
+                  label="Block this neighbour"
                   onPress={() => {
                     const target = actionsFor;
                     closeCommentActions();
@@ -917,22 +1011,23 @@ export function MissionDetailScreen({
                     blockUser.mutate(target.author.id, {
                       onError: () =>
                         showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                      onSuccess: () =>
+                        showToast(`Blocked ${target.author.name}`),
                     });
                   }}
                 />
                 <Divider />
                 <MissionMenuRow
                   destructive
-                  icon='Flag'
-                  label='Report this user'
+                  icon="Flag"
+                  label="Report this user"
                   onPress={openReportCommentAuthor}
                 />
                 <Divider />
                 <MissionMenuRow
                   destructive
-                  icon='AlertCircle'
-                  label='Report comment'
+                  icon="AlertCircle"
+                  label="Report comment"
                   onPress={openReportComment}
                 />
               </>
@@ -942,7 +1037,11 @@ export function MissionDetailScreen({
       </Sheet>
 
       <MissionCelebrationModal
-        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
+        awardedXp={
+          celebration && celebration.leveledUpTo === null
+            ? celebration.awardedXp
+            : null
+        }
         onClose={() => setCelebration(null)}
       />
       <LevelUpCelebrationModal
@@ -952,24 +1051,28 @@ export function MissionDetailScreen({
 
       {/* Full-size check-in photo viewer */}
       <Modal
-        animationType='fade'
+        animationType="fade"
         onRequestClose={() => setExpandedCheckIn(null)}
         transparent
         visible={expandedCheckIn !== null}
       >
         <Pressable
-          className='flex-1 items-center justify-center bg-[rgba(0,0,0,0.85)] px-4'
+          className="flex-1 items-center justify-center bg-[rgba(0,0,0,0.85)] px-4"
           onPress={() => setExpandedCheckIn(null)}
         >
           {expandedCheckIn ? (
-            <VStack className='w-full items-center gap-3'>
+            <VStack className="w-full items-center gap-3">
               <Image
-                resizeMode='contain'
+                resizeMode="contain"
                 source={{ uri: expandedCheckIn.photoUrl ?? '' }}
                 style={{ aspectRatio: 1, borderRadius: 12, width: '100%' }}
               />
-              <Text className='text-[13px]' style={{ color: 'rgb(255,255,255)' }}>
-                {expandedCheckIn.user.name} · Stop {expandedCheckIn.stopIndex + 1}
+              <Text
+                className="text-[13px]"
+                style={{ color: 'rgb(255,255,255)' }}
+              >
+                {expandedCheckIn.user.name} · Stop{' '}
+                {expandedCheckIn.stopIndex + 1}
               </Text>
             </VStack>
           ) : null}
@@ -986,11 +1089,11 @@ export function MissionDetailScreen({
 
       {toast ? (
         <View
-          className='absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3'
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
           style={{ bottom: insets.bottom + 96 }}
         >
-          <Icon color='rgb(250,250,250)' name='CheckCircle' size={16} />
-          <Text className='flex-1 text-[14px] text-primary-foreground'>
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
             {toast}
           </Text>
         </View>

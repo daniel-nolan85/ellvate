@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   Share,
   View,
 } from 'react-native';
@@ -17,8 +17,10 @@ import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
-import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
+import {
+  ReportSheetContent,
+  type ReportSubmission,
+} from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { Divider } from '@/src/components/ui/divider';
@@ -32,7 +34,11 @@ import { VStack } from '@/src/components/ui/vstack';
 import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
-import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
+import {
+  useBlockUser,
+  useOpenProfile,
+  useReportMember,
+} from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 
 import { PinExplainerModal } from './pin-explainer-modal';
@@ -100,7 +106,9 @@ export function PostDetailScreen({
 
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [editingComment, setEditingComment] = useState<ForumComment | null>(null);
+  const [editingComment, setEditingComment] = useState<ForumComment | null>(
+    null,
+  );
   const [actionsFor, setActionsFor] = useState<ForumComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // A single Sheet whose content switches by mode, rather than separate Sheet
@@ -116,15 +124,17 @@ export function PostDetailScreen({
   >(null);
   // Which target a postSheetMode of 'report' is for -- the post itself, or
   // its author.
-  const [postReportTarget, setPostReportTarget] = useState<'post' | 'user' | null>(null);
+  const [postReportTarget, setPostReportTarget] = useState<
+    'post' | 'user' | null
+  >(null);
   const [commentSheetMode, setCommentSheetMode] = useState<
     'actions' | 'confirm-delete' | 'report' | null
   >(null);
   // Which target a commentSheetMode of 'report' is for -- the comment
   // itself, or its author.
-  const [commentReportTarget, setCommentReportTarget] = useState<'comment' | 'user' | null>(
-    null,
-  );
+  const [commentReportTarget, setCommentReportTarget] = useState<
+    'comment' | 'user' | null
+  >(null);
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
 
   const isOwnPost = post !== undefined && userId === post.author.id;
@@ -218,7 +228,10 @@ export function PostDetailScreen({
       },
     };
     if (postReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: post.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: post.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportPost.mutate({ postId: post.id, ...submission }, onSettled);
@@ -287,7 +300,10 @@ export function PostDetailScreen({
       },
     };
     if (commentReportTarget === 'user') {
-      reportMember.mutate({ reportedUserId: target.author.id, ...submission }, onSettled);
+      reportMember.mutate(
+        { reportedUserId: target.author.id, ...submission },
+        onSettled,
+      );
       return;
     }
     reportComment.mutate({ commentId: target.id, ...submission }, onSettled);
@@ -329,35 +345,30 @@ export function PostDetailScreen({
     openProfile(post.author.id, post.author.name);
   };
 
-  const commentList = comments.data?.pages.flatMap((page) => page.comments) ?? [];
-
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: comments.fetchNextPage,
-      hasNextPage: comments.hasNextPage,
-      isFetchingNextPage: comments.isFetchingNextPage,
-    },
-  ]);
+  const commentList =
+    comments.data?.pages.flatMap((page) => page.comments) ?? [];
+  const commentsToRender =
+    !comments.isPending && !comments.isError ? commentList : [];
 
   return (
-    <View className='flex-1 bg-canvas'>
+    <View className="flex-1 bg-canvas">
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}
         style={{ paddingTop: modal ? 24 : insets.top + 8 }}
       >
         {modal ? null : (
-          <Pressable accessibilityLabel='Back' onPress={onBack}>
-            <Icon name='ChevronLeft' size={22} />
+          <Pressable accessibilityLabel="Back" onPress={onBack}>
+            <Icon name="ChevronLeft" size={22} />
           </Pressable>
         )}
-        <Heading className='flex-1 font-inter-bold text-[16px]' size='sm'>
+        <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
           Post
         </Heading>
-        <BookmarkButton size={18} targetId={postId} targetType='post' />
+        <BookmarkButton size={18} targetId={postId} targetType="post" />
         <Pressable
-          accessibilityLabel='Share post'
-          accessibilityRole='button'
+          accessibilityLabel="Share post"
+          accessibilityRole="button"
           onPress={() => {
             if (!post) {
               return;
@@ -365,190 +376,234 @@ export function PostDetailScreen({
             void Share.share({ message: `${post.title}\n\n${post.excerpt}` });
           }}
         >
-          <Icon color='rgb(120,108,94)' name='Share' size={18} />
+          <Icon color="rgb(120,108,94)" name="Share" size={18} />
         </Pressable>
       </HStack>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className='flex-1'
+        className="flex-1"
       >
-        <ScrollView
-          className='flex-1'
-          contentContainerClassName='gap-4 px-[18px] py-4'
-          onScroll={onScroll}
-          scrollEventThrottle={100}
-        >
-          {post ? (
-            <VStack className='gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card'>
-              <HStack className='items-center' space='sm'>
-                <Pressable
-                  accessibilityLabel={
-                    userId === post.author.id
-                      ? 'Open your profile'
-                      : `Open ${post.author.name}'s profile`
-                  }
-                  accessibilityRole='button'
-                  className='flex-1 flex-row items-center gap-2'
-                  onPress={openAuthorProfile}
-                >
-                  <Avatar name={post.author.name} size='sm' src={post.author.avatarUrl ?? undefined} />
-                  <VStack className='flex-1 gap-0.5'>
-                    <HStack className='items-center' space='xs'>
-                      <Text className='font-inter-bold text-[14px] text-content'>
-                        {post.author.name}
-                      </Text>
-                      <AdminBadge isAdmin={post.author.isAdmin} />
+        {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+            ActivitySectionList for why: only comment rows actually on/near
+            screen mount as real native views here, no matter how long the
+            discussion under a post grows. The post card and comments header
+            render once as ListHeaderComponent. */}
+        <FlatList
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 16 }}
+          data={commentsToRender}
+          keyExtractor={(comment) => comment.id}
+          ListFooterComponent={
+            commentsToRender.length === 0 ? null : (
+              <View className="px-[18px]">
+                {comments.hasNextPage ? (
+                  comments.isFetchingNextPage ? (
+                    <View
+                      className="items-center py-3"
+                      testID="comments-load-more"
+                    >
+                      <Spinner size="small" />
+                    </View>
+                  ) : null
+                ) : (
+                  <AllCaughtUp />
+                )}
+              </View>
+            )
+          }
+          ListHeaderComponent={
+            <VStack className="gap-4 px-[18px] pt-4">
+              {post ? (
+                <VStack className="gap-3 rounded-[20px] border border-surface-hairline bg-paper p-[18px] shadow-card">
+                  <HStack className="items-center" space="sm">
+                    <Pressable
+                      accessibilityLabel={
+                        userId === post.author.id
+                          ? 'Open your profile'
+                          : `Open ${post.author.name}'s profile`
+                      }
+                      accessibilityRole="button"
+                      className="flex-1 flex-row items-center gap-2"
+                      onPress={openAuthorProfile}
+                    >
+                      <Avatar
+                        name={post.author.name}
+                        size="sm"
+                        src={post.author.avatarUrl ?? undefined}
+                      />
+                      <VStack className="flex-1 gap-0.5">
+                        <HStack className="items-center" space="xs">
+                          <Text className="font-inter-bold text-[14px] text-content">
+                            {post.author.name}
+                          </Text>
+                          <AdminBadge isAdmin={post.author.isAdmin} />
+                        </HStack>
+                        <HStack className="items-center" space="xs">
+                          <Badge variant={categoryAccent(post.forum)}>
+                            {post.forum}
+                          </Badge>
+                          <Text className="text-[12px] text-text-muted">
+                            · {formatRelativeTime(post.createdAt)}
+                          </Text>
+                          <EditedMark editedAt={post.editedAt} />
+                        </HStack>
+                      </VStack>
+                    </Pressable>
+                    <HStack className="items-center" space="sm">
+                      <Pressable
+                        accessibilityLabel={
+                          post.pinned ? 'Unpin post' : 'Pin post'
+                        }
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={requestTogglePin}
+                      >
+                        <Icon
+                          color={post.pinned ? COLOR_AMBER : COLOR_TEXT_SUBTLE}
+                          fill={post.pinned ? COLOR_AMBER : 'none'}
+                          name="Pin"
+                          size={16}
+                        />
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel="More options"
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={() => setPostSheetMode('menu')}
+                      >
+                        <Icon
+                          color={COLOR_TEXT_SUBTLE}
+                          name="ThreeDots"
+                          size={16}
+                        />
+                      </Pressable>
                     </HStack>
-                    <HStack className='items-center' space='xs'>
-                      <Badge variant={categoryAccent(post.forum)}>{post.forum}</Badge>
-                      <Text className='text-[12px] text-text-muted'>
-                        · {formatRelativeTime(post.createdAt)}
-                      </Text>
-                      <EditedMark editedAt={post.editedAt} />
-                    </HStack>
-                  </VStack>
-                </Pressable>
-                <HStack className='items-center' space='sm'>
-                  <Pressable
-                    accessibilityLabel={post.pinned ? 'Unpin post' : 'Pin post'}
-                    accessibilityRole='button'
-                    hitSlop={8}
-                    onPress={requestTogglePin}
-                  >
-                    <Icon
-                      color={post.pinned ? COLOR_AMBER : COLOR_TEXT_SUBTLE}
-                      fill={post.pinned ? COLOR_AMBER : 'none'}
-                      name='Pin'
-                      size={16}
-                    />
-                  </Pressable>
-                  <Pressable
-                    accessibilityLabel='More options'
-                    accessibilityRole='button'
-                    hitSlop={8}
-                    onPress={() => setPostSheetMode('menu')}
-                  >
-                    <Icon color={COLOR_TEXT_SUBTLE} name='ThreeDots' size={16} />
-                  </Pressable>
-                </HStack>
-              </HStack>
+                  </HStack>
 
-              {post.media && post.media.length > 0 && (
-                <MediaGallery media={post.media} />
+                  {post.media && post.media.length > 0 && (
+                    <MediaGallery media={post.media} />
+                  )}
+
+                  <Heading
+                    className="font-inter-bold tracking-[-0.4px]"
+                    size="lg"
+                  >
+                    {post.title}
+                  </Heading>
+                  {post.excerpt ? (
+                    <Text className="text-[15px] leading-[22px] text-muted-foreground">
+                      {post.excerpt}
+                    </Text>
+                  ) : null}
+                  <HStack className="items-center" space="sm">
+                    <Pressable
+                      className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
+                        post.liked ? 'bg-amber-subtle' : 'bg-secondary'
+                      }`}
+                      onPress={() =>
+                        toggleLike.mutate({ forum: 'All', postId: post.id })
+                      }
+                    >
+                      <Icon
+                        color={post.liked ? 'rgb(217,123,41)' : 'rgb(37,30,23)'}
+                        fill={post.liked ? 'rgb(217,123,41)' : 'none'}
+                        name="Favourite"
+                        size={14}
+                      />
+                      <Text
+                        className={`font-inter-semibold text-[12px] leading-[16px] ${
+                          post.liked ? 'text-amber' : 'text-content'
+                        }`}
+                      >
+                        {post.likes}
+                      </Text>
+                    </Pressable>
+                    <HStack className="flex-row items-center gap-1.5 rounded-full bg-secondary px-3 py-[7px]">
+                      <Icon
+                        color="rgb(37,30,23)"
+                        name="MessageCircle"
+                        size={14}
+                      />
+                      <Text className="font-inter-semibold text-[12px] leading-[16px] text-content">
+                        {post.replies}
+                      </Text>
+                    </HStack>
+                  </HStack>
+                </VStack>
+              ) : postQuery.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : (
+                <Text className="text-text-muted" size="sm">
+                  This post is no longer available.
+                </Text>
               )}
 
-              <Heading className='font-inter-bold tracking-[-0.4px]' size='lg'>
-                {post.title}
-              </Heading>
-              {post.excerpt ? (
-                <Text className='text-[15px] leading-[22px] text-muted-foreground'>
-                  {post.excerpt}
+              <Divider />
+              <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                {post?.replies ?? commentList.length} comments
+              </Text>
+
+              {comments.isPending ? (
+                <View className="items-center py-10">
+                  <Spinner size="xlarge" />
+                </View>
+              ) : comments.isError ? (
+                <VStack
+                  className="items-start gap-2 py-2"
+                  testID="comments-error"
+                >
+                  <Text className="text-text-muted" size="sm">
+                    Couldn&apos;t load comments.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    className="rounded-full border border-line px-3 py-2"
+                    onPress={() => void comments.refetch()}
+                    testID="comments-retry"
+                  >
+                    <Text
+                      className="font-inter-semibold text-content"
+                      size="xs"
+                    >
+                      Retry
+                    </Text>
+                  </Pressable>
+                </VStack>
+              ) : commentList.length === 0 ? (
+                <Text className="py-2 text-text-muted" size="sm">
+                  No comments yet — start the conversation.
                 </Text>
               ) : null}
-              <HStack className='items-center' space='sm'>
-                <Pressable
-                  className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
-                    post.liked ? 'bg-amber-subtle' : 'bg-secondary'
-                  }`}
-                  onPress={() =>
-                    toggleLike.mutate({ forum: 'All', postId: post.id })
-                  }
-                >
-                  <Icon
-                    color={post.liked ? 'rgb(217,123,41)' : 'rgb(37,30,23)'}
-                    fill={post.liked ? 'rgb(217,123,41)' : 'none'}
-                    name='Favourite'
-                    size={14}
-                  />
-                  <Text
-                    className={`font-inter-semibold text-[12px] leading-[16px] ${
-                      post.liked ? 'text-amber' : 'text-content'
-                    }`}
-                  >
-                    {post.likes}
-                  </Text>
-                </Pressable>
-                <HStack className='flex-row items-center gap-1.5 rounded-full bg-secondary px-3 py-[7px]'>
-                  <Icon
-                    color='rgb(37,30,23)'
-                    name='MessageCircle'
-                    size={14}
-                  />
-                  <Text className='font-inter-semibold text-[12px] leading-[16px] text-content'>
-                    {post.replies}
-                  </Text>
-                </HStack>
-              </HStack>
             </VStack>
-          ) : postQuery.isPending ? (
-            <View className='items-center py-10'>
-              <Spinner size='xlarge' />
+          }
+          onEndReached={() => {
+            if (comments.hasNextPage && !comments.isFetchingNextPage) {
+              void comments.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item }) => (
+            <View className="mb-4 px-[18px]">
+              <CommentItem
+                comment={item}
+                onActions={openCommentActions}
+                onOpenAuthor={(authorId) =>
+                  openProfile(authorId, item.author.name)
+                }
+                onReply={handleReply}
+              />
             </View>
-          ) : (
-            <Text className='text-text-muted' size='sm'>
-              This post is no longer available.
-            </Text>
           )}
-
-          <Divider />
-          <Text className='font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground'>
-            {post?.replies ?? commentList.length} comments
-          </Text>
-
-          {comments.isPending ? (
-            <View className='items-center py-10'>
-              <Spinner size='xlarge' />
-            </View>
-          ) : comments.isError ? (
-            <VStack className='items-start gap-2 py-2' testID='comments-error'>
-              <Text className='text-text-muted' size='sm'>
-                Couldn&apos;t load comments.
-              </Text>
-              <Pressable
-                accessibilityRole='button'
-                className='rounded-full border border-line px-3 py-2'
-                onPress={() => void comments.refetch()}
-                testID='comments-retry'
-              >
-                <Text className='font-inter-semibold text-content' size='xs'>
-                  Retry
-                </Text>
-              </Pressable>
-            </VStack>
-          ) : commentList.length === 0 ? (
-            <Text className='py-2 text-text-muted' size='sm'>
-              No comments yet — start the conversation.
-            </Text>
-          ) : (
-            <VStack className='gap-4'>
-              {commentList.map((comment) => (
-                <CommentItem
-                  comment={comment}
-                  key={comment.id}
-                  onActions={openCommentActions}
-                  onOpenAuthor={(authorId) =>
-                    openProfile(authorId, comment.author.name)
-                  }
-                  onReply={handleReply}
-                />
-              ))}
-              {comments.hasNextPage ? (
-                comments.isFetchingNextPage ? (
-                  <View className='items-center py-3' testID='comments-load-more'>
-                    <Spinner size='small' />
-                  </View>
-                ) : null
-              ) : (
-                <AllCaughtUp />
-              )}
-            </VStack>
-          )}
-        </ScrollView>
+        />
 
         <CommentComposer
           editing={editingComment !== null}
-          isSending={editingComment ? updateComment.isPending : createComment.isPending}
+          isSending={
+            editingComment ? updateComment.isPending : createComment.isPending
+          }
           onCancelEdit={handleCancelEditComment}
           onChangeText={setDraft}
           onClearReply={() => setReplyTo(null)}
@@ -562,7 +617,9 @@ export function PostDetailScreen({
         {commentSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              commentReportTarget === 'user' ? reportMember.isPending : reportComment.isPending
+              commentReportTarget === 'user'
+                ? reportMember.isPending
+                : reportComment.isPending
             }
             onSubmit={handleCommentReportSubmit}
             title={
@@ -572,22 +629,22 @@ export function PostDetailScreen({
             }
           />
         ) : commentSheetMode === 'confirm-delete' ? (
-          <View className='gap-1 px-[18px] pb-4 pt-1'>
-            <Text className='font-inter-bold text-[17px] text-content'>
+          <View className="gap-1 px-[18px] pb-4 pt-1">
+            <Text className="font-inter-bold text-[17px] text-content">
               Delete comment?
             </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
+            <Text className="pb-3 text-text-muted" size="sm">
               This can’t be undone.
             </Text>
-            <HStack className='justify-end gap-3'>
+            <HStack className="justify-end gap-3">
               <Pressable onPress={() => setCommentSheetMode(null)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
+                <Text className="font-inter-semibold text-[15px] text-content">
                   Cancel
                 </Text>
               </Pressable>
               <Pressable onPress={confirmDeleteComment}>
                 <Text
-                  className='font-inter-semibold text-[15px]'
+                  className="font-inter-semibold text-[15px]"
                   style={{ color: COLOR_DESTRUCTIVE }}
                 >
                   Delete
@@ -596,10 +653,10 @@ export function PostDetailScreen({
             </HStack>
           </View>
         ) : (
-          <View className='gap-1 px-[18px] pb-2'>
+          <View className="gap-1 px-[18px] pb-2">
             <SheetRow
-              icon='Link'
-              label='Copy link to comment'
+              icon="Link"
+              label="Copy link to comment"
               onPress={() => {
                 closeCommentActions();
                 showToast('Link copied');
@@ -609,23 +666,25 @@ export function PostDetailScreen({
             {actionsFor && actionsFor.author.id === userId ? (
               <>
                 <SheetRow
-                  icon='Edit'
-                  label='Edit comment'
-                  onPress={() => actionsFor && handleStartEditComment(actionsFor)}
+                  icon="Edit"
+                  label="Edit comment"
+                  onPress={() =>
+                    actionsFor && handleStartEditComment(actionsFor)
+                  }
                 />
                 <Divider />
                 <SheetRow
                   destructive
-                  icon='AlertCircle'
-                  label='Delete comment'
+                  icon="AlertCircle"
+                  label="Delete comment"
                   onPress={handleRequestDeleteComment}
                 />
               </>
             ) : (
               <>
                 <SheetRow
-                  icon='EyeOff'
-                  label='Block this neighbour'
+                  icon="EyeOff"
+                  label="Block this neighbour"
                   onPress={() => {
                     const target = actionsFor;
                     closeCommentActions();
@@ -633,22 +692,23 @@ export function PostDetailScreen({
                     blockUser.mutate(target.author.id, {
                       onError: () =>
                         showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () => showToast(`Blocked ${target.author.name}`),
+                      onSuccess: () =>
+                        showToast(`Blocked ${target.author.name}`),
                     });
                   }}
                 />
                 <Divider />
                 <SheetRow
                   destructive
-                  icon='Flag'
-                  label='Report this user'
+                  icon="Flag"
+                  label="Report this user"
                   onPress={openReportCommentAuthor}
                 />
                 <Divider />
                 <SheetRow
                   destructive
-                  icon='AlertCircle'
-                  label='Report comment'
+                  icon="AlertCircle"
+                  label="Report comment"
                   onPress={openReportComment}
                 />
               </>
@@ -692,12 +752,14 @@ export function PostDetailScreen({
               )
             }
             subforums={subforumNames}
-            submitLabel='Save'
+            submitLabel="Save"
           />
         ) : postSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
-              postReportTarget === 'user' ? reportMember.isPending : reportPost.isPending
+              postReportTarget === 'user'
+                ? reportMember.isPending
+                : reportPost.isPending
             }
             onSubmit={handlePostReportSubmit}
             title={
@@ -707,22 +769,22 @@ export function PostDetailScreen({
             }
           />
         ) : postSheetMode === 'confirm-delete' ? (
-          <View className='gap-1 px-[18px] pb-4 pt-1'>
-            <Text className='font-inter-bold text-[17px] text-content'>
+          <View className="gap-1 px-[18px] pb-4 pt-1">
+            <Text className="font-inter-bold text-[17px] text-content">
               Delete post?
             </Text>
-            <Text className='pb-3 text-text-muted' size='sm'>
+            <Text className="pb-3 text-text-muted" size="sm">
               This can’t be undone.
             </Text>
-            <HStack className='justify-end gap-3'>
+            <HStack className="justify-end gap-3">
               <Pressable onPress={() => setPostSheetMode(null)}>
-                <Text className='font-inter-semibold text-[15px] text-content'>
+                <Text className="font-inter-semibold text-[15px] text-content">
                   Cancel
                 </Text>
               </Pressable>
               <Pressable onPress={confirmDeletePost}>
                 <Text
-                  className='font-inter-semibold text-[15px]'
+                  className="font-inter-semibold text-[15px]"
                   style={{ color: COLOR_DESTRUCTIVE }}
                 >
                   Delete
@@ -731,37 +793,41 @@ export function PostDetailScreen({
             </HStack>
           </View>
         ) : (
-          <View className='gap-1 px-[18px] pb-2'>
+          <View className="gap-1 px-[18px] pb-2">
             {isOwnPost ? (
               <>
-                <SheetRow icon='Edit' label='Edit post' onPress={handleEditPost} />
+                <SheetRow
+                  icon="Edit"
+                  label="Edit post"
+                  onPress={handleEditPost}
+                />
                 <Divider />
                 <SheetRow
                   destructive
-                  icon='AlertCircle'
-                  label='Delete post'
+                  icon="AlertCircle"
+                  label="Delete post"
                   onPress={handleDeletePost}
                 />
               </>
             ) : (
               <>
                 <SheetRow
-                  icon='EyeOff'
-                  label='Block this neighbour'
+                  icon="EyeOff"
+                  label="Block this neighbour"
                   onPress={handleBlockPost}
                 />
                 <Divider />
                 <SheetRow
                   destructive
-                  icon='Flag'
-                  label='Report this user'
+                  icon="Flag"
+                  label="Report this user"
                   onPress={openReportPostAuthor}
                 />
                 <Divider />
                 <SheetRow
                   destructive
-                  icon='AlertCircle'
-                  label='Report post'
+                  icon="AlertCircle"
+                  label="Report post"
                   onPress={openReportPost}
                 />
               </>
@@ -778,11 +844,11 @@ export function PostDetailScreen({
 
       {toast ? (
         <View
-          className='absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3'
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
           style={{ bottom: insets.bottom + 96 }}
         >
-          <Icon color='rgb(250,250,250)' name='CheckCircle' size={16} />
-          <Text className='flex-1 text-[14px] text-primary-foreground'>
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
             {toast}
           </Text>
         </View>
@@ -802,12 +868,12 @@ function SheetRow({ icon, label, onPress, destructive }: SheetRowProps) {
   const color = destructive ? 'rgb(231,0,11)' : 'rgb(37,30,23)';
   return (
     <Pressable
-      className='flex-row items-center gap-3 px-1.5 py-3.5'
+      className="flex-row items-center gap-3 px-1.5 py-3.5"
       onPress={onPress}
     >
       <Icon color={color} name={icon} size={20} />
       <Text
-        className='text-[15px]'
+        className="text-[15px]"
         style={{ color, fontWeight: destructive ? '500' : '400' }}
       >
         {label}
