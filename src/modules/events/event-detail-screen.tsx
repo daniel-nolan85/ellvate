@@ -554,6 +554,11 @@ export function EventDetailScreen({
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => {
+            void eventQuery.refetch();
+            void comments.refetch();
+          }}
+          refreshing={eventQuery.isRefetching || comments.isRefetching}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <CommentItem

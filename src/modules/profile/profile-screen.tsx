@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -381,7 +381,19 @@ export function ProfileScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 130 }}
+        refreshControl={
+          <RefreshControl
+            onRefresh={() => {
+              void profile.refetch();
+              void stats.refetch();
+              void activity.refetch();
+            }}
+            refreshing={profile.isRefetching || stats.isRefetching || activity.isRefetching}
+          />
+        }
+      >
         <VStack className="mx-5 items-center gap-3 rounded-[20px] border border-surface-hairline bg-paper px-5 pb-5 pt-6 shadow-card">
           <Pressable
             accessibilityLabel="Change your photo"

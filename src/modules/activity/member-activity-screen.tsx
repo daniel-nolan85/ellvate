@@ -382,6 +382,11 @@ export function MemberActivityScreen({
 
           <ActivitySectionList
             contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+            onRefresh={() => {
+              void activity.refetch();
+              void member.refetch();
+            }}
+            refreshing={activity.isRefetching || member.isRefetching}
             sections={sections}
           />
         </>

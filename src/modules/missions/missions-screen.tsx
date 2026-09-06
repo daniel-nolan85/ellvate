@@ -223,6 +223,11 @@ export function MissionsScreen({
           }
         }}
         onEndReachedThreshold={0.5}
+        onRefresh={() => {
+          void missionsView.refetch();
+          void progress.refetch();
+        }}
+        refreshing={missionsView.isRefetching || progress.isRefetching}
         renderItem={({ item }) => (
           <View className="mx-5 mb-2">
             <MissionCard

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -312,7 +312,15 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
           ) : null}
         </VStack>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          refreshControl={
+            <RefreshControl
+              onRefresh={() => void digest.refetch()}
+              refreshing={digest.isRefetching}
+            />
+          }
+        >
           {tab === 'recap' ? (
             <>
               <Text className="px-5 pb-4 text-[13px] text-text-muted">

@@ -143,6 +143,8 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
           }
         }}
         onEndReachedThreshold={0.5}
+        onRefresh={() => void services.refetch()}
+        refreshing={services.isRefetching}
         renderItem={({ item }) => (
           <View className="mx-5 mb-2">
             <ServiceListingCard listing={item} onOpen={onOpenListing} />

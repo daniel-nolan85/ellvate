@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -176,7 +176,15 @@ export function MemberProfileScreen({
         </Heading>
       </HStack>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        refreshControl={
+          <RefreshControl
+            onRefresh={() => void member.refetch()}
+            refreshing={member.isRefetching}
+          />
+        }
+      >
         <VStack className='items-center px-5 pb-2 pt-6' space='sm'>
           <Avatar
             name={displayName}

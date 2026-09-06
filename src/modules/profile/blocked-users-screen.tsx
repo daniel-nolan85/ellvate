@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
@@ -89,7 +89,15 @@ export function BlockedUsersScreen() {
           </Text>
         </VStack>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 130 }}
+          refreshControl={
+            <RefreshControl
+              onRefresh={() => void blockedUsers.refetch()}
+              refreshing={blockedUsers.isRefetching}
+            />
+          }
+        >
           <VStack className="mx-5 mt-2 overflow-hidden rounded-[18px] border border-surface-hairline bg-paper shadow-card">
             {items.map((member) => (
               <BlockedRow

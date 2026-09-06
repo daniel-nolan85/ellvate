@@ -256,6 +256,8 @@ export function BookmarksScreen() {
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => void bookmarks.refetch()}
+          refreshing={bookmarks.isRefetching}
           renderItem={({ item }) => <BookmarkRow item={item} onPress={() => setOpenItem(item)} />}
         />
       )}

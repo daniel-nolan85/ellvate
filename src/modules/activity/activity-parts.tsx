@@ -273,6 +273,8 @@ export function ActivityRow({
 export function ActivitySectionList({
   contentContainerStyle,
   loadMore,
+  onRefresh,
+  refreshing,
   sections,
 }: {
   readonly sections: readonly ActivitySection[];
@@ -281,6 +283,12 @@ export function ActivitySectionList({
   // and never needs more; pass the active single filter's own paginated
   // query to fetch further pages as the user scrolls.
   readonly loadMore?: ActivityLoadMoreTarget;
+  // Both omitted together where pull-to-refresh doesn't apply; otherwise
+  // pass the caller's own combined refetch of every underlying query (not
+  // just the active filter's), since switching filters shows already-
+  // fetched data instantly rather than fetching fresh per filter.
+  readonly refreshing?: boolean;
+  readonly onRefresh?: () => void;
 }) {
   return (
     <SectionList<ActivityListItem, ActivitySection>
@@ -295,6 +303,8 @@ export function ActivitySectionList({
         }
       }}
       onEndReachedThreshold={0.5}
+      onRefresh={onRefresh}
+      refreshing={refreshing ?? false}
       renderItem={({ item }) => (
         <ActivityRow
           kind={item.kind}

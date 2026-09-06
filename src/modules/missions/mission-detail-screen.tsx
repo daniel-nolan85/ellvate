@@ -791,6 +791,14 @@ export function MissionDetailScreen({
             }
           }}
           onEndReachedThreshold={0.5}
+          onRefresh={() => {
+            void missionQuery.refetch();
+            void checkIns.refetch();
+            void comments.refetch();
+          }}
+          refreshing={
+            missionQuery.isRefetching || checkIns.isRefetching || comments.isRefetching
+          }
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <CommentItem
