@@ -1,9 +1,8 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
@@ -68,7 +67,9 @@ function NotificationRow({
         </HStack>
         <Text className="text-[13px] text-text-muted">{notification.body}</Text>
       </VStack>
-      {unread ? <View className="mt-1.5 h-2 w-2 rounded-full bg-primary" /> : null}
+      {unread ? (
+        <View className="mt-1.5 h-2 w-2 rounded-full bg-primary" />
+      ) : null}
     </Pressable>
   );
 }
@@ -82,14 +83,6 @@ export function NotificationsScreen() {
   const items =
     notifications.data?.pages.flatMap((page) => page.notifications) ?? [];
   const hasUnread = items.some((notification) => notification.readAt === null);
-
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: notifications.fetchNextPage,
-      hasNextPage: notifications.hasNextPage,
-      isFetchingNextPage: notifications.isFetchingNextPage,
-    },
-  ]);
 
   const handlePress = (notification: Notification) => {
     if (notification.readAt === null) {
@@ -167,23 +160,35 @@ export function NotificationsScreen() {
           </Text>
         </VStack>
       ) : (
-        <ScrollView
+        // FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+        // ActivitySectionList for why: only rows actually on/near screen
+        // mount as real native views here, no matter how many notifications
+        // accumulate for a user over time.
+        <FlatList
           contentContainerStyle={{ paddingBottom: 130 }}
-          onScroll={onScroll}
-          scrollEventThrottle={100}
-        >
-          {items.map((notification, index) => (
-            <View key={notification.id}>
-              <NotificationRow notification={notification} onPress={handlePress} />
-              {index < items.length - 1 ? <Divider /> : null}
-            </View>
-          ))}
-          {notifications.isFetchingNextPage ? (
-            <View className="items-center py-4">
-              <Spinner size="small" />
-            </View>
-          ) : null}
-        </ScrollView>
+          data={items}
+          ItemSeparatorComponent={Divider}
+          keyExtractor={(notification) => notification.id}
+          ListFooterComponent={
+            notifications.isFetchingNextPage ? (
+              <View className="items-center py-4">
+                <Spinner size="small" />
+              </View>
+            ) : null
+          }
+          onEndReached={() => {
+            if (
+              notifications.hasNextPage &&
+              !notifications.isFetchingNextPage
+            ) {
+              void notifications.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          renderItem={({ item }) => (
+            <NotificationRow notification={item} onPress={handlePress} />
+          )}
+        />
       )}
 
       <CommunityNavBar />

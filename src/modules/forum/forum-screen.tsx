@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
-import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -26,6 +25,7 @@ import {
   useForumPosts,
   useSubforums,
   useToggleLike,
+  type ForumPost,
 } from './use-forum';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
@@ -76,20 +76,12 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       ? (subforumNames.find((name) => name !== 'All') ?? 'Announcements')
       : activeForum;
 
-  const displayedPosts = useMemo(() => {
+  const displayedPosts = useMemo((): readonly ForumPost[] => {
     const all = posts.data?.pages.flatMap((page) => page.posts) ?? [];
     return activeForum === FOR_YOU
       ? all.filter((post) => interestSubforums.has(post.forum))
       : all;
   }, [posts.data, activeForum, interestSubforums]);
-
-  const onScroll = useLoadMoreOnScroll([
-    {
-      fetchNextPage: posts.fetchNextPage,
-      hasNextPage: posts.hasNextPage,
-      isFetchingNextPage: posts.isFetchingNextPage,
-    },
-  ]);
 
   const handleCreatePost = (draft: PostComposerDraft) => {
     createPost.mutate(
@@ -107,7 +99,9 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           );
         },
         onError: () => {
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          void Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error,
+          );
         },
       },
     );
@@ -115,91 +109,109 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
 
   return (
     <>
-      <ScrollView
-      className="flex-1 bg-canvas"
-      contentContainerStyle={{ paddingBottom: 130 }}
-      onScroll={onScroll}
-      scrollEventThrottle={100}
-    >
-      <VStack space="md">
-        <ScreenTitle
-          eyebrow="Lake Las Vegas"
-          onSearch={() => router.push('/search')}
-          right={
-            <Button
-              className="rounded-full bg-accent px-4"
-              onPress={() => setIsComposing(true)}
-              testID="forum-add-post"
-              size="sm"
-            >
-              <Icon color={COLOR_ACCENT_FOREGROUND} name="Edit" size={14} />
-              <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
-                Post
-              </ButtonText>
-            </Button>
+      {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
+          ActivitySectionList for why: this screen pairs a filter-chip row
+          (SubforumChips) with a growing list, the exact shape that caused
+          My Activity's "All" filter pills to corrupt under enough
+          simultaneous content. Only rows actually on/near screen mount as
+          real native views here, no matter how many posts load. */}
+      <FlatList
+        className="flex-1 bg-canvas"
+        contentContainerStyle={{ paddingBottom: 130 }}
+        data={displayedPosts}
+        keyExtractor={(post) => post.id}
+        ListEmptyComponent={
+          posts.isPending ? (
+            <VStack className="items-center py-16">
+              <Spinner size="xlarge" />
+            </VStack>
+          ) : posts.isError ? (
+            <VStack className="items-center py-16" space="sm">
+              <Text className="text-text-muted" size="sm">
+                Couldn&apos;t load posts.
+              </Text>
+              <Button
+                action="secondary"
+                className="rounded-full"
+                onPress={() => void posts.refetch()}
+                size="sm"
+                variant="outline"
+              >
+                <ButtonText className="font-inter-semibold text-[13px]">
+                  Retry
+                </ButtonText>
+              </Button>
+            </VStack>
+          ) : (
+            <VStack className="items-center px-10 py-16" space="xs">
+              <Icon color="rgb(169,156,139)" name="MessageCircle" size={28} />
+              <Text
+                className="text-center font-inter-semibold text-content"
+                size="sm"
+              >
+                No posts here yet
+              </Text>
+              <Text className="text-center text-text-muted" size="xs">
+                {activeForum === FOR_YOU
+                  ? 'No posts match your interests yet.'
+                  : `Be the first to start a conversation in ${activeForum}.`}
+              </Text>
+            </VStack>
+          )
+        }
+        ListFooterComponent={
+          displayedPosts.length === 0 ? null : posts.hasNextPage ? (
+            <LoadMoreFooter isLoading={posts.isFetchingNextPage} />
+          ) : (
+            <AllCaughtUp />
+          )
+        }
+        ListHeaderComponent={
+          <VStack className="pb-3" space="md">
+            <ScreenTitle
+              eyebrow="Lake Las Vegas"
+              onSearch={() => router.push('/search')}
+              right={
+                <Button
+                  className="rounded-full bg-accent px-4"
+                  onPress={() => setIsComposing(true)}
+                  testID="forum-add-post"
+                  size="sm"
+                >
+                  <Icon color={COLOR_ACCENT_FOREGROUND} name="Edit" size={14} />
+                  <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
+                    Post
+                  </ButtonText>
+                </Button>
+              }
+              title="Forum"
+            />
+            <SubforumChips
+              active={activeForum}
+              onSelect={setActiveForum}
+              subforums={chipNames}
+            />
+          </VStack>
+        }
+        onEndReached={() => {
+          if (posts.hasNextPage && !posts.isFetchingNextPage) {
+            void posts.fetchNextPage();
           }
-          title="Forum"
-        />
-        <SubforumChips
-          active={activeForum}
-          onSelect={setActiveForum}
-          subforums={chipNames}
-        />
-        {posts.isPending ? (
-          <VStack className="items-center py-16">
-            <Spinner size="xlarge" />
-          </VStack>
-        ) : posts.isError ? (
-          <VStack className="items-center py-16" space="sm">
-            <Text className="text-text-muted" size="sm">
-              Couldn&apos;t load posts.
-            </Text>
-            <Button
-              action="secondary"
-              className="rounded-full"
-              onPress={() => void posts.refetch()}
-              size="sm"
-              variant="outline"
-            >
-              <ButtonText className="font-inter-semibold text-[13px]">
-                Retry
-              </ButtonText>
-            </Button>
-          </VStack>
-        ) : displayedPosts.length === 0 ? (
-          <VStack className="items-center px-10 py-16" space="xs">
-            <Icon color="rgb(169,156,139)" name="MessageCircle" size={28} />
-            <Text className="text-center font-inter-semibold text-content" size="sm">
-              No posts here yet
-            </Text>
-            <Text className="text-center text-text-muted" size="xs">
-              {activeForum === FOR_YOU
-                ? 'No posts match your interests yet.'
-                : `Be the first to start a conversation in ${activeForum}.`}
-            </Text>
-          </VStack>
-        ) : (
-          <VStack className="px-5" space="sm">
-            {displayedPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                onOpen={() => onOpenPost?.(post.id)}
-                onToggleLike={() =>
-                  toggleLike.mutate({ forum: post.forum, postId: post.id })
-                }
-                pinAction={pinAction}
-                post={post}
-              />
-            ))}
-            {posts.hasNextPage ? (
-              <LoadMoreFooter isLoading={posts.isFetchingNextPage} />
-            ) : (
-              <AllCaughtUp />
-            )}
-          </VStack>
+        }}
+        onEndReachedThreshold={0.5}
+        renderItem={({ item }) => (
+          <View className="mx-5 mb-2">
+            <PostCard
+              onOpen={() => onOpenPost?.(item.id)}
+              onToggleLike={() =>
+                toggleLike.mutate({ forum: item.forum, postId: item.id })
+              }
+              pinAction={pinAction}
+              post={item}
+            />
+          </View>
         )}
-      </VStack>
-    </ScrollView>
+      />
 
       <Sheet onClose={() => setIsComposing(false)} visible={isComposing}>
         <PostComposer
