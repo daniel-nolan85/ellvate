@@ -27,7 +27,15 @@ const HOUR_MS = 60 * 60 * 1000;
 const isoHoursBeforeSeedNow = (hours: number): string =>
   new Date(Date.parse(SEED_NOW_ISO) - hours * HOUR_MS).toISOString();
 
-const EVENT_WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+const EVENT_WEEKDAYS = [
+  'SUN',
+  'MON',
+  'TUE',
+  'WED',
+  'THU',
+  'FRI',
+  'SAT',
+] as const;
 
 // WHY: anchored to the real wall clock (like isoHoursBeforeSeedNow above) so
 // seeded events always land in the future relative to whenever the app is
@@ -38,7 +46,11 @@ const seedEventFields = (
   daysFromSeedNow: number,
   hour: number,
   minute: number,
-): { readonly startsAt: string; readonly dayLabel: string; readonly dateLabel: string } => {
+): {
+  readonly startsAt: string;
+  readonly dayLabel: string;
+  readonly dateLabel: string;
+} => {
   const date = new Date(Date.parse(SEED_NOW_ISO));
   date.setUTCDate(date.getUTCDate() + daysFromSeedNow);
   date.setUTCHours(hour, minute, 0, 0);
@@ -170,6 +182,96 @@ const seedUsers = (): readonly StoredUser[] => [
     missionsCompleted: 0,
     previousRank: null,
   }),
+  // Screenshot-only leaderboard filler -- see App Store screenshot prep
+  // notes; safe to trim back down once real users populate this.
+  seedUser({
+    id: 'user-noah',
+    name: 'Noah Bennett',
+    xp: 4150,
+    streakDays: 8,
+    missionsCompleted: 49,
+    previousRank: 2,
+  }),
+  seedUser({
+    id: 'user-grace',
+    name: 'Grace Chen',
+    xp: 3680,
+    streakDays: 4,
+    missionsCompleted: 43,
+    previousRank: 3,
+  }),
+  seedUser({
+    id: 'user-marcus',
+    name: 'Marcus Webb',
+    xp: 2980,
+    streakDays: 6,
+    missionsCompleted: 35,
+    previousRank: 8,
+  }),
+  seedUser({
+    id: 'user-isabella',
+    name: 'Isabella Cruz',
+    xp: 2410,
+    streakDays: 2,
+    missionsCompleted: 28,
+    previousRank: 9,
+  }),
+  seedUser({
+    id: 'user-owen',
+    name: 'Owen Park',
+    xp: 1750,
+    streakDays: 9,
+    missionsCompleted: 20,
+    previousRank: 11,
+  }),
+  seedUser({
+    id: 'user-lily',
+    name: 'Lily Nguyen',
+    xp: 1520,
+    streakDays: 0,
+    missionsCompleted: 18,
+    previousRank: 13,
+  }),
+  seedUser({
+    id: 'user-ethan',
+    name: 'Ethan Brooks',
+    xp: 1290,
+    streakDays: 3,
+    missionsCompleted: 15,
+    previousRank: 14,
+  }),
+  seedUser({
+    id: 'user-zoe',
+    name: 'Zoe Fisher',
+    xp: 1040,
+    streakDays: 0,
+    missionsCompleted: 12,
+    previousRank: 15,
+  }),
+  seedUser({
+    id: 'user-caleb',
+    name: 'Caleb Torres',
+    xp: 820,
+    streakDays: 1,
+    missionsCompleted: 9,
+    previousRank: 16,
+  }),
+  seedUser({
+    id: 'user-ava',
+    name: 'Ava Simmons',
+    xp: 610,
+    streakDays: 0,
+    missionsCompleted: 7,
+    previousRank: 17,
+  }),
+  seedUser({
+    id: 'user-mason',
+    name: 'Mason Reed',
+    xp: 390,
+    streakDays: 0,
+    missionsCompleted: 4,
+    previousRank: 18,
+  }),
 ];
 
 const seedComments = (): readonly StoredComment[] => [
@@ -220,6 +322,38 @@ const seedComments = (): readonly StoredComment[] => [
     editedAt: null,
     id: 'comment-6',
     postId: 'post-4',
+  },
+  {
+    authorId: 'user-sam',
+    body: 'Count me in, been wanting an excuse to actually use my new driver before it gets too hot.',
+    createdAt: isoHoursBeforeSeedNow(10),
+    editedAt: null,
+    id: 'comment-7',
+    postId: 'post-6',
+  },
+  {
+    authorId: 'user-mia',
+    body: 'Still available? I will take it if so!',
+    createdAt: isoHoursBeforeSeedNow(6),
+    editedAt: null,
+    id: 'comment-8',
+    postId: 'post-8',
+  },
+  {
+    authorId: DEMO_USER_ID,
+    body: 'Beat me to it! Let us know if you find another one though.',
+    createdAt: isoHoursBeforeSeedNow(5),
+    editedAt: null,
+    id: 'comment-9',
+    postId: 'post-8',
+  },
+  {
+    authorId: 'user-andre',
+    body: 'We used Desert Bloom for our backyard last spring, been great since.',
+    createdAt: isoHoursBeforeSeedNow(14),
+    editedAt: null,
+    id: 'comment-10',
+    postId: 'post-9',
   },
 ];
 
@@ -283,6 +417,71 @@ const seedPosts = (
     likedBy: [],
     editedAt: null,
   },
+  {
+    id: 'post-5',
+    forum: 'HOA',
+    authorId: 'user-hoa',
+    createdAt: isoHoursBeforeSeedNow(30),
+    title: 'Reminder: landscaping requests due end of month',
+    excerpt:
+      'If you want your front yard included in this quarter’s HOA landscaping refresh, get your request form in by the 30th. Link in the pinned announcement.',
+    replies: replyCount(comments, 'post-5'),
+    likes: 34,
+    likedBy: [],
+    editedAt: null,
+  },
+  {
+    id: 'post-6',
+    forum: 'Golf',
+    authorId: 'user-andre',
+    createdAt: isoHoursBeforeSeedNow(12),
+    title: 'Sunrise foursome forming for Saturdays',
+    excerpt:
+      'A few of us tee off at 6:45am most Saturdays before it gets hot. Casual pace, all levels welcome — just show up or comment here.',
+    replies: replyCount(comments, 'post-6'),
+    likes: 19,
+    likedBy: [],
+    editedAt: null,
+  },
+  {
+    id: 'post-7',
+    forum: 'Sports Club',
+    authorId: 'user-jordan',
+    createdAt: isoHoursBeforeSeedNow(16),
+    title: 'Pickleball nets on courts 2 & 3 feeling a little worn',
+    excerpt:
+      'Anyone know if the HOA has a fix scheduled? In the meantime courts 1 and 4 are still in great shape.',
+    replies: replyCount(comments, 'post-7'),
+    likes: 8,
+    likedBy: [],
+    editedAt: null,
+  },
+  {
+    id: 'post-8',
+    forum: 'Buy & Sell',
+    authorId: 'user-owen',
+    createdAt: isoHoursBeforeSeedNow(8),
+    title: 'Kayak + paddle, barely used — $150',
+    excerpt:
+      'Upgraded to a tandem so this single kayak needs a new home. Great condition, includes paddle and life vest. Pickup near the marina.',
+    replies: replyCount(comments, 'post-8'),
+    likes: 6,
+    likedBy: [],
+    editedAt: null,
+  },
+  {
+    id: 'post-9',
+    forum: 'General',
+    authorId: 'user-grace',
+    createdAt: isoHoursBeforeSeedNow(15),
+    title: 'Best local landscaper recommendations?',
+    excerpt:
+      'Our sprinkler system needs an overhaul before summer. Anyone had good experience with a local company?',
+    replies: replyCount(comments, 'post-9'),
+    likes: 14,
+    likedBy: [],
+    editedAt: null,
+  },
 ];
 
 const seedEvents = (): readonly StoredEvent[] => [
@@ -340,6 +539,62 @@ const seedEvents = (): readonly StoredEvent[] => [
     going: 19,
     joinedBy: [],
     attendeeIds: ['user-riley', 'user-mia'],
+    editedAt: null,
+  },
+  {
+    id: 'event-5',
+    authorId: 'user-priya',
+    ...seedEventFields(1, 18, 30),
+    timeLabel: '6:30 PM',
+    title: 'Sunset Yoga on the Marina Lawn',
+    place: 'Marina Lawn',
+    tag: 'Wellness',
+    featured: false,
+    going: 22,
+    joinedBy: [],
+    attendeeIds: ['user-priya', 'user-grace', 'user-lily'],
+    editedAt: null,
+  },
+  {
+    id: 'event-6',
+    authorId: 'user-mia',
+    ...seedEventFields(5, 17, 0),
+    timeLabel: '5:00 PM',
+    title: 'Live Music at the Marina',
+    place: 'Marina Boardwalk',
+    tag: 'Music',
+    featured: false,
+    going: 65,
+    joinedBy: [],
+    attendeeIds: ['user-mia', 'user-noah', 'user-marcus', 'user-isabella'],
+    editedAt: null,
+  },
+  {
+    id: 'event-7',
+    authorId: 'user-noah',
+    ...seedEventFields(6, 8, 0),
+    timeLabel: '8:00 AM',
+    title: 'Community 5K Fun Run',
+    place: 'Trailhead near the North Gate',
+    tag: 'Fitness',
+    featured: false,
+    going: 40,
+    joinedBy: [],
+    attendeeIds: ['user-noah', 'user-owen', 'user-ethan'],
+    editedAt: null,
+  },
+  {
+    id: 'event-8',
+    authorId: 'user-hoa',
+    ...seedEventFields(3, 19, 30),
+    timeLabel: '7:30 PM',
+    title: 'Neighborhood Movie Night',
+    place: 'Pool Amphitheater',
+    tag: 'Family',
+    featured: false,
+    going: 55,
+    joinedBy: [],
+    attendeeIds: ['user-zoe', 'user-caleb', 'user-ava', 'user-mason'],
     editedAt: null,
   },
 ];
@@ -415,6 +670,78 @@ const seedMissions = (): readonly StoredMission[] => [
     // No entry for DEMO_USER_ID — not yet accepted, shows in "Available".
     progressByUser: {},
   },
+  {
+    id: 'mission-5',
+    authorId: 'user-hoa',
+    title: 'Early Riser Challenge',
+    description: 'Complete a morning walk before 8 AM, three days this week.',
+    scheduledFor: '2026-07-20',
+    xp: 90,
+    stopsTotal: 3,
+    stops: [
+      'Complete a sunrise walk before 8 AM.',
+      'Log a second sunrise walk before 8 AM.',
+      'Finish the challenge with a third sunrise walk before 8 AM.',
+    ],
+    theme: 'day',
+    editedAt: null,
+    progressByUser: {},
+  },
+  {
+    id: 'mission-6',
+    authorId: 'user-hoa',
+    title: 'Meet Your Neighbors',
+    description:
+      'Introduce yourself to one neighbor you have not met yet, three times.',
+    scheduledFor: '2026-07-21',
+    xp: 80,
+    stopsTotal: 3,
+    stops: [
+      'Introduce yourself to a neighbor on your street.',
+      'Say hello to someone new at a community event.',
+      'Invite a neighbor to grab coffee at the Lakeside Café.',
+    ],
+    theme: 'social',
+    editedAt: null,
+    progressByUser: {
+      [DEMO_USER_ID]: { completedAt: null, status: 'active', stopsDone: 1 },
+    },
+  },
+  {
+    id: 'mission-7',
+    authorId: 'user-hoa',
+    title: 'Marina Sunset Photo Walk',
+    description:
+      'Snap and share your best sunset shot from three spots along the boardwalk.',
+    scheduledFor: '2026-07-22',
+    xp: 100,
+    stopsTotal: 3,
+    stops: [
+      'Photograph the sunset from the marina dock.',
+      'Photograph the sunset from the boardwalk midpoint.',
+      'Photograph the sunset from the village overlook.',
+    ],
+    theme: 'water',
+    editedAt: null,
+    progressByUser: {},
+  },
+  {
+    id: 'mission-8',
+    authorId: 'user-hoa',
+    title: 'Support 3 Local Businesses',
+    description: 'Visit and check in at any three service listings this month.',
+    scheduledFor: '2026-07-23',
+    xp: 120,
+    stopsTotal: 3,
+    stops: [
+      'Check in at any service listing.',
+      'Check in at a second service listing.',
+      'Check in at a third service listing.',
+    ],
+    theme: 'village',
+    editedAt: null,
+    progressByUser: {},
+  },
 ];
 
 const seedServiceListings = (): readonly StoredServiceListing[] => [
@@ -453,7 +780,8 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     authorId: 'user-sam',
     businessName: 'Crystal Clear Pool Care',
     category: 'pool-spa',
-    description: 'Weekly pool cleaning, chemical balancing, and equipment repair.',
+    description:
+      'Weekly pool cleaning, chemical balancing, and equipment repair.',
     contactPhone: '(702) 555-0176',
     contactEmail: 'sam@crystalclearpools.example',
     contactWebsite: null,
@@ -467,13 +795,74 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     authorId: 'user-priya',
     businessName: 'Priya Rao Web Design',
     category: 'tech-web',
-    description: 'Websites and small business branding for neighbors — from a neighbor.',
+    description:
+      'Websites and small business branding for neighbors — from a neighbor.',
     contactPhone: null,
     contactEmail: 'priya@priyaraodesign.example',
     contactWebsite: 'https://priyaraodesign.example',
     serviceArea: 'Remote & on-site',
     hours: null,
     createdAt: isoHoursBeforeSeedNow(30),
+    editedAt: null,
+  },
+  {
+    id: 'service-5',
+    authorId: 'user-grace',
+    businessName: 'Desert Bloom Landscaping',
+    category: 'home-services',
+    description:
+      'Full-service landscaping — design, install, and maintenance. HOA-approved plant palettes, free quotes.',
+    contactPhone: '(702) 555-0113',
+    contactEmail: 'grace@desertbloomlandscaping.example',
+    contactWebsite: null,
+    serviceArea: 'Lake Las Vegas & MonteLago Village',
+    hours: 'Mon–Fri 7am–5pm',
+    createdAt: isoHoursBeforeSeedNow(60),
+    editedAt: null,
+  },
+  {
+    id: 'service-6',
+    authorId: 'user-isabella',
+    businessName: 'Bella Salon & Spa',
+    category: 'beauty',
+    description:
+      'Hair, nails, and skincare just outside the north gate. Residents get 10% off their first visit.',
+    contactPhone: '(702) 555-0164',
+    contactEmail: null,
+    contactWebsite: 'https://bellasalonspa.example',
+    serviceArea: 'Lake Las Vegas',
+    hours: 'Tue–Sat 9am–6pm',
+    createdAt: isoHoursBeforeSeedNow(44),
+    editedAt: null,
+  },
+  {
+    id: 'service-7',
+    authorId: 'user-marcus',
+    businessName: 'Lakeside Catering Co.',
+    category: 'dining',
+    description:
+      'Small-batch catering for backyard gatherings, birthdays, and HOA events. Tasting menus available.',
+    contactPhone: '(702) 555-0187',
+    contactEmail: 'marcus@lakesidecatering.example',
+    contactWebsite: null,
+    serviceArea: 'Lake Las Vegas & Henderson',
+    hours: null,
+    createdAt: isoHoursBeforeSeedNow(80),
+    editedAt: null,
+  },
+  {
+    id: 'service-8',
+    authorId: 'user-lily',
+    businessName: 'Village Tutoring Collective',
+    category: 'other',
+    description:
+      'Private and small-group tutoring for K–12, run by a small group of local teachers and grad students.',
+    contactPhone: null,
+    contactEmail: 'lily@villagetutoring.example',
+    contactWebsite: 'https://villagetutoring.example',
+    serviceArea: 'Remote & on-site',
+    hours: 'Mon–Thu 3pm–7pm',
+    createdAt: isoHoursBeforeSeedNow(20),
     editedAt: null,
   },
 ];
@@ -495,6 +884,24 @@ const seedServiceReviews = (): readonly StoredServiceReview[] => [
     rating: 4,
     body: 'Came right to our driveway and the car looked brand new.',
     createdAt: isoHoursBeforeSeedNow(20),
+    editedAt: null,
+  },
+  {
+    id: 'service-review-3',
+    listingId: 'service-5',
+    authorId: 'user-owen',
+    rating: 5,
+    body: 'Transformed our front yard in a weekend, and everything was HOA-approved on the first try.',
+    createdAt: isoHoursBeforeSeedNow(30),
+    editedAt: null,
+  },
+  {
+    id: 'service-review-4',
+    listingId: 'service-6',
+    authorId: DEMO_USER_ID,
+    rating: 5,
+    body: 'Best haircut I have had since moving here.',
+    createdAt: isoHoursBeforeSeedNow(15),
     editedAt: null,
   },
 ];
@@ -533,7 +940,7 @@ const seedPetitions = (): readonly StoredPetition[] => [
       'The Loop Trail has three separate pothole clusters between the golf course crossing and the fountain overlook — bad enough now that a few neighbours have stopped running it after dark. Asking the board to get it repaved before it gets worse.',
     hoaEmailSentAt: isoHoursBeforeSeedNow(96),
     hoaResponse:
-      'Thanks for flagging this — we\'ve added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.',
+      "Thanks for flagging this — we've added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.",
     hoaResponseAt: isoHoursBeforeSeedNow(48),
     id: 'petition-loop-trail-repaving',
     requiredSignatures: 40,
@@ -563,15 +970,51 @@ const seedPetitions = (): readonly StoredPetition[] => [
 ];
 
 const seedPetitionSignatures = (): readonly StoredPetitionSignature[] => [
-  { createdAt: isoHoursBeforeSeedNow(70), petitionId: 'petition-marina-lighting', userId: 'user-mia' },
-  { createdAt: isoHoursBeforeSeedNow(65), petitionId: 'petition-marina-lighting', userId: 'user-andre' },
-  { createdAt: isoHoursBeforeSeedNow(50), petitionId: 'petition-marina-lighting', userId: 'user-priya' },
-  { createdAt: isoHoursBeforeSeedNow(230), petitionId: 'petition-loop-trail-repaving', userId: 'user-mia' },
-  { createdAt: isoHoursBeforeSeedNow(220), petitionId: 'petition-loop-trail-repaving', userId: 'user-andre' },
-  { createdAt: isoHoursBeforeSeedNow(210), petitionId: 'petition-loop-trail-repaving', userId: 'user-jordan' },
-  { createdAt: isoHoursBeforeSeedNow(200), petitionId: 'petition-loop-trail-repaving', userId: 'user-sam' },
-  { createdAt: isoHoursBeforeSeedNow(470), petitionId: 'petition-village-guest-parking', userId: 'user-mia' },
-  { createdAt: isoHoursBeforeSeedNow(460), petitionId: 'petition-village-guest-parking', userId: 'user-riley' },
+  {
+    createdAt: isoHoursBeforeSeedNow(70),
+    petitionId: 'petition-marina-lighting',
+    userId: 'user-mia',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(65),
+    petitionId: 'petition-marina-lighting',
+    userId: 'user-andre',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(50),
+    petitionId: 'petition-marina-lighting',
+    userId: 'user-priya',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(230),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-mia',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(220),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-andre',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(210),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-jordan',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(200),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-sam',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(470),
+    petitionId: 'petition-village-guest-parking',
+    userId: 'user-mia',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(460),
+    petitionId: 'petition-village-guest-parking',
+    userId: 'user-riley',
+  },
 ];
 
 const seedPetitionComments = (): readonly StoredPetitionComment[] => [
