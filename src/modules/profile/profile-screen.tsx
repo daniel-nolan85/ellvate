@@ -662,6 +662,7 @@ export function ProfileScreen() {
                   <Input size="lg">
                     <InputField
                       autoFocus
+                      maxLength={50}
                       onChangeText={setDraftName}
                       onSubmitEditing={saveProfile}
                       placeholder="First name"

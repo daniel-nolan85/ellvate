@@ -200,6 +200,7 @@ export function ServiceComposer({
         <Field label="Business name">
           <Input size="lg">
             <InputField
+              maxLength={80}
               onChangeText={setBusinessName}
               placeholder="e.g. Lakeside Tails Dog Walking"
               testID="service-business-name"
@@ -211,7 +212,8 @@ export function ServiceComposer({
         <Field label="What you do">
           <GrowingTextInput
             className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
-            maxHeight={200}
+            maxHeight={280}
+            maxLength={1000}
             onChangeText={setDescription}
             placeholder="Describe your service"
             testID="service-description"
@@ -275,6 +277,7 @@ export function ServiceComposer({
           <Input size="lg">
             <InputField
               keyboardType="phone-pad"
+              maxLength={120}
               onChangeText={setContactPhone}
               placeholder="(702) 555-0100"
               testID="service-contact-phone"
@@ -288,6 +291,7 @@ export function ServiceComposer({
             <InputField
               autoCapitalize="none"
               keyboardType="email-address"
+              maxLength={120}
               onChangeText={setContactEmail}
               placeholder="you@example.com"
               testID="service-contact-email"
@@ -301,6 +305,7 @@ export function ServiceComposer({
             <InputField
               autoCapitalize="none"
               keyboardType="url"
+              maxLength={120}
               onChangeText={setContactWebsite}
               placeholder="https://"
               testID="service-contact-website"
@@ -312,6 +317,7 @@ export function ServiceComposer({
         <Field label="Service area">
           <Input size="lg">
             <InputField
+              maxLength={120}
               onChangeText={setServiceArea}
               placeholder="e.g. Lake Las Vegas"
               testID="service-area"
@@ -323,6 +329,7 @@ export function ServiceComposer({
         <Field label="Hours">
           <Input size="lg">
             <InputField
+              maxLength={120}
               onChangeText={setHours}
               placeholder="e.g. Mon–Fri 8am–6pm"
               testID="service-hours"

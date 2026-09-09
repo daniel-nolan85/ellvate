@@ -16,7 +16,7 @@ export type PostValidation =
   | { readonly ok: false; readonly code: 'invalid_post'; readonly message: string };
 
 const MAX_TITLE_LENGTH = 140;
-const MAX_EXCERPT_LENGTH = 600;
+const MAX_EXCERPT_LENGTH = 2000;
 const MAX_FORUM_LENGTH = 60;
 
 const asTrimmedString = (value: unknown): string =>

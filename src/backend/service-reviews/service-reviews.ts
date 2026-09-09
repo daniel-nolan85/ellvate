@@ -29,7 +29,7 @@ export const DEFAULT_SERVICE_REVIEWS_PAGE_SIZE = 20;
 export const MAX_SERVICE_REVIEWS_PAGE_SIZE = 50;
 
 const VALID_RATINGS = new Set([1, 2, 3, 4, 5]);
-const MAX_REVIEW_BODY_LENGTH = 2000;
+const MAX_REVIEW_BODY_LENGTH = 1000;
 
 function validateRating(input: unknown): 1 | 2 | 3 | 4 | 5 | null {
   const raw =

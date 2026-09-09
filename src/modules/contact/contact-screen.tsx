@@ -112,6 +112,7 @@ export function ContactScreen() {
               </Text>
               <GrowingTextInput
                 className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
+                maxLength={2000}
                 minHeight={120}
                 onChangeText={setMessage}
                 placeholder="What's on your mind?"

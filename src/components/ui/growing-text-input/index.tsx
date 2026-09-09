@@ -2,10 +2,13 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import {
   Platform,
   TextInput,
+  View,
   type NativeSyntheticEvent,
   type TextInputContentSizeChangeEventData,
   type TextInputKeyPressEventData,
 } from 'react-native';
+
+import { Text } from '@/src/components/ui/text';
 
 export interface GrowingTextInputProps {
   readonly value: string;
@@ -21,10 +24,16 @@ export interface GrowingTextInputProps {
   // field where line breaks are part of the content.
   readonly submitOnEnter?: boolean;
   readonly onSubmitEditing?: () => void;
+  // Hard character cap, enforced natively by TextInput (typing stops dead at
+  // the limit). A live "N/max" counter appears once the user is within 20%
+  // of it, rather than being shown at all times — most fields never get
+  // close, so a permanent counter would just be noise on every screen.
+  readonly maxLength?: number;
 }
 
 const DEFAULT_MIN_HEIGHT = 44;
 const DEFAULT_MAX_HEIGHT = 160;
+const COUNTER_THRESHOLD_RATIO = 0.8;
 
 const clampHeight = (height: number, min: number, max: number) =>
   Math.min(max, Math.max(min, height));
@@ -39,6 +48,7 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
       autoFocus,
       className,
       maxHeight = DEFAULT_MAX_HEIGHT,
+      maxLength,
       minHeight = DEFAULT_MIN_HEIGHT,
       onChangeText,
       onSubmitEditing,
@@ -100,29 +110,47 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
       }
     };
 
+    const showCounter =
+      typeof maxLength === 'number' &&
+      value.length >= maxLength * COUNTER_THRESHOLD_RATIO;
+    const atLimit = typeof maxLength === 'number' && value.length >= maxLength;
+
     return (
-      <TextInput
-        autoFocus={autoFocus}
-        className={`no-scrollbar ${className ?? ''}`}
-        multiline
-        onChangeText={onChangeText}
-        onContentSizeChange={(
-          event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>,
-        ) =>
-          setInputHeight(
-            clampHeight(event.nativeEvent.contentSize.height, minHeight, maxHeight),
-          )
-        }
-        onKeyPress={handleKeyPress}
-        onSubmitEditing={onSubmitEditing}
-        placeholder={placeholder}
-        placeholderTextColor="rgb(169,156,139)"
-        ref={inputRef}
-        returnKeyType={submitOnEnter ? 'send' : 'default'}
-        style={{ height: inputHeight }}
-        testID={testID}
-        value={value}
-      />
+      <View>
+        <TextInput
+          autoFocus={autoFocus}
+          className={`no-scrollbar ${className ?? ''}`}
+          maxLength={maxLength}
+          multiline
+          onChangeText={onChangeText}
+          onContentSizeChange={(
+            event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>,
+          ) =>
+            setInputHeight(
+              clampHeight(event.nativeEvent.contentSize.height, minHeight, maxHeight),
+            )
+          }
+          onKeyPress={handleKeyPress}
+          onSubmitEditing={onSubmitEditing}
+          placeholder={placeholder}
+          placeholderTextColor="rgb(169,156,139)"
+          ref={inputRef}
+          returnKeyType={submitOnEnter ? 'send' : 'default'}
+          style={{ height: inputHeight }}
+          testID={testID}
+          value={value}
+        />
+        {showCounter && (
+          <Text
+            className={`px-1 pt-1 text-right text-[11px] ${
+              atLimit ? 'text-destructive' : 'text-text-muted'
+            }`}
+            testID={testID ? `${testID}-char-count` : undefined}
+          >
+            {value.length}/{maxLength}
+          </Text>
+        )}
+      </View>
     );
   },
 );

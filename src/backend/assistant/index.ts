@@ -24,6 +24,5 @@ export type {
 export {
   MAX_MESSAGE_TEXT_LENGTH,
   MAX_MESSAGES,
-  MAX_TOTAL_MESSAGE_TEXT_LENGTH,
   validateChatMessages,
 } from './validation';

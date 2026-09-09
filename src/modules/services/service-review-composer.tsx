@@ -72,7 +72,8 @@ export function ServiceReviewComposer({
       </HStack>
       <GrowingTextInput
         className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
-        maxHeight={160}
+        maxHeight={280}
+        maxLength={1000}
         onChangeText={setBody}
         placeholder="How was it? (optional)"
         testID="service-review-body"

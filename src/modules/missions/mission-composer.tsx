@@ -201,6 +201,7 @@ export function MissionComposer({
         <Field label="Name it">
           <Input size="lg">
             <InputField
+              maxLength={100}
               onChangeText={setTitle}
               placeholder="Mission name"
               testID="mission-title"
@@ -213,7 +214,8 @@ export function MissionComposer({
           <VStack space="sm">
             <GrowingTextInput
               className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
-              maxHeight={200}
+              maxHeight={280}
+              maxLength={500}
               onChangeText={setDescription}
               placeholder="Describe the challenge"
               testID="mission-description"
@@ -252,6 +254,7 @@ export function MissionComposer({
               <HStack className="items-center gap-2">
                 <Input className="flex-1" size="lg">
                   <InputField
+                    maxLength={120}
                     onChangeText={setStopDraft}
                     onSubmitEditing={addStop}
                     placeholder="Describe the next stop"

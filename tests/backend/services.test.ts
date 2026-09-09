@@ -245,7 +245,7 @@ describe('createServiceListing', () => {
   test('rejects an oversized description', async () => {
     const result = await createServiceListing(ctx(), {
       ...validListingInput,
-      description: 'x'.repeat(501),
+      description: 'x'.repeat(1001),
     });
 
     expect(result).toMatchObject({ ok: false, code: 'invalid_service_listing' });
@@ -631,7 +631,7 @@ describe('createServiceReview', () => {
   test('rejects an oversized body', async () => {
     expect(
       await createServiceReview(ctx(), 'service-1', {
-        body: 'x'.repeat(2001),
+        body: 'x'.repeat(1001),
         rating: 5,
       }),
     ).toMatchObject({ ok: false, code: 'invalid_review' });

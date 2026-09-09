@@ -197,6 +197,7 @@ export function EventComposer({
         <Field label="What is it?">
           <Input size="lg">
             <InputField
+              maxLength={100}
               onChangeText={setTitle}
               placeholder="Event name"
               testID="event-title"
@@ -208,6 +209,7 @@ export function EventComposer({
         <Field label="Where?">
           <Input size="lg">
             <InputField
+              maxLength={100}
               onChangeText={setPlace}
               placeholder="Place or venue"
               testID="event-place"

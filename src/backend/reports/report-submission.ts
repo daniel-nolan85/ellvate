@@ -8,7 +8,7 @@ import { REPORT_REASONS, isReportReason, type ReportReason } from '@/src/lib/rep
 // validation and evidence handling stay in one place rather than being
 // re-implemented per report type.
 
-const MAX_DETAILS_LENGTH = 1000;
+const MAX_DETAILS_LENGTH = 500;
 
 // A plain untyped JSON body, e.g. from `request.json()` -- not a named
 // interface, so every API route's `body ?? {}` (typed `Record<string,

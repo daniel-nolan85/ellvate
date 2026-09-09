@@ -54,6 +54,7 @@ export function CommentComposer({
         <GrowingTextInput
           className="flex-1 rounded-[20px] border border-content px-4 py-2.5 text-[14px] text-content"
           maxHeight={120}
+          maxLength={500}
           onChangeText={onChangeText}
           onSubmitEditing={() => canSend && onSend()}
           placeholder={editing ? 'Edit your comment…' : replyTo ? 'Write a reply…' : 'Add a comment…'}

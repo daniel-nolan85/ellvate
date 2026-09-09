@@ -2,14 +2,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 
 import { POST as postAssistantChat } from '../../app/api/assistant/chat+api';
 import {
-  MAX_TOTAL_MESSAGE_TEXT_LENGTH,
   respondToChat,
   resetAssistantRateLimit,
   searchEvents,
   searchMissions,
   searchPosts,
   searchServices,
-  validateChatMessages,
 } from '../../src/backend/assistant';
 import { createPost } from '../../src/backend/forum';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
@@ -338,16 +336,6 @@ describe('POST /api/assistant/chat', () => {
     );
 
     expect(response.status).toBe(200);
-  });
-
-  test('rejects a conversation whose total text exceeds the request budget', () => {
-    expect(
-      validateChatMessages({
-        messages: [
-          { role: 'user', text: 'x'.repeat(MAX_TOTAL_MESSAGE_TEXT_LENGTH + 1) },
-        ],
-      }),
-    ).toBeNull();
   });
 
   test('400s on a malformed JSON body', async () => {

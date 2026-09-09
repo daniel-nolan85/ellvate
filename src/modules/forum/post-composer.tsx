@@ -146,6 +146,7 @@ export function PostComposer({
         <Input size='lg'>
           <InputField
             autoFocus
+            maxLength={140}
             onChangeText={setTitle}
             placeholder='Title'
             testID='forum-post-title'
@@ -155,7 +156,8 @@ export function PostComposer({
 
         <GrowingTextInput
           className='w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content'
-          maxHeight={200}
+          maxHeight={400}
+          maxLength={2000}
           onChangeText={setExcerpt}
           placeholder='What do you want to share?'
           testID='forum-post-body'
