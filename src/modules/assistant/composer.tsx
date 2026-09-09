@@ -27,6 +27,7 @@ export function Composer({ isSending, onSend }: ComposerProps) {
       <GrowingTextInput
         className="flex-1 rounded-[22px] border border-line bg-canvas px-4 py-2.5 text-[14px] text-content"
         maxHeight={120}
+        maxLength={2000}
         onChangeText={setValue}
         onSubmitEditing={submit}
         placeholder="Ask about events, posts, missions…"

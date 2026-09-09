@@ -26,6 +26,7 @@ export function NameStep({ value, onChange, onNext, chrome }: NameStepProps) {
         <Input size="lg">
           <InputField
             autoFocus
+            maxLength={50}
             onChangeText={onChange}
             onSubmitEditing={onNext}
             placeholder="Name or nickname"

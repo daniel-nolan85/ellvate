@@ -4,7 +4,7 @@ import { isDateOnly } from '@/src/lib/date-only';
 import type { MissionValidation } from './types';
 
 const MAX_TITLE = 100;
-const MAX_DESCRIPTION = 300;
+const MAX_DESCRIPTION = 500;
 const MIN_XP = 5;
 const MAX_XP = 500;
 const MIN_STOPS = 1;

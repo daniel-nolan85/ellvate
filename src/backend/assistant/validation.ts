@@ -2,7 +2,6 @@ import type { AssistantChatMessage } from './types';
 
 export const MAX_MESSAGE_TEXT_LENGTH = 2000;
 export const MAX_MESSAGES = 50;
-export const MAX_TOTAL_MESSAGE_TEXT_LENGTH = 12_000;
 
 const isValidMessage = (value: unknown): value is AssistantChatMessage => {
   if (typeof value !== 'object' || value === null) {
@@ -32,14 +31,6 @@ export function validateChatMessages(
     return null;
   }
   if (!messages.every(isValidMessage)) {
-    return null;
-  }
-
-  const totalTextLength = messages.reduce(
-    (total, message) => total + message.text.length,
-    0,
-  );
-  if (totalTextLength > MAX_TOTAL_MESSAGE_TEXT_LENGTH) {
     return null;
   }
 

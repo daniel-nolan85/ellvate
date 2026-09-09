@@ -3,7 +3,7 @@ import type { PetitionCategory } from '@/src/backend/store';
 import { PETITION_CATEGORIES, PETITION_DEADLINE_OPTIONS } from './types';
 
 const MAX_TITLE = 120;
-const MAX_DESCRIPTION = 2000;
+const MAX_DESCRIPTION = 1500;
 
 export interface ComposedPetition {
   readonly title: string;

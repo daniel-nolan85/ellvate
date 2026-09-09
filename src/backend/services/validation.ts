@@ -3,7 +3,7 @@ import type { ServiceCategory } from '@/src/backend/store';
 import type { ServiceListingValidation } from './types';
 
 const MAX_BUSINESS_NAME = 80;
-const MAX_DESCRIPTION = 500;
+const MAX_DESCRIPTION = 1000;
 const MAX_CONTACT = 120;
 const CATEGORIES: readonly ServiceCategory[] = [
   'pet-care',

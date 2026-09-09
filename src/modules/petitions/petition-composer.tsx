@@ -57,7 +57,7 @@ function Field({ children, label }: { readonly children: ReactNode; readonly lab
 }
 
 const MAX_TITLE = 120;
-const MAX_DESCRIPTION = 2000;
+const MAX_DESCRIPTION = 1500;
 
 interface PetitionComposerProps {
   readonly isSubmitting: boolean;
@@ -147,9 +147,10 @@ export function PetitionComposer({
         <Field label="Details">
           <GrowingTextInput
             className="rounded-2xl border border-line bg-canvas px-4 py-3 text-[15px] text-content"
-            maxHeight={160}
+            maxHeight={280}
+            maxLength={MAX_DESCRIPTION}
             minHeight={100}
-            onChangeText={(value) => setDescription(value.slice(0, MAX_DESCRIPTION))}
+            onChangeText={setDescription}
             placeholder="Explain the problem and what you'd like to see happen."
             testID="petition-description"
             value={description}

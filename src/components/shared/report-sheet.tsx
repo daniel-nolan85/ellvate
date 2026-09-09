@@ -118,6 +118,7 @@ export function ReportSheetContent({
           </Text>
           <GrowingTextInput
             className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
+            maxLength={500}
             minHeight={80}
             onChangeText={setDetails}
             placeholder="Anything that would help a moderator understand what happened"

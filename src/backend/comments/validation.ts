@@ -1,4 +1,4 @@
-const MAX_BODY_LENGTH = 2000;
+const MAX_BODY_LENGTH = 500;
 
 export type BodyValidation =
   | { readonly ok: true; readonly body: string }
