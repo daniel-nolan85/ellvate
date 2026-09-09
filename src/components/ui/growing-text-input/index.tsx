@@ -25,15 +25,13 @@ export interface GrowingTextInputProps {
   readonly submitOnEnter?: boolean;
   readonly onSubmitEditing?: () => void;
   // Hard character cap, enforced natively by TextInput (typing stops dead at
-  // the limit). A live "N/max" counter appears once the user is within 20%
-  // of it, rather than being shown at all times — most fields never get
-  // close, so a permanent counter would just be noise on every screen.
+  // the limit). Whenever this is set, a live "N/max" counter is always shown
+  // below the field.
   readonly maxLength?: number;
 }
 
 const DEFAULT_MIN_HEIGHT = 44;
 const DEFAULT_MAX_HEIGHT = 160;
-const COUNTER_THRESHOLD_RATIO = 0.8;
 
 const clampHeight = (height: number, min: number, max: number) =>
   Math.min(max, Math.max(min, height));
@@ -110,9 +108,7 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
       }
     };
 
-    const showCounter =
-      typeof maxLength === 'number' &&
-      value.length >= maxLength * COUNTER_THRESHOLD_RATIO;
+    const showCounter = typeof maxLength === 'number';
     const atLimit = typeof maxLength === 'number' && value.length >= maxLength;
 
     return (
