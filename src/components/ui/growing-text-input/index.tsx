@@ -4,7 +4,6 @@ import {
   TextInput,
   View,
   type NativeSyntheticEvent,
-  type TextInputContentSizeChangeEventData,
   type TextInputKeyPressEventData,
 } from 'react-native';
 
@@ -39,7 +38,10 @@ const clampHeight = (height: number, min: number, max: number) =>
 // A multiline TextInput that wraps long text instead of scrolling it
 // horizontally, and grows its own height to fit — up to maxHeight, beyond
 // which it scrolls internally (scrollbar hidden via the `no-scrollbar` CSS
-// class in global.css).
+// class in global.css). Native platforms grow via their own intrinsic
+// multiline measurement (just minHeight/maxHeight in style); web needs the
+// manual scrollHeight measurement below since a plain <textarea> doesn't
+// auto-size itself.
 export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
   function GrowingTextInput(
     {
@@ -119,20 +121,26 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
           maxLength={maxLength}
           multiline
           onChangeText={onChangeText}
-          onContentSizeChange={(
-            event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>,
-          ) =>
-            setInputHeight(
-              clampHeight(event.nativeEvent.contentSize.height, minHeight, maxHeight),
-            )
-          }
           onKeyPress={handleKeyPress}
           onSubmitEditing={onSubmitEditing}
           placeholder={placeholder}
           placeholderTextColor="rgb(169,156,139)"
           ref={inputRef}
           returnKeyType={submitOnEnter ? 'send' : 'default'}
-          style={{ height: inputHeight }}
+          // WHY: an explicit height locks the box at whatever inputHeight
+          // last was, which only ever changes if onContentSizeChange fires --
+          // unreliable on some native runtimes (seen: box stuck at minHeight
+          // no matter how much text is typed). Native's own multiline
+          // TextInput measures its own content intrinsically and grows on
+          // its own when given only minHeight/maxHeight, no JS bridge event
+          // required -- that's the mechanism web's TextInput (a plain
+          // <textarea>) doesn't have, which is what the effect below and
+          // inputHeight exist for.
+          style={
+            Platform.OS === 'web'
+              ? { height: inputHeight }
+              : { maxHeight, minHeight }
+          }
           testID={testID}
           value={value}
         />
