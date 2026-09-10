@@ -54,8 +54,10 @@ interface SheetProps {
 }
 
 // A lightweight Instagram-style bottom sheet built on reanimated + gesture
-// handler: slides up over a dimmed backdrop, drag the handle (or the sheet) down
-// to dismiss, tap the backdrop to close, and rises with the keyboard.
+// handler: slides up over a dimmed backdrop, drag the handle down to
+// dismiss, tap the backdrop to close, and rises with the keyboard. (Drag-to-
+// dismiss is scoped to the handle only, not the whole panel -- see the
+// GestureDetector below for why.)
 export function Sheet({
   children,
   dismissable = true,
@@ -227,42 +229,53 @@ export function Sheet({
             ]}
           />
         </Pressable>
-        <GestureDetector gesture={pan}>
-          <Animated.View
-            onLayout={(event) => {
-              height.value = event.nativeEvent.layout.height;
-            }}
-            style={[
-              panelStyle,
-              {
-                backgroundColor: 'rgb(253,247,237)',
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                // A flat percentage of the *full* screen height (the Modal is
-                // statusBarTranslucent, so its coordinate space spans behind
-                // the notch/status bar too) reserved only a flat 8% gap at
-                // the top regardless of device -- not guaranteed to clear the
-                // real safe-area inset. Unusually tall content (e.g. Edit
-                // Profile's form) could then render its drag handle under the
-                // notch. Bounding by the actual inset plus a fixed margin --
-                // and by the live keyboard height, since the keyboard-
-                // avoiding padding below pushes this same panel further up
-                // still -- means the sheet can never physically extend past
-                // the safe area, whatever the content's height or whether
-                // the keyboard is open.
-                maxHeight: panelMaxHeight,
-                paddingBottom: insets.bottom + 12,
-              },
-            ]}
-          >
+        <Animated.View
+          onLayout={(event) => {
+            height.value = event.nativeEvent.layout.height;
+          }}
+          style={[
+            panelStyle,
+            {
+              backgroundColor: 'rgb(253,247,237)',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              // A flat percentage of the *full* screen height (the Modal is
+              // statusBarTranslucent, so its coordinate space spans behind
+              // the notch/status bar too) reserved only a flat 8% gap at
+              // the top regardless of device -- not guaranteed to clear the
+              // real safe-area inset. Unusually tall content (e.g. Edit
+              // Profile's form) could then render its drag handle under the
+              // notch. Bounding by the actual inset plus a fixed margin --
+              // and by the live keyboard height, since the keyboard-
+              // avoiding padding below pushes this same panel further up
+              // still -- means the sheet can never physically extend past
+              // the safe area, whatever the content's height or whether
+              // the keyboard is open.
+              maxHeight: panelMaxHeight,
+              paddingBottom: insets.bottom + 12,
+            },
+          ]}
+        >
+          {/* The drag-to-dismiss gesture is scoped to just this handle row,
+              not the whole panel below it -- an earlier version wrapped all
+              of `children` in the same GestureDetector too, which let this
+              raw, unconstrained Pan gesture claim any vertical drag over the
+              panel (title fields, chips, the whole form) before a child
+              ScrollView's own native scroll responder ever got a chance,
+              making long content impossible to scroll no matter how it was
+              bounded further down. `translateY` is a shared reanimated
+              value read by `panelStyle` above on the *parent* Animated.View,
+              so scoping the gesture to just this row still slides the whole
+              sheet when the handle itself is dragged. */}
+          <GestureDetector gesture={pan}>
             <View className="items-center pb-2.5 pt-4">
               <View className="h-1 w-10 rounded-full bg-line" />
             </View>
-            {typeof children === 'function'
-              ? children(maxContentHeight)
-              : children}
-          </Animated.View>
-        </GestureDetector>
+          </GestureDetector>
+          {typeof children === 'function'
+            ? children(maxContentHeight)
+            : children}
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
