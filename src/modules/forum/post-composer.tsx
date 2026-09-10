@@ -45,6 +45,15 @@ interface PostComposerProps {
   readonly initialExcerpt?: string;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
+  // From Sheet's function-child form -- the space actually left for content
+  // after the drag handle, safe area, and live keyboard height. Without this,
+  // this composer's own ScrollView has no bounded height to scroll within
+  // (Sheet's panel only caps *its own* height, which doesn't force an
+  // unbounded child to shrink-and-scroll on its own), so a tall growing post
+  // body can push the Post button past the visible sheet with no way to
+  // reach it -- see GrowingTextInput's own maxHeight for the matching half
+  // of this fix.
+  readonly maxContentHeight?: number;
 }
 
 export function PostComposer({
@@ -53,6 +62,7 @@ export function PostComposer({
   initialMedia,
   initialTitle = '',
   isSubmitting,
+  maxContentHeight,
   onDismiss,
   onSubmit,
   subforums,
@@ -105,6 +115,7 @@ export function PostComposer({
       keyboardDismissMode='on-drag'
       keyboardShouldPersistTaps='handled'
       showsVerticalScrollIndicator={false}
+      style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
     >
       <VStack className='px-5 pb-2 pt-1' space='md'>
         <Text className='font-inter-bold text-[17px] text-content'>

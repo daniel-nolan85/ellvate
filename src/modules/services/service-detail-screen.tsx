@@ -510,7 +510,7 @@ export function ServiceDetailScreen({
 
       {/* Own-listing options menu / edit -- one Sheet, content switches by mode */}
       <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
-        {sheetMode === 'edit' && listing ? (
+        {(maxContentHeight) => sheetMode === 'edit' && listing ? (
           <ServiceComposer
             initialBusinessName={listing.businessName}
             initialCategory={listing.category}
@@ -523,6 +523,7 @@ export function ServiceDetailScreen({
             initialMedia={listing.media}
             initialServiceArea={listing.serviceArea ?? ''}
             isSubmitting={updateListing.isPending}
+            maxContentHeight={maxContentHeight}
             onDismiss={() => setSheetMode(null)}
             onSubmit={(draft) =>
               updateListing.mutate(
@@ -588,13 +589,14 @@ export function ServiceDetailScreen({
         onClose={() => setReviewSheetMode(null)}
         visible={reviewSheetMode !== null}
       >
-        {reviewSheetMode === 'report' ? (
+        {(maxContentHeight) => reviewSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               reviewReportTarget === 'user'
                 ? reportMember.isPending
                 : reportReview.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleReviewReportSubmit}
             title={
               reviewReportTarget === 'user' && actionsFor
@@ -608,6 +610,7 @@ export function ServiceDetailScreen({
               initialBody={actionsFor.body}
               initialRating={actionsFor.rating}
               isSubmitting={updateReview.isPending}
+              maxContentHeight={maxContentHeight}
               onCancel={() => setReviewSheetMode(null)}
               onSubmit={(input) =>
                 updateReview.mutate(

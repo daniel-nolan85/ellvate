@@ -829,7 +829,7 @@ export function MissionDetailScreen({
 
       {/* Mission options menu / edit -- one Sheet, content switches by mode */}
       <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
-        {sheetMode === 'edit' && mission ? (
+        {(maxContentHeight) => sheetMode === 'edit' && mission ? (
           <MissionComposer
             initialDescription={mission.description}
             initialTheme={mission.theme}
@@ -839,6 +839,7 @@ export function MissionDetailScreen({
             initialTitle={mission.title}
             initialXp={mission.xp}
             isSubmitting={updateMission.isPending}
+            maxContentHeight={maxContentHeight}
             onDismiss={() => setSheetMode(null)}
             onSubmit={(draft) =>
               updateMission.mutate(
@@ -864,6 +865,7 @@ export function MissionDetailScreen({
                 ? reportMember.isPending
                 : reportMission.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleMissionReportSubmit}
             title={
               missionReportTarget === 'user' && mission
@@ -950,13 +952,14 @@ export function MissionDetailScreen({
 
       {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {commentSheetMode === 'report' ? (
+        {(maxContentHeight) => commentSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               commentReportTarget === 'user'
                 ? reportMember.isPending
                 : reportComment.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleCommentReportSubmit}
             title={
               commentReportTarget === 'user' && actionsFor

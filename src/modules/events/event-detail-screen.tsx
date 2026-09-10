@@ -589,7 +589,7 @@ export function EventDetailScreen({
 
       {/* Event options menu / edit -- one Sheet, content switches by mode */}
       <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
-        {sheetMode === 'edit' && event ? (
+        {(maxContentHeight) => sheetMode === 'edit' && event ? (
           <EventComposer
             initialMedia={event.media}
             initialPlace={event.place}
@@ -622,6 +622,7 @@ export function EventDetailScreen({
                 ? reportMember.isPending
                 : reportEvent.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleEventReportSubmit}
             title={
               eventReportTarget === 'user' && event
@@ -763,13 +764,14 @@ export function EventDetailScreen({
 
       {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {commentSheetMode === 'report' ? (
+        {(maxContentHeight) => commentSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               commentReportTarget === 'user'
                 ? reportMember.isPending
                 : reportComment.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleCommentReportSubmit}
             title={
               commentReportTarget === 'user' && actionsFor
