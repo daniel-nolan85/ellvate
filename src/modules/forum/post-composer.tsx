@@ -51,8 +51,9 @@ interface PostComposerProps {
   // (Sheet's panel only caps *its own* height, which doesn't force an
   // unbounded child to shrink-and-scroll on its own), so a tall growing post
   // body can push the Post button past the visible sheet with no way to
-  // reach it -- see GrowingTextInput's own maxHeight for the matching half
-  // of this fix.
+  // reach it. This is the only scrollable region in this composer -- see
+  // GrowingTextInput's own comment for why its body field doesn't add a
+  // second, nested one.
   readonly maxContentHeight?: number;
 }
 
