@@ -18,7 +18,7 @@ import type { MissionTheme } from './use-missions';
 export interface MissionComposerDraft {
   readonly title: string;
   readonly description: string;
-  readonly scheduledFor: string;
+  readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme;
@@ -131,8 +131,12 @@ export function MissionComposer({
   const [theme, setTheme] = useState<MissionTheme | null>(initialTheme);
   const [today] = useState(startOfToday);
   const [maxDate] = useState(() => oneYearAfter(today));
-  const [scheduledFor, setScheduledFor] = useState(
-    () => (initialScheduledFor && dateOnlyToDate(initialScheduledFor)) || today,
+  // No date by default -- a mission doesn't need a scheduled day/deadline to
+  // be valid; it's an optional detail for ones that are tied to a specific
+  // date (see the backend's own `scheduledFor: string | null`, which has
+  // always allowed this -- only this form forced a value into it).
+  const [scheduledFor, setScheduledFor] = useState<Date | null>(
+    () => (initialScheduledFor && dateOnlyToDate(initialScheduledFor)) || null,
   );
   const [media, setMedia] = useState<readonly MissionMediaItem[]>(
     () =>
@@ -282,14 +286,30 @@ export function MissionComposer({
           </VStack>
         </Field>
 
-        <Field label="Scheduled for">
-          <DateCalendar
-            maxDate={maxDate}
-            minDate={today}
-            onChange={setScheduledFor}
-            testID="mission-date-calendar"
-            value={scheduledFor}
-          />
+        <Field label="Scheduled for (optional)">
+          <VStack space="xs">
+            <Text className="text-[12px] text-text-muted">
+              Leave unset for an ongoing mission with no fixed day.
+            </Text>
+            <DateCalendar
+              maxDate={maxDate}
+              minDate={today}
+              onChange={setScheduledFor}
+              testID="mission-date-calendar"
+              value={scheduledFor ?? undefined}
+            />
+            {scheduledFor ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setScheduledFor(null)}
+                testID="mission-date-clear"
+              >
+                <Text className="font-inter-semibold text-[13px] text-accent">
+                  Clear date
+                </Text>
+              </Pressable>
+            ) : null}
+          </VStack>
         </Field>
 
         <Field label="Reward (XP)">
@@ -413,7 +433,7 @@ export function MissionComposer({
                     dataUrl: `data:${item.mimeType};base64,${item.base64}`,
                     filename: item.filename,
                   })),
-                scheduledFor: dateOnlyFromDate(scheduledFor),
+                scheduledFor: scheduledFor ? dateOnlyFromDate(scheduledFor) : null,
                 stops,
                 title: title.trim(),
                 xp,
