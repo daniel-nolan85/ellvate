@@ -1,7 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Platform,
-  ScrollView,
   TextInput,
   View,
   type NativeSyntheticEvent,
@@ -37,20 +36,28 @@ const clampHeight = (height: number, min: number, max: number) =>
   Math.min(max, Math.max(min, height));
 
 // A multiline TextInput that wraps long text instead of scrolling it
-// horizontally, and grows its own height to fit — up to maxHeight, beyond
-// which it scrolls internally (scrollbar hidden via the `no-scrollbar` CSS
-// class in global.css, web only). Native platforms grow via their own
-// intrinsic multiline measurement (just a minHeight in style, no JS bridge
-// event required) inside a small ScrollView that supplies the maxHeight cap
-// and the actual scrolling -- a bare multiline TextInput doesn't reliably
-// auto-scroll to keep the caret visible once its content exceeds the visible
-// area on iOS, so scrolling the wrapper to the end on every keystroke keeps
-// the caret in view while typing, while still letting the user freely drag
-// back up to review earlier text (it snaps back to the end on the next
-// keystroke, not while just reading). Web needs the manual scrollHeight
-// measurement below since a plain <textarea> doesn't auto-size itself, and
-// its own native scroll-to-caret behavior is already reliable, so it skips
-// the ScrollView wrapper entirely.
+// horizontally, and grows its own height to fit its content. Native
+// platforms grow via their own intrinsic multiline measurement (just
+// minHeight in style, no JS bridge event required, no maxHeight cap either
+// -- see below for why) while web measures scrollHeight manually since a
+// plain <textarea> doesn't auto-size itself (scrollbar hidden via the
+// `no-scrollbar` CSS class in global.css).
+//
+// WHY NO maxHeight/internal scroll on native: every real usage already sits
+// inside its composer's own outer ScrollView (see PostComposer's
+// `maxContentHeight` prop). An earlier version capped this field at a fixed
+// maxHeight and had it scroll internally -- either via a wrapping RN
+// ScrollView, or relying on the native text view's own bounded-content
+// scroll -- but both nest a second independently-scrollable region inside
+// the outer one. On a long post, that second region can end up covering
+// most of the sheet, and a nested scrollable region captures touch/scroll
+// gestures within its own bounds, leaving the outer form's scroll (the only
+// way to reach the submit button once the keyboard eats into the sheet's
+// available height) unreachable. Letting this field grow unbounded and
+// leaving all scrolling to the single outer ScrollView avoids that conflict
+// entirely, and lets RN's own built-in behavior (scrolling a ScrollView to
+// keep its focused child TextInput visible above the keyboard) do the work,
+// rather than a second, competing scroll region.
 export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
   function GrowingTextInput(
     {
@@ -70,7 +77,6 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
   ) {
     const [inputHeight, setInputHeight] = useState(minHeight);
     const inputRef = useRef<TextInput>(null);
-    const scrollViewRef = useRef<ScrollView>(null);
     useImperativeHandle(forwardedRef, () => inputRef.current as TextInput);
 
     // WHY: react-native-web's TextInput never fires onContentSizeChange —
@@ -120,54 +126,27 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
       }
     };
 
-    const handleChangeText = (text: string) => {
-      onChangeText(text);
-      if (Platform.OS !== 'web') {
-        // Wait a frame so the ScrollView's content size has already grown
-        // to fit the new text before scrolling, or this can scroll to the
-        // previous (shorter) end and leave the caret just out of view.
-        requestAnimationFrame(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        });
-      }
-    };
-
     const showCounter = typeof maxLength === 'number';
     const atLimit = typeof maxLength === 'number' && value.length >= maxLength;
 
-    const textInput = (
-      <TextInput
-        autoFocus={autoFocus}
-        className={`no-scrollbar ${className ?? ''}`}
-        maxLength={maxLength}
-        multiline
-        onChangeText={handleChangeText}
-        onKeyPress={handleKeyPress}
-        onSubmitEditing={onSubmitEditing}
-        placeholder={placeholder}
-        placeholderTextColor="rgb(169,156,139)"
-        ref={inputRef}
-        returnKeyType={submitOnEnter ? 'send' : 'default'}
-        style={Platform.OS === 'web' ? { height: inputHeight } : { minHeight }}
-        testID={testID}
-        value={value}
-      />
-    );
-
     return (
       <View>
-        {Platform.OS === 'web' ? (
-          textInput
-        ) : (
-          <ScrollView
-            nestedScrollEnabled
-            ref={scrollViewRef}
-            showsVerticalScrollIndicator={false}
-            style={{ maxHeight }}
-          >
-            {textInput}
-          </ScrollView>
-        )}
+        <TextInput
+          autoFocus={autoFocus}
+          className={`no-scrollbar ${className ?? ''}`}
+          maxLength={maxLength}
+          multiline
+          onChangeText={onChangeText}
+          onKeyPress={handleKeyPress}
+          onSubmitEditing={onSubmitEditing}
+          placeholder={placeholder}
+          placeholderTextColor="rgb(169,156,139)"
+          ref={inputRef}
+          returnKeyType={submitOnEnter ? 'send' : 'default'}
+          style={Platform.OS === 'web' ? { height: inputHeight } : { minHeight }}
+          testID={testID}
+          value={value}
+        />
         {showCounter && (
           <Text
             className={`px-1 pt-1 text-right text-[11px] ${
