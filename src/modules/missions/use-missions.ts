@@ -100,7 +100,7 @@ export interface NewMissionMediaInput {
 export interface CreateMissionInput {
   readonly title: string;
   readonly description: string;
-  readonly scheduledFor: string;
+  readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme;
@@ -116,7 +116,7 @@ export interface UpdateMissionInput {
   readonly missionId: string;
   readonly title: string;
   readonly description: string;
-  readonly scheduledFor: string;
+  readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme;
