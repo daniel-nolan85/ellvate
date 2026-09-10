@@ -7,6 +7,7 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { maybeRequestReviewAfterFirstMissionComplete } from '@/src/platform/review-prompt';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -408,6 +409,13 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
         void Haptics
           .notificationAsync(Haptics.NotificationFeedbackType.Success)
           .catch(() => undefined);
+        // awardedXp > 0 only on the check-in that completes a mission's last
+        // stop (see backend/missions/check-in.ts) -- this is a real "first
+        // ever mission completed" moment for whichever user it happens to.
+        // The helper itself is a one-time gate (an AsyncStorage flag), so
+        // calling it on every completion is safe -- it only ever actually
+        // asks once, on the very first one.
+        void maybeRequestReviewAfterFirstMissionComplete().catch(() => undefined);
         // WHY: config-level onSuccess runs unconditionally in TanStack Query's
         // Mutation#execute(), unlike the per-call mutate(vars, {onSuccess})
         // callback, which is gated on the observer still having listeners —
