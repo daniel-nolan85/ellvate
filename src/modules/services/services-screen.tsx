@@ -153,16 +153,21 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
       />
 
       <Sheet onClose={() => setIsComposing(false)} visible={isComposing}>
-        <ServiceComposer
-          isSubmitting={createListing.isPending}
-          onDismiss={() => setIsComposing(false)}
-          onSubmit={handleCreate}
-        />
-        {createListing.isError ? (
-          <Text className="px-5 pb-2 text-destructive" size="xs">
-            Couldn&apos;t publish your listing. Please try again.
-          </Text>
-        ) : null}
+        {(maxContentHeight) => (
+          <>
+            <ServiceComposer
+              isSubmitting={createListing.isPending}
+              maxContentHeight={maxContentHeight}
+              onDismiss={() => setIsComposing(false)}
+              onSubmit={handleCreate}
+            />
+            {createListing.isError ? (
+              <Text className="px-5 pb-2 text-destructive" size="xs">
+                Couldn&apos;t publish your listing. Please try again.
+              </Text>
+            ) : null}
+          </>
+        )}
       </Sheet>
     </>
   );

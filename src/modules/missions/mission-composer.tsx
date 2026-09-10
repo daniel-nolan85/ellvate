@@ -93,6 +93,8 @@ interface MissionComposerProps {
   readonly initialTheme?: MissionTheme | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
+  // See PostComposer's matching prop for why this is needed.
+  readonly maxContentHeight?: number;
 }
 
 const startOfToday = (): Date => {
@@ -116,6 +118,7 @@ export function MissionComposer({
   initialTitle = '',
   initialXp = null,
   isSubmitting,
+  maxContentHeight,
   onDismiss,
   onSubmit,
   submitLabel = 'Add mission',
@@ -192,6 +195,7 @@ export function MissionComposer({
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
     >
       <VStack className="px-5 pb-2 pt-1" space="md">
         <Text className="font-inter-bold text-[17px] text-content">

@@ -226,18 +226,23 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
       />
 
       <Sheet onClose={() => setIsComposing(false)} visible={isComposing}>
-        <PostComposer
-          forum={composerForum}
-          isSubmitting={createPost.isPending}
-          onDismiss={() => setIsComposing(false)}
-          onSubmit={handleCreatePost}
-          subforums={realSubforumNames}
-        />
-        {createPost.isError ? (
-          <Text className="px-5 pb-2 text-destructive" size="xs">
-            Couldn&apos;t publish your post. Please try again.
-          </Text>
-        ) : null}
+        {(maxContentHeight) => (
+          <>
+            <PostComposer
+              forum={composerForum}
+              isSubmitting={createPost.isPending}
+              maxContentHeight={maxContentHeight}
+              onDismiss={() => setIsComposing(false)}
+              onSubmit={handleCreatePost}
+              subforums={realSubforumNames}
+            />
+            {createPost.isError ? (
+              <Text className="px-5 pb-2 text-destructive" size="xs">
+                Couldn&apos;t publish your post. Please try again.
+              </Text>
+            ) : null}
+          </>
+        )}
       </Sheet>
 
       <PinExplainerModal

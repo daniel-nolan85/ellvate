@@ -101,6 +101,10 @@ interface ServiceComposerProps {
   readonly initialLogo?: { readonly filename: string; readonly url: string } | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
+  // Bounds this composer's own ScrollView to the Sheet's available content
+  // height. See PostComposer's matching prop for why this is required for
+  // long-content scrolling to actually work inside a Sheet.
+  readonly maxContentHeight?: number;
 }
 
 export function ServiceComposer({
@@ -115,6 +119,7 @@ export function ServiceComposer({
   initialMedia,
   initialServiceArea = '',
   isSubmitting,
+  maxContentHeight,
   onDismiss,
   onSubmit,
   submitLabel = 'List business',
@@ -191,6 +196,7 @@ export function ServiceComposer({
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
     >
       <VStack className="px-5 pb-2 pt-1" space="md">
         <Text className="font-inter-bold text-[17px] text-content">

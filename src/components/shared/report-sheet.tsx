@@ -33,6 +33,10 @@ interface ReportSheetContentProps {
   readonly title: string;
   readonly onSubmit: (submission: ReportSubmission) => void;
   readonly isSubmitting: boolean;
+  // Bounds this form's own ScrollView to the Sheet's available content
+  // height. See PostComposer's matching prop for why this is required for
+  // long-content scrolling to actually work inside a Sheet.
+  readonly maxContentHeight?: number;
 }
 
 // The form alone, no Sheet wrapper -- for a screen that already manages a
@@ -42,11 +46,10 @@ interface ReportSheetContentProps {
 // once, which corrupts UIKit's presentation stack and can leave the
 // underlying card permanently unresponsive -- these screens' own comments
 // document hitting exactly that. Embed this content inside that existing
-// Sheet's own mode-switch instead of introducing a second Sheet. Matches
-// PostComposer's own plain (non-scroll-bounded) ScrollView root, which
-// already works embedded the same way in post-card.tsx.
+// Sheet's own mode-switch instead of introducing a second Sheet.
 export function ReportSheetContent({
   isSubmitting,
+  maxContentHeight,
   onSubmit,
   title,
 }: ReportSheetContentProps) {
@@ -75,7 +78,11 @@ export function ReportSheetContent({
   };
 
   return (
-    <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">
+    <ScrollView
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
+    >
       <VStack className="gap-4 px-5 pb-2" space="md">
         <Heading className="font-inter-bold" size="lg">
           {title}
@@ -202,12 +209,15 @@ export function ReportSheet({
 
   return (
     <Sheet onClose={onClose} visible={visible}>
-      <ReportSheetContent
-        isSubmitting={isSubmitting}
-        key={formKey}
-        onSubmit={onSubmit}
-        title={title}
-      />
+      {(maxContentHeight) => (
+        <ReportSheetContent
+          isSubmitting={isSubmitting}
+          key={formKey}
+          maxContentHeight={maxContentHeight}
+          onSubmit={onSubmit}
+          title={title}
+        />
+      )}
     </Sheet>
   );
 }

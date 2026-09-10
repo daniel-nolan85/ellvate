@@ -355,13 +355,14 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
         onClose={() => setCardSheetMode(null)}
         visible={cardSheetMode !== null}
       >
-        {cardSheetMode === 'edit' ? (
+        {(maxContentHeight) => cardSheetMode === 'edit' ? (
           <PostComposer
             forum={post.forum}
             initialExcerpt={post.excerpt}
             initialMedia={post.media}
             initialTitle={post.title}
             isSubmitting={updatePost.isPending}
+            maxContentHeight={maxContentHeight}
             onDismiss={() => setCardSheetMode(null)}
             onSubmit={(draft) =>
               updatePost.mutate(
@@ -391,6 +392,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
         ) : cardSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={reportTarget === 'user' ? reportMember.isPending : reportPost.isPending}
+            maxContentHeight={maxContentHeight}
             onSubmit={handleReportSubmit}
             title={reportTarget === 'user' ? `Report ${post.author.name}` : 'Report post'}
           />

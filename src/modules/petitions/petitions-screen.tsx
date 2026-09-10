@@ -200,24 +200,27 @@ export function PetitionsScreen() {
         }}
         visible={composing}
       >
-        <PetitionComposer
-          errorMessage={submitError}
-          isSubmitting={createPetition.isPending}
-          onDismiss={() => setComposing(false)}
-          onSubmit={(draft) => {
-            setSubmitError(null);
-            createPetition.mutate(draft, {
-              onError: (error) =>
-                setSubmitError(
-                  error instanceof ApiError
-                    ? error.message
-                    : 'Couldn’t start your petition. Try again.',
-                ),
-              onSuccess: () => setComposing(false),
-            });
-          }}
-          totalUsers={gate.data?.totalUsers ?? 0}
-        />
+        {(maxContentHeight) => (
+          <PetitionComposer
+            errorMessage={submitError}
+            isSubmitting={createPetition.isPending}
+            maxContentHeight={maxContentHeight}
+            onDismiss={() => setComposing(false)}
+            onSubmit={(draft) => {
+              setSubmitError(null);
+              createPetition.mutate(draft, {
+                onError: (error) =>
+                  setSubmitError(
+                    error instanceof ApiError
+                      ? error.message
+                      : 'Couldn’t start your petition. Try again.',
+                  ),
+                onSuccess: () => setComposing(false),
+              });
+            }}
+            totalUsers={gate.data?.totalUsers ?? 0}
+          />
+        )}
       </Sheet>
     </>
   );

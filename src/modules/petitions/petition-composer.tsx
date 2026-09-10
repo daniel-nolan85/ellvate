@@ -70,11 +70,16 @@ interface PetitionComposerProps {
   // as a sibling of the Sheet would be completely invisible behind it while
   // the sheet stays open on error.
   readonly errorMessage?: string | null;
+  // Bounds this composer's own ScrollView to the Sheet's available content
+  // height. See PostComposer's matching prop for why this is required for
+  // long-content scrolling to actually work inside a Sheet.
+  readonly maxContentHeight?: number;
 }
 
 export function PetitionComposer({
   errorMessage,
   isSubmitting,
+  maxContentHeight,
   onDismiss,
   onSubmit,
   totalUsers,
@@ -112,6 +117,7 @@ export function PetitionComposer({
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
     >
       <VStack className="px-5 pb-2 pt-1" space="md">
         <Text className="font-inter-bold text-[17px] text-content">Start a petition</Text>

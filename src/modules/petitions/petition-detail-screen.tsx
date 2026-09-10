@@ -542,13 +542,14 @@ export function PetitionDetailScreen({
         }}
         visible={menuOpen}
       >
-        {petitionSheetView === 'report' ? (
+        {(maxContentHeight) => petitionSheetView === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               petitionReportTarget === 'user'
                 ? reportMember.isPending
                 : reportPetition.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handlePetitionReportSubmit}
             title={
               petitionReportTarget === 'user' && petition
@@ -606,13 +607,14 @@ export function PetitionDetailScreen({
 
       {/* Comment actions */}
       <Sheet onClose={closeCommentActions} visible={actionsSheetOpen}>
-        {commentSheetView === 'report' ? (
+        {(maxContentHeight) => commentSheetView === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               commentReportTarget === 'user'
                 ? reportMember.isPending
                 : reportComment.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleCommentReportSubmit}
             title={
               commentReportTarget === 'user' && actionsFor

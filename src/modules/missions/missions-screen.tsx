@@ -240,24 +240,27 @@ export function MissionsScreen({
       />
 
       <Sheet onClose={() => setComposing(false)} visible={composing}>
-        <MissionComposer
-          isSubmitting={createMission.isPending}
-          onDismiss={() => setComposing(false)}
-          onSubmit={(draft) =>
-            createMission.mutate(
-              {
-                description: draft.description,
-                theme: draft.theme,
-                newMedia: draft.newMedia,
-                scheduledFor: draft.scheduledFor,
-                stops: draft.stops,
-                title: draft.title,
-                xp: draft.xp,
-              },
-              { onSuccess: () => setComposing(false) },
-            )
-          }
-        />
+        {(maxContentHeight) => (
+          <MissionComposer
+            isSubmitting={createMission.isPending}
+            maxContentHeight={maxContentHeight}
+            onDismiss={() => setComposing(false)}
+            onSubmit={(draft) =>
+              createMission.mutate(
+                {
+                  description: draft.description,
+                  theme: draft.theme,
+                  newMedia: draft.newMedia,
+                  scheduledFor: draft.scheduledFor,
+                  stops: draft.stops,
+                  title: draft.title,
+                  xp: draft.xp,
+                },
+                { onSuccess: () => setComposing(false) },
+              )
+            }
+          />
+        )}
       </Sheet>
 
       <MissionCelebrationModal

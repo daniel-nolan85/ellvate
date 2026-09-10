@@ -619,13 +619,14 @@ export function PostDetailScreen({
       </KeyboardAvoidingView>
 
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {commentSheetMode === 'report' ? (
+        {(maxContentHeight) => commentSheetMode === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               commentReportTarget === 'user'
                 ? reportMember.isPending
                 : reportComment.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleCommentReportSubmit}
             title={
               commentReportTarget === 'user' && actionsFor
@@ -726,13 +727,14 @@ export function PostDetailScreen({
         onClose={() => setPostSheetMode(null)}
         visible={postSheetMode !== null}
       >
-        {postSheetMode === 'edit' && post ? (
+        {(maxContentHeight) => postSheetMode === 'edit' && post ? (
           <PostComposer
             forum={post.forum}
             initialExcerpt={post.excerpt}
             initialMedia={post.media}
             initialTitle={post.title}
             isSubmitting={updatePost.isPending}
+            maxContentHeight={maxContentHeight}
             onDismiss={() => setPostSheetMode(null)}
             onSubmit={(draftPost) =>
               updatePost.mutate(
@@ -766,6 +768,7 @@ export function PostDetailScreen({
                 ? reportMember.isPending
                 : reportPost.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handlePostReportSubmit}
             title={
               postReportTarget === 'user' && post

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
@@ -19,12 +19,17 @@ interface ServiceReviewComposerProps {
   readonly onCancel?: () => void;
   readonly submitLabel?: string;
   readonly title?: string;
+  // Bounds this composer to the Sheet's available content height when shown
+  // in edit mode. See PostComposer's matching prop for why this is required
+  // for long-content scrolling to actually work inside a Sheet.
+  readonly maxContentHeight?: number;
 }
 
 export function ServiceReviewComposer({
   initialBody,
   initialRating,
   isSubmitting,
+  maxContentHeight,
   onCancel,
   onSubmit,
   submitLabel,
@@ -45,7 +50,7 @@ export function ServiceReviewComposer({
   // parent forces a remount (via a changing `key` prop) once the create
   // mutation actually succeeds, which resets this component's state fresh.
 
-  return (
+  const content = (
     <VStack className="gap-2.5 rounded-[16px] border border-surface-hairline bg-paper p-3.5" space="xs">
       <Text className="font-inter-semibold text-[13px] text-content">
         {title}
@@ -111,5 +116,20 @@ export function ServiceReviewComposer({
         ) : null}
       </HStack>
     </VStack>
+  );
+
+  if (!maxContentHeight) {
+    return content;
+  }
+
+  return (
+    <ScrollView
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      style={{ maxHeight: maxContentHeight }}
+    >
+      {content}
+    </ScrollView>
   );
 }

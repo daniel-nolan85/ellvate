@@ -158,11 +158,12 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
         }}
         visible={menuOpen}
       >
-        {sheetView === 'report' ? (
+        {(maxContentHeight) => sheetView === 'report' ? (
           <ReportSheetContent
             isSubmitting={
               reportTarget === 'user' ? reportMember.isPending : reportPetition.isPending
             }
+            maxContentHeight={maxContentHeight}
             onSubmit={handleReportSubmit}
             title={
               reportTarget === 'user'
