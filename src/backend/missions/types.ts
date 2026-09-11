@@ -31,6 +31,11 @@ export interface Mission {
   readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
+  // Community-wide counts, not scoped to the viewer -- how many people
+  // total have accepted this mission (a progress row exists for them,
+  // whether or not they've finished) and how many have completed it.
+  readonly acceptedCount: number;
+  readonly completedCount: number;
 }
 
 export interface UserProgress {

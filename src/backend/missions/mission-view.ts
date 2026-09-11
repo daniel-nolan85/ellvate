@@ -47,6 +47,7 @@ export function toMissionView(
   users: readonly StoredUser[] = [],
 ): Mission {
   const entry = getUserMissionEntry(mission, userId);
+  const allProgress = Object.values(mission.progressByUser);
 
   return {
     id: mission.id,
@@ -63,5 +64,7 @@ export function toMissionView(
     theme: mission.theme,
     media: mission.media,
     editedAt: mission.editedAt,
+    acceptedCount: allProgress.length,
+    completedCount: allProgress.filter((p) => p.status === 'done').length,
   };
 }

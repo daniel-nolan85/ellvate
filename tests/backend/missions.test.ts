@@ -72,6 +72,42 @@ describe('getMissionsView', () => {
     ]);
   });
 
+  test('accepted/completed counts are community-wide, from the seed data', async () => {
+    const { missions } = await getMissionsView(ctx());
+
+    expect(missions.map((mission) => mission.acceptedCount)).toEqual([0, 1, 1, 0]);
+    expect(missions.map((mission) => mission.completedCount)).toEqual([0, 0, 1, 0]);
+  });
+
+  test('accepted/completed counts are identical for every viewer, unlike stopsDone/accepted', async () => {
+    const demoView = await getMissionsView(ctx());
+    const miaView = await getMissionsView(ctx('user-mia'));
+
+    expect(miaView.missions.map((mission) => mission.acceptedCount)).toEqual(
+      demoView.missions.map((mission) => mission.acceptedCount),
+    );
+    expect(miaView.missions.map((mission) => mission.completedCount)).toEqual(
+      demoView.missions.map((mission) => mission.completedCount),
+    );
+  });
+
+  test('counts a second user accepting and completing a mission', async () => {
+    await acceptMission(ctx('user-mia'), 'mission-1');
+    const afterAccept = await getMissionsView(ctx());
+    expect(
+      afterAccept.missions.find((mission) => mission.id === 'mission-1')
+        ?.acceptedCount,
+    ).toBe(1);
+
+    await checkIn(ctx('user-mia'), 'mission-1', CHECK_IN_PHOTO);
+    const afterComplete = await getMissionsView(ctx());
+    const mission1 = afterComplete.missions.find(
+      (mission) => mission.id === 'mission-1',
+    );
+    expect(mission1?.acceptedCount).toBe(1);
+    expect(mission1?.completedCount).toBe(1);
+  });
+
   test('progress matches computeProgress for the seed demo-user', async () => {
     const { progress } = await getMissionsView(ctx());
     const breakdown = computeProgress(1980);

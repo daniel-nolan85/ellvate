@@ -575,6 +575,26 @@ export function MissionDetailScreen({
                     </Badge>
                   </HStack>
 
+                  <HStack className="items-center gap-3">
+                    <HStack className="items-center gap-1">
+                      <Icon color="rgb(120,108,94)" name="Users" size={13} />
+                      <Text className="text-text-muted" size="xs">
+                        {mission.acceptedCount}{' '}
+                        {mission.acceptedCount === 1 ? 'person' : 'people'} accepted
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center gap-1">
+                      <Icon
+                        color="rgb(120,108,94)"
+                        name="CheckCircle"
+                        size={13}
+                      />
+                      <Text className="text-text-muted" size="xs">
+                        {mission.completedCount} completed
+                      </Text>
+                    </HStack>
+                  </HStack>
+
                   {mission.status === 'active' &&
                   mission.accepted &&
                   mission.stops[mission.stopsDone] ? (
