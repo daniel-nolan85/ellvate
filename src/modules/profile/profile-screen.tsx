@@ -145,7 +145,7 @@ function Row({
         ) : null}
         {right}
         {onPress && !right ? (
-          <Icon color="rgb(169,156,139)" name="ChevronLeft" size={16} />
+          <Icon color="rgb(169,156,139)" name="ChevronRight" size={16} />
         ) : null}
       </View>
       {description ? (
@@ -488,7 +488,7 @@ export function ProfileScreen() {
           </>
         ) : null}
 
-        <SectionTitle>Activity</SectionTitle>
+        <SectionTitle>Activity — Your Uploads</SectionTitle>
         <HStack className="mx-5" space="sm">
           <StatCard
             label="Posts"

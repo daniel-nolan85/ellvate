@@ -83,10 +83,11 @@ export interface ProfileUpdateInput {
 const profileKey = (userId: string | null) =>
   ['profile', userId ?? 'me'] as const;
 
-export function useProfile() {
+export function useProfile(options?: { readonly enabled?: boolean }) {
   const session = useSession();
 
   return useQuery({
+    enabled: options?.enabled,
     meta: { persist: true, sensitive: false },
     queryFn: ({ signal }) =>
       requestJson<ProfileResponse>({
