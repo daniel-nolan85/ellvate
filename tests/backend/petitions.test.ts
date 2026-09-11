@@ -125,6 +125,21 @@ describe('getPetitionsGate', () => {
     const body = (await response.json()) as { unlocked: boolean };
     expect(body.unlocked).toBe(false);
   });
+
+  test('unlocked for an admin even below the threshold, still locked for everyone else', async () => {
+    setState((current) => ({
+      ...current,
+      users: current.users.map((user) =>
+        user.id === DEMO_USER_ID ? { ...user, isAdmin: true } : user,
+      ),
+    }));
+
+    const adminGate = await getPetitionsGate(ctx(DEMO_USER_ID));
+    expect(adminGate.unlocked).toBe(true);
+
+    const otherGate = await getPetitionsGate(ctx('some-other-user'));
+    expect(otherGate.unlocked).toBe(false);
+  });
 });
 
 describe('createPetition', () => {
@@ -157,6 +172,23 @@ describe('createPetition', () => {
       expect(result.petition.signatureCount).toBe(0);
       expect(result.petition.status).toBe('open');
     }
+  });
+
+  test('an admin can create a petition even below the threshold', async () => {
+    setState((current) => ({
+      ...current,
+      users: current.users.map((user) =>
+        user.id === DEMO_USER_ID ? { ...user, isAdmin: true } : user,
+      ),
+    }));
+
+    const result = await createPetition(ctx(DEMO_USER_ID), {
+      category: 'safety',
+      deadlineDays: 30,
+      description: 'Needs lighting.',
+      title: 'Add lighting',
+    });
+    expect(result.ok).toBe(true);
   });
 
   test('rejects an invalid category', async () => {
