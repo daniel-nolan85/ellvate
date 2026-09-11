@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as StoreReview from 'expo-store-review';
 
 // WHY: AsyncStorage flag, not a server-side one -- mirrors the
 // `@llv:<feature>-v1` convention already used for other one-time,
@@ -30,9 +29,30 @@ export async function maybeRequestReviewAfterFirstMissionComplete(): Promise<voi
   // again on the very next mission completion.
   await AsyncStorage.setItem(REVIEW_PROMPTED_KEY, 'true');
 
-  const available = await StoreReview.isAvailableAsync();
-  if (!available) {
-    return;
+  try {
+    // WHY dynamic import, not a static one at the top of this file:
+    // expo-store-review's native module binding runs the moment its JS
+    // wrapper is evaluated (`requireNativeModule('ExpoStoreReview')` at
+    // that module's own top level, not inside a function), throwing
+    // immediately if the native module isn't compiled into the running
+    // binary yet. A static import here would put that throw on this
+    // file's own module-evaluation path -- and since expo-router eagerly
+    // requires every route file to build its navigation tree, any route
+    // that transitively imports this module (missions, in this case)
+    // would crash on *every app launch*, not just when a mission is
+    // completed. This app ships this feature over OTA updates before the
+    // native build that actually adds the module reaches everyone, so
+    // that gap is real, not hypothetical -- deferring the import to here,
+    // inside a try/catch, means a binary without the native module yet
+    // just silently skips the prompt instead of crashing the app.
+    const StoreReview = await import('expo-store-review');
+    const available = await StoreReview.isAvailableAsync();
+    if (!available) {
+      return;
+    }
+    await StoreReview.requestReview();
+  } catch {
+    // Native module not available in this binary yet (OTA update ahead of
+    // the build that adds it) -- nothing to do.
   }
-  await StoreReview.requestReview();
 }
