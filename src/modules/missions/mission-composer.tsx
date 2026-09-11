@@ -138,6 +138,13 @@ export function MissionComposer({
   const [scheduledFor, setScheduledFor] = useState<Date | null>(
     () => (initialScheduledFor && dateOnlyToDate(initialScheduledFor)) || null,
   );
+  // Collapsed by default -- since a date is optional and most missions won't
+  // have one, showing the calendar unconditionally makes every mission look
+  // like it needs one. Starts open only when editing a mission that already
+  // has a date set.
+  const [showDatePicker, setShowDatePicker] = useState(() =>
+    Boolean(initialScheduledFor),
+  );
   const [media, setMedia] = useState<readonly MissionMediaItem[]>(
     () =>
       initialMedia?.map((item) => ({
@@ -287,29 +294,51 @@ export function MissionComposer({
         </Field>
 
         <Field label="Scheduled for (optional)">
-          <VStack space="xs">
-            <Text className="text-[12px] text-text-muted">
-              Leave unset for an ongoing mission with no fixed day.
-            </Text>
-            <DateCalendar
-              maxDate={maxDate}
-              minDate={today}
-              onChange={setScheduledFor}
-              testID="mission-date-calendar"
-              value={scheduledFor ?? undefined}
-            />
-            {scheduledFor ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setScheduledFor(null)}
+          {showDatePicker ? (
+            <VStack space="xs">
+              <DateCalendar
+                maxDate={maxDate}
+                minDate={today}
+                onChange={setScheduledFor}
+                testID="mission-date-calendar"
+                value={scheduledFor ?? undefined}
+              />
+              <Button
+                action="secondary"
+                className="self-start rounded-full"
+                onPress={() => {
+                  setScheduledFor(null);
+                  setShowDatePicker(false);
+                }}
+                size="sm"
                 testID="mission-date-clear"
+                variant="outline"
               >
-                <Text className="font-inter-semibold text-[13px] text-accent">
+                <ButtonText className="font-inter-semibold text-[13px]">
                   Clear date
-                </Text>
-              </Pressable>
-            ) : null}
-          </VStack>
+                </ButtonText>
+              </Button>
+            </VStack>
+          ) : (
+            <VStack space="xs">
+              <Text className="text-[12px] text-text-muted">
+                Leave unset for an ongoing mission with no fixed day.
+              </Text>
+              <Button
+                action="secondary"
+                className="self-start rounded-full"
+                onPress={() => setShowDatePicker(true)}
+                size="sm"
+                testID="mission-date-add"
+                variant="outline"
+              >
+                <Icon color="rgb(169,156,139)" name="Add" size={14} />
+                <ButtonText className="font-inter-semibold text-[13px]">
+                  Add a deadline
+                </ButtonText>
+              </Button>
+            </VStack>
+          )}
         </Field>
 
         <Field label="Reward (XP)">
