@@ -200,7 +200,7 @@ export interface StoredMission {
   // than stops itself (progress bars, "X/Y stops" labels).
   readonly stopsTotal: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
   readonly media?: readonly StoredMedia[];
   readonly progressByUser: Readonly<Record<string, MissionUserProgress>>;
   // Null until the author edits the mission at least once.

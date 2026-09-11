@@ -57,7 +57,8 @@ export function validateMissionInput(input: unknown): MissionValidation {
   const scheduledFor = asTrimmedString(raw.scheduledFor) || null;
   const xp = asInteger(raw.xp);
   const stops = asStopList(raw.stops);
-  const theme = asTrimmedString(raw.theme) as MissionTheme;
+  const themeRaw = asTrimmedString(raw.theme);
+  const theme = themeRaw ? (themeRaw as MissionTheme) : null;
 
   if (!title || !description) {
     return invalid('A title and description are required.');
@@ -77,7 +78,7 @@ export function validateMissionInput(input: unknown): MissionValidation {
   if (stops.some((stop) => stop.length > MAX_STOP_LENGTH)) {
     return invalid(`Each stop must be under ${MAX_STOP_LENGTH} characters.`);
   }
-  if (!THEMES.includes(theme)) {
+  if (theme !== null && !THEMES.includes(theme)) {
     return invalid('Pick a valid mission theme.');
   }
 

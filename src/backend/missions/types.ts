@@ -28,7 +28,7 @@ export interface Mission {
   readonly stopsDone: number;
   readonly stopsTotal: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
 }
@@ -79,7 +79,7 @@ export interface ValidatedMission {
   readonly xp: number;
   readonly stopsTotal: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
 }
 
 export type MissionValidation =

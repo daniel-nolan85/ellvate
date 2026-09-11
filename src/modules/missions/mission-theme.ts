@@ -29,6 +29,10 @@ const MISSION_THEME_ICON: Readonly<Record<MissionTheme, AppIconName>> = {
   water: 'Waves',
 };
 
-export function missionThemeIcon(theme: MissionTheme): AppIconName {
-  return MISSION_THEME_ICON[theme];
+// Theme is optional -- purely decorative, picking which icon shows on a
+// mission's card/detail badge. A generic flag stands in for one left unset.
+const DEFAULT_MISSION_ICON: AppIconName = 'Flag';
+
+export function missionThemeIcon(theme: MissionTheme | null): AppIconName {
+  return theme ? MISSION_THEME_ICON[theme] : DEFAULT_MISSION_ICON;
 }
