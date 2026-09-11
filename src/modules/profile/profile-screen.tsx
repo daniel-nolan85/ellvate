@@ -504,7 +504,7 @@ export function ProfileScreen() {
             )}
           />
           <StatCard
-            label="Missions"
+            label="Missions created"
             onPress={() => router.push('/activity?filter=mission')}
             value={String(activity.data?.stats.missionsCreated ?? 0)}
           />
