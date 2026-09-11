@@ -168,11 +168,11 @@ export function MissionsScreen({
                 Couldn&apos;t load missions.
               </Text>
               <Button
-                className="rounded-full bg-primary"
+                className="rounded-full bg-accent"
                 onPress={() => void missionsView.refetch()}
                 size="sm"
               >
-                <ButtonText className="font-inter-semibold text-primary-foreground">
+                <ButtonText className="font-inter-semibold text-accent-foreground">
                   Retry
                 </ButtonText>
               </Button>
