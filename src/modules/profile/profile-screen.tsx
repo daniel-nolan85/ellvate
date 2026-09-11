@@ -29,6 +29,7 @@ import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import { AccountIdentifiersSheet } from './account-identifiers-sheet';
+import { PointsHistorySheet } from './points-history-sheet';
 import {
   useDeleteAccount,
   useMemberProfile,
@@ -230,7 +231,9 @@ export function ProfileScreen() {
   // safe to render in every auth mode.
   const clerkReady = getClerkConfiguration().status === 'ready';
 
-  const [activeSheet, setActiveSheet] = useState<'edit' | 'identifiers' | null>(null);
+  const [activeSheet, setActiveSheet] = useState<
+    'edit' | 'identifiers' | 'points-history' | null
+  >(null);
   const [draftName, setDraftName] = useState('');
   const [draftRole, setDraftRole] = useState<CommunityRole | null>(null);
   const [draftInterests, setDraftInterests] = useState<readonly string[]>([]);
@@ -446,12 +449,18 @@ export function ProfileScreen() {
         </HStack>
 
         {stats.data ? (
-          <LevelProgress
-            level={stats.data.level}
-            xpForNextLevel={stats.data.xpForNextLevel}
-            xpIntoLevel={stats.data.xpIntoLevel}
-            xpToNextLevel={stats.data.xpToNextLevel}
-          />
+          <Pressable
+            accessibilityLabel="View points history"
+            accessibilityRole="button"
+            onPress={() => setActiveSheet('points-history')}
+          >
+            <LevelProgress
+              level={stats.data.level}
+              xpForNextLevel={stats.data.xpForNextLevel}
+              xpIntoLevel={stats.data.xpIntoLevel}
+              xpToNextLevel={stats.data.xpToNextLevel}
+            />
+          </Pressable>
         ) : null}
 
         <SectionTitle>Shortcuts</SectionTitle>
@@ -776,6 +785,11 @@ export function ProfileScreen() {
           visible={activeSheet === 'identifiers'}
         />
       ) : null}
+
+      <PointsHistorySheet
+        onClose={() => setActiveSheet(null)}
+        visible={activeSheet === 'points-history'}
+      />
 
       <ConfirmModal
         confirmLabel="Sign out"

@@ -289,6 +289,12 @@ export function useCreatePost() {
       void queryClient.invalidateQueries({
         queryKey: ['forum', 'posts', userId],
       });
+      // Posting also grants a small amount of XP -- see src/backend/xp --
+      // which the profile's XP/level stat and the points-history list both
+      // need to pick up.
+      void queryClient.invalidateQueries({ queryKey: ['missions'] });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
     },
   });
 }

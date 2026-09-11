@@ -7,6 +7,7 @@ import {
   type StoredPost,
   type StoredUser,
 } from '@/src/backend/store';
+import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
@@ -439,9 +440,19 @@ export async function createPost(
   ctx: RequestContext,
   input: unknown,
 ): Promise<CreatePostResult> {
-  return ctx.supabase
-    ? createPostSupabase(ctx.supabase, ctx.userId, input)
+  const result = ctx.supabase
+    ? await createPostSupabase(ctx.supabase, ctx.userId, input)
     : createPostMemory(ctx.userId, input);
+
+  if (result.ok) {
+    await grantXp(ctx, {
+      amount: CREATE_CONTENT_XP,
+      reason: 'post_created',
+      refId: result.post.id,
+    });
+  }
+
+  return result;
 }
 
 export async function toggleLike(

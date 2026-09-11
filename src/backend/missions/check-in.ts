@@ -6,6 +6,7 @@ import {
   setState,
   type StoredMissionCheckIn,
 } from '@/src/backend/store';
+import { recordXpLedgerEntry } from '@/src/backend/xp';
 
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
 import { checkInSupabase } from './missions-supabase';
@@ -136,7 +137,17 @@ export async function checkIn(
   missionId: string,
   input: unknown = null,
 ): Promise<CheckInResult> {
-  return ctx.supabase
-    ? checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
+  const result = ctx.supabase
+    ? await checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
     : checkInMemory(ctx.userId, missionId, input);
+
+  if (result.ok && result.body.awardedXp > 0) {
+    await recordXpLedgerEntry(ctx, {
+      amount: result.body.awardedXp,
+      reason: 'mission_completed',
+      refId: missionId,
+    });
+  }
+
+  return result;
 }
