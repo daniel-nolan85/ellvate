@@ -8,7 +8,6 @@ const REPORT_TABLES = [
   'event_comment_reports',
   'mission_comment_reports',
   'service_review_reports',
-  'mission_check_in_reports',
   'petition_reports',
   'petition_comment_reports',
 ] as const;

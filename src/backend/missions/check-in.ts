@@ -6,17 +6,18 @@ import {
   setState,
   type StoredMissionCheckIn,
 } from '@/src/backend/store';
+import { detectFace } from '@/src/services/face-detection';
 
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
 import { checkInSupabase } from './missions-supabase';
 import type { CheckInResult, Mission } from './types';
 import { buildUserProgress } from './user-progress';
 
-function checkInMemory(
+async function checkInMemory(
   userId: string,
   missionId: string,
   input: unknown,
-): CheckInResult {
+): Promise<CheckInResult> {
   ensureUser(userId);
   const mission = getState().missions.find((item) => item.id === missionId);
 
@@ -58,6 +59,34 @@ function checkInMemory(
     };
   }
 
+  // WHY: a hard automated gate, not a soft flag-for-review -- there's no
+  // review queue for this because the photo is never kept around to review
+  // (see below). Scanned in memory and immediately discarded either way, so
+  // a rejection here costs the user nothing but a retry with a different
+  // photo.
+  if (completed && photo) {
+    const outcome = await detectFace(photo.dataUrl);
+    if (outcome === 'no_face_detected') {
+      return {
+        ok: false,
+        status: 400,
+        code: 'no_face_detected',
+        message: "We couldn't spot a person in that photo. Try a different one.",
+      };
+    }
+    if (outcome === 'undecodable_image') {
+      return {
+        ok: false,
+        status: 400,
+        code: 'unreadable_photo',
+        message: "We couldn't read that photo. Try a different one.",
+      };
+    }
+  }
+
+  // WHY: never persisted -- these photos are scanned for a face and
+  // discarded, never displayed to anyone (including admins), so there's
+  // nothing to keep a URL for.
   const nowIso = new Date().toISOString();
   const checkInRow: StoredMissionCheckIn = {
     id: `check-in-${crypto.randomUUID()}`,
@@ -65,7 +94,6 @@ function checkInMemory(
     userId,
     stopIndex: entry.stopsDone,
     completedAt: nowIso,
-    photoUrl: photo ? photo.dataUrl : null,
   };
 
   // WHY: streaks are intentionally naive for the demo store — +1 day per
@@ -140,3 +168,4 @@ export async function checkIn(
     ? checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
     : checkInMemory(ctx.userId, missionId, input);
 }
+

@@ -119,7 +119,9 @@ export interface CheckInResponse {
 export type CheckInErrorCode =
   | 'mission_not_found'
   | 'mission_complete'
-  | 'photo_required';
+  | 'photo_required'
+  | 'no_face_detected'
+  | 'unreadable_photo';
 
 export interface CheckInFailure {
   readonly ok: false;
@@ -134,28 +136,6 @@ export interface CheckInSuccess {
 }
 
 export type CheckInResult = CheckInSuccess | CheckInFailure;
-
-// Unbounded otherwise — a long-running mission with many participants adds a
-// row per stop completion and nothing here is ever deleted. Capped to the
-// most recent N, still returned oldest-first within that window.
-export const CHECK_INS_LIST_LIMIT = 40;
-
-export interface CheckInEntry {
-  readonly id: string;
-  readonly missionId: string;
-  readonly user: PersonRef;
-  readonly stopIndex: number;
-  readonly completedAt: string;
-  readonly photoUrl: string | null;
-}
-
-export type ReportCheckInResult =
-  | { readonly ok: true; readonly reported: true }
-  | {
-      readonly ok: false;
-      readonly code: 'check_in_not_found';
-      readonly message: string;
-    };
 
 export type ReportMissionResult =
   | { readonly ok: true; readonly reported: true }

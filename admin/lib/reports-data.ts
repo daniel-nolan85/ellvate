@@ -68,7 +68,6 @@ export async function loadReports(
     missionReports,
     missionCommentReports,
     serviceReviewReports,
-    checkInReports,
     petitionReports,
     petitionCommentReports,
     memberReports,
@@ -139,15 +138,6 @@ export async function loadReports(
       .limit(FETCH_CAP),
     withReporterFilter(
       admin
-        .from('mission_check_in_reports')
-        .select(
-          'id, check_in_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), check_in:mission_check_ins(stop_index, photo_url)',
-        ),
-    )
-      .order('created_at', { ascending: false })
-      .limit(FETCH_CAP),
-    withReporterFilter(
-      admin
         .from('petition_reports')
         .select(
           'id, petition_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), petition:petitions(title)',
@@ -183,7 +173,6 @@ export async function loadReports(
     missionReports,
     missionCommentReports,
     serviceReviewReports,
-    checkInReports,
     petitionReports,
     petitionCommentReports,
     memberReports,
@@ -377,32 +366,6 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'service_reviews',
       deleteId: r.service_review_id,
-      reason: r.reason,
-      details: r.details,
-      evidenceImageUrl: r.evidence_image_url,
-    });
-  }
-
-  for (const r of (checkInReports.data ?? []) as unknown as readonly {
-    id: string;
-    check_in_id: string;
-    created_at: string;
-    reason: string | null;
-    details: string | null;
-    evidence_image_url: string | null;
-    reporter: { name: string } | null;
-    check_in: { stop_index: number; photo_url: string | null } | null;
-  }[]) {
-    rows.push({
-      id: r.id,
-      type: 'Mission check-in photo',
-      snippet: r.check_in ? `Stop ${r.check_in.stop_index + 1} check-in` : 'Unknown check-in',
-      photoUrl: r.check_in?.photo_url ?? null,
-      detailHref: `/mission-check-ins/${r.check_in_id}`,
-      reporter: r.reporter?.name ?? 'Unknown',
-      created_at: r.created_at,
-      deleteTable: 'mission_check_ins',
-      deleteId: r.check_in_id,
       reason: r.reason,
       details: r.details,
       evidenceImageUrl: r.evidence_image_url,
