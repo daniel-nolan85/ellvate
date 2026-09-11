@@ -39,9 +39,18 @@ interface MissionCardProps {
   readonly mission: Mission;
   readonly onOpen?: (missionId: string) => void;
   readonly onMissionComplete?: (celebration: CheckInCelebration) => void;
+  // Fires after a successful accept -- lets the screen follow the mission
+  // across to the "In progress" filter instead of leaving the user staring
+  // at the "Available" list while the card they just tapped vanishes from it.
+  readonly onAccepted?: () => void;
 }
 
-export function MissionCard({ mission, onMissionComplete, onOpen }: MissionCardProps) {
+export function MissionCard({
+  mission,
+  onAccepted,
+  onMissionComplete,
+  onOpen,
+}: MissionCardProps) {
   const acceptMission = useAcceptMission();
   const checkIn = useCheckIn(onMissionComplete);
   const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
@@ -53,7 +62,7 @@ export function MissionCard({ mission, onMissionComplete, onOpen }: MissionCardP
   const handleAccept = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
     void Haptics.selectionAsync().catch(() => undefined);
-    acceptMission.mutate(mission.id);
+    acceptMission.mutate(mission.id, { onSuccess: () => onAccepted?.() });
   };
 
   const handleAttachPhoto = async (event: { stopPropagation: () => void }) => {
