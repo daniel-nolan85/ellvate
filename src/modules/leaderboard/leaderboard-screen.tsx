@@ -44,7 +44,7 @@ function RangeTabs({
         return (
           <Pressable
             className={`flex-1 items-center rounded-full py-2 ${
-              isActive ? 'bg-primary' : 'bg-secondary'
+              isActive ? 'bg-accent' : 'bg-secondary'
             }`}
             key={tab.value}
             onPress={() => onSelect(tab.value)}
@@ -52,7 +52,7 @@ function RangeTabs({
             <Text
               className={`font-inter-semibold text-[13px] ${
                 isActive
-                  ? 'text-primary-foreground'
+                  ? 'text-accent-foreground'
                   : 'text-secondary-foreground'
               }`}
             >

@@ -692,7 +692,7 @@ export function ProfileScreen() {
                           accessibilityRole="button"
                           className={`flex-row items-center gap-3 rounded-2xl px-4 py-3 ${
                             selected
-                              ? 'border border-primary bg-primary'
+                              ? 'border border-accent bg-accent'
                               : 'border border-surface-hairline bg-canvas'
                           }`}
                           key={role.id}
@@ -707,7 +707,7 @@ export function ProfileScreen() {
                           <View className="flex-1">
                             <Text
                               className={`font-inter-semibold text-[14px] ${
-                                selected ? 'text-primary-foreground' : 'text-content'
+                                selected ? 'text-accent-foreground' : 'text-content'
                               }`}
                             >
                               {role.title}
@@ -743,7 +743,7 @@ export function ProfileScreen() {
                         <Pressable
                           accessibilityRole="button"
                           className={`rounded-full px-4 py-2.5 ${
-                            selected ? 'bg-primary' : 'bg-secondary'
+                            selected ? 'bg-accent' : 'bg-secondary'
                           }`}
                           key={interest}
                           onPress={() => toggleDraftInterest(interest)}
@@ -751,7 +751,7 @@ export function ProfileScreen() {
                         >
                           <Text
                             className={`font-inter-medium text-[13px] ${
-                              selected ? 'text-primary-foreground' : 'text-content'
+                              selected ? 'text-accent-foreground' : 'text-content'
                             }`}
                           >
                             {interest}
