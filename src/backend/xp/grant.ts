@@ -11,7 +11,7 @@ import type { GrantXpInput } from './types';
 // (the smallest seeded mission is worth 25 XP), so actually completing a
 // mission always outweighs just posting content. Keeping this amount small
 // is itself the anti-farming measure -- there's no separate cooldown/cap.
-export const CREATE_CONTENT_XP = 5;
+export const CREATE_CONTENT_XP = 10;
 
 function grantXpMemory(userId: string, input: GrantXpInput): void {
   ensureUser(userId);
