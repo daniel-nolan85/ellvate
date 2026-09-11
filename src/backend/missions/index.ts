@@ -1,6 +1,5 @@
 export { acceptMission } from './accept';
 export { checkIn } from './check-in';
-export { listMissionCheckIns, reportCheckIn } from './check-ins';
 export { createMission } from './create';
 export { deleteMission } from './delete';
 export {
@@ -13,10 +12,8 @@ export {
 export { reportMission } from './report';
 export { updateMission } from './update';
 export { buildUserProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
-export { CHECK_INS_LIST_LIMIT } from './types';
 export type {
   AcceptMissionResult,
-  CheckInEntry,
   CheckInErrorCode,
   CheckInFailure,
   CheckInResponse,
@@ -31,7 +28,6 @@ export type {
   MissionsView,
   MyMissionsOptions,
   MyMissionsPage,
-  ReportCheckInResult,
   ReportMissionResult,
   UpdateMissionResult,
   UserProgress,
