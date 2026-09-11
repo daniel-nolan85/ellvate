@@ -249,13 +249,11 @@ export function ProfileScreen() {
   const displayName =
     profile.data?.profile.name ??
     (session.status === 'signed-in' ? 'You' : 'Demo member');
-  // WHY: kept separate from displayName -- a heading can say 'You' while
-  // the real name loads, but the avatar's initial-only fallback shouldn't
-  // turn that placeholder into a real-looking (and wrong) 'Y'. Undefined
-  // here lets Avatar fall back to its own generic '?' instead.
-  const avatarName =
-    profile.data?.profile.name ??
-    (session.status === 'signed-in' ? undefined : 'Demo member');
+  // WHY: shows the loading spinner on the avatar instead of an initial
+  // guessed from the 'You' placeholder above -- the heading text can say
+  // 'You' while the real name loads, but a wrong-looking 'Y' initial would
+  // briefly misrepresent the person.
+  const stillLoadingRealProfile = session.status === 'signed-in' && !profile.data;
   const prefs = profile.data?.profile.notificationPrefs;
   const currentRole = profile.data?.profile.role ?? null;
   const currentRoleOption = currentRole
@@ -413,7 +411,8 @@ export function ProfileScreen() {
             onPress={pickAvatar}
           >
             <Avatar
-              name={avatarName}
+              loading={stillLoadingRealProfile}
+              name={displayName}
               size="2xl"
               src={profile.data?.profile.avatarUrl ?? undefined}
             />

@@ -88,8 +88,8 @@ describe('ProfileAvatarButton', () => {
 
   // Regression test: a signed-in user whose profile hadn't loaded yet fell
   // back to the placeholder name 'You', which produced a real-looking (but
-  // wrong) initial -- 'Y' -- instead of a generic placeholder.
-  test('shows a generic placeholder, not a wrong-looking initial, while loading for a signed-in user', async () => {
+  // wrong) initial -- 'Y' -- instead of showing the loading state.
+  test('shows the loading spinner, not a wrong-looking initial, while loading for a signed-in user', async () => {
     let resolveRequest: (value: unknown) => void = () => {};
     mockedRequestJson.mockReturnValue(
       new Promise((resolve) => {
@@ -105,8 +105,9 @@ describe('ProfileAvatarButton', () => {
 
     const view = await renderButton(session);
 
-    expect(view.getByText('?')).toBeTruthy();
+    expect(view.getByLabelText('loading')).toBeTruthy();
     expect(view.queryByText('Y')).toBeNull();
+    expect(view.queryByText('?')).toBeNull();
 
     // Resolve the pending request so nothing is left dangling once the test ends.
     resolveRequest({ profile: { ...baseProfile, name: 'Daniel Nolan' } });

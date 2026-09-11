@@ -12,14 +12,13 @@ import { useProfile } from './use-profile';
 export function ProfileAvatarButton() {
   const session = useSession();
   const profile = useProfile();
-  // WHY: no name fallback for a signed-in user whose profile hasn't loaded
-  // yet -- a placeholder like 'You' produces a real-looking (but wrong)
-  // initial ('Y'), which briefly misrepresents the person's actual
-  // initials. Leaving name undefined here lets Avatar fall back to its own
-  // generic '?' instead.
   const name =
     profile.data?.profile.name ??
-    (session.status === 'signed-in' ? undefined : 'Demo member');
+    (session.status === 'signed-in' ? 'You' : 'Demo member');
+  // WHY: shows the loading spinner instead of an initial guessed from the
+  // 'You' placeholder above -- a signed-in user's real name/photo just
+  // hasn't loaded yet, and a wrong-looking 'Y' briefly misrepresents them.
+  const stillLoadingRealProfile = session.status === 'signed-in' && !profile.data;
 
   return (
     <Pressable
@@ -30,6 +29,7 @@ export function ProfileAvatarButton() {
     >
       <Avatar
         className="rounded-full border-[1.5px] border-accent"
+        loading={stillLoadingRealProfile}
         name={name}
         size="sm"
         src={profile.data?.profile.avatarUrl ?? undefined}
