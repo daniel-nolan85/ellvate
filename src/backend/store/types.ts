@@ -3,6 +3,13 @@ import type { ReportReason } from '@/src/lib/report-reasons';
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
+export type XpReason =
+  | 'mission_completed'
+  | 'mission_created'
+  | 'post_created'
+  | 'event_created'
+  | 'service_created'
+  | 'onboarding_bonus';
 
 export interface NotificationPrefs {
   readonly events: boolean;
@@ -363,6 +370,15 @@ export interface StoredMemberReport {
   readonly evidenceImageUrl: string | null;
 }
 
+export interface StoredXpLedgerEntry {
+  readonly id: string;
+  readonly userId: string;
+  readonly amount: number;
+  readonly reason: XpReason;
+  readonly refId: string | null;
+  readonly createdAt: string;
+}
+
 export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
 
 export interface StoredBookmark {
@@ -400,6 +416,7 @@ export interface StoreState {
   readonly petitionCommentReports: readonly StoredPetitionCommentReport[];
   readonly bookmarks: readonly StoredBookmark[];
   readonly memberReports: readonly StoredMemberReport[];
+  readonly xpLedger: readonly StoredXpLedgerEntry[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];
 }

@@ -249,6 +249,13 @@ export function useCreateMission() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
+      // Bumps the creator's "missions created" count on their profile --
+      // that count is served by the member-profile endpoint, not the
+      // missions endpoints, so it isn't covered by the invalidation above.
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      // Also grants a small amount of XP -- see src/backend/xp -- which the
+      // points-history list needs to pick up too.
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
     },
   });
 }
@@ -284,6 +291,10 @@ export function useDeleteMission() {
       }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
+      // Deleting a created mission also changes the creator's "missions
+      // created" count -- see useCreateMission for why this needs its own
+      // invalidation.
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 }
@@ -397,6 +408,7 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
     },
     onSuccess: (result, _input, context) => {
       if (result.awardedXp > 0) {

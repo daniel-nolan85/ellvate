@@ -1,6 +1,7 @@
 import { extractLogoUpload, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { setState, type StoredServiceListing } from '@/src/backend/store';
+import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
 
 import { createServiceListingSupabase } from './services-supabase';
 import { toServiceListingView } from './service-view';
@@ -55,7 +56,17 @@ export async function createServiceListing(
   ctx: RequestContext,
   input: unknown,
 ): Promise<CreateServiceListingResult> {
-  return ctx.supabase
-    ? createServiceListingSupabase(ctx.supabase, ctx.userId, input)
+  const result = ctx.supabase
+    ? await createServiceListingSupabase(ctx.supabase, ctx.userId, input)
     : createServiceListingMemory(ctx.userId, input);
+
+  if (result.ok) {
+    await grantXp(ctx, {
+      amount: CREATE_CONTENT_XP,
+      reason: 'service_created',
+      refId: result.listing.id,
+    });
+  }
+
+  return result;
 }

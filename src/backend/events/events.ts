@@ -2,6 +2,7 @@ import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
+import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import type { ValidReportSubmission } from '../reports/report-submission';
@@ -547,9 +548,19 @@ export async function createEvent(
   ctx: RequestContext,
   input: unknown,
 ): Promise<CreateEventResult> {
-  return ctx.supabase
-    ? createEventSupabase(ctx.supabase, ctx.userId, input)
+  const result = ctx.supabase
+    ? await createEventSupabase(ctx.supabase, ctx.userId, input)
     : createEventMemory(ctx.userId, input);
+
+  if (result.ok) {
+    await grantXp(ctx, {
+      amount: CREATE_CONTENT_XP,
+      reason: 'event_created',
+      refId: result.event.id,
+    });
+  }
+
+  return result;
 }
 
 export async function toggleJoin(

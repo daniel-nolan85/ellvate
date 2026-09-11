@@ -35,9 +35,11 @@ export type {
   StoredServiceReviewReport,
   StoredUser,
   StoredWeekDay,
+  StoredXpLedgerEntry,
   StoreState,
   PetitionCategory,
   PetitionStatus,
+  XpReason,
 } from './types';
 export { createSeedState, DEMO_USER_ID, SEED_NOW_ISO } from './seed';
 export { getState, resetStore, setState } from './store';

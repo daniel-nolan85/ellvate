@@ -192,6 +192,7 @@ export async function updateProfileSupabase(
     await removeStorageObjects(supabase, [replacedAvatarUrl]);
   }
   return {
+    justOnboarded,
     ok: true,
     profile: toUserProfile(userId, data as unknown as AppUserProfileRow),
   };
