@@ -69,7 +69,6 @@ interface SeedUserInput {
   readonly id: string;
   readonly name: string;
   readonly xp: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly previousRank: number | null;
   readonly pinnedPostId?: string | null;
@@ -83,13 +82,11 @@ const seedUser = ({
   name,
   pinnedPostId = null,
   previousRank,
-  streakDays,
   xp,
 }: SeedUserInput): StoredUser => ({
   id,
   name,
   xp,
-  streakDays,
   missionsCompleted,
   previousRank,
   title: 'LAKE EXPLORER',
@@ -105,7 +102,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-mia',
     name: 'Mia Lake',
     xp: 3820,
-    streakDays: 0,
     missionsCompleted: 41,
     previousRank: 1,
   }),
@@ -113,7 +109,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-andre',
     name: 'Andre King',
     xp: 3540,
-    streakDays: 0,
     missionsCompleted: 38,
     previousRank: 3,
   }),
@@ -121,7 +116,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-jordan',
     name: 'Jordan Diaz',
     xp: 3110,
-    streakDays: 0,
     missionsCompleted: 35,
     previousRank: 2,
   }),
@@ -129,7 +123,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-priya',
     name: 'Priya Rao',
     xp: 2640,
-    streakDays: 0,
     missionsCompleted: 29,
     previousRank: 6,
   }),
@@ -137,7 +130,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-sam',
     name: 'Sam Ortiz',
     xp: 2190,
-    streakDays: 0,
     missionsCompleted: 24,
     previousRank: 5,
   }),
@@ -145,7 +137,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: DEMO_USER_ID,
     name: 'You',
     xp: 1980,
-    streakDays: 12,
     missionsCompleted: 21,
     previousRank: 7,
     // Seeded so the demo shows the pin feature already in use, matching the
@@ -157,7 +148,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-hoa',
     name: 'HOA Board',
     xp: 0,
-    streakDays: 0,
     missionsCompleted: 0,
     previousRank: null,
     isAdmin: true,
@@ -166,7 +156,6 @@ const seedUsers = (): readonly StoredUser[] => [
     id: 'user-riley',
     name: 'Riley Kim',
     xp: 0,
-    streakDays: 0,
     missionsCompleted: 0,
     previousRank: null,
   }),

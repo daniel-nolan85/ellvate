@@ -30,7 +30,6 @@ export interface PublicProfile {
 export interface PublicMemberStats {
   readonly level: number;
   readonly xp: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly missionsCreated: number;
   readonly postsCount: number;
@@ -182,7 +181,6 @@ export async function getPublicProfile(
     stats: {
       level: progress?.level ?? 1,
       missionsCompleted: progress?.missionsCompleted ?? 0,
-      streakDays: progress?.streakDays ?? 0,
       xp: progress?.xp ?? 0,
       ...activityCounts,
     },

@@ -51,7 +51,6 @@ export interface UserProgress {
   readonly xpIntoLevel: number;
   readonly xpForNextLevel: number;
   readonly xpToNextLevel: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly title: string;
 }
@@ -173,7 +172,7 @@ export function useMissionsView(filter: MissionFilter) {
   });
 }
 
-// The viewer's own level/XP/streak stats, decoupled from the (now paginated
+// The viewer's own level/XP stats, decoupled from the (now paginated
 // and filtered) missions list -- profile's useProfileStats hits the same
 // backend endpoint independently, mirroring how it already duplicated this
 // fetch rather than importing across the module boundary.

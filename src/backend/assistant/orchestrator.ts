@@ -365,7 +365,7 @@ const NO_MATCH_REPLY =
 // signal for missions.
 const CATEGORY_NAME_ROUTES: readonly (readonly [AssistantTool, RegExp])[] = [
   ['search_events', /\b(events?|weekend|mixer)\b/i],
-  ['search_missions', /\b(missions?|xp|streaks?)\b/i],
+  ['search_missions', /\b(missions?|xp)\b/i],
   ['search_posts', /\b(posts?|forums?|kayak|ask)\b/i],
   [
     'search_services',

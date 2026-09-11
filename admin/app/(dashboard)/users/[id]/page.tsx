@@ -12,7 +12,6 @@ interface UserRow {
   readonly role: string | null;
   readonly xp: number;
   readonly missions_completed: number;
-  readonly streak_days: number;
   readonly created_at: string;
   readonly avatar_url: string | null;
   readonly is_admin: boolean;
@@ -27,7 +26,7 @@ export default async function UserDetailPage({
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('app_users')
-    .select('id, name, role, xp, missions_completed, streak_days, created_at, avatar_url, is_admin')
+    .select('id, name, role, xp, missions_completed, created_at, avatar_url, is_admin')
     .eq('id', id)
     .maybeSingle();
   if (error) {
@@ -51,7 +50,6 @@ export default async function UserDetailPage({
         { label: 'Role', value: user.role ?? '—' },
         { label: 'XP', value: user.xp },
         { label: 'Missions completed', value: user.missions_completed },
-        { label: 'Streak', value: `${user.streak_days}d` },
         { label: 'Joined', value: formatDate(user.created_at) },
         {
           label: 'Admin',

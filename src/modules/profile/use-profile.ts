@@ -33,7 +33,6 @@ interface ProfileResponse {
 export interface MemberActivityStats {
   readonly level: number;
   readonly xp: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly missionsCreated: number;
   readonly postsCount: number;
@@ -57,7 +56,6 @@ export interface ProfileStats {
   readonly xpIntoLevel: number;
   readonly xpForNextLevel: number;
   readonly xpToNextLevel: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly title: string;
 }

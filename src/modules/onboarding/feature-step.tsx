@@ -281,7 +281,7 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <MissionsArt />,
     eyebrow: 'MISSIONS',
     id: 'missions',
-    sub: 'Check in at real places around the lake, earn XP, keep a streak — moving feels better with a scoreboard.',
+    sub: 'Check in at real places around the lake and earn XP — moving feels better with a scoreboard.',
     title: 'Turn your walks into wins',
   },
   {

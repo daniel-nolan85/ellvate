@@ -89,7 +89,6 @@ describe('getProfile', () => {
 
     expect(created).toMatchObject({
       xp: 0,
-      streakDays: 0,
       missionsCompleted: 0,
       previousRank: null,
     });
@@ -111,7 +110,6 @@ describe('getPublicProfile (requester differs from member)', () => {
     });
     expect(summary?.stats).toMatchObject({
       xp: 3820,
-      streakDays: 0,
       missionsCompleted: 41,
     });
 

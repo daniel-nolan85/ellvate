@@ -238,12 +238,6 @@ export function MemberProfileScreen({
                 tone='palm'
                 value={String(member.data.stats?.missionsCompleted ?? 0)}
               />
-              <StatCard
-                icon='Footprints'
-                label='Streak'
-                tone='amber'
-                value={String(member.data.stats?.streakDays ?? 0)}
-              />
             </HStack>
 
             <VStack space='sm'>

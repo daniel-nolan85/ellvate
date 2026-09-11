@@ -21,11 +21,11 @@ delete from missions where id like 'dmsn-%';
 delete from app_users where id like 'demo-%';
 
 -- Demo neighbours (real-sounding residents; never an HOA account).
-insert into app_users (id,name,xp,streak_days,missions_completed,previous_rank,on_leaderboard) values
-  ('demo-mia','Mia Alvarez',3820,6,41,1,true),
-  ('demo-carlos','Carlos Nguyen',3110,4,35,2,true),
-  ('demo-priya','Priya Rao',2640,3,29,3,true),
-  ('demo-sam','Sam Whitfield',2190,0,24,4,true);
+insert into app_users (id,name,xp,missions_completed,previous_rank,on_leaderboard) values
+  ('demo-mia','Mia Alvarez',3820,41,1,true),
+  ('demo-carlos','Carlos Nguyen',3110,35,2,true),
+  ('demo-priya','Priya Rao',2640,29,3,true),
+  ('demo-sam','Sam Whitfield',2190,24,4,true);
 
 -- Events at real venues, aligned to the current week strip (14 MON … 20 SUN).
 insert into events (id,starts_at,time_label,day_label,date_label,title,place,tag,featured,going_base,seed_attendee_ids) values

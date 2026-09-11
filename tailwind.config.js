@@ -191,7 +191,7 @@ module.exports = {
           subtle: 'rgb(247,226,216)',
           foreground: 'rgb(255,255,255)',
         },
-        // Warmth accent — likes, pinned/featured badges, streaks, XP.
+        // Warmth accent — likes, pinned/featured badges, XP.
         amber: {
           DEFAULT: 'rgb(217,123,41)',
           subtle: 'rgb(251,234,214)',

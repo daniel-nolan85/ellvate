@@ -2,7 +2,7 @@
 
 A mobile community app for Lake Las Vegas, built with Expo SDK 54. It brings the
 neighbourhood into one place: a **Forum**, an **Events** calendar, gamified
-**Missions** with XP and streaks, a **Leaderboard**, and an **AI Assistant** that
+**Missions** with XP, a **Leaderboard**, and an **AI Assistant** that
 answers questions grounded in real app content — plus a guided first-run
 onboarding flow.
 

@@ -79,7 +79,6 @@ describe('getMissionsView', () => {
       xpIntoLevel: breakdown.xpIntoLevel,
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
-      streakDays: 12,
       missionsCompleted: 21,
       title: 'LAKE EXPLORER',
     });
@@ -105,7 +104,6 @@ describe('getMissionsView', () => {
       xpIntoLevel: 0,
       xpForNextLevel: 300,
       xpToNextLevel: 300,
-      streakDays: 0,
       missionsCompleted: 0,
       title: 'LAKE EXPLORER',
     });
@@ -183,7 +181,6 @@ describe('checkIn', () => {
     expect(result.body.awardedXp).toBe(0);
     expect(result.body.progress.xp).toBe(3820);
     expect(result.body.progress.missionsCompleted).toBe(41);
-    expect(result.body.progress.streakDays).toBe(0);
   });
 
   test('rejects the completing check-in without a photo', async () => {
@@ -213,7 +210,6 @@ describe('checkIn', () => {
       xpIntoLevel: breakdown.xpIntoLevel,
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
-      streakDays: 13,
       missionsCompleted: 22,
       title: 'LAKE EXPLORER',
     });
@@ -231,7 +227,6 @@ describe('checkIn', () => {
     expect(result.body.awardedXp).toBe(50);
     expect(result.body.progress.xp).toBe(2030);
     expect(result.body.progress.missionsCompleted).toBe(22);
-    expect(result.body.progress.streakDays).toBe(13);
   });
 
   test('completion persists in the store and in the missions view', async () => {
@@ -828,7 +823,6 @@ describe('getUserProgress / GET /api/missions/progress', () => {
       xpIntoLevel: breakdown.xpIntoLevel,
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
-      streakDays: 12,
       missionsCompleted: 21,
       title: 'LAKE EXPLORER',
     });
@@ -889,7 +883,7 @@ describe('POST /api/missions/:id/check-in', () => {
     const body = (await response.json()) as {
       mission: { id: string; status: string; stopsDone: number };
       awardedXp: number;
-      progress: { xp: number; streakDays: number; missionsCompleted: number };
+      progress: { xp: number; missionsCompleted: number };
     };
 
     expect(response.status).toBe(200);
@@ -901,7 +895,6 @@ describe('POST /api/missions/:id/check-in', () => {
     expect(body.awardedXp).toBe(50);
     expect(body.progress).toMatchObject({
       xp: 2030,
-      streakDays: 13,
       missionsCompleted: 22,
     });
   });

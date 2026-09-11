@@ -71,12 +71,11 @@ export const features: readonly Feature[] = [
     title: 'Missions',
     hook: "Turn 'get out more' into a game.",
     description:
-      "Themed challenges — Trail, Water, Village, Day, Night, and Social — that nudge you to actually go explore Lake Las Vegas: check in at the marina before sunrise, try a restaurant you've never been to, walk a trail on the other side of the lake. Photo check-ins prove you were there; XP and streaks keep you coming back.",
+      "Themed challenges — Trail, Water, Village, Day, Night, and Social — that nudge you to actually go explore Lake Las Vegas: check in at the marina before sunrise, try a restaurant you've never been to, walk a trail on the other side of the lake. Photo check-ins prove you were there; XP keeps you coming back.",
     highlights: [
       'Six mission themes, from sunrise marina walks to social mixers',
       'Photo-proof check-ins at each stop along the way',
       'XP and levels that grow the more you explore',
-      'Daily streaks that reward showing up consistently',
     ],
     goodFor: 'People who want an actual reason to get out of the house and explore their own neighborhood.',
     accent: 'palm',

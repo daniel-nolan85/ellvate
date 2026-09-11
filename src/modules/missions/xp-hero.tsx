@@ -62,14 +62,6 @@ export function XpHero({ progress }: XpHeroProps) {
             {progress.xpToNextLevel} XP to Level {progress.level + 1}
           </Text>
         </VStack>
-        <VStack className="items-center gap-0.5 rounded-[16px] bg-[rgba(250,250,250,0.1)] px-3 py-2.5">
-          <Text className="font-inter-bold text-[18px] leading-[22px] text-primary-foreground">
-            {progress.streakDays}
-          </Text>
-          <Text className="font-inter-semibold text-[9px] tracking-[0.8px] text-[rgba(250,250,250,0.6)]">
-            DAY STREAK
-          </Text>
-        </VStack>
       </HStack>
     </View>
   );
