@@ -249,6 +249,13 @@ export function ProfileScreen() {
   const displayName =
     profile.data?.profile.name ??
     (session.status === 'signed-in' ? 'You' : 'Demo member');
+  // WHY: kept separate from displayName -- a heading can say 'You' while
+  // the real name loads, but the avatar's initial-only fallback shouldn't
+  // turn that placeholder into a real-looking (and wrong) 'Y'. Undefined
+  // here lets Avatar fall back to its own generic '?' instead.
+  const avatarName =
+    profile.data?.profile.name ??
+    (session.status === 'signed-in' ? undefined : 'Demo member');
   const prefs = profile.data?.profile.notificationPrefs;
   const currentRole = profile.data?.profile.role ?? null;
   const currentRoleOption = currentRole
@@ -406,7 +413,7 @@ export function ProfileScreen() {
             onPress={pickAvatar}
           >
             <Avatar
-              name={displayName}
+              name={avatarName}
               size="2xl"
               src={profile.data?.profile.avatarUrl ?? undefined}
             />
