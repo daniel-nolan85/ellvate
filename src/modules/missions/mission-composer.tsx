@@ -42,7 +42,7 @@ interface NewMissionMediaItem {
 
 type MissionMediaItem = ExistingMissionMediaItem | NewMissionMediaItem;
 
-const XP_OPTIONS = [25, 50, 75, 100, 150] as const;
+const XP_OPTIONS = [25, 50, 75, 100] as const;
 const MAX_STOPS = 10;
 
 interface ChipProps {

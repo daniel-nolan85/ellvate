@@ -16,11 +16,6 @@ function deleteMissionMemory(userId: string, missionId: string): boolean {
         .filter((comment) => comment.missionId === missionId)
         .map((comment) => comment.id),
     );
-    const removedCheckInIds = new Set(
-      current.missionCheckIns
-        .filter((checkIn) => checkIn.missionId === missionId)
-        .map((checkIn) => checkIn.id),
-    );
     return {
       ...current,
       missionCommentReports: current.missionCommentReports.filter(
@@ -28,9 +23,6 @@ function deleteMissionMemory(userId: string, missionId: string): boolean {
       ),
       missionComments: current.missionComments.filter(
         (comment) => comment.missionId !== missionId,
-      ),
-      missionCheckInReports: current.missionCheckInReports.filter(
-        (report) => !removedCheckInIds.has(report.checkInId),
       ),
       missionCheckIns: current.missionCheckIns.filter(
         (checkIn) => checkIn.missionId !== missionId,

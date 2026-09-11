@@ -3,7 +3,6 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   Share,
@@ -20,7 +19,6 @@ import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import {
-  ReportSheet,
   ReportSheetContent,
   type ReportSubmission,
 } from '@/src/components/shared/report-sheet';
@@ -47,6 +45,7 @@ import {
   type PickedImage,
 } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
+import { ApiError } from '@/src/services/api';
 
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCelebrationModal } from './mission-celebration-modal';
@@ -65,12 +64,9 @@ import {
   useCheckIn,
   useDeleteMission,
   useMission,
-  useMissionCheckIns,
-  useReportCheckIn,
   useReportMission,
   useUpdateMission,
   type CheckInCelebration,
-  type CheckInEntry,
   type MissionStatus,
 } from './use-missions';
 
@@ -153,8 +149,6 @@ export function MissionDetailScreen({
   const updateComment = useUpdateMissionComment(missionId);
   const deleteComment = useDeleteMissionComment(missionId);
   const reportComment = useReportMissionComment();
-  const checkIns = useMissionCheckIns(missionId);
-  const reportCheckIn = useReportCheckIn();
 
   const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
   // A single Sheet whose content switches by mode, rather than separate
@@ -187,14 +181,6 @@ export function MissionDetailScreen({
     'comment' | 'user' | null
   >(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [expandedCheckIn, setExpandedCheckIn] = useState<CheckInEntry | null>(
-    null,
-  );
-  // The check-in photo currently open for report -- a standalone ReportSheet
-  // (see below), not part of the sheetMode/commentSheetMode state machines
-  // above, since it's reached from its own icon in the check-in photos list,
-  // never simultaneously with either of those.
-  const [reportTarget, setReportTarget] = useState<CheckInEntry | null>(null);
 
   const mission = missionQuery.data?.mission;
   const isOwnMission = !!mission && mission.author.id === userId;
@@ -250,7 +236,17 @@ export function MissionDetailScreen({
       },
       {
         onSuccess: () => setCheckInPhoto(null),
-        onError: () => showToast('Couldn’t check in. Try again.'),
+        onError: (error) => {
+          if (error instanceof ApiError && error.code === 'no_face_detected') {
+            showToast("We couldn't spot a person in that photo — try a different one.");
+            return;
+          }
+          if (error instanceof ApiError && error.code === 'unreadable_photo') {
+            showToast("We couldn't read that photo — try a different one.");
+            return;
+          }
+          showToast('Couldn’t check in. Try again.');
+        },
       },
     );
   };
@@ -269,23 +265,6 @@ export function MissionDetailScreen({
       },
       onError: () => showToast('Couldn’t delete this mission. Try again.'),
     });
-  };
-
-  const handleReportCheckInSubmit = (submission: ReportSubmission) => {
-    const target = reportTarget;
-    if (!target) {
-      return;
-    }
-    reportCheckIn.mutate(
-      { checkInId: target.id, ...submission },
-      {
-        onError: () => showToast('Couldn’t report this check-in. Try again.'),
-        onSuccess: () => {
-          setReportTarget(null);
-          showToast('Thanks — our moderators will take a look.');
-        },
-      },
-    );
   };
 
   const openReportMission = () => {
@@ -472,10 +451,8 @@ export function MissionDetailScreen({
         {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
             ActivitySectionList for why: only comment rows actually on/near
             screen mount as real native views here, no matter how long the
-            discussion under a mission grows. The mission card (including
-            its own bounded check-in-photos list, capped by participant
-            count rather than independently growable) and the comments
-            header render once as ListHeaderComponent. */}
+            discussion under a mission grows. The mission card and the
+            comments header render once as ListHeaderComponent. */}
         <FlatList
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 16 }}
@@ -598,6 +575,26 @@ export function MissionDetailScreen({
                     </Badge>
                   </HStack>
 
+                  <HStack className="items-center gap-3">
+                    <HStack className="items-center gap-1">
+                      <Icon color="rgb(120,108,94)" name="Users" size={13} />
+                      <Text className="text-text-muted" size="xs">
+                        {mission.acceptedCount}{' '}
+                        {mission.acceptedCount === 1 ? 'person' : 'people'} accepted
+                      </Text>
+                    </HStack>
+                    <HStack className="items-center gap-1">
+                      <Icon
+                        color="rgb(120,108,94)"
+                        name="CheckCircle"
+                        size={13}
+                      />
+                      <Text className="text-text-muted" size="xs">
+                        {mission.completedCount} completed
+                      </Text>
+                    </HStack>
+                  </HStack>
+
                   {mission.status === 'active' &&
                   mission.accepted &&
                   mission.stops[mission.stopsDone] ? (
@@ -682,60 +679,6 @@ export function MissionDetailScreen({
                     </VStack>
                   ) : null}
 
-                  {checkIns.data &&
-                  checkIns.data.some((entry) => entry.photoUrl) ? (
-                    <>
-                      <Divider />
-                      <VStack className="gap-3">
-                        <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-                          Check-in photos
-                        </Text>
-                        {checkIns.data
-                          .filter((entry) => entry.photoUrl)
-                          .map((entry) => (
-                            <HStack
-                              className="items-center gap-2.5"
-                              key={entry.id}
-                            >
-                              <Pressable
-                                accessibilityLabel={`View ${entry.user.name}'s check-in photo`}
-                                accessibilityRole="button"
-                                onPress={() => setExpandedCheckIn(entry)}
-                              >
-                                <Image
-                                  source={{ uri: entry.photoUrl ?? '' }}
-                                  style={{
-                                    borderRadius: 10,
-                                    height: 44,
-                                    width: 44,
-                                  }}
-                                />
-                              </Pressable>
-                              <VStack className="flex-1 gap-0.5">
-                                <Text className="font-inter-semibold text-[13px] text-content">
-                                  {entry.user.name}
-                                </Text>
-                                <Text className="text-text-muted" size="xs">
-                                  Stop {entry.stopIndex + 1}
-                                </Text>
-                              </VStack>
-                              <Pressable
-                                accessibilityLabel="Report check-in"
-                                accessibilityRole="button"
-                                hitSlop={8}
-                                onPress={() => setReportTarget(entry)}
-                              >
-                                <Icon
-                                  color="rgb(120,108,94)"
-                                  name="Flag"
-                                  size={16}
-                                />
-                              </Pressable>
-                            </HStack>
-                          ))}
-                      </VStack>
-                    </>
-                  ) : null}
                 </VStack>
               ) : missionQuery.isPending ? (
                 <View className="items-center py-10">
@@ -793,12 +736,9 @@ export function MissionDetailScreen({
           onEndReachedThreshold={0.5}
           onRefresh={() => {
             void missionQuery.refetch();
-            void checkIns.refetch();
             void comments.refetch();
           }}
-          refreshing={
-            missionQuery.isRefetching || checkIns.isRefetching || comments.isRefetching
-          }
+          refreshing={missionQuery.isRefetching || comments.isRefetching}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <CommentItem
@@ -1058,44 +998,6 @@ export function MissionDetailScreen({
       <LevelUpCelebrationModal
         newLevel={celebration?.leveledUpTo ?? null}
         onClose={() => setCelebration(null)}
-      />
-
-      {/* Full-size check-in photo viewer */}
-      <Modal
-        animationType="fade"
-        onRequestClose={() => setExpandedCheckIn(null)}
-        transparent
-        visible={expandedCheckIn !== null}
-      >
-        <Pressable
-          className="flex-1 items-center justify-center bg-[rgba(0,0,0,0.85)] px-4"
-          onPress={() => setExpandedCheckIn(null)}
-        >
-          {expandedCheckIn ? (
-            <VStack className="w-full items-center gap-3">
-              <Image
-                resizeMode="contain"
-                source={{ uri: expandedCheckIn.photoUrl ?? '' }}
-                style={{ aspectRatio: 1, borderRadius: 12, width: '100%' }}
-              />
-              <Text
-                className="text-[13px]"
-                style={{ color: 'rgb(255,255,255)' }}
-              >
-                {expandedCheckIn.user.name} · Stop{' '}
-                {expandedCheckIn.stopIndex + 1}
-              </Text>
-            </VStack>
-          ) : null}
-        </Pressable>
-      </Modal>
-
-      <ReportSheet
-        isSubmitting={reportCheckIn.isPending}
-        onClose={() => setReportTarget(null)}
-        onSubmit={handleReportCheckInSubmit}
-        title="Report this check-in"
-        visible={reportTarget !== null}
       />
 
       {toast ? (

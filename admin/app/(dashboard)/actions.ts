@@ -101,7 +101,6 @@ const DELETABLE_CONTENT = {
   events: '/events',
   missions: '/missions',
   service_listings: '/services',
-  mission_check_ins: '/reports',
   app_users: '/users',
   contact_messages: '/contact',
   landing_contact_messages: '/contact',

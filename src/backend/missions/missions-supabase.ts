@@ -7,6 +7,7 @@ import {
 } from '@/src/backend/media';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
+import { detectFace } from '@/src/services/face-detection';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
@@ -71,6 +72,39 @@ interface ProgressRow {
   readonly status: MissionStatus;
 }
 
+interface ProgressCounts {
+  readonly accepted: number;
+  readonly completed: number;
+}
+
+const ZERO_COUNTS: ProgressCounts = { accepted: 0, completed: 0 };
+
+// Community-wide accept/complete counts, not scoped to any one requesting
+// user (unlike ProgressRow above) -- one grouped query per missions fetch
+// rather than one per mission.
+async function loadProgressCounts(
+  supabase: SupabaseClient,
+  missionIds: readonly string[],
+): Promise<ReadonlyMap<string, ProgressCounts>> {
+  if (missionIds.length === 0) {
+    return new Map();
+  }
+  const { data, error } = await supabase
+    .from('mission_progress')
+    .select('mission_id,status')
+    .in('mission_id', missionIds);
+  throwIfSupabaseError(error, 'load mission progress counts');
+  const counts = new Map<string, ProgressCounts>();
+  for (const row of (data ?? []) as unknown as { mission_id: string; status: MissionStatus }[]) {
+    const current = counts.get(row.mission_id) ?? ZERO_COUNTS;
+    counts.set(row.mission_id, {
+      accepted: current.accepted + 1,
+      completed: current.completed + (row.status === 'done' ? 1 : 0),
+    });
+  }
+  return counts;
+}
+
 interface UserRow {
   readonly xp: number;
   readonly streak_days: number;
@@ -119,9 +153,11 @@ const toMissionView = (
   row: MissionRow,
   entry: ProgressRow | undefined,
   nameById: ReadonlyMap<string, PersonLookup>,
+  counts: ReadonlyMap<string, ProgressCounts> = new Map(),
 ): Mission => {
   const stopsDone = entry?.stops_done ?? 0;
   const author = nameById.get(row.created_by);
+  const missionCounts = counts.get(row.id) ?? ZERO_COUNTS;
   return {
     id: row.id,
     author: {
@@ -142,6 +178,8 @@ const toMissionView = (
     theme: row.theme as MissionTheme | null,
     media: row.media ?? undefined,
     editedAt: row.edited_at,
+    acceptedCount: missionCounts.accepted,
+    completedCount: missionCounts.completed,
   };
 };
 
@@ -262,10 +300,14 @@ export async function getMissionsViewSupabase(
   const userRow = await loadUserRow(supabase, userId);
 
   const nameById = nameByIdFromRows(missionRows);
+  const counts = await loadProgressCounts(
+    supabase,
+    missionRows.map((row) => row.id),
+  );
 
   return {
     missions: missionRows.map((row) =>
-      toMissionView(row, progressByMission.get(row.id), nameById),
+      toMissionView(row, progressByMission.get(row.id), nameById, counts),
     ),
     progress: buildProgress({
       xp: userRow?.xp ?? 0,
@@ -331,11 +373,15 @@ export async function listMissionsPageSupabase(
   );
 
   const nameById = nameByIdFromRows(missionRows);
+  const counts = await loadProgressCounts(
+    supabase,
+    missionRows.map((row) => row.id),
+  );
 
   const filtered = missionRows
     .map((row, index) => ({
       index,
-      view: toMissionView(row, progressByMission.get(row.id), nameById),
+      view: toMissionView(row, progressByMission.get(row.id), nameById, counts),
     }))
     .filter(({ view }) => matchesMissionFilter(view, filter))
     .map(({ index, view }) => ({
@@ -410,6 +456,10 @@ export async function getMyMissionsViewSupabase(
   const progressByMission = new Map(myProgress.map((row) => [row.mission_id, row]));
 
   const nameById = nameByIdFromRows(missionRows);
+  const counts = await loadProgressCounts(
+    supabase,
+    missionRows.map((row) => row.id),
+  );
 
   const wrapped = missionRows.map((row) => ({
     id: row.id,
@@ -420,7 +470,7 @@ export async function getMyMissionsViewSupabase(
 
   return {
     missions: page.items.map((item) =>
-      toMissionView(item.row, progressByMission.get(item.row.id), nameById),
+      toMissionView(item.row, progressByMission.get(item.row.id), nameById, counts),
     ),
     nextCursor: page.nextCursor,
   };
@@ -448,9 +498,13 @@ export async function getMissionsByIdsSupabase(
   );
 
   const nameById = nameByIdFromRows(missionRows);
+  const counts = await loadProgressCounts(
+    supabase,
+    missionRows.map((row) => row.id),
+  );
 
   return missionRows.map((row) =>
-    toMissionView(row, progressByMission.get(row.id), nameById),
+    toMissionView(row, progressByMission.get(row.id), nameById, counts),
   );
 }
 
@@ -619,9 +673,10 @@ export async function updateMissionSupabase(
   throwIfSupabaseError(entryError, 'load mission progress');
   const entry = (entryData as ProgressRow | null) ?? undefined;
   const nameById = await nameMapFor(supabase, userId);
+  const counts = await loadProgressCounts(supabase, [missionId]);
   return {
     ok: true,
-    mission: toMissionView(row, entry, nameById),
+    mission: toMissionView(row, entry, nameById, counts),
   };
 }
 
@@ -711,15 +766,38 @@ export async function checkInSupabase(
     };
   }
 
-  const photoUrl = photo
-    ? await uploadDataUrl(supabase, photo.dataUrl, photo.filename, 'mission-checkins', userId)
-    : null;
+  // WHY: a hard automated gate, not a soft flag-for-review -- there's no
+  // review queue for this because the photo is never kept around to review
+  // (see below). Scanned in memory and immediately discarded either way, so
+  // a rejection here costs the user nothing but a retry with a different
+  // photo.
+  if (completed && photo) {
+    const outcome = await detectFace(photo.dataUrl);
+    if (outcome === 'no_face_detected') {
+      return {
+        ok: false,
+        status: 400,
+        code: 'no_face_detected',
+        message: "We couldn't spot a person in that photo. Try a different one.",
+      };
+    }
+    if (outcome === 'undecodable_image') {
+      return {
+        ok: false,
+        status: 400,
+        code: 'unreadable_photo',
+        message: "We couldn't read that photo. Try a different one.",
+      };
+    }
+  }
 
+  // WHY: never persisted -- these photos are scanned for a face and
+  // discarded, never displayed to anyone (including admins), so there's
+  // nothing to upload or keep a URL for.
   const { error: checkInInsertError } = await supabase.from('mission_check_ins').insert({
     mission_id: missionId,
     user_id: userId,
     stop_index: currentStopsDone,
-    photo_url: photoUrl,
   });
   throwIfSupabaseError(checkInInsertError, 'save mission check-in');
 
@@ -757,6 +835,7 @@ export async function checkInSupabase(
 
   const authorNameById = await nameMapFor(supabase, mission.created_by);
   const author = authorNameById.get(mission.created_by);
+  const counts = (await loadProgressCounts(supabase, [missionId])).get(missionId) ?? ZERO_COUNTS;
   const missionView: Mission = {
     id: mission.id,
     author: {
@@ -777,6 +856,8 @@ export async function checkInSupabase(
     theme: mission.theme as MissionTheme | null,
     media: mission.media ?? undefined,
     editedAt: mission.edited_at,
+    acceptedCount: counts.accepted,
+    completedCount: counts.completed,
   };
 
   return {
@@ -842,7 +923,8 @@ export async function acceptMissionSupabase(
   const entry = (entryData as ProgressRow | null) ?? undefined;
 
   const nameById = await nameMapFor(supabase, mission.created_by);
-  return { ok: true, mission: toMissionView(mission, entry, nameById) };
+  const counts = await loadProgressCounts(supabase, [missionId]);
+  return { ok: true, mission: toMissionView(mission, entry, nameById, counts) };
 }
 
 export async function reportMissionSupabase(
