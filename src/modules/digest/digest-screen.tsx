@@ -48,7 +48,11 @@ function TabSwitcher({
   readonly onSelect: (tab: DigestTab) => void;
 }) {
   return (
-    <HStack className="px-5 pb-3" space="sm">
+    // collapsable={false} for the same reason as the header above it (see
+    // the WHY comment on that HStack) -- without it, this row is the next
+    // sibling RN's view-flattening collapses, letting the stat cards below
+    // paint over both this and the header instead of beneath them.
+    <HStack className="px-5 pb-3" collapsable={false} space="sm">
       {TABS.map((tab) => {
         const isActive = tab.key === active;
         return (
