@@ -53,7 +53,7 @@ interface MissionRow {
   readonly xp: number;
   readonly stops_total: number;
   readonly stops: readonly string[] | null;
-  readonly theme: string;
+  readonly theme: string | null;
   readonly media: readonly MissionMedia[] | null;
   readonly position: number;
   readonly edited_at: string | null;
@@ -139,7 +139,7 @@ const toMissionView = (
     stopsDone,
     stopsTotal: row.stops_total,
     stops: row.stops ?? [],
-    theme: row.theme as MissionTheme,
+    theme: row.theme as MissionTheme | null,
     media: row.media ?? undefined,
     editedAt: row.edited_at,
   };
@@ -774,7 +774,7 @@ export async function checkInSupabase(
     stopsDone,
     stopsTotal: mission.stops_total,
     stops: mission.stops ?? [],
-    theme: mission.theme as MissionTheme,
+    theme: mission.theme as MissionTheme | null,
     media: mission.media ?? undefined,
     editedAt: mission.edited_at,
   };

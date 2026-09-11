@@ -40,7 +40,7 @@ export interface Mission {
   readonly stopsDone: number;
   readonly stopsTotal: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
 }
@@ -104,7 +104,7 @@ export interface CreateMissionInput {
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
   readonly newMedia?: readonly NewMissionMediaInput[];
 }
 
@@ -120,7 +120,7 @@ export interface UpdateMissionInput {
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
   readonly existingMedia?: readonly ExistingMissionMediaInput[];
   readonly newMedia?: readonly NewMissionMediaInput[];
 }

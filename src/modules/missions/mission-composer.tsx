@@ -21,7 +21,7 @@ export interface MissionComposerDraft {
   readonly scheduledFor: string | null;
   readonly xp: number;
   readonly stops: readonly string[];
-  readonly theme: MissionTheme;
+  readonly theme: MissionTheme | null;
   readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly newMedia?: readonly { readonly filename: string; readonly dataUrl: string }[];
 }
@@ -161,7 +161,6 @@ export function MissionComposer({
     description.trim().length > 0 &&
     xp !== null &&
     stops.length > 0 &&
-    theme !== null &&
     !isSubmitting;
 
   const showAlert = (nextTitle: string, message: string) => {
@@ -208,7 +207,7 @@ export function MissionComposer({
       showsVerticalScrollIndicator={false}
       style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
     >
-      <VStack className="px-5 pb-2 pt-1" space="md">
+      <VStack className="px-5 pb-2 pt-1" space="lg">
         <Text className="font-inter-bold text-[17px] text-content">
           {submitLabel === 'Add mission' ? 'New mission around the lake' : 'Edit mission'}
         </Text>
@@ -355,7 +354,7 @@ export function MissionComposer({
           </HStack>
         </Field>
 
-        <Field label="Theme">
+        <Field label="Theme (optional)">
           <HStack className="flex-wrap gap-2">
             {MISSION_THEMES.map((option) => {
               const active = theme === option;
@@ -366,7 +365,7 @@ export function MissionComposer({
                   accessibilityState={{ selected: active }}
                   className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${active ? 'bg-accent' : 'bg-secondary'}`}
                   key={option}
-                  onPress={() => setTheme(option)}
+                  onPress={() => setTheme(active ? null : option)}
                   testID={`mission-theme-${option}`}
                 >
                   <Icon
@@ -447,7 +446,7 @@ export function MissionComposer({
             className="rounded-full bg-accent px-5"
             isDisabled={!canSubmit}
             onPress={() => {
-              if (xp === null || stops.length === 0 || theme === null) {
+              if (xp === null || stops.length === 0) {
                 return;
               }
               onSubmit({

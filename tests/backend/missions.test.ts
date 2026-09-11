@@ -353,6 +353,16 @@ describe('createMission', () => {
     expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
   });
 
+  test('creates a mission with no theme', async () => {
+    const { theme: _theme, ...withoutTheme } = validInput;
+    const result = await createMission(ctx(), withoutTheme);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.mission.theme).toBeNull();
+    }
+  });
+
   test('rejects a normalized calendar date', async () => {
     const result = await createMission(ctx(), {
       ...validInput,
