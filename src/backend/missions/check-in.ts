@@ -102,6 +102,9 @@ function checkInMemory(
       : state.users,
   }));
 
+  const updatedMission = next.missions.find((item) => item.id === missionId);
+  const allProgress = Object.values(updatedMission?.progressByUser ?? {});
+
   const missionView: Mission = {
     id: mission.id,
     author: toAuthorRef(next.users, mission.authorId),
@@ -117,6 +120,8 @@ function checkInMemory(
     theme: mission.theme,
     media: mission.media,
     editedAt: mission.editedAt,
+    acceptedCount: allProgress.length,
+    completedCount: allProgress.filter((p) => p.status === 'done').length,
   };
 
   return {

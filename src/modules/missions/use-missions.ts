@@ -43,6 +43,9 @@ export interface Mission {
   readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
+  // Community-wide, not scoped to the viewer.
+  readonly acceptedCount: number;
+  readonly completedCount: number;
 }
 
 export interface UserProgress {
