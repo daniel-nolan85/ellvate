@@ -20,7 +20,6 @@ function createMissionMemory(userId: string, input: unknown): CreateMissionResul
     title: value.title,
     description: value.description,
     scheduledFor: value.scheduledFor,
-    xp: value.xp,
     stopsTotal: value.stopsTotal,
     stops: value.stops,
     theme: value.theme,

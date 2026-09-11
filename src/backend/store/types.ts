@@ -194,7 +194,6 @@ export interface StoredMission {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   // Always equal to stops.length — never picked directly, only derived at
   // write time — but kept as its own field since it's read far more often
   // than stops itself (progress bars, "X/Y stops" labels).

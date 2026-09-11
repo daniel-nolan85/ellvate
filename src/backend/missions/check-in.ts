@@ -10,7 +10,7 @@ import {
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
 import { checkInSupabase } from './missions-supabase';
 import type { CheckInResult, Mission } from './types';
-import { buildUserProgress } from './user-progress';
+import { buildUserProgress, MISSION_COMPLETION_XP } from './user-progress';
 
 function checkInMemory(
   userId: string,
@@ -43,7 +43,7 @@ function checkInMemory(
 
   const stopsDone = entry.stopsDone + 1;
   const completed = stopsDone >= mission.stopsTotal;
-  const awardedXp = completed ? mission.xp : 0;
+  const awardedXp = completed ? MISSION_COMPLETION_XP : 0;
   const photo = extractCheckInPhoto(input);
 
   // WHY: the check-in that completes the mission is the one that actually
@@ -93,7 +93,7 @@ function checkInMemory(
           user.id === userId
             ? {
                 ...user,
-                xp: user.xp + mission.xp,
+                xp: user.xp + MISSION_COMPLETION_XP,
                 missionsCompleted: user.missionsCompleted + 1,
                 streakDays: user.streakDays + 1,
               }
@@ -108,7 +108,6 @@ function checkInMemory(
     title: mission.title,
     description: mission.description,
     scheduledFor: mission.scheduledFor,
-    xp: mission.xp,
     status: completed ? 'done' : 'active',
     accepted: true,
     stopsDone,

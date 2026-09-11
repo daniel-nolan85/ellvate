@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { GET as getDigest } from '../../app/api/digest+api';
 import { getWeeklyDigest } from '../../src/backend/digest';
 import { memoryContext } from '../../src/backend/http';
+import { MISSION_COMPLETION_XP } from '../../src/backend/missions/user-progress';
 import {
   DEMO_USER_ID,
   resetStore,
@@ -72,7 +73,6 @@ function makeMission(
     stops: ['Stop 1'],
     stopsTotal: 1,
     title: 'Untitled mission',
-    xp: 10,
     ...overrides,
   };
 }
@@ -159,7 +159,12 @@ describe('getWeeklyDigest', () => {
     const digest = await getWeeklyDigest(ctx(), { weekStart: WEEK_START });
     expect(digest.stats.missionsCompleted).toBe(2);
     expect(digest.completedMissions).toEqual([
-      { completedByCount: 2, id: 'mission-a', title: 'Untitled mission', xp: 10 },
+      {
+        completedByCount: 2,
+        id: 'mission-a',
+        title: 'Untitled mission',
+        xp: MISSION_COMPLETION_XP,
+      },
     ]);
   });
 

@@ -60,7 +60,6 @@ describe('getMissionsView', () => {
     ]);
     expect(missions.map((mission) => mission.stopsDone)).toEqual([0, 2, 3, 0]);
     expect(missions.map((mission) => mission.stopsTotal)).toEqual([1, 3, 3, 1]);
-    expect(missions.map((mission) => mission.xp)).toEqual([50, 120, 90, 40]);
     expect(missions.map((mission) => mission.theme)).toEqual([
       'water',
       'trail',
@@ -204,12 +203,12 @@ describe('checkIn', () => {
 
     expect(result.body.mission.status).toBe('done');
     expect(result.body.mission.stopsDone).toBe(3);
-    expect(result.body.awardedXp).toBe(120);
+    expect(result.body.awardedXp).toBe(50);
 
-    const breakdown = computeProgress(1980 + 120);
+    const breakdown = computeProgress(1980 + 50);
     expect(result.body.progress).toEqual({
       level: breakdown.level,
-      xp: 2100,
+      xp: 2030,
       xpIntoLevel: breakdown.xpIntoLevel,
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
@@ -217,7 +216,7 @@ describe('checkIn', () => {
       missionsCompleted: 22,
       title: 'LAKE EXPLORER',
     });
-    expect(result.body.progress.level).toBe(7);
+    expect(result.body.progress.level).toBe(6);
   });
 
   test('single-stop mission completes and awards full XP on one check-in', async () => {
@@ -251,7 +250,7 @@ describe('checkIn', () => {
 
     expect(result.body.mission.status).toBe('done');
     expect(result.body.mission.stopsDone).toBe(1);
-    expect(result.body.awardedXp).toBe(40);
+    expect(result.body.awardedXp).toBe(50);
   });
 
   test('rejects an already completed mission with 409 mission_complete', async () => {
@@ -315,7 +314,6 @@ describe('createMission', () => {
     scheduledFor: '2026-07-18',
     stops: ['Stop 1'],
     title: 'Paddle the Lake',
-    xp: 75,
   };
 
   test('creates an active mission and lists it', async () => {
@@ -328,7 +326,6 @@ describe('createMission', () => {
     expect(result.mission).toMatchObject({
       title: 'Paddle the Lake',
       scheduledFor: '2026-07-18',
-      xp: 75,
       stopsTotal: 1,
       status: 'active',
       stopsDone: 0,
@@ -339,12 +336,6 @@ describe('createMission', () => {
       (mission) => mission.id === result.mission.id,
     );
     expect(listed).toBeDefined();
-  });
-
-  test('rejects out-of-range xp', async () => {
-    const result = await createMission(ctx(), { ...validInput, xp: 9999 });
-
-    expect(result).toMatchObject({ ok: false, code: 'invalid_mission' });
   });
 
   test('rejects an unknown theme', async () => {
@@ -405,7 +396,6 @@ describe('updateMission', () => {
     scheduledFor: '2026-07-25',
     stops: ['Stop 1', 'Stop 2'],
     title: 'Updated Mission',
-    xp: 100,
   };
 
   test('the author can edit their own mission', async () => {
@@ -415,7 +405,6 @@ describe('updateMission', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
     });
     if (!created.ok) {
       throw new Error('setup failed');
@@ -430,7 +419,6 @@ describe('updateMission', () => {
     expect(result.mission).toMatchObject({
       title: 'Updated Mission',
       description: 'Updated description.',
-      xp: 100,
       stopsTotal: 2,
       theme: 'social',
     });
@@ -443,7 +431,6 @@ describe('updateMission', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
     });
     if (!created.ok) {
       throw new Error('setup failed');
@@ -486,7 +473,6 @@ describe('updateMission', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
       newMedia: [
         { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
       ],
@@ -521,7 +507,6 @@ describe('updateMission', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
       newMedia: [
         { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
       ],
@@ -547,7 +532,6 @@ describe('deleteMission', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
     });
     if (!created.ok) {
       throw new Error('setup failed');
@@ -593,7 +577,6 @@ describe('PATCH /api/missions/:id', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
     });
     if (!created.ok) {
       throw new Error('setup failed');
@@ -605,14 +588,13 @@ describe('PATCH /api/missions/:id', () => {
       scheduledFor: '2026-07-25',
       stops: ['Stop 1', 'Stop 2'],
       title: 'Updated Mission',
-      xp: 100,
     });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
-      mission: { title: string; xp: number };
+      mission: { title: string };
     };
-    expect(body.mission).toMatchObject({ title: 'Updated Mission', xp: 100 });
+    expect(body.mission).toMatchObject({ title: 'Updated Mission' });
   });
 
   test('returns 403 when editing someone else’s mission', async () => {
@@ -622,7 +604,6 @@ describe('PATCH /api/missions/:id', () => {
       scheduledFor: '2026-07-25',
       stops: ['Stop 1', 'Stop 2'],
       title: 'Hijack',
-      xp: 100,
     });
 
     expect(response.status).toBe(403);
@@ -639,7 +620,6 @@ describe('PATCH /api/missions/:id', () => {
       scheduledFor: '2026-07-25',
       stops: ['Stop 1', 'Stop 2'],
       title: 'Updated Mission',
-      xp: 100,
     });
 
     expect(response.status).toBe(404);
@@ -654,7 +634,6 @@ describe('DELETE /api/missions/:id', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
     });
     if (!created.ok) {
       throw new Error('setup failed');
@@ -710,7 +689,6 @@ describe('POST /api/missions', () => {
       scheduledFor: '2026-07-19',
       stops: ['Stop 1'],
       title: 'Beach Day',
-      xp: 50,
     });
 
     expect(response.status).toBe(201);
@@ -919,7 +897,7 @@ describe('POST /api/missions/:id/check-in', () => {
       status: 'done',
       stopsDone: 1,
     });
-    expect(body.awardedXp).toBe(40);
+    expect(body.awardedXp).toBe(50);
   });
 
   test('returns the 409 mission_complete error envelope', async () => {

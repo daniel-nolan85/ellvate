@@ -158,7 +158,6 @@ describe('getMyMissionsView', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'One',
-      xp: 75,
     };
     await createMission(ctx('user-riley'), validInput);
     await createMission(ctx('user-riley'), { ...validInput, title: 'Two' });

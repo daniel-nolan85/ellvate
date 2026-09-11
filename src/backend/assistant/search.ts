@@ -19,7 +19,6 @@ export interface MissionSummary {
   readonly id: string;
   readonly title: string;
   readonly description: string;
-  readonly xp: number;
   readonly stopsTotal: number;
 }
 
@@ -159,13 +158,11 @@ const toMissionSummary = (mission: {
   readonly id: string;
   readonly title: string;
   readonly description: string;
-  readonly xp: number;
   readonly stopsTotal: number;
 }): MissionSummary => ({
   id: mission.id,
   title: mission.title,
   description: mission.description,
-  xp: mission.xp,
   stopsTotal: mission.stopsTotal,
 });
 

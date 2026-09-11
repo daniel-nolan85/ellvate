@@ -16,6 +16,7 @@ import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker
 
 import { missionThemeIcon } from './mission-theme';
 import {
+  MISSION_COMPLETION_XP,
   useAcceptMission,
   useCheckIn,
   type CheckInCelebration,
@@ -145,7 +146,7 @@ export function MissionCard({ mission, onMissionComplete, onOpen }: MissionCardP
           {mission.stopsDone}/{mission.stopsTotal} stops
         </Text>
         <Badge leftIcon={<Icon color={AMBER} name="Star" size={11} />} variant="amber">
-          {mission.xp} XP
+          {MISSION_COMPLETION_XP} XP
         </Badge>
       </HStack>
       {mission.status === 'active' && !mission.accepted ? (

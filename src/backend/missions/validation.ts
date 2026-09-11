@@ -5,8 +5,6 @@ import type { MissionValidation } from './types';
 
 const MAX_TITLE = 100;
 const MAX_DESCRIPTION = 500;
-const MIN_XP = 5;
-const MAX_XP = 500;
 const MIN_STOPS = 1;
 const MAX_STOPS = 10;
 const MAX_STOP_LENGTH = 120;
@@ -21,11 +19,6 @@ const THEMES: readonly MissionTheme[] = [
 
 const asTrimmedString = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
-
-const asInteger = (value: unknown): number | null => {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isInteger(parsed) ? parsed : null;
-};
 
 // WHY: returns null (not an empty array) for anything that isn't a proper
 // array of non-empty strings, so the caller can distinguish "no stops sent"
@@ -55,7 +48,6 @@ export function validateMissionInput(input: unknown): MissionValidation {
   const title = asTrimmedString(raw.title);
   const description = asTrimmedString(raw.description);
   const scheduledFor = asTrimmedString(raw.scheduledFor) || null;
-  const xp = asInteger(raw.xp);
   const stops = asStopList(raw.stops);
   const themeRaw = asTrimmedString(raw.theme);
   const theme = themeRaw ? (themeRaw as MissionTheme) : null;
@@ -68,9 +60,6 @@ export function validateMissionInput(input: unknown): MissionValidation {
   }
   if (scheduledFor !== null && !isDateOnly(scheduledFor)) {
     return invalid('Pick a valid mission day.');
-  }
-  if (xp === null || xp < MIN_XP || xp > MAX_XP) {
-    return invalid(`XP must be a whole number between ${MIN_XP} and ${MAX_XP}.`);
   }
   if (stops === null || stops.length < MIN_STOPS || stops.length > MAX_STOPS) {
     return invalid(`Add between ${MIN_STOPS} and ${MAX_STOPS} stops.`);
@@ -91,7 +80,6 @@ export function validateMissionInput(input: unknown): MissionValidation {
       stopsTotal: stops.length,
       theme,
       title,
-      xp,
     },
   };
 }

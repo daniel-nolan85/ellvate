@@ -19,7 +19,6 @@ export interface MissionComposerDraft {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme | null;
   readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
@@ -42,33 +41,7 @@ interface NewMissionMediaItem {
 
 type MissionMediaItem = ExistingMissionMediaItem | NewMissionMediaItem;
 
-const XP_OPTIONS = [25, 50, 75, 100, 150] as const;
 const MAX_STOPS = 10;
-
-interface ChipProps {
-  readonly label: string;
-  readonly onPress: () => void;
-  readonly selected: boolean;
-  readonly testID: string;
-}
-
-function Chip({ label, onPress, selected, testID }: ChipProps) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      className={`rounded-full px-3.5 py-2 ${selected ? 'bg-accent' : 'bg-secondary'}`}
-      onPress={onPress}
-      testID={testID}
-    >
-      <Text
-        className={`font-inter-medium text-[13px] ${selected ? 'text-accent-foreground' : 'text-content'}`}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
 
 function Field({ children, label }: { readonly children: ReactNode; readonly label: string }) {
   return (
@@ -88,7 +61,6 @@ interface MissionComposerProps {
   readonly initialTitle?: string;
   readonly initialDescription?: string;
   readonly initialScheduledFor?: string;
-  readonly initialXp?: number | null;
   readonly initialStops?: readonly string[];
   readonly initialTheme?: MissionTheme | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
@@ -116,7 +88,6 @@ export function MissionComposer({
   initialStops = [],
   initialTheme = null,
   initialTitle = '',
-  initialXp = null,
   isSubmitting,
   maxContentHeight,
   onDismiss,
@@ -125,7 +96,6 @@ export function MissionComposer({
 }: MissionComposerProps) {
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
-  const [xp, setXp] = useState<number | null>(initialXp);
   const [stops, setStops] = useState<readonly string[]>(initialStops);
   const [stopDraft, setStopDraft] = useState('');
   const [theme, setTheme] = useState<MissionTheme | null>(initialTheme);
@@ -159,7 +129,6 @@ export function MissionComposer({
   const canSubmit =
     title.trim().length > 0 &&
     description.trim().length > 0 &&
-    xp !== null &&
     stops.length > 0 &&
     !isSubmitting;
 
@@ -340,20 +309,6 @@ export function MissionComposer({
           )}
         </Field>
 
-        <Field label="Reward (XP)">
-          <HStack className="flex-wrap gap-2">
-            {XP_OPTIONS.map((option) => (
-              <Chip
-                key={option}
-                label={`${option} XP`}
-                onPress={() => setXp(option)}
-                selected={xp === option}
-                testID={`mission-xp-${option}`}
-              />
-            ))}
-          </HStack>
-        </Field>
-
         <Field label="Theme (optional)">
           <HStack className="flex-wrap gap-2">
             {MISSION_THEMES.map((option) => {
@@ -446,7 +401,7 @@ export function MissionComposer({
             className="rounded-full bg-accent px-5"
             isDisabled={!canSubmit}
             onPress={() => {
-              if (xp === null || stops.length === 0) {
+              if (stops.length === 0) {
                 return;
               }
               onSubmit({
@@ -464,7 +419,6 @@ export function MissionComposer({
                 scheduledFor: scheduledFor ? dateOnlyFromDate(scheduledFor) : null,
                 stops,
                 title: title.trim(),
-                xp,
               });
             }}
             testID="mission-submit"

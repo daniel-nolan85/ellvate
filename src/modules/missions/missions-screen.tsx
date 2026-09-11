@@ -254,7 +254,6 @@ export function MissionsScreen({
                   scheduledFor: draft.scheduledFor,
                   stops: draft.stops,
                   title: draft.title,
-                  xp: draft.xp,
                 },
                 { onSuccess: () => setComposing(false) },
               )

@@ -14,12 +14,16 @@ interface MissionRow {
   readonly id: string;
   readonly title: string;
   readonly description: string;
-  readonly xp: number;
   readonly theme: string;
   readonly stops: readonly string[] | null;
   readonly media: readonly StoredMedia[] | null;
   readonly creator: { readonly name: string } | null;
 }
+
+// WHY: mirrors src/backend/missions/user-progress.ts's MISSION_COMPLETION_XP
+// -- every completed mission now pays out the same flat reward, so the
+// column is gone and this is display-only, not a per-mission value.
+const MISSION_COMPLETION_XP = 50;
 
 export default async function MissionDetailPage({
   params,
@@ -31,7 +35,7 @@ export default async function MissionDetailPage({
   const { data, error } = await admin
     .from('missions')
     .select(
-      'id, title, description, xp, theme, stops, media, creator:app_users!missions_created_by_fkey(name)',
+      'id, title, description, theme, stops, media, creator:app_users!missions_created_by_fkey(name)',
     )
     .eq('id', id)
     .maybeSingle();
@@ -54,7 +58,7 @@ export default async function MissionDetailPage({
         table: 'missions',
       }}
       fields={[
-        { label: 'XP', value: mission.xp },
+        { label: 'XP', value: MISSION_COMPLETION_XP },
         { label: 'Theme', value: mission.theme },
         { label: 'Creator', value: mission.creator?.name ?? 'Curated' },
       ]}

@@ -351,7 +351,6 @@ const seedMissions = (): readonly StoredMission[] => [
     title: 'Sunrise at the Marina',
     description: 'Check in at Village Marina before 8 AM.',
     scheduledFor: '2026-07-14',
-    xp: 50,
     stopsTotal: 1,
     stops: ['Check in at the Village Marina dock before 8 AM.'],
     theme: 'water',
@@ -365,7 +364,6 @@ const seedMissions = (): readonly StoredMission[] => [
     title: 'Trail Trekker',
     description: 'Complete the 3-mile lakeside loop.',
     scheduledFor: '2026-07-15',
-    xp: 120,
     stopsTotal: 3,
     stops: [
       'Start at the trailhead by the marina and head south.',
@@ -384,7 +382,6 @@ const seedMissions = (): readonly StoredMission[] => [
     title: 'Taste of the Village',
     description: 'Visit 3 different lakeside eateries.',
     scheduledFor: '2026-07-16',
-    xp: 90,
     stopsTotal: 3,
     stops: [
       'Grab tacos at the marina taco stand.',
@@ -407,7 +404,6 @@ const seedMissions = (): readonly StoredMission[] => [
     title: 'Fountain Night Owl',
     description: 'Attend a Friday fountain show.',
     scheduledFor: '2026-07-18',
-    xp: 40,
     stopsTotal: 1,
     stops: ['Watch the Friday night fountain show from the promenade.'],
     theme: 'night',

@@ -27,7 +27,11 @@ import type {
   UpdateMissionResult,
   UserProgress,
 } from './types';
-import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
+import {
+  buildProgress,
+  DEFAULT_PROGRESS_TITLE,
+  MISSION_COMPLETION_XP,
+} from './user-progress';
 import { validateMissionInput } from './validation';
 
 // The embedded `author` relation (same pattern already used by posts,
@@ -42,7 +46,7 @@ import { validateMissionInput } from './validation';
 // logs, surfacing to users as a generic 503 on member profiles and other
 // screens that route through this module.
 const MISSION_SELECT =
-  'id,created_by,title,description,scheduled_for,xp,stops_total,stops,theme,media,position,edited_at,author:app_users!missions_created_by_fkey(id,name,avatar_url,is_admin)';
+  'id,created_by,title,description,scheduled_for,stops_total,stops,theme,media,position,edited_at,author:app_users!missions_created_by_fkey(id,name,avatar_url,is_admin)';
 
 interface MissionRow {
   readonly id: string;
@@ -50,7 +54,6 @@ interface MissionRow {
   readonly title: string;
   readonly description: string;
   readonly scheduled_for: string | null;
-  readonly xp: number;
   readonly stops_total: number;
   readonly stops: readonly string[] | null;
   readonly theme: string | null;
@@ -133,7 +136,6 @@ const toMissionView = (
     title: row.title,
     description: row.description,
     scheduledFor: row.scheduled_for,
-    xp: row.xp,
     status: resolveStatus(stopsDone, row.stops_total),
     accepted: entry !== undefined,
     stopsDone,
@@ -484,7 +486,6 @@ export async function createMissionSupabase(
       title: value.title,
       description: value.description,
       scheduled_for: value.scheduledFor,
-      xp: value.xp,
       stops_total: value.stopsTotal,
       stops: value.stops,
       theme: value.theme,
@@ -585,7 +586,6 @@ export async function updateMissionSupabase(
       title: value.title,
       description: value.description,
       scheduled_for: value.scheduledFor,
-      xp: value.xp,
       stops_total: value.stopsTotal,
       stops: value.stops,
       theme: value.theme,
@@ -699,7 +699,7 @@ export async function checkInSupabase(
 
   const stopsDone = currentStopsDone + 1;
   const completed = stopsDone >= mission.stops_total;
-  const awardedXp = completed ? mission.xp : 0;
+  const awardedXp = completed ? MISSION_COMPLETION_XP : 0;
   const photo = extractCheckInPhoto(input);
 
   if (completed && !photo) {
@@ -747,7 +747,7 @@ export async function checkInSupabase(
     const { error: userUpdateError } = await supabase
       .from('app_users')
       .update({
-        xp: baseXp + mission.xp,
+        xp: baseXp + MISSION_COMPLETION_XP,
         missions_completed: baseMissions + 1,
         streak_days: baseStreak + 1,
       })
@@ -768,7 +768,6 @@ export async function checkInSupabase(
     title: mission.title,
     description: mission.description,
     scheduledFor: mission.scheduled_for,
-    xp: mission.xp,
     status: completed ? 'done' : 'active',
     accepted: true,
     stopsDone,
@@ -785,7 +784,7 @@ export async function checkInSupabase(
       mission: missionView,
       awardedXp,
       progress: buildProgress({
-        xp: completed ? baseXp + mission.xp : baseXp,
+        xp: completed ? baseXp + MISSION_COMPLETION_XP : baseXp,
         streakDays: completed ? baseStreak + 1 : baseStreak,
         missionsCompleted: completed ? baseMissions + 1 : baseMissions,
         title,

@@ -61,6 +61,7 @@ import {
   type MissionComment,
 } from './use-mission-comments';
 import {
+  MISSION_COMPLETION_XP,
   useAcceptMission,
   useCheckIn,
   useDeleteMission,
@@ -594,7 +595,7 @@ export function MissionDetailScreen({
                       leftIcon={<Icon color={AMBER} name="Star" size={11} />}
                       variant="amber"
                     >
-                      {mission.xp} XP
+                      {MISSION_COMPLETION_XP} XP
                     </Badge>
                   </HStack>
 
@@ -837,7 +838,6 @@ export function MissionDetailScreen({
             initialScheduledFor={mission.scheduledFor ?? undefined}
             initialStops={mission.stops}
             initialTitle={mission.title}
-            initialXp={mission.xp}
             isSubmitting={updateMission.isPending}
             maxContentHeight={maxContentHeight}
             onDismiss={() => setSheetMode(null)}

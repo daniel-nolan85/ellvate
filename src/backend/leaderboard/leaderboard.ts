@@ -3,6 +3,7 @@ import { getState } from '@/src/backend/store';
 import type { StoredMission, StoredUser } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
+import { MISSION_COMPLETION_XP } from '../missions/user-progress';
 import {
   getLeaderboardPageSupabase,
   getLeaderboardSupabase,
@@ -70,7 +71,7 @@ function tallyCompletions(
       if (completedMs < windowStartMs || completedMs >= windowEndMs) {
         continue;
       }
-      addToTally(tally, userId, mission.xp);
+      addToTally(tally, userId, MISSION_COMPLETION_XP);
     }
   }
   return tally;

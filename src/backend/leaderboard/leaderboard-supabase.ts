@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
+import { MISSION_COMPLETION_XP } from '../missions/user-progress';
 import type { LeaderboardEntry, LeaderboardPage, LeaderboardResult } from './types';
 import {
   addToTally,
@@ -61,11 +62,6 @@ interface ProgressRow {
   readonly completed_at: string | null;
 }
 
-interface MissionXpRow {
-  readonly id: string;
-  readonly xp: number;
-}
-
 interface MemberRow {
   readonly id: string;
   readonly name: string;
@@ -95,29 +91,15 @@ async function getWindowedLeaderboardSupabase(
     return { leaders: [] };
   }
 
-  const missionIds = [...new Set(progressRows.map((row) => row.mission_id))];
-  const { data: missionData, error: missionError } = await supabase
-    .from('missions')
-    .select('id,xp')
-    .in('id', missionIds);
-  throwIfSupabaseError(missionError, 'load mission xp values');
-  const xpByMissionId = new Map(
-    ((missionData ?? []) as unknown as MissionXpRow[]).map((mission) => [
-      mission.id,
-      mission.xp,
-    ]),
-  );
-
   const currentTally = new Map<string, WindowedTally>();
   const previousTally = new Map<string, WindowedTally>();
   for (const row of progressRows) {
     if (!row.completed_at) {
       continue;
     }
-    const xp = xpByMissionId.get(row.mission_id) ?? 0;
     const bucket =
       row.completed_at >= currentStartIso ? currentTally : previousTally;
-    addToTally(bucket, row.user_id, xp);
+    addToTally(bucket, row.user_id, MISSION_COMPLETION_XP);
   }
 
   const memberIds = [...currentTally.keys()];

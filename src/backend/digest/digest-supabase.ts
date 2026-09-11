@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
+import { MISSION_COMPLETION_XP } from '../missions/user-progress';
 import type { DigestCompletedMission, DigestRawData } from './types';
 
 const COMING_UP_LIMIT = 3;
@@ -42,7 +43,6 @@ interface CompletedProgressRow {
 interface MissionSummaryRow {
   readonly id: string;
   readonly title: string;
-  readonly xp: number;
 }
 
 export async function getWeeklyDigestRawSupabase(
@@ -133,7 +133,7 @@ export async function getWeeklyDigestRawSupabase(
   // eventRows itself (see the `events` query above).
   const missionIds = [...new Set(completedRows.map((row) => row.mission_id))];
   const missionsRes = missionIds.length
-    ? await supabase.from('missions').select('id,title,xp').in('id', missionIds)
+    ? await supabase.from('missions').select('id,title').in('id', missionIds)
     : { data: [] as MissionSummaryRow[], error: null };
   throwIfSupabaseError(missionsRes.error, 'load digest completed missions');
   const goingCountFor = (eventId: string): number =>
@@ -153,7 +153,7 @@ export async function getWeeklyDigestRawSupabase(
       completedByCount: (existing?.completedByCount ?? 0) + 1,
       id: mission.id,
       title: mission.title,
-      xp: mission.xp,
+      xp: MISSION_COMPLETION_XP,
     });
   }
 

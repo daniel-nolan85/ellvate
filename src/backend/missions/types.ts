@@ -18,7 +18,6 @@ export interface Mission {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   readonly status: MissionStatus;
   // Whether the viewer has accepted this mission — i.e. a progress row
   // exists for them, even before their first check-in. Distinguishes a
@@ -76,7 +75,6 @@ export interface ValidatedMission {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   readonly stopsTotal: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme | null;

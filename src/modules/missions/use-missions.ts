@@ -16,6 +16,12 @@ import { computeLeveledUpTo } from './level-up';
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 
+// WHY: display-only mirror of the backend's flat per-mission reward
+// (src/backend/missions/user-progress.ts) -- the server is the source of
+// truth for what's actually awarded, this just lets the UI show the number
+// before a check-in response comes back.
+export const MISSION_COMPLETION_XP = 50;
+
 export interface MissionMedia {
   readonly url: string;
   readonly filename: string;
@@ -34,7 +40,6 @@ export interface Mission {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   readonly status: MissionStatus;
   readonly accepted: boolean;
   readonly stopsDone: number;
@@ -102,7 +107,6 @@ export interface CreateMissionInput {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme | null;
   readonly newMedia?: readonly NewMissionMediaInput[];
@@ -118,7 +122,6 @@ export interface UpdateMissionInput {
   readonly title: string;
   readonly description: string;
   readonly scheduledFor: string | null;
-  readonly xp: number;
   readonly stops: readonly string[];
   readonly theme: MissionTheme | null;
   readonly existingMedia?: readonly ExistingMissionMediaInput[];

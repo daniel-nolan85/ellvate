@@ -162,7 +162,6 @@ describe('deleteMission cascade', () => {
       scheduledFor: '2026-07-18',
       stops: ['Stop 1'],
       title: 'Paddle the Lake',
-      xp: 75,
     });
     if (!created.ok) {
       throw new Error('setup failed');

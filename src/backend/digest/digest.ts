@@ -3,6 +3,7 @@ import { getPostsByIds } from '@/src/backend/forum';
 import type { RequestContext } from '@/src/backend/http';
 import { getState } from '@/src/backend/store';
 
+import { MISSION_COMPLETION_XP } from '../missions/user-progress';
 import { getWeeklyDigestRawSupabase } from './digest-supabase';
 import type {
   DigestCompletedMission,
@@ -57,7 +58,7 @@ function getWeeklyDigestRawMemory(start: Date, end: Date): DigestRawData {
       completedByCount: (existing?.completedByCount ?? 0) + 1,
       id: entry.mission.id,
       title: entry.mission.title,
-      xp: entry.mission.xp,
+      xp: MISSION_COMPLETION_XP,
     });
   }
 

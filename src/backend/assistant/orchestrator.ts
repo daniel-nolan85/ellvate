@@ -5,6 +5,7 @@ import {
   withRequestContext,
   type RequestContext,
 } from '@/src/backend/http';
+import { MISSION_COMPLETION_XP } from '@/src/backend/missions/user-progress';
 
 import {
   browseEvents,
@@ -317,7 +318,10 @@ const describeEvents = (events: readonly EventSummary[]): string =>
 
 const describeMissions = (missions: readonly MissionSummary[]): string =>
   `Missions worth a look: ${missions
-    .map((mission) => `${mission.title} — ${mission.description} (${mission.xp} XP)`)
+    .map(
+      (mission) =>
+        `${mission.title} — ${mission.description} (${MISSION_COMPLETION_XP} XP)`,
+    )
     .join('; ')}.`;
 
 // WHY: the excerpt (the post's actual free-text body) is included, not just

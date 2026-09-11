@@ -105,7 +105,6 @@ describe('seed data', () => {
 
     expect(missions).toHaveLength(4);
     expect(missions.map((mission) => mission.stopsTotal)).toEqual([1, 3, 3, 1]);
-    expect(missions.map((mission) => mission.xp)).toEqual([50, 120, 90, 40]);
     expect(missions.map((mission) => mission.theme)).toEqual([
       'water',
       'trail',

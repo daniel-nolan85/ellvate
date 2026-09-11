@@ -210,7 +210,7 @@ describe('getLeaderboard (windowed ranges)', () => {
       missionsCompleted: 1,
       rank: 1,
       user: { id: DEMO_USER_ID },
-      xp: 90,
+      xp: 50,
     });
   });
 
@@ -273,8 +273,11 @@ describe('getLeaderboard (windowed ranges)', () => {
           };
         }
         if (mission.id === 'mission-2') {
-          // user-mia overtakes demo-user in the current week (higher xp),
-          // so demo-user drops from 1st to 2nd.
+          // user-mia completes two missions in the current week (this one
+          // plus mission-4 below) -- every mission now pays the same flat
+          // XP, so it's missionsCompleted, not xp, that lets her overtake
+          // demo-user's single completion, dropping demo-user from 1st to
+          // 2nd.
           return {
             ...mission,
             progressByUser: {
@@ -283,6 +286,19 @@ describe('getLeaderboard (windowed ranges)', () => {
                 completedAt: daysAgoIso(1),
                 status: 'done' as const,
                 stopsDone: 3,
+              },
+            },
+          };
+        }
+        if (mission.id === 'mission-4') {
+          return {
+            ...mission,
+            progressByUser: {
+              ...mission.progressByUser,
+              'user-mia': {
+                completedAt: daysAgoIso(2),
+                status: 'done' as const,
+                stopsDone: 1,
               },
             },
           };

@@ -66,7 +66,6 @@ function seedMatchingContent(authorId: string = DEMO_USER_ID): void {
     stopsTotal: 1,
     theme: 'trail',
     title: `${NEEDLE} mission`,
-    xp: 10,
   };
   const service: StoredServiceListing = {
     authorId,

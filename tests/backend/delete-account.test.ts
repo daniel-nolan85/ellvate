@@ -35,7 +35,6 @@ const missionInput = {
   scheduledFor: '2026-09-18',
   stops: ['Stop 1', 'Stop 2', 'Stop 3'],
   title: 'Kayak the marina',
-  xp: 75,
 } as const;
 
 const listingInput = {

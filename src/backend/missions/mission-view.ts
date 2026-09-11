@@ -54,7 +54,6 @@ export function toMissionView(
     title: mission.title,
     description: mission.description,
     scheduledFor: mission.scheduledFor,
-    xp: mission.xp,
     status: resolveMissionStatus(mission, entry),
     accepted: userId in mission.progressByUser,
     stopsDone: entry.stopsDone,
