@@ -208,7 +208,7 @@ export function MissionComposer({
       showsVerticalScrollIndicator={false}
       style={maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
     >
-      <VStack className="px-5 pb-2 pt-1" space="md">
+      <VStack className="px-5 pb-2 pt-1" space="lg">
         <Text className="font-inter-bold text-[17px] text-content">
           {submitLabel === 'Add mission' ? 'New mission around the lake' : 'Edit mission'}
         </Text>
