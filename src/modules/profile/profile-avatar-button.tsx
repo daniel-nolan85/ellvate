@@ -15,6 +15,10 @@ export function ProfileAvatarButton() {
   const name =
     profile.data?.profile.name ??
     (session.status === 'signed-in' ? 'You' : 'Demo member');
+  // WHY: shows the loading spinner instead of an initial guessed from the
+  // 'You' placeholder above -- a signed-in user's real name/photo just
+  // hasn't loaded yet, and a wrong-looking 'Y' briefly misrepresents them.
+  const stillLoadingRealProfile = session.status === 'signed-in' && !profile.data;
 
   return (
     <Pressable
@@ -25,6 +29,7 @@ export function ProfileAvatarButton() {
     >
       <Avatar
         className="rounded-full border-[1.5px] border-accent"
+        loading={stillLoadingRealProfile}
         name={name}
         size="sm"
         src={profile.data?.profile.avatarUrl ?? undefined}

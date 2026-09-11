@@ -3,6 +3,8 @@ import { Text, View, type ViewProps } from 'react-native';
 
 import { Image } from 'expo-image';
 
+import { Spinner } from '@/src/components/ui/spinner';
+
 const AVATAR_SIZES = {
   'xs': 24,
   'sm': 32,
@@ -11,6 +13,16 @@ const AVATAR_SIZES = {
   'xl': 64,
   '2xl': 96,
 } as const;
+
+// The closest Spinner size for a given avatar's pixel size -- Spinner only
+// offers 3 discrete sizes (plus its own 24px default), so this rounds down
+// to whichever still fits inside the circle without crowding it.
+function spinnerSizeFor(px: number): 'small' | 'large' | 'xlarge' | undefined {
+  if (px >= 90) return 'xlarge';
+  if (px >= 44) return 'large';
+  if (px >= 28) return 'small';
+  return undefined;
+}
 
 type AvatarSize = keyof typeof AVATAR_SIZES;
 type AvatarStatus = 'online' | 'busy' | 'offline';
@@ -21,6 +33,10 @@ type AvatarProps = Omit<ViewProps, 'children'> & {
   size?: AvatarSize;
   status?: AvatarStatus;
   className?: string;
+  // Shows the app's loading indicator instead of initials/image -- for a
+  // person whose real name/photo hasn't loaded yet, where a generic '?' or
+  // (worse) an initial guessed from a placeholder name would be misleading.
+  loading?: boolean;
 };
 
 const statusClassNames: Record<AvatarStatus, string> = {
@@ -48,7 +64,7 @@ function getDotSize(px: number): number {
 }
 
 const Avatar = React.forwardRef<View, AvatarProps>(function Avatar(
-  { name, src, size = 'lg', status, className, style, ...props },
+  { name, src, size = 'lg', status, className, style, loading = false, ...props },
   ref
 ) {
   const px = AVATAR_SIZES[size];
@@ -63,7 +79,9 @@ const Avatar = React.forwardRef<View, AvatarProps>(function Avatar(
       style={[{ width: px, height: px }, style]}
     >
       <View className="h-full w-full items-center justify-center overflow-hidden rounded-full bg-muted">
-        {src ? (
+        {loading ? (
+          <Spinner size={spinnerSizeFor(px)} />
+        ) : src ? (
           <Image
             source={{ uri: src }}
             accessibilityLabel={name}
