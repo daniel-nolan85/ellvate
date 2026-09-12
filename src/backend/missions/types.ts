@@ -144,6 +144,28 @@ export type ReportMissionResult =
       readonly message: string;
     };
 
+export interface MissionCheckInPhoto {
+  readonly id: string;
+  readonly missionId: string;
+  readonly author: PersonRef;
+  readonly photoUrl: string;
+  readonly completedAt: string;
+  readonly stopIndex: number;
+}
+
+export interface MissionCheckInPhotosPage {
+  readonly photos: readonly MissionCheckInPhoto[];
+  readonly nextCursor: string | null;
+}
+
+export type ReportMissionCheckInPhotoResult =
+  | { readonly ok: true; readonly reported: true }
+  | {
+      readonly ok: false;
+      readonly code: 'check_in_not_found';
+      readonly message: string;
+    };
+
 export type AcceptMissionResult =
   | { readonly ok: true; readonly mission: Mission }
   | {

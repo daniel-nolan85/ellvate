@@ -18,6 +18,7 @@ export type {
   StoredMedia,
   StoredMission,
   StoredMissionCheckIn,
+  StoredMissionCheckInPhotoReport,
   StoredMissionComment,
   StoredMissionCommentReport,
   StoredMissionReport,

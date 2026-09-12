@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 import { AdminBadge } from '@/src/components/shared/admin-badge';
@@ -39,10 +41,12 @@ import {
   useOpenProfile,
   useReportMember,
 } from '@/src/modules/profile';
+import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCelebrationModal } from './mission-celebration-modal';
+import { MissionCheckInThumbnailRow } from './mission-check-in-gallery';
 import { MissionComposer } from './mission-composer';
 import { missionThemeIcon } from './mission-theme';
 import {
@@ -174,6 +178,7 @@ export function MissionDetailScreen({
     'comment' | 'user' | null
   >(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
 
   const mission = missionQuery.data?.mission;
   const isOwnMission = !!mission && mission.author.id === userId;
@@ -201,14 +206,32 @@ export function MissionDetailScreen({
     });
   };
 
+  const handleAttachCheckInPhoto = async () => {
+    const [picked] = await pickGalleryImages({ selectionLimit: 1 });
+    if (picked) {
+      setCheckInPhoto(picked);
+    }
+  };
+
   const handleCheckIn = () => {
     if (!mission) {
       return;
     }
     void Haptics.selectionAsync().catch(() => undefined);
     checkIn.mutate(
-      { missionId: mission.id },
-      { onError: () => showToast('Couldn’t check in. Try again.') },
+      {
+        missionId: mission.id,
+        photo: checkInPhoto
+          ? {
+              dataUrl: `data:${checkInPhoto.mimeType};base64,${checkInPhoto.base64}`,
+              filename: checkInPhoto.filename,
+            }
+          : undefined,
+      },
+      {
+        onError: () => showToast('Couldn’t check in. Try again.'),
+        onSuccess: () => setCheckInPhoto(null),
+      },
     );
   };
 
@@ -589,6 +612,34 @@ export function MissionDetailScreen({
                       <Text className="text-[12px] leading-4 text-text-muted">
                         Check in honestly — the adventure is the point.
                       </Text>
+                      {checkInPhoto ? (
+                        <HStack className="items-center gap-2.5">
+                          <Image
+                            className="rounded-lg bg-secondary"
+                            source={{ uri: checkInPhoto.uri }}
+                            style={{ height: 40, width: 40 }}
+                          />
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() => setCheckInPhoto(null)}
+                          >
+                            <Text className="font-inter-semibold text-[12px] text-text-muted">
+                              Remove photo
+                            </Text>
+                          </Pressable>
+                        </HStack>
+                      ) : (
+                        <Pressable
+                          accessibilityRole="button"
+                          className="flex-row items-center gap-1.5 self-start"
+                          onPress={() => void handleAttachCheckInPhoto()}
+                        >
+                          <Icon color="rgb(120,108,94)" name="Add" size={14} />
+                          <Text className="font-inter-semibold text-[12px] text-muted-foreground">
+                            Add a photo (optional)
+                          </Text>
+                        </Pressable>
+                      )}
                       <Button
                         className="self-start rounded-full bg-accent"
                         isDisabled={checkIn.isPending}
@@ -602,6 +653,11 @@ export function MissionDetailScreen({
                       </Button>
                     </VStack>
                   ) : null}
+
+                  <MissionCheckInThumbnailRow
+                    missionId={missionId}
+                    onOpenAll={() => router.push(`/mission/${missionId}/gallery`)}
+                  />
 
                 </VStack>
               ) : missionQuery.isPending ? (

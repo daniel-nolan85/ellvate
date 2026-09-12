@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 
-interface MediaGalleryItem {
+export interface MediaGalleryItem {
   readonly url: string;
   readonly filename: string;
 }
@@ -48,7 +48,7 @@ function PageIndicator({ index, total }: { readonly index: number; readonly tota
 // gallery, starting on whichever one was tapped. Unmounts entirely when
 // closed (rather than just hiding) so it always re-mounts at the correct
 // starting page next time, with no imperative scroll-to-index needed.
-function MediaViewer({
+export function MediaViewer({
   media,
   onClose,
   startIndex,

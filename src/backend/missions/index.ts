@@ -1,5 +1,5 @@
+export { checkIn, listMissionCheckInPhotos } from './check-in';
 export { acceptMission } from './accept';
-export { checkIn } from './check-in';
 export { createMission } from './create';
 export { deleteMission } from './delete';
 export {
@@ -9,7 +9,7 @@ export {
   getUserProgress,
   listMissionsPage,
 } from './missions-view';
-export { reportMission } from './report';
+export { reportMission, reportMissionCheckInPhoto } from './report';
 export { updateMission } from './update';
 export { buildUserProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
 export type {
@@ -22,12 +22,15 @@ export type {
   CreateMissionResult,
   ListMissionsOptions,
   Mission,
+  MissionCheckInPhoto,
+  MissionCheckInPhotosPage,
   MissionFilter,
   MissionMedia,
   MissionsPage,
   MissionsView,
   MyMissionsOptions,
   MyMissionsPage,
+  ReportMissionCheckInPhotoResult,
   ReportMissionResult,
   UpdateMissionResult,
   UserProgress,

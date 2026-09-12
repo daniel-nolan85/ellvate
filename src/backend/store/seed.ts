@@ -629,6 +629,7 @@ export const createSeedState = (): StoreState => {
     missionCommentReports: [],
     missionReports: [],
     missionCheckIns: [],
+    missionCheckInPhotoReports: [],
     serviceListings: seedServiceListings(),
     serviceReviews: seedServiceReviews(),
     serviceReviewReports: [],
