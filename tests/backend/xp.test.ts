@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
 
 import { GET as getXpLedgerRoute } from '../../app/api/me/xp-ledger+api';
 import { createEvent } from '../../src/backend/events';
@@ -13,18 +12,8 @@ import { CREATE_CONTENT_XP, getXpLedger } from '../../src/backend/xp';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
-// A real photo of a person -- the face-detection gate (src/services/face-
-// detection) rejects anything it can't find a face in, so a placeholder
-// data URL no longer completes a mission. Reused from @vladmandic/face-api's
-// own bundled demo assets (the package this gate runs on) rather than
-// committing a new binary fixture to this repo.
 const CHECK_IN_PHOTO = {
-  checkInPhoto: {
-    dataUrl: `data:image/jpeg;base64,${readFileSync(
-      require.resolve('@vladmandic/face-api/demo/sample1.jpg'),
-    ).toString('base64')}`,
-    filename: 'proof.jpg',
-  },
+  checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
 };
 
 afterEach(() => {

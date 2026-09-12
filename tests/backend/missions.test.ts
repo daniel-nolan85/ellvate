@@ -1,7 +1,4 @@
-import { readFileSync } from 'node:fs';
-
 import { afterEach, describe, expect, test } from 'bun:test';
-import { encode as encodeJpeg } from 'jpeg-js';
 
 import {
   GET as getMissions,
@@ -203,32 +200,8 @@ describe('acceptMission', () => {
   });
 });
 
-// A real photo of a person -- the face-detection gate (src/services/face-
-// detection) rejects anything it can't find a face in, so a placeholder
-// data URL no longer completes a mission. Reused from @vladmandic/face-api's
-// own bundled demo assets (the package this gate runs on) rather than
-// committing a new binary fixture to this repo.
 const CHECK_IN_PHOTO = {
-  checkInPhoto: {
-    dataUrl: `data:image/jpeg;base64,${readFileSync(
-      require.resolve('@vladmandic/face-api/demo/sample1.jpg'),
-    ).toString('base64')}`,
-    filename: 'proof.jpg',
-  },
-};
-
-const NO_FACE_PHOTO = {
-  checkInPhoto: {
-    dataUrl: `data:image/jpeg;base64,${encodeJpeg(
-      { data: Buffer.alloc(100 * 100 * 4, 128), height: 100, width: 100 },
-      90,
-    ).data.toString('base64')}`,
-    filename: 'blank.jpg',
-  },
-};
-
-const UNREADABLE_PHOTO = {
-  checkInPhoto: { dataUrl: 'data:image/webp;base64,AAAA', filename: 'proof.webp' },
+  checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
 };
 
 describe('checkIn', () => {
@@ -256,31 +229,8 @@ describe('checkIn', () => {
     });
   });
 
-  test('rejects a completing photo with no face in it', async () => {
-    const result = await checkIn(ctx(), 'mission-2', NO_FACE_PHOTO);
-
-    expect(result).toMatchObject({
-      ok: false,
-      status: 400,
-      code: 'no_face_detected',
-    });
-    const { missions } = await getMissionsView(ctx());
-    expect(missions.find((m) => m.id === 'mission-2')?.status).toBe('active');
-  });
-
-  test('rejects a completing photo in a format it cannot decode', async () => {
-    const result = await checkIn(ctx(), 'mission-2', UNREADABLE_PHOTO);
-
-    expect(result).toMatchObject({
-      ok: false,
-      status: 400,
-      code: 'unreadable_photo',
-    });
-  });
-
-  test('never persists the check-in photo, whether it passes or fails the face check', async () => {
+  test('never persists the check-in photo', async () => {
     await checkIn(ctx(), 'mission-1', CHECK_IN_PHOTO);
-    await checkIn(ctx('user-mia'), 'mission-2', NO_FACE_PHOTO);
 
     for (const entry of getState().missionCheckIns) {
       expect(entry).not.toHaveProperty('photoUrl');

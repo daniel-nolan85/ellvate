@@ -45,7 +45,6 @@ import {
   type PickedImage,
 } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
-import { ApiError } from '@/src/services/api';
 
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCelebrationModal } from './mission-celebration-modal';
@@ -236,17 +235,7 @@ export function MissionDetailScreen({
       },
       {
         onSuccess: () => setCheckInPhoto(null),
-        onError: (error) => {
-          if (error instanceof ApiError && error.code === 'no_face_detected') {
-            showToast("We couldn't spot a person in that photo — try a different one.");
-            return;
-          }
-          if (error instanceof ApiError && error.code === 'unreadable_photo') {
-            showToast("We couldn't read that photo — try a different one.");
-            return;
-          }
-          showToast('Couldn’t check in. Try again.');
-        },
+        onError: () => showToast('Couldn’t check in. Try again.'),
       },
     );
   };
@@ -625,6 +614,13 @@ export function MissionDetailScreen({
 
                   {mission.status === 'active' && mission.accepted ? (
                     <VStack className="gap-2.5">
+                      {isFinalStop ? (
+                        <Text className="text-[12px] leading-4 text-text-muted">
+                          Missions are about getting out and exploring the
+                          community — snap a real photo. Faking it only cheats
+                          you out of the reason we built this.
+                        </Text>
+                      ) : null}
                       {checkInPhoto ? (
                         <HStack className="items-center gap-2.5">
                           <Image

@@ -123,9 +123,7 @@ export interface CheckInResponse {
 export type CheckInErrorCode =
   | 'mission_not_found'
   | 'mission_complete'
-  | 'photo_required'
-  | 'no_face_detected'
-  | 'unreadable_photo';
+  | 'photo_required';
 
 export interface CheckInFailure {
   readonly ok: false;

@@ -6,7 +6,6 @@ import {
   setState,
   type StoredMissionCheckIn,
 } from '@/src/backend/store';
-import { detectFace } from '@/src/services/face-detection';
 import { recordXpLedgerEntry } from '@/src/backend/xp';
 
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
@@ -60,34 +59,11 @@ async function checkInMemory(
     };
   }
 
-  // WHY: a hard automated gate, not a soft flag-for-review -- there's no
-  // review queue for this because the photo is never kept around to review
-  // (see below). Scanned in memory and immediately discarded either way, so
-  // a rejection here costs the user nothing but a retry with a different
-  // photo.
-  if (completed && photo) {
-    const outcome = await detectFace(photo.dataUrl);
-    if (outcome === 'no_face_detected') {
-      return {
-        ok: false,
-        status: 400,
-        code: 'no_face_detected',
-        message: "We couldn't spot a person in that photo. Try a different one.",
-      };
-    }
-    if (outcome === 'undecodable_image') {
-      return {
-        ok: false,
-        status: 400,
-        code: 'unreadable_photo',
-        message: "We couldn't read that photo. Try a different one.",
-      };
-    }
-  }
-
-  // WHY: never persisted -- these photos are scanned for a face and
-  // discarded, never displayed to anyone (including admins), so there's
-  // nothing to keep a URL for.
+  // WHY: never persisted -- a good-faith honor system, not an automated
+  // check (an "is a face present" gate is trivially beaten by any photo of
+  // any face, so it wasn't buying real deterrence, and pulled in a multi-MB
+  // dependency that blew out every mission-route bundle). The photo is
+  // discarded either way; the UI carries the honesty message instead.
   const nowIso = new Date().toISOString();
   const checkInRow: StoredMissionCheckIn = {
     id: `check-in-${crypto.randomUUID()}`,
