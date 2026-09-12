@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -40,12 +39,7 @@ import {
   useOpenProfile,
   useReportMember,
 } from '@/src/modules/profile';
-import {
-  pickGalleryImages,
-  type PickedImage,
-} from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
-import { ApiError } from '@/src/services/api';
 
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCelebrationModal } from './mission-celebration-modal';
@@ -150,7 +144,6 @@ export function MissionDetailScreen({
   const deleteComment = useDeleteMissionComment(missionId);
   const reportComment = useReportMissionComment();
 
-  const [checkInPhoto, setCheckInPhoto] = useState<PickedImage | null>(null);
   // A single Sheet whose content switches by mode, rather than separate
   // Sheet/Modal instances -- closing one and opening another in the same
   // tick briefly presents two native Modals at once (a Sheet stays mounted,
@@ -208,46 +201,14 @@ export function MissionDetailScreen({
     });
   };
 
-  const handleAttachPhoto = async () => {
-    const [picked] = await pickGalleryImages({ selectionLimit: 1 });
-    if (picked) {
-      setCheckInPhoto(picked);
-    }
-  };
-
   const handleCheckIn = () => {
     if (!mission) {
       return;
     }
-    if (isFinalStop && !checkInPhoto) {
-      void handleAttachPhoto();
-      return;
-    }
     void Haptics.selectionAsync().catch(() => undefined);
     checkIn.mutate(
-      {
-        missionId: mission.id,
-        photo: checkInPhoto
-          ? {
-              dataUrl: `data:${checkInPhoto.mimeType};base64,${checkInPhoto.base64}`,
-              filename: checkInPhoto.filename,
-            }
-          : undefined,
-      },
-      {
-        onSuccess: () => setCheckInPhoto(null),
-        onError: (error) => {
-          if (error instanceof ApiError && error.code === 'no_face_detected') {
-            showToast("We couldn't spot a person in that photo — try a different one.");
-            return;
-          }
-          if (error instanceof ApiError && error.code === 'unreadable_photo') {
-            showToast("We couldn't read that photo — try a different one.");
-            return;
-          }
-          showToast('Couldn’t check in. Try again.');
-        },
-      },
+      { missionId: mission.id },
+      { onError: () => showToast('Couldn’t check in. Try again.') },
     );
   };
 
@@ -625,57 +586,20 @@ export function MissionDetailScreen({
 
                   {mission.status === 'active' && mission.accepted ? (
                     <VStack className="gap-2.5">
-                      {checkInPhoto ? (
-                        <HStack className="items-center gap-2.5">
-                          <Image
-                            source={{ uri: checkInPhoto.uri }}
-                            style={{ borderRadius: 10, height: 44, width: 44 }}
-                          />
-                          <Text className="flex-1 text-text-muted" size="xs">
-                            Photo attached
-                          </Text>
-                          <Pressable
-                            accessibilityLabel="Remove photo"
-                            accessibilityRole="button"
-                            hitSlop={8}
-                            onPress={() => setCheckInPhoto(null)}
-                          >
-                            <Icon
-                              color="rgb(120,108,94)"
-                              name="Close"
-                              size={16}
-                            />
-                          </Pressable>
-                        </HStack>
-                      ) : null}
-                      <HStack className="items-center gap-2.5">
-                        <Button
-                          className="self-start rounded-full bg-accent"
-                          isDisabled={checkIn.isPending}
-                          onPress={handleCheckIn}
-                          size="sm"
-                        >
-                          <Icon color={WHITE} name="CheckCircle" size={15} />
-                          <ButtonText className="font-inter-semibold text-accent-foreground">
-                            {isFinalStop
-                              ? checkInPhoto
-                                ? 'Finish mission'
-                                : 'Add photo to finish'
-                              : 'Check in'}
-                          </ButtonText>
-                        </Button>
-                        {!isFinalStop && !checkInPhoto ? (
-                          <Pressable
-                            accessibilityLabel="Attach a photo (optional)"
-                            accessibilityRole="button"
-                            className="h-9 w-9 items-center justify-center rounded-full bg-accent-subtle"
-                            hitSlop={8}
-                            onPress={() => void handleAttachPhoto()}
-                          >
-                            <Icon color={ACCENT} name="Image" size={16} />
-                          </Pressable>
-                        ) : null}
-                      </HStack>
+                      <Text className="text-[12px] leading-4 text-text-muted">
+                        Check in honestly — the adventure is the point.
+                      </Text>
+                      <Button
+                        className="self-start rounded-full bg-accent"
+                        isDisabled={checkIn.isPending}
+                        onPress={handleCheckIn}
+                        size="sm"
+                      >
+                        <Icon color={WHITE} name="CheckCircle" size={15} />
+                        <ButtonText className="font-inter-semibold text-accent-foreground">
+                          {isFinalStop ? 'Complete mission' : 'Check in'}
+                        </ButtonText>
+                      </Button>
                     </VStack>
                   ) : null}
 

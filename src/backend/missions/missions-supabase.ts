@@ -1,13 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
-  extractCheckInPhoto,
   extractExistingMedia,
   extractMediaUploads,
 } from '@/src/backend/media';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
-import { detectFace } from '@/src/services/face-detection';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
@@ -708,7 +706,6 @@ export async function checkInSupabase(
   supabase: SupabaseClient,
   userId: string,
   missionId: string,
-  input: unknown,
 ): Promise<CheckInResult> {
   await ensureUser(supabase, userId);
 
@@ -752,45 +749,12 @@ export async function checkInSupabase(
   const stopsDone = currentStopsDone + 1;
   const completed = stopsDone >= mission.stops_total;
   const awardedXp = completed ? mission.xp : 0;
-  const photo = extractCheckInPhoto(input);
 
-  if (completed && !photo) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'photo_required',
-      message: 'A photo is required to complete this mission.',
-    };
-  }
-
-  // WHY: a hard automated gate, not a soft flag-for-review -- there's no
-  // review queue for this because the photo is never kept around to review
-  // (see below). Scanned in memory and immediately discarded either way, so
-  // a rejection here costs the user nothing but a retry with a different
-  // photo.
-  if (completed && photo) {
-    const outcome = await detectFace(photo.dataUrl);
-    if (outcome === 'no_face_detected') {
-      return {
-        ok: false,
-        status: 400,
-        code: 'no_face_detected',
-        message: "We couldn't spot a person in that photo. Try a different one.",
-      };
-    }
-    if (outcome === 'undecodable_image') {
-      return {
-        ok: false,
-        status: 400,
-        code: 'unreadable_photo',
-        message: "We couldn't read that photo. Try a different one.",
-      };
-    }
-  }
-
-  // WHY: never persisted -- these photos are scanned for a face and
-  // discarded, never displayed to anyone (including admins), so there's
-  // nothing to upload or keep a URL for.
+  // WHY: no photo/face-detection gate -- a good-faith honor system instead.
+  // An "is a face present" check was trivially beaten by any photo of any
+  // face, so it wasn't buying real deterrence, and pulled in a multi-MB
+  // dependency that blew out every mission-route bundle. The UI carries the
+  // honesty message instead.
   const { error: checkInInsertError } = await supabase.from('mission_check_ins').insert({
     mission_id: missionId,
     user_id: userId,

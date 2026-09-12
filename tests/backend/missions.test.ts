@@ -1,7 +1,4 @@
-import { readFileSync } from 'node:fs';
-
 import { afterEach, describe, expect, test } from 'bun:test';
-import { encode as encodeJpeg } from 'jpeg-js';
 
 import {
   GET as getMissions,
@@ -99,7 +96,7 @@ describe('getMissionsView', () => {
         ?.acceptedCount,
     ).toBe(1);
 
-    await checkIn(ctx('user-mia'), 'mission-1', CHECK_IN_PHOTO);
+    await checkIn(ctx('user-mia'), 'mission-1');
     const afterComplete = await getMissionsView(ctx());
     const mission1 = afterComplete.missions.find(
       (mission) => mission.id === 'mission-1',
@@ -203,34 +200,6 @@ describe('acceptMission', () => {
   });
 });
 
-// A real photo of a person -- the face-detection gate (src/services/face-
-// detection) rejects anything it can't find a face in, so a placeholder
-// data URL no longer completes a mission. Reused from @vladmandic/face-api's
-// own bundled demo assets (the package this gate runs on) rather than
-// committing a new binary fixture to this repo.
-const CHECK_IN_PHOTO = {
-  checkInPhoto: {
-    dataUrl: `data:image/jpeg;base64,${readFileSync(
-      require.resolve('@vladmandic/face-api/demo/sample1.jpg'),
-    ).toString('base64')}`,
-    filename: 'proof.jpg',
-  },
-};
-
-const NO_FACE_PHOTO = {
-  checkInPhoto: {
-    dataUrl: `data:image/jpeg;base64,${encodeJpeg(
-      { data: Buffer.alloc(100 * 100 * 4, 128), height: 100, width: 100 },
-      90,
-    ).data.toString('base64')}`,
-    filename: 'blank.jpg',
-  },
-};
-
-const UNREADABLE_PHOTO = {
-  checkInPhoto: { dataUrl: 'data:image/webp;base64,AAAA', filename: 'proof.webp' },
-};
-
 describe('checkIn', () => {
   test('advances one stop without awarding XP when the mission is not complete', async () => {
     const result = await checkIn(ctx('user-mia'), 'mission-2');
@@ -246,49 +215,8 @@ describe('checkIn', () => {
     expect(result.body.progress.missionsCompleted).toBe(41);
   });
 
-  test('rejects the completing check-in without a photo', async () => {
-    const result = await checkIn(ctx(), 'mission-2');
-
-    expect(result).toMatchObject({
-      ok: false,
-      status: 400,
-      code: 'photo_required',
-    });
-  });
-
-  test('rejects a completing photo with no face in it', async () => {
-    const result = await checkIn(ctx(), 'mission-2', NO_FACE_PHOTO);
-
-    expect(result).toMatchObject({
-      ok: false,
-      status: 400,
-      code: 'no_face_detected',
-    });
-    const { missions } = await getMissionsView(ctx());
-    expect(missions.find((m) => m.id === 'mission-2')?.status).toBe('active');
-  });
-
-  test('rejects a completing photo in a format it cannot decode', async () => {
-    const result = await checkIn(ctx(), 'mission-2', UNREADABLE_PHOTO);
-
-    expect(result).toMatchObject({
-      ok: false,
-      status: 400,
-      code: 'unreadable_photo',
-    });
-  });
-
-  test('never persists the check-in photo, whether it passes or fails the face check', async () => {
-    await checkIn(ctx(), 'mission-1', CHECK_IN_PHOTO);
-    await checkIn(ctx('user-mia'), 'mission-2', NO_FACE_PHOTO);
-
-    for (const entry of getState().missionCheckIns) {
-      expect(entry).not.toHaveProperty('photoUrl');
-    }
-  });
-
   test('completing the final stop marks the mission done and awards its XP', async () => {
-    const result = await checkIn(ctx(), 'mission-2', CHECK_IN_PHOTO);
+    const result = await checkIn(ctx(), 'mission-2');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -311,7 +239,7 @@ describe('checkIn', () => {
   });
 
   test('single-stop mission completes and awards full XP on one check-in', async () => {
-    const result = await checkIn(ctx(), 'mission-1', CHECK_IN_PHOTO);
+    const result = await checkIn(ctx(), 'mission-1');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -324,7 +252,7 @@ describe('checkIn', () => {
   });
 
   test('completion persists in the store and in the missions view', async () => {
-    await checkIn(ctx(), 'mission-1', CHECK_IN_PHOTO);
+    await checkIn(ctx(), 'mission-1');
     const { missions, progress } = await getMissionsView(ctx());
 
     expect(missions.find((m) => m.id === 'mission-1')?.status).toBe('done');
@@ -333,7 +261,7 @@ describe('checkIn', () => {
   });
 
   test('checks in on a not-yet-started mission and awards its XP', async () => {
-    const result = await checkIn(ctx(), 'mission-4', CHECK_IN_PHOTO);
+    const result = await checkIn(ctx(), 'mission-4');
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -354,9 +282,9 @@ describe('checkIn', () => {
   });
 
   test('rejects a second check-in after completing a mission', async () => {
-    expect((await checkIn(ctx(), 'mission-1', CHECK_IN_PHOTO)).ok).toBe(true);
+    expect((await checkIn(ctx(), 'mission-1')).ok).toBe(true);
 
-    expect(await checkIn(ctx(), 'mission-1', CHECK_IN_PHOTO)).toMatchObject({
+    expect(await checkIn(ctx(), 'mission-1')).toMatchObject({
       ok: false,
       status: 409,
       code: 'mission_complete',
@@ -373,7 +301,7 @@ describe('checkIn', () => {
 
   test('does not mutate the previous store state', async () => {
     const before = getState();
-    await checkIn(ctx(), 'mission-2', CHECK_IN_PHOTO);
+    await checkIn(ctx(), 'mission-2');
 
     const beforeMission = before.missions.find((m) => m.id === 'mission-2');
     const beforeUser = before.users.find((u) => u.id === DEMO_USER_ID);
@@ -383,7 +311,7 @@ describe('checkIn', () => {
   });
 
   test('does not touch other users or missions on check-in', async () => {
-    await checkIn(ctx(), 'mission-2', CHECK_IN_PHOTO);
+    await checkIn(ctx(), 'mission-2');
     const state = getState();
 
     expect(state.users.find((u) => u.id === 'user-mia')?.xp).toBe(3820);
@@ -973,7 +901,7 @@ describe('POST /api/missions/:id/check-in', () => {
     );
 
   test('returns mission, awardedXp, and progress on completion', async () => {
-    const response = await checkInRequest('mission-1', CHECK_IN_PHOTO);
+    const response = await checkInRequest('mission-1');
     const body = (await response.json()) as {
       mission: { id: string; status: string; stopsDone: number };
       awardedXp: number;
@@ -994,7 +922,7 @@ describe('POST /api/missions/:id/check-in', () => {
   });
 
   test('checks in on mission-4 and returns 200', async () => {
-    const response = await checkInRequest('mission-4', CHECK_IN_PHOTO);
+    const response = await checkInRequest('mission-4');
     const body = (await response.json()) as {
       mission: { id: string; status: string; stopsDone: number };
       awardedXp: number;

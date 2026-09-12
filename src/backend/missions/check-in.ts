@@ -1,4 +1,3 @@
-import { extractCheckInPhoto } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import {
   ensureUser,
@@ -6,7 +5,6 @@ import {
   setState,
   type StoredMissionCheckIn,
 } from '@/src/backend/store';
-import { detectFace } from '@/src/services/face-detection';
 import { recordXpLedgerEntry } from '@/src/backend/xp';
 
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
@@ -17,7 +15,6 @@ import { buildUserProgress } from './user-progress';
 async function checkInMemory(
   userId: string,
   missionId: string,
-  input: unknown,
 ): Promise<CheckInResult> {
   ensureUser(userId);
   const mission = getState().missions.find((item) => item.id === missionId);
@@ -46,48 +43,12 @@ async function checkInMemory(
   const stopsDone = entry.stopsDone + 1;
   const completed = stopsDone >= mission.stopsTotal;
   const awardedXp = completed ? mission.xp : 0;
-  const photo = extractCheckInPhoto(input);
 
-  // WHY: the check-in that completes the mission is the one that actually
-  // proves you did it — required there, optional on earlier stops so the
-  // deterrent lands where it matters without adding friction to every stop.
-  if (completed && !photo) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'photo_required',
-      message: 'A photo is required to complete this mission.',
-    };
-  }
-
-  // WHY: a hard automated gate, not a soft flag-for-review -- there's no
-  // review queue for this because the photo is never kept around to review
-  // (see below). Scanned in memory and immediately discarded either way, so
-  // a rejection here costs the user nothing but a retry with a different
-  // photo.
-  if (completed && photo) {
-    const outcome = await detectFace(photo.dataUrl);
-    if (outcome === 'no_face_detected') {
-      return {
-        ok: false,
-        status: 400,
-        code: 'no_face_detected',
-        message: "We couldn't spot a person in that photo. Try a different one.",
-      };
-    }
-    if (outcome === 'undecodable_image') {
-      return {
-        ok: false,
-        status: 400,
-        code: 'unreadable_photo',
-        message: "We couldn't read that photo. Try a different one.",
-      };
-    }
-  }
-
-  // WHY: never persisted -- these photos are scanned for a face and
-  // discarded, never displayed to anyone (including admins), so there's
-  // nothing to keep a URL for.
+  // WHY: no photo/face-detection gate -- a good-faith honor system instead.
+  // An "is a face present" check was trivially beaten by any photo of any
+  // face, so it wasn't buying real deterrence, and pulled in a multi-MB
+  // dependency that blew out every mission-route bundle. The UI carries the
+  // honesty message instead.
   const nowIso = new Date().toISOString();
   const checkInRow: StoredMissionCheckIn = {
     id: `check-in-${crypto.randomUUID()}`,
@@ -165,11 +126,10 @@ async function checkInMemory(
 export async function checkIn(
   ctx: RequestContext,
   missionId: string,
-  input: unknown = null,
 ): Promise<CheckInResult> {
   const result = ctx.supabase
-    ? await checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
-    : await checkInMemory(ctx.userId, missionId, input);
+    ? await checkInSupabase(ctx.supabase, ctx.userId, missionId)
+    : await checkInMemory(ctx.userId, missionId);
 
   if (result.ok && result.body.awardedXp > 0) {
     await recordXpLedgerEntry(ctx, {
