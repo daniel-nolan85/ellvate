@@ -232,6 +232,7 @@ export function MissionsScreen({
           <View className="mx-5 mb-2">
             <MissionCard
               mission={item}
+              onAccepted={() => setFilter('in-progress')}
               onMissionComplete={setCelebration}
               onOpen={onOpenMission}
             />
