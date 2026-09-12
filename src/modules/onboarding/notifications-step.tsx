@@ -34,8 +34,8 @@ const NOTIF_OPTS: readonly NotifOption[] = [
   {
     icon: 'Star',
     id: 'missions',
-    sub: 'New missions nearby, streak about to break',
-    title: 'Mission & streak alerts',
+    sub: 'New missions nearby',
+    title: 'Mission alerts',
   },
   {
     icon: 'Mail',

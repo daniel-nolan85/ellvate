@@ -107,7 +107,6 @@ async function loadProgressCounts(
 
 interface UserRow {
   readonly xp: number;
-  readonly streak_days: number;
   readonly missions_completed: number;
   readonly title: string;
 }
@@ -267,7 +266,7 @@ const loadUserRow = async (
 ): Promise<UserRow | null> => {
   const { data, error } = await supabase
     .from('app_users')
-    .select('xp,streak_days,missions_completed,title')
+    .select('xp,missions_completed,title')
     .eq('id', userId)
     .maybeSingle();
   throwIfSupabaseError(error, 'load mission user');
@@ -311,7 +310,6 @@ export async function getMissionsViewSupabase(
     ),
     progress: buildProgress({
       xp: userRow?.xp ?? 0,
-      streakDays: userRow?.streak_days ?? 0,
       missionsCompleted: userRow?.missions_completed ?? 0,
       title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
     }),
@@ -404,7 +402,6 @@ export async function getUserProgressSupabase(
   const userRow = await loadUserRow(supabase, userId);
   return buildProgress({
     xp: userRow?.xp ?? 0,
-    streakDays: userRow?.streak_days ?? 0,
     missionsCompleted: userRow?.missions_completed ?? 0,
     title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
   });
@@ -815,19 +812,15 @@ export async function checkInSupabase(
 
   const userRow = await loadUserRow(supabase, userId);
   const baseXp = userRow?.xp ?? 0;
-  const baseStreak = userRow?.streak_days ?? 0;
   const baseMissions = userRow?.missions_completed ?? 0;
   const title = userRow?.title ?? DEFAULT_PROGRESS_TITLE;
 
-  // WHY: streaks are intentionally naive — +1 day per completing check-in, no
-  // calendar tracking. Documented in the API contract and matches the memory path.
   if (completed) {
     const { error: userUpdateError } = await supabase
       .from('app_users')
       .update({
         xp: baseXp + mission.xp,
         missions_completed: baseMissions + 1,
-        streak_days: baseStreak + 1,
       })
       .eq('id', userId);
     throwIfSupabaseError(userUpdateError, 'save mission user progress');
@@ -867,7 +860,6 @@ export async function checkInSupabase(
       awardedXp,
       progress: buildProgress({
         xp: completed ? baseXp + mission.xp : baseXp,
-        streakDays: completed ? baseStreak + 1 : baseStreak,
         missionsCompleted: completed ? baseMissions + 1 : baseMissions,
         title,
       }),

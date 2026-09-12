@@ -97,8 +97,6 @@ async function checkInMemory(
     completedAt: nowIso,
   };
 
-  // WHY: streaks are intentionally naive for the demo store — +1 day per
-  // completing check-in, no calendar tracking. Documented in the API contract.
   const next = setState((state) => ({
     ...state,
     missionCheckIns: [...state.missionCheckIns, checkInRow],
@@ -124,7 +122,6 @@ async function checkInMemory(
                 ...user,
                 xp: user.xp + mission.xp,
                 missionsCompleted: user.missionsCompleted + 1,
-                streakDays: user.streakDays + 1,
               }
             : user,
         )

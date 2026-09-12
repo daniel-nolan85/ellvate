@@ -451,7 +451,6 @@ export function ProfileScreen() {
             label="Missions"
             value={String(stats.data?.missionsCompleted ?? 0)}
           />
-          <StatCard label="Streak" value={String(stats.data?.streakDays ?? 0)} />
         </HStack>
 
         {stats.data ? (

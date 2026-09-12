@@ -48,7 +48,6 @@ export function ensureUser(userId: string): StoredUser {
     avatarUrl: null,
     isAdmin: false,
     xp: 0,
-    streakDays: 0,
     missionsCompleted: 0,
     previousRank: null,
     title: DEFAULT_PROGRESS_TITLE,

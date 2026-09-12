@@ -145,7 +145,6 @@ describe('seed data', () => {
     const me = ranked.at(-1);
     expect(me?.id).toBe(DEMO_USER_ID);
     expect(me?.missionsCompleted).toBe(21);
-    expect(me?.streakDays).toBe(12);
     expect(me?.title).toBe('LAKE EXPLORER');
   });
 

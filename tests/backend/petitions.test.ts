@@ -64,7 +64,6 @@ function unlockPetitions(): void {
         onboardedAt: null,
         role: null,
       },
-      streakDays: 0,
       title: 'LAKE EXPLORER',
       xp: 0,
     }));

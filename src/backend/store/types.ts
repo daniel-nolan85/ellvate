@@ -39,7 +39,6 @@ export interface StoredUser {
   // shown next to this user's name on their own content.
   readonly isAdmin: boolean;
   readonly xp: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly previousRank: number | null;
   readonly title: string;

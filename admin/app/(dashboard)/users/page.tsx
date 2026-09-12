@@ -14,7 +14,6 @@ interface UserRow {
   readonly role: string | null;
   readonly xp: number;
   readonly missions_completed: number;
-  readonly streak_days: number;
   readonly created_at: string;
   readonly avatar_url: string | null;
   readonly is_admin: boolean;
@@ -31,7 +30,7 @@ export default async function UsersPage({
   const admin = createSupabaseAdminClient();
   let request = admin
     .from('app_users')
-    .select('id, name, role, xp, missions_completed, streak_days, created_at, avatar_url, is_admin');
+    .select('id, name, role, xp, missions_completed, created_at, avatar_url, is_admin');
   if (query) {
     request = request.ilike('name', `%${query}%`);
   }
@@ -92,7 +91,6 @@ export default async function UsersPage({
             <th className="pb-2 font-normal">Role</th>
             <th className="pb-2 font-normal">XP</th>
             <th className="pb-2 font-normal">Missions done</th>
-            <th className="pb-2 font-normal">Streak</th>
             <th className="pb-2 font-normal">Joined</th>
             <th className="pb-2 font-normal">Admin</th>
             <th className="pb-2 font-normal text-right">Actions</th>
@@ -101,7 +99,7 @@ export default async function UsersPage({
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td className="py-4 text-sm text-muted" colSpan={8}>
+              <td className="py-4 text-sm text-muted" colSpan={7}>
                 {query ? `No members match "${query}".` : 'No members yet.'}
               </td>
             </tr>
@@ -124,7 +122,6 @@ export default async function UsersPage({
                 <td className="py-2 pr-4 text-xs text-muted">{user.role ?? '—'}</td>
                 <td className="py-2 pr-4 text-xs text-muted">{user.xp}</td>
                 <td className="py-2 pr-4 text-xs text-muted">{user.missions_completed}</td>
-                <td className="py-2 pr-4 text-xs text-muted">{user.streak_days}d</td>
                 <td className="py-2 pr-4 text-xs text-muted">
                   {formatDate(user.created_at)}
                 </td>

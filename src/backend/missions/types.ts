@@ -44,7 +44,6 @@ export interface UserProgress {
   readonly xpIntoLevel: number;
   readonly xpForNextLevel: number;
   readonly xpToNextLevel: number;
-  readonly streakDays: number;
   readonly missionsCompleted: number;
   readonly title: string;
 }
