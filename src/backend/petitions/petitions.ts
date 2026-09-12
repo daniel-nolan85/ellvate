@@ -11,7 +11,7 @@ import {
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import type { ValidReportSubmission } from '../reports/report-submission';
-import { countAppUsers } from './gate';
+import { countAppUsers, isCallerAdmin } from './gate';
 import {
   createPetitionSupabase,
   getMyPetitionsViewSupabase,
@@ -158,14 +158,9 @@ function getPetitionMemory(petitionId: string, userId: string): Petition | null 
 }
 
 function createPetitionMemory(userId: string, input: unknown): CreatePetitionResult {
+  // Gate already checked by the caller (createPetition) -- not re-checked
+  // here so the admin bypass has exactly one place to live.
   const totalUsers = getState().users.length;
-  if (totalUsers < PETITIONS_UNLOCK_MIN_USERS) {
-    return {
-      code: 'petitions_locked',
-      message: 'Petitions unlock once the community is larger.',
-      ok: false,
-    };
-  }
   const validation = validatePetitionInput(input);
   if (!validation.ok) {
     return validation;
@@ -341,9 +336,10 @@ function reportPetitionMemory(
 
 export async function getPetitionsGate(ctx: RequestContext): Promise<PetitionsGate> {
   const totalUsers = await countAppUsers(ctx);
+  const isAdmin = await isCallerAdmin(ctx);
   return {
     totalUsers,
-    unlocked: totalUsers >= PETITIONS_UNLOCK_MIN_USERS,
+    unlocked: isAdmin || totalUsers >= PETITIONS_UNLOCK_MIN_USERS,
     usersNeeded: Math.max(0, PETITIONS_UNLOCK_MIN_USERS - totalUsers),
   };
 }
@@ -404,9 +400,10 @@ export async function createPetition(
 ): Promise<CreatePetitionResult> {
   // Re-checked here, server-side, regardless of what the client's own gate
   // state believes -- the client-side gate is UX only, this is the real
-  // enforcement boundary.
+  // enforcement boundary. Admins bypass the threshold (see getPetitionsGate).
   const totalUsers = await countAppUsers(ctx);
-  if (totalUsers < PETITIONS_UNLOCK_MIN_USERS) {
+  const isAdmin = await isCallerAdmin(ctx);
+  if (!isAdmin && totalUsers < PETITIONS_UNLOCK_MIN_USERS) {
     return {
       code: 'petitions_locked',
       message: 'Petitions unlock once the community is larger.',

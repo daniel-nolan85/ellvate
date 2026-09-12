@@ -43,6 +43,9 @@ export interface Mission {
   readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
+  // Community-wide, not scoped to the viewer.
+  readonly acceptedCount: number;
+  readonly completedCount: number;
 }
 
 export interface UserProgress {
@@ -77,15 +80,6 @@ export interface CheckInResult {
   readonly mission: Mission;
   readonly awardedXp: number;
   readonly progress: UserProgress;
-}
-
-export interface CheckInEntry {
-  readonly id: string;
-  readonly missionId: string;
-  readonly user: PersonRef;
-  readonly stopIndex: number;
-  readonly completedAt: string;
-  readonly photoUrl: string | null;
 }
 
 export interface CheckInPhotoInput {
@@ -259,6 +253,9 @@ export function useCreateMission() {
       // that count is served by the member-profile endpoint, not the
       // missions endpoints, so it isn't covered by the invalidation above.
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      // Also grants a small amount of XP -- see src/backend/xp -- which the
+      // points-history list needs to pick up too.
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
     },
   });
 }
@@ -411,6 +408,7 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
     },
     onSuccess: (result, _input, context) => {
       if (result.awardedXp > 0) {
@@ -438,39 +436,6 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
         });
       }
     },
-  });
-}
-
-const missionCheckInsPath = (missionId: string): `/${string}` =>
-  `/api/missions/${missionId}/check-ins`;
-
-export function useMissionCheckIns(missionId: string) {
-  const session = useSession();
-
-  return useQuery({
-    meta: { persist: true, sensitive: false },
-    queryFn: ({ signal }) =>
-      requestJson<{ readonly checkIns: readonly CheckInEntry[] }>({
-        getAccessToken: session.getToken,
-        path: missionCheckInsPath(missionId),
-        signal,
-      }),
-    queryKey: ['missions', 'check-ins', session.userId ?? 'demo-user', missionId],
-    select: (data) => data.checkIns,
-  });
-}
-
-export function useReportCheckIn() {
-  const session = useSession();
-
-  return useMutation({
-    mutationFn: ({ checkInId, ...submission }: { checkInId: string } & ReportSubmission) =>
-      requestJson<{ reported: boolean }>({
-        body: submission,
-        getAccessToken: session.getToken,
-        method: 'POST',
-        path: `/api/mission-check-ins/${checkInId}/report`,
-      }),
   });
 }
 

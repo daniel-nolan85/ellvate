@@ -3,6 +3,13 @@ import type { ReportReason } from '@/src/lib/report-reasons';
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
+export type XpReason =
+  | 'mission_completed'
+  | 'mission_created'
+  | 'post_created'
+  | 'event_created'
+  | 'service_created'
+  | 'onboarding_bonus';
 
 export interface NotificationPrefs {
   readonly events: boolean;
@@ -137,17 +144,6 @@ export interface StoredMissionCheckIn {
   readonly userId: string;
   readonly stopIndex: number;
   readonly completedAt: string;
-  readonly photoUrl: string | null;
-}
-
-export interface StoredMissionCheckInReport {
-  readonly id: string;
-  readonly checkInId: string;
-  readonly reporterId: string;
-  readonly createdAt: string;
-  readonly reason: ReportReason | null;
-  readonly details: string | null;
-  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredEvent {
@@ -374,6 +370,15 @@ export interface StoredMemberReport {
   readonly evidenceImageUrl: string | null;
 }
 
+export interface StoredXpLedgerEntry {
+  readonly id: string;
+  readonly userId: string;
+  readonly amount: number;
+  readonly reason: XpReason;
+  readonly refId: string | null;
+  readonly createdAt: string;
+}
+
 export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
 
 export interface StoredBookmark {
@@ -399,7 +404,6 @@ export interface StoreState {
   readonly missionCommentReports: readonly StoredMissionCommentReport[];
   readonly missionReports: readonly StoredMissionReport[];
   readonly missionCheckIns: readonly StoredMissionCheckIn[];
-  readonly missionCheckInReports: readonly StoredMissionCheckInReport[];
   readonly serviceListings: readonly StoredServiceListing[];
   readonly serviceReviews: readonly StoredServiceReview[];
   readonly serviceReviewReports: readonly StoredServiceReviewReport[];
@@ -412,6 +416,7 @@ export interface StoreState {
   readonly petitionCommentReports: readonly StoredPetitionCommentReport[];
   readonly bookmarks: readonly StoredBookmark[];
   readonly memberReports: readonly StoredMemberReport[];
+  readonly xpLedger: readonly StoredXpLedgerEntry[];
   readonly users: readonly StoredUser[];
   readonly week: readonly StoredWeekDay[];
 }

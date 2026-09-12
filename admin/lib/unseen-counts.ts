@@ -1,16 +1,16 @@
 import { createSupabaseAdminClient } from './supabase/admin';
 
-// All 11 report tables -- this list was missing event_reports/
+// All 10 report tables -- this list was missing event_reports/
 // mission_reports/member_reports (added later, in migrations 0046/0052,
 // after this file was written), which meant reports on events, missions,
-// or members directly never counted toward this badge.
+// or members directly never counted toward this badge. Mission check-in
+// reports were removed entirely along with check-in photo persistence.
 const REPORT_TABLES = [
   'post_reports',
   'comment_reports',
   'event_comment_reports',
   'mission_comment_reports',
   'service_review_reports',
-  'mission_check_in_reports',
   'petition_reports',
   'petition_comment_reports',
   'event_reports',

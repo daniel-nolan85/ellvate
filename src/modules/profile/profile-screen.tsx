@@ -29,6 +29,7 @@ import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import { AccountIdentifiersSheet } from './account-identifiers-sheet';
+import { PointsHistorySheet } from './points-history-sheet';
 import {
   useDeleteAccount,
   useMemberProfile,
@@ -230,7 +231,9 @@ export function ProfileScreen() {
   // safe to render in every auth mode.
   const clerkReady = getClerkConfiguration().status === 'ready';
 
-  const [activeSheet, setActiveSheet] = useState<'edit' | 'identifiers' | null>(null);
+  const [activeSheet, setActiveSheet] = useState<
+    'edit' | 'identifiers' | 'points-history' | null
+  >(null);
   const [draftName, setDraftName] = useState('');
   const [draftRole, setDraftRole] = useState<CommunityRole | null>(null);
   const [draftInterests, setDraftInterests] = useState<readonly string[]>([]);
@@ -246,6 +249,11 @@ export function ProfileScreen() {
   const displayName =
     profile.data?.profile.name ??
     (session.status === 'signed-in' ? 'You' : 'Demo member');
+  // WHY: shows the loading spinner on the avatar instead of an initial
+  // guessed from the 'You' placeholder above -- the heading text can say
+  // 'You' while the real name loads, but a wrong-looking 'Y' initial would
+  // briefly misrepresent the person.
+  const stillLoadingRealProfile = session.status === 'signed-in' && !profile.data;
   const prefs = profile.data?.profile.notificationPrefs;
   const currentRole = profile.data?.profile.role ?? null;
   const currentRoleOption = currentRole
@@ -403,6 +411,7 @@ export function ProfileScreen() {
             onPress={pickAvatar}
           >
             <Avatar
+              loading={stillLoadingRealProfile}
               name={displayName}
               size="2xl"
               src={profile.data?.profile.avatarUrl ?? undefined}
@@ -446,12 +455,18 @@ export function ProfileScreen() {
         </HStack>
 
         {stats.data ? (
-          <LevelProgress
-            level={stats.data.level}
-            xpForNextLevel={stats.data.xpForNextLevel}
-            xpIntoLevel={stats.data.xpIntoLevel}
-            xpToNextLevel={stats.data.xpToNextLevel}
-          />
+          <Pressable
+            accessibilityLabel="View points history"
+            accessibilityRole="button"
+            onPress={() => setActiveSheet('points-history')}
+          >
+            <LevelProgress
+              level={stats.data.level}
+              xpForNextLevel={stats.data.xpForNextLevel}
+              xpIntoLevel={stats.data.xpIntoLevel}
+              xpToNextLevel={stats.data.xpToNextLevel}
+            />
+          </Pressable>
         ) : null}
 
         <SectionTitle>Shortcuts</SectionTitle>
@@ -683,7 +698,7 @@ export function ProfileScreen() {
                           accessibilityRole="button"
                           className={`flex-row items-center gap-3 rounded-2xl px-4 py-3 ${
                             selected
-                              ? 'border border-primary bg-primary'
+                              ? 'border border-accent bg-accent'
                               : 'border border-surface-hairline bg-canvas'
                           }`}
                           key={role.id}
@@ -698,7 +713,7 @@ export function ProfileScreen() {
                           <View className="flex-1">
                             <Text
                               className={`font-inter-semibold text-[14px] ${
-                                selected ? 'text-primary-foreground' : 'text-content'
+                                selected ? 'text-accent-foreground' : 'text-content'
                               }`}
                             >
                               {role.title}
@@ -734,7 +749,7 @@ export function ProfileScreen() {
                         <Pressable
                           accessibilityRole="button"
                           className={`rounded-full px-4 py-2.5 ${
-                            selected ? 'bg-primary' : 'bg-secondary'
+                            selected ? 'bg-accent' : 'bg-secondary'
                           }`}
                           key={interest}
                           onPress={() => toggleDraftInterest(interest)}
@@ -742,7 +757,7 @@ export function ProfileScreen() {
                         >
                           <Text
                             className={`font-inter-medium text-[13px] ${
-                              selected ? 'text-primary-foreground' : 'text-content'
+                              selected ? 'text-accent-foreground' : 'text-content'
                             }`}
                           >
                             {interest}
@@ -776,6 +791,11 @@ export function ProfileScreen() {
           visible={activeSheet === 'identifiers'}
         />
       ) : null}
+
+      <PointsHistorySheet
+        onClose={() => setActiveSheet(null)}
+        visible={activeSheet === 'points-history'}
+      />
 
       <ConfirmModal
         confirmLabel="Sign out"

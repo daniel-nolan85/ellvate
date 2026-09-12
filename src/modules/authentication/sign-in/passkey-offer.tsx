@@ -61,11 +61,11 @@ export function PasskeyOffer({
           title="You’re all set"
         >
           <Button
-            className="h-[52px] w-full rounded-full bg-primary"
+            className="h-[52px] w-full rounded-full bg-accent"
             onPress={onDone}
             size="lg"
           >
-            <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground">
+            <ButtonText className="font-inter-semibold text-[15px] text-accent-foreground">
               {continueLabel}
             </ButtonText>
           </Button>
@@ -80,11 +80,11 @@ export function PasskeyOffer({
         >
           <VStack className="w-full" space="sm">
             <Button
-              className="h-[52px] w-full rounded-full bg-primary"
+              className="h-[52px] w-full rounded-full bg-accent"
               onPress={createPasskey}
               size="lg"
             >
-              <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground">
+              <ButtonText className="font-inter-semibold text-[15px] text-accent-foreground">
                 Try again
               </ButtonText>
             </Button>
@@ -134,12 +134,12 @@ export function PasskeyOffer({
           </View>
           <VStack space="sm">
             <Button
-              className="h-[52px] w-full rounded-full bg-primary"
+              className="h-[52px] w-full rounded-full bg-accent"
               isDisabled={phase === 'busy'}
               onPress={createPasskey}
               size="lg"
             >
-              <ButtonText className="font-inter-semibold text-[15px] text-primary-foreground">
+              <ButtonText className="font-inter-semibold text-[15px] text-accent-foreground">
                 {phase === 'busy' ? 'Just a moment…' : 'Turn on Face ID'}
               </ButtonText>
             </Button>

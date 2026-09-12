@@ -196,7 +196,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
 
       {flow.step === 'identifier' ? (
         <Button
-          className="h-[54px] rounded-2xl bg-primary"
+          className="h-[54px] rounded-2xl bg-accent"
           isDisabled={
             flow.busy ||
             !flow.ready ||
@@ -205,7 +205,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
           onPress={onPrimary}
           size="lg"
         >
-          <ButtonText className="font-inter-semibold text-[16px] text-primary-foreground">
+          <ButtonText className="font-inter-semibold text-[16px] text-accent-foreground">
             {flow.busy ? 'Just a moment…' : 'Continue'}
           </ButtonText>
         </Button>
@@ -234,7 +234,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
               hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
               className={`mt-0.5 h-5 w-5 items-center justify-center rounded-md border ${
                 consentChecked
-                  ? 'border-primary bg-primary'
+                  ? 'border-accent bg-accent'
                   : 'border-surface-hairline bg-paper'
               }`}
               onPress={() => setConsentChecked((current) => !current)}

@@ -1,6 +1,7 @@
 import { extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { setState, type StoredMission } from '@/src/backend/store';
+import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
 
 import { toMissionView } from './mission-view';
 import { createMissionSupabase } from './missions-supabase';
@@ -44,7 +45,17 @@ export async function createMission(
   ctx: RequestContext,
   input: unknown,
 ): Promise<CreateMissionResult> {
-  return ctx.supabase
-    ? createMissionSupabase(ctx.supabase, ctx.userId, input)
+  const result = ctx.supabase
+    ? await createMissionSupabase(ctx.supabase, ctx.userId, input)
     : createMissionMemory(ctx.userId, input);
+
+  if (result.ok) {
+    await grantXp(ctx, {
+      amount: CREATE_CONTENT_XP,
+      reason: 'mission_created',
+      refId: result.mission.id,
+    });
+  }
+
+  return result;
 }

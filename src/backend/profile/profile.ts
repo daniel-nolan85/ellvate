@@ -6,6 +6,7 @@ import type {
   NotificationPrefs,
   StoredProfile,
 } from '@/src/backend/store';
+import { recordXpLedgerEntry } from '@/src/backend/xp';
 
 import { getProfileSupabase, updateProfileSupabase } from './profile-supabase';
 import { validateProfileUpdate } from './validate';
@@ -35,6 +36,11 @@ export interface ProfileResult {
 export interface UpdateProfileSuccess {
   readonly ok: true;
   readonly profile: UserProfile;
+  // Internal to the backend -- lets the updateProfile wrapper record an xp
+  // ledger entry for the welcome bonus without re-deriving the before/after
+  // onboardedAt transition itself. Never returned to the client (the API
+  // route picks only `profile` off this result).
+  readonly justOnboarded: boolean;
 }
 
 export type UpdateProfileResult = ProfileValidationFailure | UpdateProfileSuccess;
@@ -130,6 +136,7 @@ function updateProfileMemory(
   const avatarUrl = updatedUser?.avatarUrl ?? null;
 
   return {
+    justOnboarded,
     ok: true,
     profile: toUserProfile(userId, updatedUser?.name ?? '', next, avatarUrl),
   };
@@ -147,7 +154,16 @@ export async function updateProfile(
   ctx: RequestContext,
   input: unknown,
 ): Promise<UpdateProfileResult> {
-  return ctx.supabase
-    ? updateProfileSupabase(ctx.supabase, ctx.userId, input)
+  const result = ctx.supabase
+    ? await updateProfileSupabase(ctx.supabase, ctx.userId, input)
     : updateProfileMemory(ctx.userId, input);
+
+  if (result.ok && result.justOnboarded) {
+    await recordXpLedgerEntry(ctx, {
+      amount: WELCOME_XP,
+      reason: 'onboarding_bonus',
+    });
+  }
+
+  return result;
 }

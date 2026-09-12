@@ -27,7 +27,16 @@ export function CommentComposer({
 }: CommentComposerProps) {
   const canSend = value.trim().length > 0 && !isSending;
   return (
-    <View className="gap-2.5 border-t border-line px-[18px] pb-9 pt-2.5">
+    // collapsable={false}: this View is a fixed-height sibling docked below
+    // a flex-1 FlatList in every screen that renders it -- exactly the shape
+    // RN's view-flattening optimization can collapse into its parent,
+    // letting the composer paint at the wrong position (overlapping list
+    // content instead of sitting below it) instead of just being invisible.
+    // Same root cause and fix as the header on the digest screen.
+    <View
+      className="gap-2.5 border-t border-line px-[18px] pb-9 pt-2.5"
+      collapsable={false}
+    >
       {editing ? (
         <View className="flex-row items-center gap-2 rounded-lg bg-accent-subtle px-3 py-2">
           <Icon color="rgb(181,80,44)" name="Edit" size={16} />

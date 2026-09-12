@@ -640,7 +640,6 @@ export const createSeedState = (): StoreState => {
     missionCommentReports: [],
     missionReports: [],
     missionCheckIns: [],
-    missionCheckInReports: [],
     serviceListings: seedServiceListings(),
     serviceReviews: seedServiceReviews(),
     serviceReviewReports: [],
@@ -653,6 +652,7 @@ export const createSeedState = (): StoreState => {
     petitionCommentReports: [],
     bookmarks: [],
     memberReports: [],
+    xpLedger: [],
     users: seedUsers(),
     week: seedWeek(),
   };
