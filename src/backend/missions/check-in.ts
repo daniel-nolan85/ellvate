@@ -1,4 +1,3 @@
-import { extractCheckInPhoto } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import {
   ensureUser,
@@ -16,7 +15,6 @@ import { buildUserProgress } from './user-progress';
 async function checkInMemory(
   userId: string,
   missionId: string,
-  input: unknown,
 ): Promise<CheckInResult> {
   ensureUser(userId);
   const mission = getState().missions.find((item) => item.id === missionId);
@@ -45,25 +43,12 @@ async function checkInMemory(
   const stopsDone = entry.stopsDone + 1;
   const completed = stopsDone >= mission.stopsTotal;
   const awardedXp = completed ? mission.xp : 0;
-  const photo = extractCheckInPhoto(input);
 
-  // WHY: the check-in that completes the mission is the one that actually
-  // proves you did it — required there, optional on earlier stops so the
-  // deterrent lands where it matters without adding friction to every stop.
-  if (completed && !photo) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'photo_required',
-      message: 'A photo is required to complete this mission.',
-    };
-  }
-
-  // WHY: never persisted -- a good-faith honor system, not an automated
-  // check (an "is a face present" gate is trivially beaten by any photo of
-  // any face, so it wasn't buying real deterrence, and pulled in a multi-MB
-  // dependency that blew out every mission-route bundle). The photo is
-  // discarded either way; the UI carries the honesty message instead.
+  // WHY: no photo/face-detection gate -- a good-faith honor system instead.
+  // An "is a face present" check was trivially beaten by any photo of any
+  // face, so it wasn't buying real deterrence, and pulled in a multi-MB
+  // dependency that blew out every mission-route bundle. The UI carries the
+  // honesty message instead.
   const nowIso = new Date().toISOString();
   const checkInRow: StoredMissionCheckIn = {
     id: `check-in-${crypto.randomUUID()}`,
@@ -141,11 +126,10 @@ async function checkInMemory(
 export async function checkIn(
   ctx: RequestContext,
   missionId: string,
-  input: unknown = null,
 ): Promise<CheckInResult> {
   const result = ctx.supabase
-    ? await checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
-    : await checkInMemory(ctx.userId, missionId, input);
+    ? await checkInSupabase(ctx.supabase, ctx.userId, missionId)
+    : await checkInMemory(ctx.userId, missionId);
 
   if (result.ok && result.body.awardedXp > 0) {
     await recordXpLedgerEntry(ctx, {

@@ -12,10 +12,6 @@ import { CREATE_CONTENT_XP, getXpLedger } from '../../src/backend/xp';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
-const CHECK_IN_PHOTO = {
-  checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
-};
-
 afterEach(() => {
   setSystemTime();
   resetStore();
@@ -162,7 +158,7 @@ describe('XP ledger for mission completion', () => {
       throw new Error('setup failed');
     }
 
-    const result = await checkIn(ctx(), recreated.mission.id, CHECK_IN_PHOTO);
+    const result = await checkIn(ctx(), recreated.mission.id);
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;

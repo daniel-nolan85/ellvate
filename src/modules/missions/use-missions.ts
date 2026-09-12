@@ -81,11 +81,6 @@ export interface CheckInResult {
   readonly progress: UserProgress;
 }
 
-export interface CheckInPhotoInput {
-  readonly filename: string;
-  readonly dataUrl: string;
-}
-
 export interface NewMissionMediaInput {
   readonly filename: string;
   readonly dataUrl: string;
@@ -359,7 +354,6 @@ export function useAcceptMission() {
 
 export interface CheckInInput {
   readonly missionId: string;
-  readonly photo?: CheckInPhotoInput;
 }
 
 export interface CheckInCelebration {
@@ -375,8 +369,7 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
   const userId = session.userId ?? 'demo-user';
 
   return useMutation<CheckInResult, Error, CheckInInput, MissionDetailMutationContext>({
-    mutationFn: ({ missionId, photo }) => requestJson<CheckInResult>({
-      body: photo ? { checkInPhoto: photo } : {},
+    mutationFn: ({ missionId }) => requestJson<CheckInResult>({
       getAccessToken: session.getToken,
       method: 'POST',
       path: `/api/missions/${missionId}/check-in`,

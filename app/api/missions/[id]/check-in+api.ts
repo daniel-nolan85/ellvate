@@ -6,8 +6,7 @@ export async function POST(
   { id }: { id: string },
 ): Promise<Response> {
   return withRequestContext(request, async (ctx) => {
-    const body: unknown = await request.json().catch(() => null);
-    const result = await checkIn(ctx, id, body);
+    const result = await checkIn(ctx, id);
 
     if (!result.ok) {
       return jsonError(result.status, result.code, result.message);

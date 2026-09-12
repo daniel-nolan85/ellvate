@@ -120,10 +120,7 @@ export interface CheckInResponse {
   readonly progress: UserProgress;
 }
 
-export type CheckInErrorCode =
-  | 'mission_not_found'
-  | 'mission_complete'
-  | 'photo_required';
+export type CheckInErrorCode = 'mission_not_found' | 'mission_complete';
 
 export interface CheckInFailure {
   readonly ok: false;

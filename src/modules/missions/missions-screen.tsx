@@ -206,6 +206,17 @@ export function MissionsScreen({
               title="Missions"
             />
 
+            <VStack className="mx-5 gap-1 rounded-2xl bg-accent-subtle px-4 py-3">
+              <Text className="font-inter-semibold text-[13px] text-accent">
+                🌵 Explore. Discover. Earn.
+              </Text>
+              <Text className="text-[12px] leading-4 text-accent">
+                Missions are designed to get you out and experiencing Lake
+                Las Vegas. Please check in honestly and keep things fair.
+                The XP is the bonus. The adventure is the point.
+              </Text>
+            </VStack>
+
             {progress.data ? <XpHero progress={progress.data} /> : null}
             <MissionFilterChips active={filter} onSelect={setFilter} />
             {missionsView.isPending ||

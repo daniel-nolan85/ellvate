@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
-  extractCheckInPhoto,
   extractExistingMedia,
   extractMediaUploads,
 } from '@/src/backend/media';
@@ -707,7 +706,6 @@ export async function checkInSupabase(
   supabase: SupabaseClient,
   userId: string,
   missionId: string,
-  input: unknown,
 ): Promise<CheckInResult> {
   await ensureUser(supabase, userId);
 
@@ -751,22 +749,12 @@ export async function checkInSupabase(
   const stopsDone = currentStopsDone + 1;
   const completed = stopsDone >= mission.stops_total;
   const awardedXp = completed ? mission.xp : 0;
-  const photo = extractCheckInPhoto(input);
 
-  if (completed && !photo) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'photo_required',
-      message: 'A photo is required to complete this mission.',
-    };
-  }
-
-  // WHY: never persisted -- a good-faith honor system, not an automated
-  // check (an "is a face present" gate is trivially beaten by any photo of
-  // any face, so it wasn't buying real deterrence, and pulled in a multi-MB
-  // dependency that blew out every mission-route bundle). The photo is
-  // discarded either way; the UI carries the honesty message instead.
+  // WHY: no photo/face-detection gate -- a good-faith honor system instead.
+  // An "is a face present" check was trivially beaten by any photo of any
+  // face, so it wasn't buying real deterrence, and pulled in a multi-MB
+  // dependency that blew out every mission-route bundle. The UI carries the
+  // honesty message instead.
   const { error: checkInInsertError } = await supabase.from('mission_check_ins').insert({
     mission_id: missionId,
     user_id: userId,
