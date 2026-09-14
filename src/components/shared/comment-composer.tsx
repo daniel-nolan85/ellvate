@@ -33,8 +33,14 @@ export function CommentComposer({
     // letting the composer paint at the wrong position (overlapping list
     // content instead of sitting below it) instead of just being invisible.
     // Same root cause and fix as the header on the digest screen.
+    //
+    // bg-paper + shadow-hard-4 (an upward-cast shadow): without its own
+    // opaque background this View was the same color as the canvas behind
+    // it, so scrolled-to-the-edge content read as running straight into the
+    // composer with no visible seam -- the hairline border alone didn't
+    // provide enough contrast to register as a distinct, raised bar.
     <View
-      className="gap-2.5 border-t border-line px-[18px] pb-9 pt-2.5"
+      className="gap-2.5 border-t border-line bg-paper px-[18px] pb-9 pt-2.5 shadow-hard-4"
       collapsable={false}
     >
       {editing ? (
