@@ -485,8 +485,14 @@ export function ServiceDetailScreen({
         {/* Pinned footer, not part of the scroll -- KeyboardAvoidingView only
             resizes its flex-1 sibling above, it doesn't scroll to a focused
             field, so a review composer embedded mid-scroll never came into
-            view on its own when the keyboard opened. */}
-        <View className="border-t border-line px-[18px] py-3">
+            view on its own when the keyboard opened.
+
+            bg-paper + shadow-hard-4 (an upward-cast shadow): without its own
+            opaque background this View matched the canvas color behind it,
+            so scrolled-to-the-edge reviews read as running straight into
+            the footer with no visible seam -- see comment-composer.tsx's
+            identical fix. */}
+        <View className="border-t border-line bg-paper px-[18px] py-3 shadow-hard-4">
           <ServiceReviewComposer
             isSubmitting={createReview.isPending}
             key={reviewComposerKey}
