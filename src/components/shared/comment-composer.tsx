@@ -37,10 +37,17 @@ export function CommentComposer({
     // bg-paper + shadow-hard-4 (an upward-cast shadow): without its own
     // opaque background this View was the same color as the canvas behind
     // it, so scrolled-to-the-edge content read as running straight into the
-    // composer with no visible seam -- the hairline border alone didn't
-    // provide enough contrast to register as a distinct, raised bar.
+    // composer with no visible seam. A first attempt paired bg-paper with
+    // the standard border-line hairline (12% opacity) -- too subtle a color
+    // shift within this app's deliberately low-contrast palette to register
+    // reliably, especially over a compressed screenshot, and native
+    // shadow-* box-shadow translation isn't guaranteed to carry all the way
+    // through on-device the way it does on web. A visibly thicker,
+    // higher-opacity border is the one part of this that's guaranteed to
+    // render identically on every platform, so it carries the fix even if
+    // the shadow doesn't land.
     <View
-      className="gap-2.5 border-t border-line bg-paper px-[18px] pb-9 pt-2.5 shadow-hard-4"
+      className="gap-2.5 border-t-2 border-[rgba(37,30,23,0.35)] bg-paper px-[18px] pb-9 pt-2.5 shadow-hard-4"
       collapsable={false}
     >
       {editing ? (

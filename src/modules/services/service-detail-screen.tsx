@@ -487,12 +487,11 @@ export function ServiceDetailScreen({
             field, so a review composer embedded mid-scroll never came into
             view on its own when the keyboard opened.
 
-            bg-paper + shadow-hard-4 (an upward-cast shadow): without its own
-            opaque background this View matched the canvas color behind it,
-            so scrolled-to-the-edge reviews read as running straight into
-            the footer with no visible seam -- see comment-composer.tsx's
-            identical fix. */}
-        <View className="border-t border-line bg-paper px-[18px] py-3 shadow-hard-4">
+            bg-paper + shadow-hard-4 (an upward-cast shadow) + a visibly
+            thicker, higher-opacity border: see comment-composer.tsx's
+            identical fix for why the color shift and shadow alone weren't
+            enough on-device. */}
+        <View className="border-t-2 border-[rgba(37,30,23,0.35)] bg-paper px-[18px] py-3 shadow-hard-4">
           <ServiceReviewComposer
             isSubmitting={createReview.isPending}
             key={reviewComposerKey}
