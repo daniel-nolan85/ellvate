@@ -3,8 +3,8 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { DeletableTable } from '../app/(dashboard)/actions';
 import { escapeOrSearchTerm, LIST_PAGE_SIZE } from './pagination';
 
-// Reports merge 10 separate tables. A fully keyset-paginated merge across all
-// 10 (independently tracking each table's cursor position) is real complexity
+// Reports merge 11 separate tables. A fully keyset-paginated merge across all
+// 11 (independently tracking each table's cursor position) is real complexity
 // for an internal moderation queue with a small row count -- offset
 // pagination is simpler to build and maintain, and the classic downside (a
 // row shifting page as new reports arrive between loads) is a non-issue at
@@ -71,6 +71,7 @@ export async function loadReports(
     petitionReports,
     petitionCommentReports,
     memberReports,
+    missionCheckInPhotoReports,
   ] = await Promise.all([
     markSeen,
     withReporterFilter(
@@ -163,6 +164,15 @@ export async function loadReports(
     )
       .order('created_at', { ascending: false })
       .limit(FETCH_CAP),
+    withReporterFilter(
+      admin
+        .from('mission_check_in_photo_reports')
+        .select(
+          'id, check_in_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), check_in:mission_check_ins(photo_url, mission_id, mission:missions(title))',
+        ),
+    )
+      .order('created_at', { ascending: false })
+      .limit(FETCH_CAP),
   ]);
 
   for (const result of [
@@ -176,6 +186,7 @@ export async function loadReports(
     petitionReports,
     petitionCommentReports,
     memberReports,
+    missionCheckInPhotoReports,
   ]) {
     if (result.error) {
       throw result.error;
@@ -444,6 +455,38 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'app_users',
       deleteId: r.reported_user_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
+    });
+  }
+
+  for (const r of (missionCheckInPhotoReports.data ?? []) as unknown as readonly {
+    id: string;
+    check_in_id: string;
+    created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
+    reporter: { name: string } | null;
+    check_in: {
+      photo_url: string | null;
+      mission_id: string;
+      mission: { title: string } | null;
+    } | null;
+  }[]) {
+    rows.push({
+      id: r.id,
+      type: 'Mission check-in photo',
+      snippet: r.check_in?.mission?.title
+        ? `Check-in photo — "${r.check_in.mission.title}"`
+        : 'Unknown check-in',
+      photoUrl: r.check_in?.photo_url ?? null,
+      detailHref: r.check_in ? `/missions/${r.check_in.mission_id}` : null,
+      reporter: r.reporter?.name ?? 'Unknown',
+      created_at: r.created_at,
+      deleteTable: 'mission_check_ins',
+      deleteId: r.check_in_id,
       reason: r.reason,
       details: r.details,
       evidenceImageUrl: r.evidence_image_url,

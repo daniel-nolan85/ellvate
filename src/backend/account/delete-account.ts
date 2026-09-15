@@ -99,8 +99,16 @@ async function deleteAccountMemory(ctx: RequestContext): Promise<void> {
   // still finds it via ensureUser()/current.users lookups.
   setState((current) => {
     const remainingPostIds = new Set(current.posts.map((post) => post.id));
+    const removedCheckInIds = new Set(
+      current.missionCheckIns
+        .filter((checkIn) => checkIn.userId === userId)
+        .map((checkIn) => checkIn.id),
+    );
     return {
       ...current,
+      missionCheckInPhotoReports: current.missionCheckInPhotoReports.filter(
+        (report) => !removedCheckInIds.has(report.checkInId),
+      ),
       missionCheckIns: current.missionCheckIns.filter(
         (checkIn) => checkIn.userId !== userId,
       ),

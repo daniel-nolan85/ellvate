@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 
 import {
   GET as getMissions,
@@ -12,7 +12,9 @@ import {
 import { GET as getMissionsProgress } from '../../app/api/missions/progress+api';
 import { POST as postAccept } from '../../app/api/missions/[id]/accept+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
+import { GET as getCheckInPhotos } from '../../app/api/missions/[id]/check-in-photos+api';
 import { POST as postReport } from '../../app/api/missions/[id]/report+api';
+import { POST as postCheckInPhotoReport } from '../../app/api/mission-check-ins/[id]/report+api';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import {
   acceptMission,
@@ -21,8 +23,10 @@ import {
   deleteMission,
   getMissionsView,
   getUserProgress,
+  listMissionCheckInPhotos,
   listMissionsPage,
   reportMission,
+  reportMissionCheckInPhoto,
   updateMission,
 } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
@@ -38,6 +42,7 @@ const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
 };
 
 afterEach(() => {
+  setSystemTime();
   resetStore();
   resetWriteRateLimits();
 });
@@ -322,6 +327,127 @@ describe('checkIn', () => {
         DEMO_USER_ID
       ],
     ).toBeUndefined();
+  });
+
+  test('an attached photo is optional and shows up in the check-in gallery', async () => {
+    const result = await checkIn(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    expect(result.ok).toBe(true);
+
+    const gallery = await listMissionCheckInPhotos(ctx(), 'mission-1');
+    expect(gallery.photos).toHaveLength(1);
+    expect(gallery.photos[0]?.photoUrl).toBe('data:image/jpeg;base64,b25l');
+    expect(gallery.photos[0]?.author.id).toBe(DEMO_USER_ID);
+  });
+
+  test('a check-in with no photo adds nothing to the gallery', async () => {
+    const result = await checkIn(ctx(), 'mission-1');
+    expect(result.ok).toBe(true);
+
+    const gallery = await listMissionCheckInPhotos(ctx(), 'mission-1');
+    expect(gallery.photos).toHaveLength(0);
+  });
+});
+
+describe('listMissionCheckInPhotos', () => {
+  test('is newest-first and excludes muted authors', async () => {
+    setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    await checkIn(ctx('user-mia'), 'mission-2', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
+    });
+    setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
+    await checkIn(ctx(), 'mission-2', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,dHdv', filename: 'two.jpg' },
+    });
+
+    const unfiltered = await listMissionCheckInPhotos(ctx(), 'mission-2');
+    expect(unfiltered.photos.map((photo) => photo.author.id)).toEqual([
+      DEMO_USER_ID,
+      'user-mia',
+    ]);
+
+    await toggleMute(ctx(), 'user-mia');
+    const filtered = await listMissionCheckInPhotos(ctx(), 'mission-2');
+    expect(filtered.photos.map((photo) => photo.author.id)).toEqual([DEMO_USER_ID]);
+  });
+
+  test('GET /api/missions/:id/check-in-photos returns the gallery page', async () => {
+    await checkIn(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+
+    const response = await getCheckInPhotos(
+      new Request('http://localhost/api/missions/mission-1/check-in-photos'),
+      { id: 'mission-1' },
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      photos: readonly { photoUrl: string }[];
+      nextCursor: string | null;
+    };
+    expect(body.photos).toHaveLength(1);
+    expect(body.nextCursor).toBeNull();
+  });
+});
+
+describe('reportMissionCheckInPhoto', () => {
+  test('is idempotent -- reporting twice records one report', async () => {
+    const checkInResult = await checkIn(ctx('user-mia'), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    expect(checkInResult.ok).toBe(true);
+    const [photo] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+    expect(photo).toBeDefined();
+
+    await reportMissionCheckInPhoto(ctx(), photo!.id, TEST_REPORT_SUBMISSION);
+    await reportMissionCheckInPhoto(ctx(), photo!.id, TEST_REPORT_SUBMISSION);
+
+    expect(
+      getState().missionCheckInPhotoReports.filter(
+        (report) => report.checkInId === photo!.id,
+      ),
+    ).toHaveLength(1);
+  });
+
+  test('returns check_in_not_found for a check-in with no photo', async () => {
+    await checkIn(ctx(), 'mission-1');
+    const [checkInRow] = getState().missionCheckIns;
+    expect(checkInRow).toBeDefined();
+
+    const result = await reportMissionCheckInPhoto(
+      ctx(),
+      checkInRow!.id,
+      TEST_REPORT_SUBMISSION,
+    );
+    expect(result).toMatchObject({ ok: false, code: 'check_in_not_found' });
+  });
+
+  test('returns check_in_not_found for an unknown check-in', async () => {
+    const result = await reportMissionCheckInPhoto(
+      ctx(),
+      'does-not-exist',
+      TEST_REPORT_SUBMISSION,
+    );
+    expect(result).toMatchObject({ ok: false, code: 'check_in_not_found' });
+  });
+
+  test('POST /api/mission-check-ins/:id/report reports a check-in photo', async () => {
+    await checkIn(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    const [photo] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+
+    const response = await postCheckInPhotoReport(
+      new Request('http://localhost/api/mission-check-ins/x/report', {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }),
+      { id: photo!.id },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ reported: true });
   });
 });
 

@@ -100,6 +100,7 @@ const DELETABLE_CONTENT = {
   service_reviews: '/comments',
   events: '/events',
   missions: '/missions',
+  mission_check_ins: '/missions',
   service_listings: '/services',
   app_users: '/users',
   contact_messages: '/contact',

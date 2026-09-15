@@ -352,8 +352,16 @@ export function useAcceptMission() {
   });
 }
 
+export interface CheckInPhotoInput {
+  readonly dataUrl: string;
+  readonly filename: string;
+}
+
 export interface CheckInInput {
   readonly missionId: string;
+  // Entirely optional -- an honor-system add-on to the gallery, never a
+  // requirement to complete a check-in.
+  readonly photo?: CheckInPhotoInput;
 }
 
 export interface CheckInCelebration {
@@ -369,7 +377,8 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
   const userId = session.userId ?? 'demo-user';
 
   return useMutation<CheckInResult, Error, CheckInInput, MissionDetailMutationContext>({
-    mutationFn: ({ missionId }) => requestJson<CheckInResult>({
+    mutationFn: ({ missionId, photo }) => requestJson<CheckInResult>({
+      body: photo ? { checkInPhoto: photo } : undefined,
       getAccessToken: session.getToken,
       method: 'POST',
       path: `/api/missions/${missionId}/check-in`,
@@ -397,10 +406,13 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
 
       return { previous, previousLevel };
     },
-    onSettled: () => {
+    onSettled: (_result, _error, { missionId }) => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['missions', 'check-in-photos', missionId],
+      });
     },
     onSuccess: (result, _input, context) => {
       if (result.awardedXp > 0) {

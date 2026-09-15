@@ -143,6 +143,17 @@ export interface StoredMissionCheckIn {
   readonly userId: string;
   readonly stopIndex: number;
   readonly completedAt: string;
+  readonly photoUrl: string | null;
+}
+
+export interface StoredMissionCheckInPhotoReport {
+  readonly id: string;
+  readonly checkInId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
 }
 
 export interface StoredEvent {
@@ -403,6 +414,7 @@ export interface StoreState {
   readonly missionCommentReports: readonly StoredMissionCommentReport[];
   readonly missionReports: readonly StoredMissionReport[];
   readonly missionCheckIns: readonly StoredMissionCheckIn[];
+  readonly missionCheckInPhotoReports: readonly StoredMissionCheckInPhotoReport[];
   readonly serviceListings: readonly StoredServiceListing[];
   readonly serviceReviews: readonly StoredServiceReview[];
   readonly serviceReviewReports: readonly StoredServiceReviewReport[];

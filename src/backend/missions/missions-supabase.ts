@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  extractCheckInPhoto,
   extractExistingMedia,
   extractMediaUploads,
 } from '@/src/backend/media';
@@ -17,11 +18,13 @@ import type {
   CheckInResult,
   CreateMissionResult,
   Mission,
+  MissionCheckInPhotosPage,
   MissionFilter,
   MissionMedia,
   MissionsPage,
   MissionsView,
   MyMissionsPage,
+  ReportMissionCheckInPhotoResult,
   ReportMissionResult,
   UpdateMissionResult,
   UserProgress,
@@ -706,6 +709,7 @@ export async function checkInSupabase(
   supabase: SupabaseClient,
   userId: string,
   missionId: string,
+  input?: unknown,
 ): Promise<CheckInResult> {
   await ensureUser(supabase, userId);
 
@@ -754,11 +758,20 @@ export async function checkInSupabase(
   // An "is a face present" check was trivially beaten by any photo of any
   // face, so it wasn't buying real deterrence, and pulled in a multi-MB
   // dependency that blew out every mission-route bundle. The UI carries the
-  // honesty message instead.
+  // honesty message instead. A photo is entirely optional here -- attaching
+  // one is a fun add-on to the gallery, never a requirement to complete. A
+  // failed upload doesn't block the check-in itself (mirrors
+  // extractAvatarUpload's best-effort handling in profile-supabase.ts) --
+  // losing the photo is far less harmful than losing the XP/progress.
+  const photoUpload = extractCheckInPhoto(input);
+  const photoUrl = photoUpload
+    ? await uploadDataUrl(supabase, photoUpload.dataUrl, photoUpload.filename, 'mission-checkins', userId)
+    : null;
   const { error: checkInInsertError } = await supabase.from('mission_check_ins').insert({
     mission_id: missionId,
     user_id: userId,
     stop_index: currentStopsDone,
+    photo_url: photoUrl,
   });
   throwIfSupabaseError(checkInInsertError, 'save mission check-in');
 
@@ -829,6 +842,117 @@ export async function checkInSupabase(
       }),
     },
   };
+}
+
+const CHECK_IN_PHOTO_SELECT =
+  'id,mission_id,user_id,stop_index,completed_at,photo_url,author:app_users!mission_check_ins_user_id_fkey(id,name,avatar_url,is_admin)';
+
+interface CheckInPhotoRow {
+  readonly id: string;
+  readonly mission_id: string;
+  readonly user_id: string;
+  readonly stop_index: number;
+  readonly completed_at: string;
+  readonly photo_url: string | null;
+  readonly author: {
+    readonly id: string;
+    readonly name: string;
+    readonly avatar_url: string | null;
+    readonly is_admin: boolean;
+  } | null;
+}
+
+const toCheckInPhoto = (row: CheckInPhotoRow) => ({
+  author: {
+    avatarUrl: row.author?.avatar_url ?? null,
+    id: row.user_id,
+    isAdmin: row.author?.is_admin ?? false,
+    name: row.author?.name ?? 'Member',
+  },
+  completedAt: row.completed_at,
+  id: row.id,
+  missionId: row.mission_id,
+  // Non-null by the query's `.not('photo_url', 'is', null)` filter below --
+  // TypeScript can't see through a query filter, so this is a plain
+  // assertion, not a runtime check.
+  photoUrl: row.photo_url as string,
+  stopIndex: row.stop_index,
+});
+
+// Newest-first gallery of everyone's optional check-in photos for one
+// mission -- mirrors listMissionCommentsPageSupabase's fetch-then-paginate
+// shape, but skips the ascending-order inversion trick since a photo
+// gallery has no "conversation" to read in order; descending by
+// completed_at is already the page's natural order.
+export async function listMissionCheckInPhotosSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<MissionCheckInPhotosPage> {
+  const [{ data, error }, mutedUserIds] = await Promise.all([
+    supabase
+      .from('mission_check_ins')
+      .select(CHECK_IN_PHOTO_SELECT)
+      .eq('mission_id', missionId)
+      .not('photo_url', 'is', null)
+      .order('completed_at', { ascending: false }),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
+  throwIfSupabaseError(error, 'load mission check-in photos');
+  const mutedSet = new Set(mutedUserIds);
+  const rows = ((data as unknown as CheckInPhotoRow[]) ?? []).filter(
+    (row) => !mutedSet.has(row.user_id),
+  );
+
+  const wrapped = rows.map((row) => ({ id: row.id, row, sortKey: row.completed_at }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    nextCursor: page.nextCursor,
+    photos: page.items.map((item) => toCheckInPhoto(item.row)),
+  };
+}
+
+export async function reportMissionCheckInPhotoSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  checkInId: string,
+  submission: ValidReportSubmission,
+): Promise<ReportMissionCheckInPhotoResult> {
+  const { data: checkInRow, error: checkInError } = await supabase
+    .from('mission_check_ins')
+    .select('id')
+    .eq('id', checkInId)
+    .not('photo_url', 'is', null)
+    .maybeSingle();
+  throwIfSupabaseError(checkInError, 'load reported check-in photo');
+  if (!checkInRow) {
+    return { code: 'check_in_not_found', message: 'Check-in photo not found.', ok: false };
+  }
+
+  await ensureUser(supabase, userId);
+  const evidenceImageUrl = await uploadReportEvidence(
+    supabase,
+    userId,
+    submission.evidenceImageDataUrl,
+  );
+  // Idempotent: a unique (check_in_id, reporter_id) constraint on
+  // mission_check_in_photo_reports means a repeat report from the same user
+  // is a silent no-op, not an error.
+  const { error } = await supabase.from('mission_check_in_photo_reports').upsert(
+    {
+      check_in_id: checkInId,
+      details: submission.details,
+      evidence_image_url: evidenceImageUrl,
+      reason: submission.reason,
+      reporter_id: userId,
+    },
+    { ignoreDuplicates: true, onConflict: 'check_in_id,reporter_id' },
+  );
+  throwIfSupabaseError(error, 'report mission check-in photo');
+  return { ok: true, reported: true };
 }
 
 // Creates a 0-stops mission_progress row for the user if one doesn't already
