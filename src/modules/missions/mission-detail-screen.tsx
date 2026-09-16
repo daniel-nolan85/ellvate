@@ -49,6 +49,7 @@ import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionCheckInThumbnailRow } from './mission-check-in-gallery';
 import { MissionComposer } from './mission-composer';
 import { missionThemeIcon } from './mission-theme';
+import { useMyCheckInPhoto, useUpdateMyCheckInPhoto } from './use-mission-check-in-photos';
 import {
   useCreateMissionComment,
   useDeleteMissionComment,
@@ -185,6 +186,8 @@ export function MissionDetailScreen({
 
   const done = mission?.status === 'done';
   const badge = mission ? STATUS_BADGE[mission.status] : null;
+  const myCheckInPhoto = useMyCheckInPhoto(missionId, done);
+  const updateMyCheckInPhoto = useUpdateMyCheckInPhoto();
   const isFinalStop =
     !!mission &&
     mission.status === 'active' &&
@@ -211,6 +214,30 @@ export function MissionDetailScreen({
     if (picked) {
       setCheckInPhoto(picked);
     }
+  };
+
+  const handleReplaceCompletionPhoto = async () => {
+    const [picked] = await pickGalleryImages({ selectionLimit: 1 });
+    if (!picked) {
+      return;
+    }
+    updateMyCheckInPhoto.mutate(
+      {
+        missionId,
+        photo: {
+          dataUrl: `data:${picked.mimeType};base64,${picked.base64}`,
+          filename: picked.filename,
+        },
+      },
+      { onError: () => showToast('Couldn’t update your photo. Try again.') },
+    );
+  };
+
+  const handleRemoveCompletionPhoto = () => {
+    updateMyCheckInPhoto.mutate(
+      { missionId, removePhoto: true },
+      { onError: () => showToast('Couldn’t remove your photo. Try again.') },
+    );
   };
 
   const handleCheckIn = () => {
@@ -651,6 +678,53 @@ export function MissionDetailScreen({
                           {isFinalStop ? 'Complete mission' : 'Check in'}
                         </ButtonText>
                       </Button>
+                    </VStack>
+                  ) : null}
+
+                  {mission.status === 'done' && mission.accepted ? (
+                    <VStack className="gap-2.5">
+                      <Text className="font-inter-semibold text-[12px] text-text-muted">
+                        Your check-in photo
+                      </Text>
+                      {myCheckInPhoto.data?.photoUrl ? (
+                        <HStack className="items-center gap-2.5">
+                          <Image
+                            className="rounded-lg bg-secondary"
+                            source={{ uri: myCheckInPhoto.data.photoUrl }}
+                            style={{ height: 40, width: 40 }}
+                          />
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={updateMyCheckInPhoto.isPending}
+                            onPress={() => void handleReplaceCompletionPhoto()}
+                          >
+                            <Text className="font-inter-semibold text-[12px] text-muted-foreground">
+                              Replace
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={updateMyCheckInPhoto.isPending}
+                            onPress={handleRemoveCompletionPhoto}
+                          >
+                            <Text className="font-inter-semibold text-[12px] text-text-muted">
+                              Remove
+                            </Text>
+                          </Pressable>
+                        </HStack>
+                      ) : (
+                        <Pressable
+                          accessibilityRole="button"
+                          className="flex-row items-center gap-1.5 self-start"
+                          disabled={updateMyCheckInPhoto.isPending}
+                          onPress={() => void handleReplaceCompletionPhoto()}
+                        >
+                          <Icon color="rgb(120,108,94)" name="Add" size={14} />
+                          <Text className="font-inter-semibold text-[12px] text-muted-foreground">
+                            Add a photo
+                          </Text>
+                        </Pressable>
+                      )}
                     </VStack>
                   ) : null}
 

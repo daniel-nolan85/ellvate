@@ -10,8 +10,18 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { recordXpLedgerEntry } from '@/src/backend/xp';
 
 import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
-import { checkInSupabase, listMissionCheckInPhotosSupabase } from './missions-supabase';
-import type { CheckInResult, Mission, MissionCheckInPhotosPage } from './types';
+import {
+  checkInSupabase,
+  getMyCheckInPhotoSupabase,
+  listMissionCheckInPhotosSupabase,
+  updateMyCheckInPhotoSupabase,
+} from './missions-supabase';
+import type {
+  CheckInResult,
+  Mission,
+  MissionCheckInPhotosPage,
+  MyCheckInPhotoResult,
+} from './types';
 import { buildUserProgress } from './user-progress';
 
 export const DEFAULT_CHECK_IN_PHOTOS_PAGE_SIZE = 20;
@@ -207,5 +217,94 @@ export async function listMissionCheckInPhotos(
   return ctx.supabase
     ? listMissionCheckInPhotosSupabase(ctx.supabase, ctx.userId, missionId, limit, cursor)
     : listMissionCheckInPhotosMemory(ctx.userId, missionId, limit, cursor);
+}
+
+// The check-in that actually finished the mission for this user -- the row
+// with the highest stopIndex, since a done mission's final check-in is
+// always the last one recorded. Editing a photo only ever targets this one
+// row, not every stop's check-in, mirroring how the UI shows a single "your
+// check-in photo" slot on a completed mission rather than a per-stop gallery.
+function findCompletingCheckIn(
+  userId: string,
+  missionId: string,
+): StoredMissionCheckIn | undefined {
+  return getState().missionCheckIns
+    .filter((row) => row.missionId === missionId && row.userId === userId)
+    .reduce<StoredMissionCheckIn | undefined>(
+      (latest, row) => (!latest || row.stopIndex > latest.stopIndex ? row : latest),
+      undefined,
+    );
+}
+
+function getMyCheckInPhotoMemory(userId: string, missionId: string): MyCheckInPhotoResult {
+  const mission = getState().missions.find((item) => item.id === missionId);
+  if (!mission) {
+    return {
+      ok: false,
+      status: 404,
+      code: 'mission_not_found',
+      message: 'Mission not found.',
+    };
+  }
+  const entry = getUserMissionEntry(mission, userId);
+  if (resolveMissionStatus(mission, entry) !== 'done') {
+    return {
+      ok: false,
+      status: 409,
+      code: 'not_completed',
+      message: 'You haven’t completed this mission yet.',
+    };
+  }
+  const checkInRow = findCompletingCheckIn(userId, missionId);
+  return { ok: true, body: { photoUrl: checkInRow?.photoUrl ?? null } };
+}
+
+function updateMyCheckInPhotoMemory(
+  userId: string,
+  missionId: string,
+  input: unknown,
+): MyCheckInPhotoResult {
+  ensureUser(userId);
+  const existing = getMyCheckInPhotoMemory(userId, missionId);
+  if (!existing.ok) {
+    return existing;
+  }
+  const checkInRow = findCompletingCheckIn(userId, missionId);
+  if (!checkInRow) {
+    return { ok: true, body: { photoUrl: null } };
+  }
+
+  const raw = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  const nextPhotoUrl = raw.removePhoto === true
+    ? null
+    : (extractCheckInPhoto(input)?.dataUrl ?? checkInRow.photoUrl);
+
+  setState((state) => ({
+    ...state,
+    missionCheckIns: state.missionCheckIns.map((row) =>
+      row.id === checkInRow.id ? { ...row, photoUrl: nextPhotoUrl } : row,
+    ),
+  }));
+
+  return { ok: true, body: { photoUrl: nextPhotoUrl } };
+}
+
+export async function getMyCheckInPhoto(
+  ctx: RequestContext,
+  missionId: string,
+): Promise<MyCheckInPhotoResult> {
+  return ctx.supabase
+    ? getMyCheckInPhotoSupabase(ctx.supabase, ctx.userId, missionId)
+    : getMyCheckInPhotoMemory(ctx.userId, missionId);
+}
+
+export async function updateMyCheckInPhoto(
+  ctx: RequestContext,
+  missionId: string,
+  input: unknown,
+): Promise<MyCheckInPhotoResult> {
+  return ctx.supabase
+    ? updateMyCheckInPhotoSupabase(ctx.supabase, ctx.userId, missionId, input)
+    : updateMyCheckInPhotoMemory(ctx.userId, missionId, input);
 }
 
