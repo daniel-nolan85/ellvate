@@ -12,6 +12,10 @@ import {
 import { GET as getMissionsProgress } from '../../app/api/missions/progress+api';
 import { POST as postAccept } from '../../app/api/missions/[id]/accept+api';
 import { POST as postCheckIn } from '../../app/api/missions/[id]/check-in+api';
+import {
+  GET as getMyCheckInPhotoRoute,
+  PATCH as patchMyCheckInPhotoRoute,
+} from '../../app/api/missions/[id]/check-in-photo+api';
 import { GET as getCheckInPhotos } from '../../app/api/missions/[id]/check-in-photos+api';
 import { POST as postReport } from '../../app/api/missions/[id]/report+api';
 import { POST as postCheckInPhotoReport } from '../../app/api/mission-check-ins/[id]/report+api';
@@ -22,12 +26,14 @@ import {
   createMission,
   deleteMission,
   getMissionsView,
+  getMyCheckInPhoto,
   getUserProgress,
   listMissionCheckInPhotos,
   listMissionsPage,
   reportMission,
   reportMissionCheckInPhoto,
   updateMission,
+  updateMyCheckInPhoto,
 } from '../../src/backend/missions';
 import { toggleMute } from '../../src/backend/mutes';
 import { computeProgress } from '../../src/backend/progress';
@@ -388,6 +394,157 @@ describe('listMissionCheckInPhotos', () => {
     };
     expect(body.photos).toHaveLength(1);
     expect(body.nextCursor).toBeNull();
+  });
+});
+
+describe('getMyCheckInPhoto / updateMyCheckInPhoto', () => {
+  test('rejects a not-yet-completed mission with 409 not_completed', async () => {
+    expect(await getMyCheckInPhoto(ctx(), 'mission-2')).toMatchObject({
+      ok: false,
+      status: 409,
+      code: 'not_completed',
+    });
+    expect(
+      await updateMyCheckInPhoto(ctx(), 'mission-2', { removePhoto: true }),
+    ).toMatchObject({ ok: false, status: 409, code: 'not_completed' });
+  });
+
+  test('rejects an unknown mission with 404 mission_not_found', async () => {
+    expect(await getMyCheckInPhoto(ctx(), 'mission-999')).toMatchObject({
+      ok: false,
+      status: 404,
+      code: 'mission_not_found',
+    });
+  });
+
+  test('a photo-less completion reads back as null', async () => {
+    await checkIn(ctx(), 'mission-1');
+
+    const result = await getMyCheckInPhoto(ctx(), 'mission-1');
+    expect(result).toMatchObject({ ok: true, body: { photoUrl: null } });
+  });
+
+  test('attaching a photo after completion shows up in getMyCheckInPhoto and the gallery', async () => {
+    await checkIn(ctx(), 'mission-1');
+
+    const result = await updateMyCheckInPhoto(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      body: { photoUrl: 'data:image/jpeg;base64,b25l' },
+    });
+    expect(await getMyCheckInPhoto(ctx(), 'mission-1')).toMatchObject({
+      ok: true,
+      body: { photoUrl: 'data:image/jpeg;base64,b25l' },
+    });
+
+    const gallery = await listMissionCheckInPhotos(ctx(), 'mission-1');
+    expect(gallery.photos).toHaveLength(1);
+    expect(gallery.photos[0]?.photoUrl).toBe('data:image/jpeg;base64,b25l');
+  });
+
+  test('replaces an already-attached photo', async () => {
+    await checkIn(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'one.jpg' },
+    });
+
+    const result = await updateMyCheckInPhoto(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,dHdv', filename: 'two.jpg' },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      body: { photoUrl: 'data:image/jpeg;base64,dHdv' },
+    });
+
+    const gallery = await listMissionCheckInPhotos(ctx(), 'mission-1');
+    expect(gallery.photos).toHaveLength(1);
+    expect(gallery.photos[0]?.photoUrl).toBe('data:image/jpeg;base64,dHdv');
+  });
+
+  test('removes an attached photo', async () => {
+    await checkIn(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+
+    const result = await updateMyCheckInPhoto(ctx(), 'mission-1', { removePhoto: true });
+    expect(result).toMatchObject({ ok: true, body: { photoUrl: null } });
+
+    const gallery = await listMissionCheckInPhotos(ctx(), 'mission-1');
+    expect(gallery.photos).toHaveLength(0);
+  });
+
+  test('targets the completing check-in on a multi-stop mission, not an earlier stop', async () => {
+    // mission-2 is seeded with the demo user already at 2/3 stops, so this
+    // uses a user starting fresh at 0/3 to actually exercise all 3 stops.
+    // Distinct timestamps per check-in, same as the gallery ordering test
+    // above -- otherwise all 3 land in the same millisecond and the gallery's
+    // "newest first" sort can't meaningfully distinguish them.
+    setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+    await checkIn(ctx('user-mia'), 'mission-2', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'stop-one.jpg' },
+    });
+    setSystemTime(new Date('2026-02-01T00:00:01.000Z'));
+    await checkIn(ctx('user-mia'), 'mission-2');
+    setSystemTime(new Date('2026-02-01T00:00:02.000Z'));
+    const finalCheckIn = await checkIn(ctx('user-mia'), 'mission-2');
+    expect(finalCheckIn.ok).toBe(true);
+    if (!finalCheckIn.ok) return;
+    expect(finalCheckIn.body.mission.status).toBe('done');
+
+    const result = await updateMyCheckInPhoto(ctx('user-mia'), 'mission-2', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,dHdv', filename: 'completing.jpg' },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      body: { photoUrl: 'data:image/jpeg;base64,dHdv' },
+    });
+
+    // The first stop's photo is untouched -- the gallery still shows both,
+    // newest (the just-edited completing check-in) first.
+    const gallery = await listMissionCheckInPhotos(ctx('user-mia'), 'mission-2');
+    expect(gallery.photos.map((photo) => photo.photoUrl)).toEqual([
+      'data:image/jpeg;base64,dHdv',
+      'data:image/jpeg;base64,b25l',
+    ]);
+  });
+
+  test('is scoped to the caller -- another user has no completing check-in to edit', async () => {
+    await checkIn(ctx(), 'mission-1');
+
+    expect(
+      await updateMyCheckInPhoto(ctx('user-mia'), 'mission-1', { removePhoto: true }),
+    ).toMatchObject({ ok: false, status: 409, code: 'not_completed' });
+  });
+
+  test('GET /api/missions/:id/check-in-photo returns the caller’s photo', async () => {
+    await checkIn(ctx(), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+
+    const response = await getMyCheckInPhotoRoute(
+      new Request('http://localhost/api/missions/mission-1/check-in-photo'),
+      { id: 'mission-1' },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ photoUrl: 'data:image/jpeg;base64,b25l' });
+  });
+
+  test('PATCH /api/missions/:id/check-in-photo updates the caller’s photo', async () => {
+    await checkIn(ctx(), 'mission-1');
+
+    const response = await patchMyCheckInPhotoRoute(
+      new Request('http://localhost/api/missions/mission-1/check-in-photo', {
+        body: JSON.stringify({
+          checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+      }),
+      { id: 'mission-1' },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ photoUrl: 'data:image/jpeg;base64,b25l' });
   });
 });
 

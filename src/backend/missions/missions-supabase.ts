@@ -23,6 +23,7 @@ import type {
   MissionMedia,
   MissionsPage,
   MissionsView,
+  MyCheckInPhotoResult,
   MyMissionsPage,
   ReportMissionCheckInPhotoResult,
   ReportMissionResult,
@@ -913,6 +914,121 @@ export async function listMissionCheckInPhotosSupabase(
     nextCursor: page.nextCursor,
     photos: page.items.map((item) => toCheckInPhoto(item.row)),
   };
+}
+
+// The check-in that actually finished the mission for this user -- the row
+// with the highest stop_index, mirroring findCompletingCheckIn's memory-
+// backend counterpart in check-in.ts.
+async function loadCompletingCheckInRow(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+): Promise<{ readonly id: string; readonly photo_url: string | null } | null> {
+  const { data, error } = await supabase
+    .from('mission_check_ins')
+    .select('id,photo_url')
+    .eq('mission_id', missionId)
+    .eq('user_id', userId)
+    .order('stop_index', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  throwIfSupabaseError(error, 'load completing mission check-in');
+  return data as { id: string; photo_url: string | null } | null;
+}
+
+const NOT_COMPLETED_RESULT: MyCheckInPhotoResult = {
+  ok: false,
+  status: 409,
+  code: 'not_completed',
+  message: 'You haven’t completed this mission yet.',
+};
+
+export async function getMyCheckInPhotoSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+): Promise<MyCheckInPhotoResult> {
+  const { data: mission, error: missionError } = await supabase
+    .from('missions')
+    .select('id')
+    .eq('id', missionId)
+    .maybeSingle();
+  throwIfSupabaseError(missionError, 'load mission');
+  if (!mission) {
+    return {
+      ok: false,
+      status: 404,
+      code: 'mission_not_found',
+      message: 'Mission not found.',
+    };
+  }
+
+  const { data: progress, error: progressError } = await supabase
+    .from('mission_progress')
+    .select('status')
+    .eq('mission_id', missionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(progressError, 'load mission progress');
+  if ((progress as { status: MissionStatus } | null)?.status !== 'done') {
+    return NOT_COMPLETED_RESULT;
+  }
+
+  const checkInRow = await loadCompletingCheckInRow(supabase, userId, missionId);
+  return { ok: true, body: { photoUrl: checkInRow?.photo_url ?? null } };
+}
+
+export async function updateMyCheckInPhotoSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  missionId: string,
+  input: unknown,
+): Promise<MyCheckInPhotoResult> {
+  const existing = await getMyCheckInPhotoSupabase(supabase, userId, missionId);
+  if (!existing.ok) {
+    return existing;
+  }
+
+  const checkInRow = await loadCompletingCheckInRow(supabase, userId, missionId);
+  if (!checkInRow) {
+    return { ok: true, body: { photoUrl: null } };
+  }
+
+  const raw = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  let nextPhotoUrl = checkInRow.photo_url;
+  if (raw.removePhoto === true) {
+    nextPhotoUrl = null;
+  } else {
+    const photoUpload = extractCheckInPhoto(input);
+    if (photoUpload) {
+      const uploadedUrl = await uploadDataUrl(
+        supabase,
+        photoUpload.dataUrl,
+        photoUpload.filename,
+        'mission-checkins',
+        userId,
+      );
+      // WHY: a failed upload leaves the existing photo in place rather than
+      // erroring the request -- mirrors checkInSupabase's own best-effort
+      // handling of this same upload call.
+      if (uploadedUrl) {
+        nextPhotoUrl = uploadedUrl;
+      }
+    }
+  }
+
+  if (nextPhotoUrl !== checkInRow.photo_url) {
+    const { error } = await supabase
+      .from('mission_check_ins')
+      .update({ photo_url: nextPhotoUrl })
+      .eq('id', checkInRow.id);
+    throwIfSupabaseError(error, 'update mission check-in photo');
+    if (checkInRow.photo_url) {
+      await removeStorageObjects(supabase, [checkInRow.photo_url]);
+    }
+  }
+
+  return { ok: true, body: { photoUrl: nextPhotoUrl } };
 }
 
 export async function reportMissionCheckInPhotoSupabase(

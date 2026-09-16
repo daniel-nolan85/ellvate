@@ -1,4 +1,9 @@
-export { checkIn, listMissionCheckInPhotos } from './check-in';
+export {
+  checkIn,
+  getMyCheckInPhoto,
+  listMissionCheckInPhotos,
+  updateMyCheckInPhoto,
+} from './check-in';
 export { acceptMission } from './accept';
 export { createMission } from './create';
 export { deleteMission } from './delete';
@@ -28,6 +33,9 @@ export type {
   MissionMedia,
   MissionsPage,
   MissionsView,
+  MyCheckInPhotoErrorCode,
+  MyCheckInPhotoResponse,
+  MyCheckInPhotoResult,
   MyMissionsOptions,
   MyMissionsPage,
   ReportMissionCheckInPhotoResult,

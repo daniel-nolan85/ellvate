@@ -166,6 +166,21 @@ export type ReportMissionCheckInPhotoResult =
       readonly message: string;
     };
 
+export interface MyCheckInPhotoResponse {
+  readonly photoUrl: string | null;
+}
+
+export type MyCheckInPhotoErrorCode = 'mission_not_found' | 'not_completed';
+
+export type MyCheckInPhotoResult =
+  | { readonly ok: true; readonly body: MyCheckInPhotoResponse }
+  | {
+      readonly ok: false;
+      readonly status: number;
+      readonly code: MyCheckInPhotoErrorCode;
+      readonly message: string;
+    };
+
 export type AcceptMissionResult =
   | { readonly ok: true; readonly mission: Mission }
   | {
