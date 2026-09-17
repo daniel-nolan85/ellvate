@@ -126,7 +126,7 @@ export function useOnboardingState() {
           'Profile sync is temporarily unavailable. Try again.',
         );
       }
-      await requestJson({
+      const response = await requestJson<Record<string, unknown>>({
         body: {
           // Omitted (not sent as an empty string) when the name step was
           // skipped -- the backend rejects an empty name, and skipping should
@@ -143,23 +143,33 @@ export function useOnboardingState() {
       });
       await markOnboardingComplete();
       // This PUT bypasses useUpdateProfile's mutation (onboarding runs before
-      // any profile screen mounts), so nothing else invalidates the cached
-      // profile/forum/leaderboard queries — without this, a profile screen
-      // visited earlier in the same session (e.g. before a demo-mode sign
-      // out + re-onboard) keeps showing the pre-onboarding data forever.
+      // any profile screen mounts), so nothing else keeps the cached
+      // profile/forum/leaderboard queries in sync — without this, a profile
+      // screen visited earlier in the same session (e.g. before a demo-mode
+      // sign out + re-onboard) keeps showing the pre-onboarding data forever.
       //
-      // WHY refetchType: 'all', not the default 'active': invalidateQueries
-      // only *refetches* queries that currently have an active observer --
-      // an *inactive* match just gets marked stale, its cached data left
-      // untouched. app/index.tsx's own `useProfile` (the one that routed
-      // here in the first place) has already unmounted by this point, so
-      // the default left the persisted profile cache sitting on its
-      // pre-onboarding (onboardedAt: null) snapshot indefinitely -- app's
-      // own next cold launch would restore that same stale snapshot from
-      // AsyncStorage before any live check ran, see onboarding again as
-      // incomplete, and loop forever no matter how many times this endpoint
-      // was actually called successfully.
-      await queryClient.invalidateQueries({ queryKey: ['profile'], refetchType: 'all' });
+      // Writes the PUT's own response straight into the profile cache
+      // (matching the shape useProfile's queryFn returns: {profile: ...})
+      // rather than only invalidating and waiting on a refetch. A prior
+      // version relied solely on invalidateQueries -- correct in theory,
+      // but two ways it can still lose the race in practice: (1) with the
+      // default 'active' refetchType, an *inactive* match (app/index.tsx's
+      // own `useProfile`, the one that routed here, has already unmounted
+      // by this point) only gets marked stale, its cached data left
+      // untouched, with nothing left to trigger the actual refetch; (2)
+      // even with refetchType: 'all' forcing that refetch, the corrected
+      // result still has to round-trip a real network request and then
+      // survive the query persister's own throttled (1s) write to
+      // AsyncStorage before the app can safely close -- force-quitting
+      // soon after finishing the wizard, an entirely normal thing to do
+      // right after finishing a form, could still capture the stale
+      // snapshot. Setting the data directly is synchronous and needs
+      // neither. The next cold launch was restoring that stale
+      // (onboardedAt: null) snapshot before any live check ran, reading
+      // the account as still not onboarded, and looping -- no matter how
+      // many times the account had actually completed onboarding
+      // server-side.
+      queryClient.setQueryData(['profile', session.userId ?? 'me'], response);
       await queryClient.invalidateQueries({ queryKey: ['forum'], refetchType: 'all' });
       await queryClient.invalidateQueries({ queryKey: ['leaderboard'], refetchType: 'all' });
       return true;
