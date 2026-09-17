@@ -43,6 +43,7 @@ import {
 } from '@/src/modules/profile';
 import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
+import { ApiError } from '@/src/services/api';
 
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCelebrationModal } from './mission-celebration-modal';
@@ -216,6 +217,24 @@ export function MissionDetailScreen({
     }
   };
 
+  // WHY: surfaces the actual failure (not_completed, mission_not_found, or a
+  // raw status/code for anything unexpected) in the toast itself instead of
+  // a single generic message -- on TestFlight there's no device console to
+  // check, so this is the only diagnostic signal available for a failure
+  // that doesn't reproduce locally.
+  const describeCheckInPhotoError = (error: unknown, action: 'update' | 'remove'): string => {
+    if (error instanceof ApiError) {
+      if (error.code === 'not_completed') {
+        return 'This mission doesn’t look complete yet — try refreshing.';
+      }
+      if (error.code === 'mission_not_found') {
+        return 'This mission is no longer available.';
+      }
+      return `Couldn’t ${action} your photo (${error.code ?? error.status}). Try again.`;
+    }
+    return `Couldn’t ${action} your photo. Try again.`;
+  };
+
   const handleReplaceCompletionPhoto = async () => {
     const [picked] = await pickGalleryImages({ selectionLimit: 1 });
     if (!picked) {
@@ -229,14 +248,14 @@ export function MissionDetailScreen({
           filename: picked.filename,
         },
       },
-      { onError: () => showToast('Couldn’t update your photo. Try again.') },
+      { onError: (error) => showToast(describeCheckInPhotoError(error, 'update')) },
     );
   };
 
   const handleRemoveCompletionPhoto = () => {
     updateMyCheckInPhoto.mutate(
       { missionId, removePhoto: true },
-      { onError: () => showToast('Couldn’t remove your photo. Try again.') },
+      { onError: (error) => showToast(describeCheckInPhotoError(error, 'remove')) },
     );
   };
 
@@ -683,9 +702,6 @@ export function MissionDetailScreen({
 
                   {mission.status === 'done' && mission.accepted ? (
                     <VStack className="gap-2.5">
-                      <Text className="font-inter-semibold text-[12px] text-text-muted">
-                        Mission photo (optional)
-                      </Text>
                       {myCheckInPhoto.data?.photoUrl ? (
                         <HStack className="items-center gap-2.5">
                           <Image

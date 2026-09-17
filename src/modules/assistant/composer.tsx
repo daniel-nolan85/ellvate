@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { GrowingTextInput } from '@/src/components/ui/growing-text-input';
 import { HStack } from '@/src/components/ui/hstack';
@@ -24,17 +24,22 @@ export function Composer({ isSending, onSend }: ComposerProps) {
 
   return (
     <HStack className="items-end gap-2 px-5 pb-7 pt-2.5">
-      <GrowingTextInput
-        className="flex-1 rounded-[22px] border border-line bg-canvas px-4 py-2.5 text-[14px] text-content"
-        maxHeight={120}
-        maxLength={2000}
-        onChangeText={setValue}
-        onSubmitEditing={submit}
-        placeholder="Ask about events, posts, missions…"
-        submitOnEnter
-        testID="assistant-composer-input"
-        value={value}
-      />
+      {/* Sizes GrowingTextInput against the send button -- see that
+          component's own WHY for why this lives here instead of on its own
+          className. */}
+      <View className="flex-1">
+        <GrowingTextInput
+          className="rounded-[22px] border border-line bg-canvas px-4 py-2.5 text-[14px] text-content"
+          maxHeight={120}
+          maxLength={2000}
+          onChangeText={setValue}
+          onSubmitEditing={submit}
+          placeholder="Ask about events, posts, missions…"
+          submitOnEnter
+          testID="assistant-composer-input"
+          value={value}
+        />
+      </View>
       <Pressable
         accessibilityLabel="Send"
         className={`h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent ${
