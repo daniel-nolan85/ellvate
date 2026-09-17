@@ -147,9 +147,21 @@ export function useOnboardingState() {
       // profile/forum/leaderboard queries — without this, a profile screen
       // visited earlier in the same session (e.g. before a demo-mode sign
       // out + re-onboard) keeps showing the pre-onboarding data forever.
-      await queryClient.invalidateQueries({ queryKey: ['profile'] });
-      await queryClient.invalidateQueries({ queryKey: ['forum'] });
-      await queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      //
+      // WHY refetchType: 'all', not the default 'active': invalidateQueries
+      // only *refetches* queries that currently have an active observer --
+      // an *inactive* match just gets marked stale, its cached data left
+      // untouched. app/index.tsx's own `useProfile` (the one that routed
+      // here in the first place) has already unmounted by this point, so
+      // the default left the persisted profile cache sitting on its
+      // pre-onboarding (onboardedAt: null) snapshot indefinitely -- app's
+      // own next cold launch would restore that same stale snapshot from
+      // AsyncStorage before any live check ran, see onboarding again as
+      // incomplete, and loop forever no matter how many times this endpoint
+      // was actually called successfully.
+      await queryClient.invalidateQueries({ queryKey: ['profile'], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ['forum'], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ['leaderboard'], refetchType: 'all' });
       return true;
     } catch (error) {
       setCompletionError(
