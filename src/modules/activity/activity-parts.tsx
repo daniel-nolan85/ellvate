@@ -7,13 +7,15 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import {
+import Animated, {
   Easing,
+  FadeInDown,
   runOnJS,
   useAnimatedReaction,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
@@ -22,10 +24,21 @@ import { ProgressRing } from '@/src/components/ui/progress-ring';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+import {
+  CATEGORY_ACCENT_ICON_COLOR,
+  CATEGORY_CHIP_ACTIVE_TREATMENT,
+  type CategoryAccent,
+} from '@/src/lib/category-accent';
 
 const RING_COLOR = 'rgb(181,80,44)';
 const RING_TRACK_COLOR = 'rgb(238,231,219)';
 const COUNT_UP_MS = 700;
+// Every stat card (StatCard and MissionProgressStatCard) shares this exact
+// footprint -- see the WHY on StatCard below for why a fixed size, not each
+// card's own intrinsic content height, is what actually fixes the uneven,
+// "odd"-looking row this replaced.
+const STAT_CARD_WIDTH = 108;
+const STAT_CARD_HEIGHT = 138;
 
 // Ticks a displayed integer from its previous value up (or down) to `target`
 // over COUNT_UP_MS, easing out -- plain requestAnimationFrame rather than
@@ -116,6 +129,20 @@ export const KIND_ICON: Readonly<Record<ActivityKind, AppIconName>> = {
   petition: 'FileSignature',
   post: 'MessageCircle',
   service: 'Store',
+};
+
+// A fixed tone per activity kind, not derived via categoryAccent() (that
+// function classifies forum *categories* like "Marina & Boating" -- a
+// different axis entirely from "is this a post, event, mission, service, or
+// petition"). Reuses the same five accents category-accent.ts already
+// defines so a stat card's chip and, say, a "Dining" category badge read as
+// the same color language app-wide rather than introducing a second palette.
+const KIND_TONE: Readonly<Record<ActivityKind, CategoryAccent>> = {
+  event: 'palm',
+  mission: 'accent',
+  petition: 'lake',
+  post: 'plum',
+  service: 'amber',
 };
 
 // Deliberately no "All" option combining every kind into one screen. That
@@ -232,66 +259,106 @@ export function StatBox({ label, value }: { readonly label: string; readonly val
   );
 }
 
-// A fixed-width sibling of StatBox for use inside StatRow's horizontal
-// scroll below -- flex-1 (StatBox's own sizing) only makes sense splitting
-// a fixed number of items evenly across a non-scrolling row.
+// A fixed-width, fixed-HEIGHT sibling of StatBox for use inside StatRow's
+// horizontal scroll below -- flex-1 (StatBox's own sizing) only makes sense
+// splitting a fixed number of items evenly across a non-scrolling row. The
+// fixed height (not each card's own intrinsic content height) is the actual
+// fix for this row's previous "odd"/uneven look: a one-line label ("Posts")
+// and a two-line one ("Events attending") used to size their own cards to
+// different heights, so the row's top and bottom edges never lined up card
+// to card. Reserving a fixed 2-line-tall slot for the label (numberOfLines
+// + a min height on the label itself, not just the outer card) keeps the
+// icon/number position identical regardless of how the actual label wraps.
 export function StatCard({
+  index = 0,
+  kind,
   label,
   value,
 }: {
+  readonly kind: ActivityKind;
   readonly label: string;
   readonly value: number;
+  // Staggers this card's own entrance relative to its siblings -- see
+  // StatRow's own WHY for why that reads as more deliberate/premium than
+  // every card fading in at once.
+  readonly index?: number;
 }) {
   const displayValue = useCountUp(value);
+  const tone = KIND_TONE[kind];
   return (
-    <VStack
-      className="w-[96px] items-center rounded-2xl border border-surface-hairline bg-paper px-2 py-3.5 shadow-card"
-      space="xs"
+    <Animated.View
+      entering={FadeInDown.delay(index * 50).duration(320).springify().damping(16)}
+      style={{ height: STAT_CARD_HEIGHT, width: STAT_CARD_WIDTH }}
     >
-      <Text className="font-inter-bold text-[20px] text-content">{displayValue}</Text>
-      <Text className="text-center text-text-muted" size="xs">
-        {label}
-      </Text>
-    </VStack>
+      <VStack
+        className="h-full w-full items-center justify-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-2 py-3 shadow-card"
+      >
+        <View
+          className={`h-9 w-9 items-center justify-center rounded-full ${CATEGORY_CHIP_ACTIVE_TREATMENT[tone].bg}`}
+        >
+          <Icon color={CATEGORY_ACCENT_ICON_COLOR[tone]} name={KIND_ICON[kind]} size={16} />
+        </View>
+        <Text className="font-inter-bold text-[20px] text-content">{displayValue}</Text>
+        <Text
+          className="text-center text-text-muted"
+          numberOfLines={2}
+          size="xs"
+          style={{ minHeight: 28 }}
+        >
+          {label}
+        </Text>
+      </VStack>
+    </Animated.View>
   );
 }
 
 // The one stat with a natural "progress toward a goal" reading -- missions
 // you've engaged with (created or accepted) that are now done -- gets a
-// ring instead of a bare number, echoing the same visual language as the
-// onboarding commit step and the Profile screen's own level-progress bar
-// rather than introducing a new one. completed/total both being 0 (no
+// ring instead of a bare number+icon chip, echoing the same visual language
+// as the onboarding commit step and the Profile screen's own level-progress
+// bar rather than introducing a new one. completed/total both being 0 (no
 // mission activity yet) reads as an empty ring, not a divide-by-zero NaN.
+// Shares StatCard's exact fixed footprint so it lines up with its siblings
+// in the row instead of sticking out taller/shorter.
 export function MissionProgressStatCard({
   completed,
+  index = 0,
   total,
 }: {
   readonly completed: number;
   readonly total: number;
+  readonly index?: number;
 }) {
   const fraction = total > 0 ? completed / total : 0;
   const ringProgress = useAnimatedRingProgress(fraction);
   const displayCompleted = useCountUp(completed);
   return (
-    <VStack
-      className="w-[96px] items-center rounded-2xl border border-surface-hairline bg-paper px-2 py-3.5 shadow-card"
-      space="xs"
+    <Animated.View
+      entering={FadeInDown.delay(index * 50).duration(320).springify().damping(16)}
+      style={{ height: STAT_CARD_HEIGHT, width: STAT_CARD_WIDTH }}
     >
-      <ProgressRing
-        color={RING_COLOR}
-        progress={ringProgress}
-        size={52}
-        strokeWidth={5}
-        trackColor={RING_TRACK_COLOR}
-      >
-        <Text className="font-inter-bold text-[15px] text-content">
-          {displayCompleted}
+      <VStack className="h-full w-full items-center justify-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-2 py-3 shadow-card">
+        <ProgressRing
+          color={RING_COLOR}
+          progress={ringProgress}
+          size={52}
+          strokeWidth={5}
+          trackColor={RING_TRACK_COLOR}
+        >
+          <Text className="font-inter-bold text-[15px] text-content">
+            {displayCompleted}
+          </Text>
+        </ProgressRing>
+        <Text
+          className="text-center text-text-muted"
+          numberOfLines={2}
+          size="xs"
+          style={{ minHeight: 28 }}
+        >
+          Missions completed
         </Text>
-      </ProgressRing>
-      <Text className="text-center text-text-muted" size="xs">
-        Missions completed
-      </Text>
-    </VStack>
+      </VStack>
+    </Animated.View>
   );
 }
 
@@ -300,17 +367,50 @@ export function MissionProgressStatCard({
 // further), ActivityScreen's own stat row needs room for Events and
 // Missions each broken into two figures (created vs attended/completed) to
 // resolve what used to be one combined, ambiguous count -- 7 cards no
-// longer fit evenly in a fixed-width row the way 5 did.
+// longer fit evenly in a fixed-width row the way 5 did. snapToInterval (the
+// same STAT_CARD_WIDTH+gap every card actually uses) plus a fast
+// decelerationRate makes it settle on a card instead of drifting to an
+// arbitrary half-scrolled stop, which read as unpolished on a row this
+// short. The right-edge gradient is a plain SVG overlay (react-native-svg
+// is already a dependency -- see CommitStep's own RadialGradient) rather
+// than expo-linear-gradient, which isn't installed and would need a new
+// native build to add -- this app ships over EAS Update (JS-only), so a
+// brand-new native module isn't something a normal deploy here can pick up.
+const STAT_ROW_GAP = 8;
+const EDGE_FADE_WIDTH = 28;
+
 export function StatRow({ children }: { readonly children: ReactNode }) {
   return (
-    <ScrollView
-      contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ flexGrow: 0 }}
-    >
-      {children}
-    </ScrollView>
+    <View>
+      <ScrollView
+        contentContainerStyle={{
+          gap: STAT_ROW_GAP,
+          paddingHorizontal: 20,
+        }}
+        decelerationRate="fast"
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={STAT_CARD_WIDTH + STAT_ROW_GAP}
+        style={{ flexGrow: 0 }}
+      >
+        {children}
+      </ScrollView>
+      <View
+        className="absolute bottom-0 right-0 top-0"
+        pointerEvents="none"
+        style={{ width: EDGE_FADE_WIDTH }}
+      >
+        <Svg height="100%" width="100%">
+          <Defs>
+            <LinearGradient id="statRowFade" x1="0" x2="1" y1="0" y2="0">
+              <Stop offset="0" stopColor="rgb(247,241,230)" stopOpacity={0} />
+              <Stop offset="1" stopColor="rgb(247,241,230)" stopOpacity={1} />
+            </LinearGradient>
+          </Defs>
+          <Rect fill="url(#statRowFade)" height="100%" width="100%" />
+        </Svg>
+      </View>
+    </View>
   );
 }
 
