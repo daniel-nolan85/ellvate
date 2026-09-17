@@ -4,6 +4,7 @@ import { FlatList, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
@@ -110,12 +111,18 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
                 <ButtonText>Retry</ButtonText>
               </Button>
             </VStack>
+          ) : selectedDate ? (
+            <EmptyState
+              heading="Nothing scheduled"
+              icon="CalendarDays"
+              subtext="No events planned for this day."
+            />
           ) : (
-            <Text className="px-5 py-2 text-muted-foreground" size="sm">
-              {selectedDate
-                ? 'Nothing scheduled for this day.'
-                : 'Nothing on the calendar yet. Tap + to add the first one.'}
-            </Text>
+            <EmptyState
+              heading="Nothing on the calendar yet"
+              icon="CalendarDays"
+              subtext="Tap + to add the first one."
+            />
           )
         }
         ListFooterComponent={

@@ -4,6 +4,7 @@ import { FlatList, Pressable, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
@@ -118,13 +119,23 @@ export function PetitionsScreen() {
               </Button>
             </VStack>
           ) : (
-            <Text className="px-5 py-2 text-muted-foreground" size="sm">
-              {status === 'open'
-                ? 'No open petitions right now. Tap Start to raise something with the HOA.'
-                : status === 'succeeded'
-                  ? 'No petitions have succeeded yet.'
-                  : 'No petitions have expired.'}
-            </Text>
+            <EmptyState
+              heading={
+                status === 'open'
+                  ? 'No open petitions'
+                  : status === 'succeeded'
+                    ? 'No petitions have succeeded yet'
+                    : 'No expired petitions'
+              }
+              icon="FileSignature"
+              subtext={
+                status === 'open'
+                  ? 'Tap Start to raise something with the HOA.'
+                  : status === 'succeeded'
+                    ? 'Successful petitions will show up here.'
+                    : 'Expired petitions will show up here.'
+              }
+            />
           )
         }
         ListFooterComponent={

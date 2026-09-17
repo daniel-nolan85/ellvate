@@ -4,6 +4,12 @@ import { ForumScreen } from '@/src/modules/forum';
 
 export default function ForumTab() {
   return (
-    <ForumScreen onOpenPost={(id) => router.push(`/post/${id}` as Href)} />
+    <ForumScreen
+      onOpenPost={(id, focusComments) =>
+        router.push(
+          `/post/${id}${focusComments ? '?focusComments=1' : ''}` as Href,
+        )
+      }
+    />
   );
 }

@@ -3,6 +3,7 @@ import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
 import { Box } from '@/src/components/ui/box';
 import { Button, ButtonText } from '@/src/components/ui/button';
@@ -156,18 +157,11 @@ export function LeaderboardScreen() {
               </Button>
             </VStack>
           ) : (
-            <VStack className="items-center px-10 py-16" space="xs">
-              <Text
-                className="text-center font-inter-semibold text-content"
-                size="sm"
-              >
-                No missions completed yet
-              </Text>
-              <Text className="text-center text-text-muted" size="xs">
-                Be the first to check in{' '}
-                {range === 'week' ? 'this week' : 'this month'}.
-              </Text>
-            </VStack>
+            <EmptyState
+              heading="No missions completed yet"
+              icon="Trophy"
+              subtext={`Be the first to check in ${range === 'week' ? 'this week' : 'this month'}.`}
+            />
           )
         }
         ListFooterComponent={

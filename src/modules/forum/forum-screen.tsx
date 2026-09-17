@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -44,7 +45,7 @@ function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
 }
 
 interface ForumScreenProps {
-  readonly onOpenPost?: (postId: string) => void;
+  readonly onOpenPost?: (postId: string, focusComments?: boolean) => void;
 }
 
 export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
@@ -153,20 +154,15 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
               </Button>
             </VStack>
           ) : (
-            <VStack className="items-center px-10 py-16" space="xs">
-              <Icon color="rgb(169,156,139)" name="MessageCircle" size={28} />
-              <Text
-                className="text-center font-inter-semibold text-content"
-                size="sm"
-              >
-                No posts here yet
-              </Text>
-              <Text className="text-center text-text-muted" size="xs">
-                {activeForum === FOR_YOU
+            <EmptyState
+              heading="No posts here yet"
+              icon="MessageCircle"
+              subtext={
+                activeForum === FOR_YOU
                   ? 'No posts match your interests yet.'
-                  : `Be the first to start a conversation in ${activeForum}.`}
-              </Text>
-            </VStack>
+                  : `Be the first to start a conversation in ${activeForum}.`
+              }
+            />
           )
         }
         ListFooterComponent={
@@ -188,7 +184,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
                   testID="forum-add-post"
                   size="sm"
                 >
-                  <Icon color={COLOR_ACCENT_FOREGROUND} name="Edit" size={14} />
+                  <Icon color={COLOR_ACCENT_FOREGROUND} name="Add" size={14} />
                   <ButtonText className="font-inter-semibold text-[13px] text-accent-foreground">
                     Post
                   </ButtonText>
@@ -214,7 +210,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
         renderItem={({ item }) => (
           <View className="mx-5 mb-2">
             <PostCard
-              onOpen={() => onOpenPost?.(item.id)}
+              onOpen={(focusComments) => onOpenPost?.(item.id, focusComments)}
               onToggleLike={() =>
                 toggleLike.mutate({ forum: item.forum, postId: item.id })
               }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -6,6 +6,7 @@ import {
   Pressable,
   Share,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -72,9 +73,14 @@ interface PostDetailScreenProps {
   // True when reached from Notifications (see app/notification/post/[id].tsx)
   // -- see petition-detail-screen.tsx's identical prop for why.
   readonly modal?: boolean;
+  // True when opened via a post's comment-count pill rather than the card
+  // itself (see PostCard's onOpen) -- scrolls straight to the comments
+  // section below instead of landing on the post's own top.
+  readonly focusComments?: boolean;
 }
 
 export function PostDetailScreen({
+  focusComments = false,
   modal = false,
   onBack,
   postId,
@@ -151,6 +157,26 @@ export function PostDetailScreen({
     'comment' | 'user' | null
   >(null);
   const [pinExplainerOpen, setPinExplainerOpen] = useState(false);
+
+  // Scroll-to-comments (see PostDetailScreenProps.focusComments): the
+  // comments header's own onLayout gives its y position relative to
+  // ListHeaderComponent's root, which is also its offset within the
+  // FlatList's scroll content -- ListHeaderComponent is the very first
+  // thing in that content, with no padding above it. Guarded by a ref
+  // (not state) so a later re-layout (e.g. the post finishing its own
+  // load) never fires a second, jarring auto-scroll.
+  const flatListRef = useRef<FlatList<ForumComment>>(null);
+  const hasScrolledToComments = useRef(false);
+  const handleCommentsHeaderLayout = (event: LayoutChangeEvent) => {
+    if (!focusComments || hasScrolledToComments.current) {
+      return;
+    }
+    hasScrolledToComments.current = true;
+    const offset = event.nativeEvent.layout.y;
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToOffset({ animated: true, offset });
+    });
+  };
 
   const isOwnPost = post !== undefined && userId === post.author.id;
 
@@ -570,10 +596,12 @@ export function PostDetailScreen({
                 </Text>
               )}
 
-              <Divider />
-              <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-                {post?.replies ?? commentList.length} comments
-              </Text>
+              <VStack className="gap-4" onLayout={handleCommentsHeaderLayout}>
+                <Divider />
+                <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                  {post?.replies ?? commentList.length} comments
+                </Text>
+              </VStack>
 
               {comments.isPending ? (
                 <View className="items-center py-10">
@@ -620,6 +648,7 @@ export function PostDetailScreen({
               setIsManualRefreshing(false),
             );
           }}
+          ref={flatListRef}
           refreshing={isManualRefreshing}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
