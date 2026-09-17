@@ -32,7 +32,6 @@ import { AccountIdentifiersSheet } from './account-identifiers-sheet';
 import { PointsHistorySheet } from './points-history-sheet';
 import {
   useDeleteAccount,
-  useMemberProfile,
   useProfile,
   useProfileStats,
   useUpdateProfile,
@@ -158,38 +157,15 @@ function Row({
   );
 }
 
-function StatCard({
-  label,
-  onPress,
-  value,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly onPress?: () => void;
-}) {
-  return (
-    <Pressable
-      className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card"
-      disabled={!onPress}
-      onPress={onPress}
-    >
-      <VStack className="items-center" space="xs">
-        <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
-        <Text className="text-center text-text-muted" size="xs">
-          {label}
-        </Text>
-      </VStack>
-    </Pressable>
-  );
-}
-
 function LevelProgress({
   level,
+  xp,
   xpForNextLevel,
   xpIntoLevel,
   xpToNextLevel,
 }: {
   readonly level: number;
+  readonly xp: number;
   readonly xpIntoLevel: number;
   readonly xpForNextLevel: number;
   readonly xpToNextLevel: number;
@@ -208,6 +184,9 @@ function LevelProgress({
           {xpToNextLevel} XP to Level {level + 1}
         </Text>
       </HStack>
+      {/* The former top-of-screen "XP" StatCard's total, moved here -- right
+          above the bar it explains -- now that that 3-card row is gone. */}
+      <Text className="font-inter-bold text-[20px] text-content">{xp} XP</Text>
       <View className="h-2 overflow-hidden rounded-full bg-muted">
         <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
       </View>
@@ -220,7 +199,6 @@ export function ProfileScreen() {
   const session = useSession();
   const profile = useProfile();
   const stats = useProfileStats();
-  const activity = useMemberProfile(session.userId ?? 'demo-user');
   const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
 
@@ -396,9 +374,8 @@ export function ProfileScreen() {
             onRefresh={() => {
               void profile.refetch();
               void stats.refetch();
-              void activity.refetch();
             }}
-            refreshing={profile.isRefetching || stats.isRefetching || activity.isRefetching}
+            refreshing={profile.isRefetching || stats.isRefetching}
           />
         }
       >
@@ -444,23 +421,16 @@ export function ProfileScreen() {
           </Button>
         </VStack>
 
-        <HStack className="px-5 pt-4" space="sm">
-          <StatCard label="Level" value={String(stats.data?.level ?? 1)} />
-          <StatCard label="XP" value={String(stats.data?.xp ?? 0)} />
-          <StatCard
-            label="Missions"
-            value={String(stats.data?.missionsCompleted ?? 0)}
-          />
-        </HStack>
-
         {stats.data ? (
           <Pressable
             accessibilityLabel="View points history"
             accessibilityRole="button"
+            className="pt-4"
             onPress={() => setActiveSheet('points-history')}
           >
             <LevelProgress
               level={stats.data.level}
+              xp={stats.data.xp}
               xpForNextLevel={stats.data.xpForNextLevel}
               xpIntoLevel={stats.data.xpIntoLevel}
               xpToNextLevel={stats.data.xpToNextLevel}
@@ -501,38 +471,6 @@ export function ProfileScreen() {
             </Pressable>
           </>
         ) : null}
-
-        <SectionTitle>Activity — Your Uploads</SectionTitle>
-        <HStack className="mx-5" space="sm">
-          <StatCard
-            label="Posts"
-            onPress={() => router.push('/activity?filter=post')}
-            value={String(activity.data?.stats.postsCount ?? 0)}
-          />
-          <StatCard
-            label="Events"
-            onPress={() => router.push('/activity?filter=event')}
-            value={String(
-              (activity.data?.stats.eventsCreated ?? 0) +
-                (activity.data?.stats.eventsAttended ?? 0),
-            )}
-          />
-          <StatCard
-            label="Missions created"
-            onPress={() => router.push('/activity?filter=mission')}
-            value={String(activity.data?.stats.missionsCreated ?? 0)}
-          />
-          <StatCard
-            label="Services"
-            onPress={() => router.push('/activity?filter=service')}
-            value={String(activity.data?.stats.servicesListed ?? 0)}
-          />
-          <StatCard
-            label="Petitions"
-            onPress={() => router.push('/activity?filter=petition')}
-            value={String(activity.data?.stats.petitionsStarted ?? 0)}
-          />
-        </HStack>
 
         <SectionTitle>Privacy</SectionTitle>
         <SectionCard>
