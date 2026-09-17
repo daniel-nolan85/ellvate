@@ -17,6 +17,7 @@ import type {
   AcceptMissionResult,
   CheckInResult,
   CreateMissionResult,
+  LikeCheckInPhotoResult,
   Mission,
   MissionCheckInPhotosPage,
   MissionFilter,
@@ -846,7 +847,7 @@ export async function checkInSupabase(
 }
 
 const CHECK_IN_PHOTO_SELECT =
-  'id,mission_id,user_id,stop_index,completed_at,photo_url,author:app_users!mission_check_ins_user_id_fkey(id,name,avatar_url,is_admin)';
+  'id,mission_id,user_id,stop_index,completed_at,photo_url,like_count,author:app_users!mission_check_ins_user_id_fkey(id,name,avatar_url,is_admin)';
 
 interface CheckInPhotoRow {
   readonly id: string;
@@ -855,6 +856,7 @@ interface CheckInPhotoRow {
   readonly stop_index: number;
   readonly completed_at: string;
   readonly photo_url: string | null;
+  readonly like_count: number;
   readonly author: {
     readonly id: string;
     readonly name: string;
@@ -863,7 +865,7 @@ interface CheckInPhotoRow {
   } | null;
 }
 
-const toCheckInPhoto = (row: CheckInPhotoRow) => ({
+const toCheckInPhoto = (row: CheckInPhotoRow, likedIds: ReadonlySet<string>) => ({
   author: {
     avatarUrl: row.author?.avatar_url ?? null,
     id: row.user_id,
@@ -872,6 +874,8 @@ const toCheckInPhoto = (row: CheckInPhotoRow) => ({
   },
   completedAt: row.completed_at,
   id: row.id,
+  liked: likedIds.has(row.id),
+  likes: row.like_count,
   missionId: row.mission_id,
   // Non-null by the query's `.not('photo_url', 'is', null)` filter below --
   // TypeScript can't see through a query filter, so this is a plain
@@ -879,6 +883,21 @@ const toCheckInPhoto = (row: CheckInPhotoRow) => ({
   photoUrl: row.photo_url as string,
   stopIndex: row.stop_index,
 });
+
+// Mirrors likedPostIds (posts-supabase.ts) exactly -- the viewer's own
+// check-in-photo like membership, read via the "read own likes" RLS policy
+// rather than a broader read of who else liked what.
+const likedCheckInPhotoIds = async (
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ReadonlySet<string>> => {
+  const { data, error } = await supabase
+    .from('mission_check_in_photo_likes')
+    .select('check_in_id')
+    .eq('user_id', userId);
+  throwIfSupabaseError(error, 'load mission check-in photo likes');
+  return new Set((data ?? []).map((row) => row.check_in_id as string));
+};
 
 // Newest-first gallery of everyone's optional check-in photos for one
 // mission -- mirrors listMissionCommentsPageSupabase's fetch-then-paginate
@@ -892,7 +911,7 @@ export async function listMissionCheckInPhotosSupabase(
   limit: number,
   cursor: string | null,
 ): Promise<MissionCheckInPhotosPage> {
-  const [{ data, error }, mutedUserIds] = await Promise.all([
+  const [{ data, error }, mutedUserIds, likedIds] = await Promise.all([
     supabase
       .from('mission_check_ins')
       .select(CHECK_IN_PHOTO_SELECT)
@@ -900,6 +919,7 @@ export async function listMissionCheckInPhotosSupabase(
       .not('photo_url', 'is', null)
       .order('completed_at', { ascending: false }),
     getMutedUserIdsSupabase(supabase, userId),
+    likedCheckInPhotoIds(supabase, userId),
   ]);
   throwIfSupabaseError(error, 'load mission check-in photos');
   const mutedSet = new Set(mutedUserIds);
@@ -912,8 +932,58 @@ export async function listMissionCheckInPhotosSupabase(
 
   return {
     nextCursor: page.nextCursor,
-    photos: page.items.map((item) => toCheckInPhoto(item.row)),
+    photos: page.items.map((item) => toCheckInPhoto(item.row, likedIds)),
   };
+}
+
+// Mirrors toggleLikeSupabase (posts-supabase.ts) exactly -- same
+// exists-then-insert/delete-then-recount shape, scoped to
+// mission_check_in_photo_likes/mission_check_ins instead of post_likes/posts.
+export async function toggleCheckInPhotoLikeSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  checkInId: string,
+): Promise<LikeCheckInPhotoResult | null> {
+  const { data: checkInRow, error: checkInError } = await supabase
+    .from('mission_check_ins')
+    .select('id')
+    .eq('id', checkInId)
+    .not('photo_url', 'is', null)
+    .maybeSingle();
+  throwIfSupabaseError(checkInError, 'load check-in photo');
+  if (!checkInRow) {
+    return null;
+  }
+  await ensureUser(supabase, userId);
+  const { data: existing, error: existingError } = await supabase
+    .from('mission_check_in_photo_likes')
+    .select('check_in_id')
+    .eq('check_in_id', checkInId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(existingError, 'load check-in photo like membership');
+
+  if (existing) {
+    const { error } = await supabase
+      .from('mission_check_in_photo_likes')
+      .delete()
+      .eq('check_in_id', checkInId)
+      .eq('user_id', userId);
+    throwIfSupabaseError(error, 'unlike check-in photo');
+  } else {
+    const { error } = await supabase
+      .from('mission_check_in_photo_likes')
+      .insert({ check_in_id: checkInId, user_id: userId });
+    throwIfSupabaseError(error, 'like check-in photo');
+  }
+
+  const { data: updated, error: updatedError } = await supabase
+    .from('mission_check_ins')
+    .select('like_count')
+    .eq('id', checkInId)
+    .single();
+  throwIfSupabaseError(updatedError, 'load check-in photo like count');
+  return { id: checkInId, liked: !existing, likes: updated?.like_count ?? 0 };
 }
 
 // The check-in that actually finished the mission for this user -- the row

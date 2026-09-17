@@ -1,7 +1,7 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
-import { MediaGallery } from './media-gallery';
+import { MediaGallery, MediaViewer } from './media-gallery';
 
 const TEST_SAFE_AREA_METRICS: Metrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
@@ -47,5 +47,76 @@ describe('MediaGallery', () => {
     const view = await renderGallery([]);
     expect(view.queryByLabelText('View photo full screen')).toBeNull();
     expect(view.queryByText(/^\d\/\d$/)).toBeNull();
+  });
+});
+
+describe('MediaViewer', () => {
+  test('does not render an author/like bar for a plain single-author gallery', async () => {
+    const view = await render(
+      <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
+        <MediaViewer
+          media={[{ filename: 'a.jpg', url: 'https://example.com/a.jpg' }]}
+          onClose={() => {}}
+          startIndex={0}
+        />
+      </SafeAreaProvider>,
+    );
+    expect(view.queryByLabelText(/View .*'s profile/)).toBeNull();
+    expect(view.queryByLabelText('Like photo')).toBeNull();
+  });
+
+  test('renders the poster and timestamp, and navigates on tap', async () => {
+    const onAuthorPress = jest.fn();
+    const view = await render(
+      <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
+        <MediaViewer
+          media={[
+            {
+              author: { id: 'user-mia', name: 'Mia' },
+              filename: 'a.jpg',
+              timestamp: new Date().toISOString(),
+              url: 'https://example.com/a.jpg',
+            },
+          ]}
+          onAuthorPress={onAuthorPress}
+          onClose={() => {}}
+          startIndex={0}
+        />
+      </SafeAreaProvider>,
+    );
+    expect(view.getByText('Mia')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(view.getByLabelText("View Mia's profile"));
+    });
+    expect(onAuthorPress).toHaveBeenCalledWith('user-mia');
+  });
+
+  test('renders the like count and toggles on tap', async () => {
+    const onToggleLike = jest.fn();
+    const view = await render(
+      <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
+        <MediaViewer
+          media={[
+            {
+              author: { id: 'user-mia', name: 'Mia' },
+              filename: 'a.jpg',
+              liked: false,
+              likes: 3,
+              url: 'https://example.com/a.jpg',
+            },
+          ]}
+          onClose={() => {}}
+          onToggleLike={onToggleLike}
+          startIndex={0}
+        />
+      </SafeAreaProvider>,
+    );
+    expect(view.getByText('3')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(view.getByLabelText('Like photo'));
+    });
+    expect(onToggleLike).toHaveBeenCalledWith(
+      expect.objectContaining({ filename: 'a.jpg', liked: false, likes: 3 }),
+    );
   });
 });

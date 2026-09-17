@@ -144,6 +144,8 @@ export interface StoredMissionCheckIn {
   readonly stopIndex: number;
   readonly completedAt: string;
   readonly photoUrl: string | null;
+  readonly likes: number;
+  readonly likedBy: readonly string[];
 }
 
 export interface StoredMissionCheckInPhotoReport {

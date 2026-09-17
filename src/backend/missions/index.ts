@@ -2,6 +2,7 @@ export {
   checkIn,
   getMyCheckInPhoto,
   listMissionCheckInPhotos,
+  toggleCheckInPhotoLike,
   updateMyCheckInPhoto,
 } from './check-in';
 export { acceptMission } from './accept';
@@ -25,6 +26,7 @@ export type {
   CheckInResult,
   CheckInSuccess,
   CreateMissionResult,
+  LikeCheckInPhotoResult,
   ListMissionsOptions,
   Mission,
   MissionCheckInPhoto,
