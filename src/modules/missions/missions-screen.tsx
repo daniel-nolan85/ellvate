@@ -25,7 +25,6 @@ import {
   type CheckInCelebration,
   type MissionFilter,
 } from './use-missions';
-import { XpHero } from './xp-hero';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 
@@ -232,7 +231,6 @@ export function MissionsScreen({
               </Text>
             </VStack>
 
-            {progress.data ? <XpHero progress={progress.data} /> : null}
             <MissionFilterChips active={filter} onSelect={setFilter} />
             {missionsView.isPending ||
             missionsView.isError ||

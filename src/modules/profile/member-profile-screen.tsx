@@ -23,9 +23,9 @@ import {
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
-import { LevelProgress } from './profile-screen';
 import { useBlockUser, useBlockedUsers, useReportMember } from './use-block-user';
 import { useMemberProfile } from './use-profile';
+import { XpHero } from './xp-hero';
 
 const ROLE_LABELS: Record<string, string> = {
   business: 'Local business',
@@ -235,15 +235,15 @@ export function MemberProfileScreen({
           </VStack>
         ) : (
           <VStack className='gap-4 px-5 pt-4'>
-            {/* Replaces the former Level/XP/Missions 3-card row -- the same
-                level-progress bar the signed-in user's own Profile screen
-                uses (see profile-screen.tsx's LevelProgress), not a second
-                copy of it. Missions stays covered exactly once, below, as
-                "Missions completed" in the Activity grid -- this bar only
-                needs Level/XP, so no duplicate reappears. No mx-5 (unlike
-                that screen's own usage): this VStack already carries px-5. */}
-            <LevelProgress
+            {/* The same XpHero the signed-in user's own Profile screen
+                shows (moved there from the Missions screen, which didn't
+                need its own copy), not a second component. Missions stays
+                covered exactly once, below, as "Missions completed" in the
+                Activity grid -- this card only needs Level/XP, so no
+                duplicate reappears. */}
+            <XpHero
               level={member.data.stats?.level ?? 1}
+              title={member.data.stats?.title ?? 'Lake Explorer'}
               xp={member.data.stats?.xp ?? 0}
               xpForNextLevel={member.data.stats?.xpForNextLevel ?? 0}
               xpIntoLevel={member.data.stats?.xpIntoLevel ?? 0}
