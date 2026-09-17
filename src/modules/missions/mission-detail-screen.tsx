@@ -435,7 +435,17 @@ export function MissionDetailScreen({
     !comments.isPending && !comments.isError ? commentList : [];
 
   return (
-    <View className="flex-1 bg-canvas">
+    // See post-detail-screen.tsx's identical WHY: `flex-1` alone is not a
+    // reliable way for this root to fill the formSheet's allocated detent
+    // height when reached via the notification/... duplicate, and
+    // collapsable={false} here (not just on the header below) keeps this
+    // container itself from being flattened by RN's view-flattening
+    // optimization.
+    <View
+      className={modal ? 'bg-canvas' : 'flex-1 bg-canvas'}
+      collapsable={false}
+      style={modal ? { height: '100%' } : undefined}
+    >
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}

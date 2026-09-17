@@ -366,7 +366,21 @@ export function PostDetailScreen({
     !comments.isPending && !comments.isError ? commentList : [];
 
   return (
-    <View className="flex-1 bg-canvas">
+    // When reached via the notification/... formSheet duplicate, `flex-1`
+    // on this root View is not a reliable way to fill the sheet's allocated
+    // detent height -- see SHEET_SCREEN_OPTIONS' own WHY for the underlying
+    // react-native-screens quirk; contentStyle:{height:'100%'} there fixes
+    // the *navigator's* wrapper, but this component's own root also needs
+    // an explicit height rather than flex to actually stretch to match it.
+    // collapsable={false} here (not just on the header below) keeps this
+    // root from being flattened into that wrapper by RN's view-flattening
+    // optimization -- the same #3092 class of bug the header fix below
+    // targets, but at the container level instead of the header alone.
+    <View
+      className={modal ? 'bg-canvas' : 'flex-1 bg-canvas'}
+      collapsable={false}
+      style={modal ? { height: '100%' } : undefined}
+    >
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}
