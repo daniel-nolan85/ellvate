@@ -9,13 +9,14 @@ import {
 } from 'react-native';
 import Animated, {
   Easing,
-  FadeInDown,
+  FadeIn,
+  FadeOut,
   runOnJS,
   useAnimatedReaction,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
@@ -34,11 +35,9 @@ const RING_COLOR = 'rgb(181,80,44)';
 const RING_TRACK_COLOR = 'rgb(238,231,219)';
 const COUNT_UP_MS = 700;
 // Every stat card (StatCard and MissionProgressStatCard) shares this exact
-// footprint -- see the WHY on StatCard below for why a fixed size, not each
-// card's own intrinsic content height, is what actually fixes the uneven,
-// "odd"-looking row this replaced.
-const STAT_CARD_WIDTH = 108;
-const STAT_CARD_HEIGHT = 138;
+// height, so a 1-card tab and a 2-card tab read as the same size shelf
+// rather than jumping taller/shorter when the filter changes.
+const STAT_CARD_HEIGHT = 152;
 
 // Ticks a displayed integer from its previous value up (or down) to `target`
 // over COUNT_UP_MS, easing out -- plain requestAnimationFrame rather than
@@ -259,18 +258,54 @@ export function StatBox({ label, value }: { readonly label: string; readonly val
   );
 }
 
-// A fixed-width, fixed-HEIGHT sibling of StatBox for use inside StatRow's
-// horizontal scroll below -- flex-1 (StatBox's own sizing) only makes sense
-// splitting a fixed number of items evenly across a non-scrolling row. The
-// fixed height (not each card's own intrinsic content height) is the actual
-// fix for this row's previous "odd"/uneven look: a one-line label ("Posts")
-// and a two-line one ("Events attending") used to size their own cards to
-// different heights, so the row's top and bottom edges never lined up card
-// to card. Reserving a fixed 2-line-tall slot for the label (numberOfLines
-// + a min height on the label itself, not just the outer card) keeps the
-// icon/number position identical regardless of how the actual label wraps.
+// A slow, subtle breathing pulse on the icon chip (scale + glow opacity) --
+// the "always something gently alive" touch a static card lacks, without
+// resorting to a scrolling ticker: nothing here moves the *number* itself,
+// which stays perfectly legible the whole time. -1 repeat count means loop
+// forever; the `true` reverses direction each cycle (yoyo) rather than
+// snapping back to 0, so the motion has no visible seam.
+function useBreathingPulse(): number {
+  const shared = useSharedValue(0);
+  const [display, setDisplay] = useState(0);
+
+  useAnimatedReaction(
+    () => shared.value,
+    (value) => {
+      runOnJS(setDisplay)(value);
+    },
+  );
+
+  useEffect(() => {
+    shared.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [shared]);
+
+  return display;
+}
+
+function StatIconChip({ tone, kind }: { readonly tone: CategoryAccent; readonly kind: ActivityKind }) {
+  const pulse = useBreathingPulse();
+  return (
+    <Animated.View
+      className={`h-11 w-11 items-center justify-center rounded-full ${CATEGORY_CHIP_ACTIVE_TREATMENT[tone].bg}`}
+      style={{ transform: [{ scale: 1 + pulse * 0.05 }] }}
+    >
+      <Icon color={CATEGORY_ACCENT_ICON_COLOR[tone]} name={KIND_ICON[kind]} size={19} />
+    </Animated.View>
+  );
+}
+
+// A "hero" stat card, sized to fill the space next to its 0-1 siblings
+// (flex-1, not a fixed width) -- ActivityStatPanel below only ever shows the
+// 1-2 cards relevant to whichever filter tab is active, so there's no long
+// row to keep a fixed width consistent against anymore. The fixed HEIGHT
+// still matters: a post/service/petition tab shows one card, an event/
+// mission tab shows two, and both should read as the same size shelf, not
+// jump taller or shorter when the filter changes.
 export function StatCard({
-  index = 0,
   kind,
   label,
   value,
@@ -278,37 +313,20 @@ export function StatCard({
   readonly kind: ActivityKind;
   readonly label: string;
   readonly value: number;
-  // Staggers this card's own entrance relative to its siblings -- see
-  // StatRow's own WHY for why that reads as more deliberate/premium than
-  // every card fading in at once.
-  readonly index?: number;
 }) {
   const displayValue = useCountUp(value);
   const tone = KIND_TONE[kind];
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 50).duration(320).springify().damping(16)}
-      style={{ height: STAT_CARD_HEIGHT, width: STAT_CARD_WIDTH }}
+    <VStack
+      className="w-[160px] items-center justify-center gap-2.5 rounded-2xl border border-surface-hairline bg-paper px-3 py-4 shadow-card"
+      style={{ height: STAT_CARD_HEIGHT }}
     >
-      <VStack
-        className="h-full w-full items-center justify-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-2 py-3 shadow-card"
-      >
-        <View
-          className={`h-9 w-9 items-center justify-center rounded-full ${CATEGORY_CHIP_ACTIVE_TREATMENT[tone].bg}`}
-        >
-          <Icon color={CATEGORY_ACCENT_ICON_COLOR[tone]} name={KIND_ICON[kind]} size={16} />
-        </View>
-        <Text className="font-inter-bold text-[20px] text-content">{displayValue}</Text>
-        <Text
-          className="text-center text-text-muted"
-          numberOfLines={2}
-          size="xs"
-          style={{ minHeight: 28 }}
-        >
-          {label}
-        </Text>
-      </VStack>
-    </Animated.View>
+      <StatIconChip kind={kind} tone={tone} />
+      <Text className="font-inter-bold text-[26px] text-content">{displayValue}</Text>
+      <Text className="text-center text-text-muted" numberOfLines={2} size="xs">
+        {label}
+      </Text>
+    </VStack>
   );
 }
 
@@ -318,99 +336,111 @@ export function StatCard({
 // as the onboarding commit step and the Profile screen's own level-progress
 // bar rather than introducing a new one. completed/total both being 0 (no
 // mission activity yet) reads as an empty ring, not a divide-by-zero NaN.
-// Shares StatCard's exact fixed footprint so it lines up with its siblings
-// in the row instead of sticking out taller/shorter.
+// Shares StatCard's exact fixed height so it lines up with its sibling card
+// when the Missions tab shows both this and "Missions created" side by side.
 export function MissionProgressStatCard({
   completed,
-  index = 0,
   total,
 }: {
   readonly completed: number;
   readonly total: number;
-  readonly index?: number;
 }) {
   const fraction = total > 0 ? completed / total : 0;
   const ringProgress = useAnimatedRingProgress(fraction);
   const displayCompleted = useCountUp(completed);
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 50).duration(320).springify().damping(16)}
-      style={{ height: STAT_CARD_HEIGHT, width: STAT_CARD_WIDTH }}
+    <VStack
+      className="w-[160px] items-center justify-center gap-2.5 rounded-2xl border border-surface-hairline bg-paper px-3 py-4 shadow-card"
+      style={{ height: STAT_CARD_HEIGHT }}
     >
-      <VStack className="h-full w-full items-center justify-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-2 py-3 shadow-card">
-        <ProgressRing
-          color={RING_COLOR}
-          progress={ringProgress}
-          size={52}
-          strokeWidth={5}
-          trackColor={RING_TRACK_COLOR}
-        >
-          <Text className="font-inter-bold text-[15px] text-content">
-            {displayCompleted}
-          </Text>
-        </ProgressRing>
-        <Text
-          className="text-center text-text-muted"
-          numberOfLines={2}
-          size="xs"
-          style={{ minHeight: 28 }}
-        >
-          Missions completed
-        </Text>
-      </VStack>
-    </Animated.View>
+      <ProgressRing
+        color={RING_COLOR}
+        progress={ringProgress}
+        size={60}
+        strokeWidth={6}
+        trackColor={RING_TRACK_COLOR}
+      >
+        <Text className="font-inter-bold text-[18px] text-content">{displayCompleted}</Text>
+      </ProgressRing>
+      <Text className="text-center text-text-muted" numberOfLines={2} size="xs">
+        Missions completed
+      </Text>
+    </VStack>
   );
 }
 
-// A horizontally scrolling row of StatCard/MissionProgressStatCard --
-// unlike StatBox's flex-1 row (a fixed 5 items, no ambiguity to split
-// further), ActivityScreen's own stat row needs room for Events and
-// Missions each broken into two figures (created vs attended/completed) to
-// resolve what used to be one combined, ambiguous count -- 7 cards no
-// longer fit evenly in a fixed-width row the way 5 did. snapToInterval (the
-// same STAT_CARD_WIDTH+gap every card actually uses) plus a fast
-// decelerationRate makes it settle on a card instead of drifting to an
-// arbitrary half-scrolled stop, which read as unpolished on a row this
-// short. The right-edge gradient is a plain SVG overlay (react-native-svg
-// is already a dependency -- see CommitStep's own RadialGradient) rather
-// than expo-linear-gradient, which isn't installed and would need a new
-// native build to add -- this app ships over EAS Update (JS-only), so a
-// brand-new native module isn't something a normal deploy here can pick up.
-const STAT_ROW_GAP = 8;
-const EDGE_FADE_WIDTH = 28;
+// Shows only the 1-2 stat cards relevant to `filter` instead of every kind
+// at once -- a direct answer to two complaints about the horizontally-
+// scrolling 7-card version this replaces: cramped mini cards competing for
+// attention regardless of which tab was actually open below, and (a real
+// rendering side effect, not just a stylistic complaint) seven shadow-card
+// elements packed 8px apart with a 16px blur radius each visually bled into
+// one continuous dark shelf behind the whole row. 1-2 cards spaced normally
+// don't have that problem.
+//
+// Crossfades between filters (key={filter} forces React to unmount the old
+// set and mount the new one, which is what lets Reanimated's entering/
+// exiting props animate the swap) rather than an auto-scrolling ticker --
+// the ticker idea was tempting but numbers are the one thing on this card
+// that must stay legible; content sliding past on a loop is the opposite of
+// that, however "alive" it might look. StatIconChip's own slow breathing
+// pulse above is where the continuous motion actually lives instead,
+// without ever touching the number itself. No spring/bounce on the
+// transition, unlike the previous version -- matches CommitStep's own
+// plain duration-based ZoomIn rather than introducing a bouncier feel this
+// app doesn't use anywhere else.
+export function ActivityStatPanel({
+  eventsAttendingCount,
+  eventsCreatedCount,
+  filter,
+  missionsCompletedCount,
+  missionsCreatedCount,
+  missionsEngagedCount,
+  petitionsCount,
+  postsCount,
+  servicesCount,
+}: {
+  readonly filter: ActivityFilter;
+  readonly postsCount: number;
+  readonly eventsCreatedCount: number;
+  readonly eventsAttendingCount: number;
+  readonly missionsCreatedCount: number;
+  readonly missionsCompletedCount: number;
+  readonly missionsEngagedCount: number;
+  readonly servicesCount: number;
+  readonly petitionsCount: number;
+}) {
+  const cards: ReactNode =
+    filter === 'post' ? (
+      <StatCard kind="post" label="Posts" value={postsCount} />
+    ) : filter === 'event' ? (
+      <>
+        <StatCard kind="event" label="Events created" value={eventsCreatedCount} />
+        <StatCard kind="event" label="Events attending" value={eventsAttendingCount} />
+      </>
+    ) : filter === 'mission' ? (
+      <>
+        <StatCard kind="mission" label="Missions created" value={missionsCreatedCount} />
+        <MissionProgressStatCard completed={missionsCompletedCount} total={missionsEngagedCount} />
+      </>
+    ) : filter === 'service' ? (
+      <StatCard kind="service" label="Services" value={servicesCount} />
+    ) : (
+      <StatCard kind="petition" label="Petitions" value={petitionsCount} />
+    );
 
-export function StatRow({ children }: { readonly children: ReactNode }) {
   return (
-    <View>
-      <ScrollView
-        contentContainerStyle={{
-          gap: STAT_ROW_GAP,
-          paddingHorizontal: 20,
-        }}
-        decelerationRate="fast"
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={STAT_CARD_WIDTH + STAT_ROW_GAP}
-        style={{ flexGrow: 0 }}
-      >
-        {children}
-      </ScrollView>
-      <View
-        className="absolute bottom-0 right-0 top-0"
-        pointerEvents="none"
-        style={{ width: EDGE_FADE_WIDTH }}
-      >
-        <Svg height="100%" width="100%">
-          <Defs>
-            <LinearGradient id="statRowFade" x1="0" x2="1" y1="0" y2="0">
-              <Stop offset="0" stopColor="rgb(247,241,230)" stopOpacity={0} />
-              <Stop offset="1" stopColor="rgb(247,241,230)" stopOpacity={1} />
-            </LinearGradient>
-          </Defs>
-          <Rect fill="url(#statRowFade)" height="100%" width="100%" />
-        </Svg>
-      </View>
-    </View>
+    <Animated.View
+      // key remounts this subtree per filter, which is what makes
+      // entering/exiting actually fire on every switch rather than once.
+      entering={FadeIn.duration(220)}
+      exiting={FadeOut.duration(120)}
+      key={filter}
+    >
+      <HStack className="justify-center px-5 pb-3" space="sm">
+        {cards}
+      </HStack>
+    </Animated.View>
   );
 }
 
