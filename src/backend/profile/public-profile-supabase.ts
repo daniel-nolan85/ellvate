@@ -61,67 +61,37 @@ export async function getMemberDisplayRowsSupabase(
   }));
 }
 
-// Count-only (head) queries — cheaper than fetching full rows just to
-// measure how many a member has, and mirrors the read-only, ownership-blind
-// nature of getMemberRowSupabase above (app_users is publicly readable).
+interface MemberActivityCountsRow {
+  readonly posts_count: number;
+  readonly missions_created: number;
+  readonly events_created: number;
+  readonly events_attended: number;
+  readonly services_listed: number;
+  readonly petitions_started: number;
+}
+
+// One round trip via the member_activity_counts() RPC (0062), not 6 separate
+// head-count queries -- getPublicProfile already fires several other
+// subrequests of its own (the member row, and getMissionsView's own 4), and
+// this member-profile-only path used to add 6 more, hitting the hosting
+// platform's per-request subrequest cap -- see missions-supabase.ts's
+// MISSION_SELECT comment for the exact "Too many subrequests by single
+// Worker invocation" failure this mirrors.
 export async function getMemberActivityCountsSupabase(
   supabase: SupabaseClient,
   memberUserId: string,
 ): Promise<MemberActivityCounts> {
-  const [
-    postsRes,
-    missionsRes,
-    eventsCreatedRes,
-    eventsAttendedRes,
-    servicesListedRes,
-    petitionsStartedRes,
-  ] = await Promise.all([
-    supabase
-      .from('posts')
-      .select('*', { count: 'exact', head: true })
-      .eq('author_id', memberUserId),
-    supabase
-      .from('missions')
-      .select('*', { count: 'exact', head: true })
-      .eq('created_by', memberUserId),
-    supabase
-      .from('events')
-      .select('*', { count: 'exact', head: true })
-      .eq('created_by', memberUserId),
-    supabase
-      .from('event_joins')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', memberUserId),
-    supabase
-      .from('service_listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('created_by', memberUserId),
-    supabase
-      .from('petitions')
-      .select('*', { count: 'exact', head: true })
-      .eq('created_by', memberUserId),
-  ]);
-  throwIfSupabaseError(postsRes.error, 'count member posts');
-  throwIfSupabaseError(missionsRes.error, 'count member missions created');
-  throwIfSupabaseError(eventsCreatedRes.error, 'count member events created');
-  throwIfSupabaseError(
-    eventsAttendedRes.error,
-    'count member events attended',
-  );
-  throwIfSupabaseError(
-    servicesListedRes.error,
-    'count member services listed',
-  );
-  throwIfSupabaseError(
-    petitionsStartedRes.error,
-    'count member petitions started',
-  );
+  const { data, error } = await supabase
+    .rpc('member_activity_counts', { member_id: memberUserId })
+    .single();
+  throwIfSupabaseError(error, 'count member activity');
+  const row = data as unknown as MemberActivityCountsRow;
   return {
-    eventsAttended: eventsAttendedRes.count ?? 0,
-    eventsCreated: eventsCreatedRes.count ?? 0,
-    missionsCreated: missionsRes.count ?? 0,
-    petitionsStarted: petitionsStartedRes.count ?? 0,
-    postsCount: postsRes.count ?? 0,
-    servicesListed: servicesListedRes.count ?? 0,
+    eventsAttended: row.events_attended,
+    eventsCreated: row.events_created,
+    missionsCreated: row.missions_created,
+    petitionsStarted: row.petitions_started,
+    postsCount: row.posts_count,
+    servicesListed: row.services_listed,
   };
 }

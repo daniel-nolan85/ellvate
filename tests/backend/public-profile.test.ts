@@ -96,17 +96,26 @@ describe('getMemberRowSupabase (requester differs from member)', () => {
 });
 
 describe('getMemberActivityCountsSupabase', () => {
-  test('runs a head-count query per activity table scoped to the member', async () => {
-    const calls: { table: string; column: string; value: string }[] = [];
+  test('calls the member_activity_counts RPC once instead of 6 separate head-count queries', async () => {
+    const calls: { fn: string; args: Record<string, unknown> }[] = [];
     const client = {
-      from: (table: string) => ({
-        select: () => ({
-          eq: (column: string, value: string) => {
-            calls.push({ column, table, value });
-            return Promise.resolve({ count: 3, error: null });
-          },
-        }),
-      }),
+      rpc: (fn: string, args: Record<string, unknown>) => {
+        calls.push({ args, fn });
+        return {
+          single: () =>
+            Promise.resolve({
+              data: {
+                events_attended: 3,
+                events_created: 3,
+                missions_created: 3,
+                petitions_started: 3,
+                posts_count: 3,
+                services_listed: 3,
+              },
+              error: null,
+            }),
+        };
+      },
     } as unknown as SupabaseClient;
 
     const counts = await getMemberActivityCountsSupabase(client, 'user-other');
@@ -120,12 +129,7 @@ describe('getMemberActivityCountsSupabase', () => {
       servicesListed: 3,
     });
     expect(calls).toEqual([
-      { column: 'author_id', table: 'posts', value: 'user-other' },
-      { column: 'created_by', table: 'missions', value: 'user-other' },
-      { column: 'created_by', table: 'events', value: 'user-other' },
-      { column: 'user_id', table: 'event_joins', value: 'user-other' },
-      { column: 'created_by', table: 'service_listings', value: 'user-other' },
-      { column: 'created_by', table: 'petitions', value: 'user-other' },
+      { args: { member_id: 'user-other' }, fn: 'member_activity_counts' },
     ]);
   });
 });
