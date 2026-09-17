@@ -45,10 +45,8 @@ import { useSession } from '@/src/platform/session';
 
 import {
   ActivitySectionList,
+  ActivityStatPanel,
   FilterChips,
-  MissionProgressStatCard,
-  StatCard,
-  StatRow,
   isActivityFilter,
   type ActivityFilter,
   type ActivityListItem,
@@ -512,45 +510,21 @@ export function ActivityScreen() {
         <>
           {/* collapsable={false}: the same real react-native-screens#3092
               view-flattening workaround used on four other screens in this
-              app (see e.g. notifications-screen.tsx). Events and Missions
-              are each split into two cards (created vs attended/completed)
-              instead of one combined, ambiguous count -- see the WHY on
-              eventsCreatedCount above -- which is also why this row scrolls
-              horizontally now rather than splitting a fixed row 5 ways. */}
-          <View className="pb-3" collapsable={false}>
-            <StatRow>
-              <StatCard index={0} kind="post" label="Posts" value={myPostItems.length} />
-              <StatCard
-                index={1}
-                kind="event"
-                label="Events created"
-                value={eventsCreatedCount}
-              />
-              <StatCard
-                index={2}
-                kind="event"
-                label="Events attending"
-                value={eventsAttendingCount}
-              />
-              <StatCard
-                index={3}
-                kind="mission"
-                label="Missions created"
-                value={missionsCreatedCount}
-              />
-              <MissionProgressStatCard
-                completed={missionsCompletedCount}
-                index={4}
-                total={myMissionItems.length}
-              />
-              <StatCard index={5} kind="service" label="Services" value={myServiceItems.length} />
-              <StatCard
-                index={6}
-                kind="petition"
-                label="Petitions"
-                value={myPetitionItems.length}
-              />
-            </StatRow>
+              app (see e.g. notifications-screen.tsx). Shows only the 1-2
+              cards relevant to the active filter tab below, not every kind
+              at once -- see ActivityStatPanel's own WHY. */}
+          <View collapsable={false}>
+            <ActivityStatPanel
+              eventsAttendingCount={eventsAttendingCount}
+              eventsCreatedCount={eventsCreatedCount}
+              filter={filter}
+              missionsCompletedCount={missionsCompletedCount}
+              missionsCreatedCount={missionsCreatedCount}
+              missionsEngagedCount={myMissionItems.length}
+              petitionsCount={myPetitionItems.length}
+              postsCount={myPostItems.length}
+              servicesCount={myServiceItems.length}
+            />
           </View>
 
           <FilterChips active={filter} onSelect={setFilter} />
