@@ -49,9 +49,12 @@ export function MissionCheckInThumbnailRow({
 
   return (
     <VStack className="gap-2">
-      <HStack className="items-center justify-between px-5">
+      {/* No horizontal padding here -- unlike the full-bleed gallery screen
+          below, this row only ever renders inside mission-detail-screen's
+          own padded card, which already insets it correctly. */}
+      <HStack className="items-center justify-between">
         <Text className="font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-          Check-in photos
+          Mission photos
         </Text>
         <Pressable accessibilityRole="button" onPress={onOpenAll}>
           <Text className="font-inter-semibold text-[12px] text-accent">
@@ -59,7 +62,7 @@ export function MissionCheckInThumbnailRow({
           </Text>
         </Pressable>
       </HStack>
-      <HStack className="flex-wrap gap-2 px-5">
+      <HStack className="flex-wrap gap-2">
         {preview.map((photo, index) => (
           <Pressable
             accessibilityLabel="View check-in photo"
@@ -155,7 +158,7 @@ export function MissionCheckInGalleryScreen({
           <Icon name="ChevronLeft" size={22} />
         </Pressable>
         <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
-          Check-in photos
+          Mission photos
         </Heading>
       </HStack>
 
@@ -171,8 +174,8 @@ export function MissionCheckInGalleryScreen({
           ) : (
             <Text className="px-1 py-4 text-center text-muted-foreground" size="sm">
               {gallery.isError
-                ? "Couldn't load check-in photos."
-                : 'No check-in photos yet.'}
+                ? "Couldn't load mission photos."
+                : 'No mission photos yet.'}
             </Text>
           )
         }
