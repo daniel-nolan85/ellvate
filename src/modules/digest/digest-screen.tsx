@@ -443,7 +443,11 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
         {openItem?.kind === 'post' ? (
           <View className="px-1 pb-4">
             <PostCard
-              onOpen={() => closeThenNavigate(`/post/${openItem.post.id}`)}
+              onOpen={(focusComments) =>
+                closeThenNavigate(
+                  `/post/${openItem.post.id}${focusComments ? '?focusComments=1' : ''}`,
+                )
+              }
               onToggleLike={() =>
                 toggleLike.mutate({ forum: openItem.post.forum, postId: openItem.post.id })
               }

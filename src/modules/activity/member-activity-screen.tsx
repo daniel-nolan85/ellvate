@@ -411,7 +411,11 @@ export function MemberActivityScreen({
         {openPost ? (
           <View className="px-1 pb-4">
             <PostCard
-              onOpen={() => closeThenNavigate(`/post/${openPost.id}`)}
+              onOpen={(focusComments) =>
+                closeThenNavigate(
+                  `/post/${openPost.id}${focusComments ? '?focusComments=1' : ''}`,
+                )
+              }
               onToggleLike={() =>
                 toggleLike.mutate({ forum: openPost.forum, postId: openPost.id })
               }

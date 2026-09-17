@@ -4,6 +4,7 @@ import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -178,9 +179,23 @@ export function MissionsScreen({
               </Button>
             </VStack>
           ) : (
-            <Text className="px-5 py-2 text-muted-foreground" size="sm">
-              No missions in this filter yet.
-            </Text>
+            <EmptyState
+              heading={
+                filter === 'available'
+                  ? 'No missions available'
+                  : filter === 'in-progress'
+                    ? 'Nothing in progress'
+                    : 'No missions completed yet'
+              }
+              icon="Star"
+              subtext={
+                filter === 'available'
+                  ? 'Check back soon, or create one yourself.'
+                  : filter === 'in-progress'
+                    ? 'Accept a mission to see it here.'
+                    : 'Finish a mission to see it here.'
+              }
+            />
           )
         }
         ListFooterComponent={

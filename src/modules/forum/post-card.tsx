@@ -44,7 +44,10 @@ const COLOR_DESTRUCTIVE = 'rgb(231,0,11)';
 interface PostCardProps {
   readonly post: ForumPost;
   readonly onToggleLike: () => void;
-  readonly onOpen?: () => void;
+  // `focusComments` true when opened via the comment-count pill below,
+  // rather than tapping the card itself -- callers use it to land the
+  // detail screen scrolled to the comments section instead of the top.
+  readonly onOpen?: (focusComments?: boolean) => void;
   // Screens that render many PostCards at once (the forum list) pass a
   // shared PinAction so only one <PinExplainerModal> is ever mounted — see
   // use-pin-action.ts for why. Screens showing a single card at a time
@@ -231,7 +234,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
         accessibilityLabel={`Open post: ${post.title}`}
         accessibilityRole='button'
         className='gap-4'
-        onPress={onOpen}
+        onPress={() => onOpen?.()}
         testID={`forum-post-${post.id}`}
       >
         <HStack className='items-center' space='sm'>
@@ -332,8 +335,10 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
           </Text>
         </Pressable>
         <Pressable
+          accessibilityLabel='Open comments'
+          accessibilityRole='button'
           className='flex-row items-center gap-1.5 rounded-full bg-secondary px-3 py-[7px]'
-          onPress={onOpen}
+          onPress={() => onOpen?.(true)}
         >
           <Icon color={COLOR_CONTENT} name='MessageCircle' size={14} />
           <Text className='font-inter-semibold text-[12px] leading-[16px] text-content'>

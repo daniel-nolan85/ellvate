@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, type Href } from 'expo-router';
 
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
@@ -231,13 +232,11 @@ export function BookmarksScreen() {
           <Spinner size="xlarge" />
         </VStack>
       ) : items.length === 0 ? (
-        <VStack className="items-center gap-2 px-8 py-16" space="sm">
-          <Icon name="Bookmark" size={28} />
-          <Text className="text-center text-[14px] text-text-muted">
-            Nothing bookmarked yet — tap the bookmark icon on a post, event,
-            mission, service listing, or petition to save it here.
-          </Text>
-        </VStack>
+        <EmptyState
+          heading="Nothing bookmarked yet"
+          icon="Bookmark"
+          subtext="Tap the bookmark icon on a post, event, mission, service listing, or petition to save it here."
+        />
       ) : (
         // FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
         // ActivitySectionList for why: only mounting rows actually on
@@ -266,7 +265,11 @@ export function BookmarksScreen() {
         {openItem?.kind === 'post' ? (
           <View className="px-1 pb-4">
             <PostCard
-              onOpen={() => closeThenNavigate(`/post/${openItem.post.id}`)}
+              onOpen={(focusComments) =>
+                closeThenNavigate(
+                  `/post/${openItem.post.id}${focusComments ? '?focusComments=1' : ''}`,
+                )
+              }
               onToggleLike={() =>
                 toggleLike.mutate({
                   forum: openItem.post.forum,

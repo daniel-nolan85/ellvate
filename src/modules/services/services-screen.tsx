@@ -4,6 +4,7 @@ import { FlatList, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
+import { EmptyState } from '@/src/components/shared/empty-state';
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Icon } from '@/src/components/ui/icon';
 import { Sheet } from '@/src/components/ui/sheet';
@@ -90,18 +91,11 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
               </Button>
             </VStack>
           ) : (
-            <VStack className="items-center px-10 py-16" space="xs">
-              <Icon color="rgb(169,156,139)" name="Store" size={28} />
-              <Text
-                className="text-center font-inter-semibold text-content"
-                size="sm"
-              >
-                No listings yet
-              </Text>
-              <Text className="text-center text-text-muted" size="xs">
-                Be the first to list a business in this category.
-              </Text>
-            </VStack>
+            <EmptyState
+              heading="No listings yet"
+              icon="Store"
+              subtext="Be the first to list a business in this category."
+            />
           )
         }
         ListFooterComponent={
