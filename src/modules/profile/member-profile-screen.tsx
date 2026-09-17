@@ -141,7 +141,17 @@ export function MemberProfileScreen({
   };
 
   return (
-    <View className='flex-1 bg-canvas'>
+    // This screen is always formSheet-presented, so `flex-1` on this root
+    // is not a reliable way to fill the sheet's allocated detent height --
+    // see SHEET_SCREEN_OPTIONS' own WHY (community-shell) for the underlying
+    // react-native-screens quirk; contentStyle:{height:'100%'} there fixes
+    // the *navigator's* wrapper, but this component's own root also needs
+    // an explicit height rather than flex to actually stretch to match it.
+    // collapsable={false} on this root (not just the header below) keeps it
+    // from being flattened into that wrapper by RN's view-flattening
+    // optimization -- the same #3092 class of bug the header fix below
+    // targets, but at the container level.
+    <View className='bg-canvas' collapsable={false} style={{ height: '100%' }}>
       {/* No manual close button -- this screen is presented as a native
           formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
           dismiss, and tap-outside already cover closing it. A `formSheet`

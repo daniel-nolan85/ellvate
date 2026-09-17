@@ -323,7 +323,17 @@ export function MemberActivityScreen({
   }, [filter, postListItems, eventListItems, missionListItems, serviceListItems, petitionListItems]);
 
   return (
-    <View className="flex-1 bg-canvas">
+    // Always presented as a native modal (see below), so `flex-1` on this
+    // root is not a reliable way to fill the sheet's allocated height --
+    // see SHEET_SCREEN_OPTIONS'/MODAL_SCREEN_OPTIONS' own WHY (community-
+    // shell) for the underlying react-native-screens quirk; contentStyle:
+    // {height:'100%'} there fixes the *navigator's* wrapper, but this
+    // component's own root also needs an explicit height rather than flex
+    // to actually stretch to match it. collapsable={false} on this root
+    // (not just the header below) keeps it from being flattened into that
+    // wrapper by RN's view-flattening optimization -- the same #3092 class
+    // of bug the header fix below targets, but at the container level.
+    <View className="bg-canvas" collapsable={false} style={{ height: '100%' }}>
       {/* No manual close button -- this screen is presented as a native
           `presentation: 'modal'` screen (see app/_layout.tsx and
           MODAL_SCREEN_OPTIONS -- not formSheet like Member Profile, the
