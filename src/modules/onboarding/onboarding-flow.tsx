@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Spinner } from '@/src/components/ui/spinner';
+import { Text } from '@/src/components/ui/text';
+import { useProfile } from '@/src/modules/profile';
 import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { useSession } from '@/src/platform/session';
 
@@ -15,6 +17,7 @@ import { NameStep } from './name-step';
 import { NotificationsStep } from './notifications-step';
 import { PasskeyStep } from './passkey-step';
 import { RoleStep } from './role-step';
+import { useOnboardingComplete } from './use-onboarding-complete';
 import {
   fetchReturningProfile,
   markOnboardingComplete,
@@ -58,6 +61,13 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const clerkUsable =
     session.status !== 'disabled' && session.status !== 'misconfigured';
   const isSignedIn = session.status === 'signed-in';
+  // TEMPORARY diagnostic for the onboarding-loops-every-launch report --
+  // shows exactly what app/index.tsx's own redirect decision saw, since
+  // that decision fires before this screen even mounts and there's no
+  // device console available to check otherwise. Remove once that's
+  // confirmed fixed.
+  const debugProfile = useProfile({ enabled: isSignedIn });
+  const debugLocalComplete = useOnboardingComplete();
   const includePasskey =
     clerkUsable && process.env.EXPO_PUBLIC_ENABLE_PASSKEYS === 'true';
   // welcome, auth, role, name, interests, 8 feature moments, notifications,
@@ -242,13 +252,35 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     />,
   ];
 
+  // TEMPORARY diagnostic for the onboarding-loops-every-launch report --
+  // see the debugProfile/debugLocalComplete hooks above for why this reads
+  // both sources. Rendered absolutely so it overlays every step without
+  // shifting any step's own layout. Remove this block together with those
+  // hooks once the loop is confirmed fixed.
+  const debugOverlay = (
+    <View
+      className="absolute left-2 right-2 top-16 z-50 rounded-md bg-black/80 px-2 py-1"
+      pointerEvents="none"
+    >
+      <Text className="text-[10px] text-white">
+        {`[DEBUG] server onboardedAt=${String(debugProfile.data?.profile.onboardedAt ?? 'n/a')} local=${String(debugLocalComplete)} signedIn=${String(isSignedIn)}`}
+      </Text>
+    </View>
+  );
+
   if (checkingReturningUser) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
         <Spinner size="xlarge" />
+        {debugOverlay}
       </View>
     );
   }
 
-  return <View className="flex-1 bg-canvas">{steps[step]}</View>;
+  return (
+    <View className="flex-1 bg-canvas">
+      {steps[step]}
+      {debugOverlay}
+    </View>
+  );
 }
