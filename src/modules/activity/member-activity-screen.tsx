@@ -352,7 +352,12 @@ export function MemberActivityScreen({
           native view into its parent, which then lets the ScrollView below
           render on top of it instead of below it -- forcing this view to
           actually exist natively is the documented fix. */}
-      <HStack className="items-center justify-between px-5 pb-3 pt-6" collapsable={false}>
+      {/* pt-9, not this app's usual pt-6 -- see digest-screen.tsx's identical
+          WHY: the native grabber/rounded top corner of this modal
+          presentation already take up real space above the first row, so
+          the same fixed gap that reads fine on a plain pushed screen's
+          header reads as cramped here specifically. */}
+      <HStack className="items-center justify-between px-5 pb-3 pt-9" collapsable={false}>
         <VStack>
           <Text className="text-text-muted" size="xs">
             Activity

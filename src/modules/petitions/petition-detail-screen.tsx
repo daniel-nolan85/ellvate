@@ -279,7 +279,7 @@ export function PetitionDetailScreen({
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}
-        style={{ paddingTop: modal ? 24 : insets.top + 8 }}
+        style={{ paddingTop: modal ? 32 : insets.top + 8 }}
       >
         {modal ? null : (
           <Pressable accessibilityLabel="Back" onPress={onBack}>

@@ -3,8 +3,6 @@ import React, { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Spinner } from '@/src/components/ui/spinner';
-import { Text } from '@/src/components/ui/text';
-import { useProfile } from '@/src/modules/profile';
 import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { useSession } from '@/src/platform/session';
 
@@ -17,7 +15,6 @@ import { NameStep } from './name-step';
 import { NotificationsStep } from './notifications-step';
 import { PasskeyStep } from './passkey-step';
 import { RoleStep } from './role-step';
-import { useOnboardingComplete } from './use-onboarding-complete';
 import {
   fetchReturningProfile,
   markOnboardingComplete,
@@ -61,13 +58,6 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
   const clerkUsable =
     session.status !== 'disabled' && session.status !== 'misconfigured';
   const isSignedIn = session.status === 'signed-in';
-  // TEMPORARY diagnostic for the onboarding-loops-every-launch report --
-  // shows exactly what app/index.tsx's own redirect decision saw, since
-  // that decision fires before this screen even mounts and there's no
-  // device console available to check otherwise. Remove once that's
-  // confirmed fixed.
-  const debugProfile = useProfile({ enabled: isSignedIn });
-  const debugLocalComplete = useOnboardingComplete();
   const includePasskey =
     clerkUsable && process.env.EXPO_PUBLIC_ENABLE_PASSKEYS === 'true';
   // welcome, auth, role, name, interests, 8 feature moments, notifications,
@@ -178,7 +168,12 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     <WelcomeStep key="welcome" onNext={goNext} />,
     <AuthStep key="auth" onBack={goBack} onNext={goNext} />,
     <RoleStep
-      chrome={chrome(true)}
+      // Not skippable -- see the WHY on the InterestsStep entry below, the
+      // same reasoning applies here: role is one of the two fields (with
+      // interests) the backend requires before it will ever set
+      // onboardedAt (see ONBOARDING_MIN_INTERESTS's usage in
+      // src/backend/profile/profile.ts's isOnboardingComplete).
+      chrome={chrome(false)}
       key="role"
       onNext={goNext}
       onPick={setRole}
@@ -192,7 +187,21 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       value={draft.name}
     />,
     <InterestsStep
-      chrome={chrome(true)}
+      // Not skippable -- this step's own CTA already disables "Continue"
+      // below MIN_PICKS, but the header's Skip link used to call goNext()
+      // directly, bypassing that entirely and leaving draft.interests
+      // short (or role null, from the step above). completeOnboarding()
+      // still PUTs successfully and unconditionally marks the *local*
+      // AsyncStorage flag complete either way, but the backend's own
+      // isOnboardingComplete requires role !== null AND interests.length
+      // >= ONBOARDING_MIN_INTERESTS before it will ever set onboardedAt --
+      // so a skip here left onboardedAt permanently null server-side while
+      // the device-local flag read complete, which is exactly what
+      // app/index.tsx's own isComplete check (server truth for a real
+      // signed-in session, never the local flag) then read as "not
+      // onboarded" on every subsequent launch. Confirmed via the onboarding
+      // debug overlay: local=true, server onboardedAt=n/a.
+      chrome={chrome(false)}
       key="interests"
       onNext={goNext}
       onToggle={toggleInterest}
@@ -252,35 +261,13 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     />,
   ];
 
-  // TEMPORARY diagnostic for the onboarding-loops-every-launch report --
-  // see the debugProfile/debugLocalComplete hooks above for why this reads
-  // both sources. Rendered absolutely so it overlays every step without
-  // shifting any step's own layout. Remove this block together with those
-  // hooks once the loop is confirmed fixed.
-  const debugOverlay = (
-    <View
-      className="absolute left-2 right-2 top-16 z-50 rounded-md bg-black/80 px-2 py-1"
-      pointerEvents="none"
-    >
-      <Text className="text-[10px] text-white">
-        {`[DEBUG] server onboardedAt=${String(debugProfile.data?.profile.onboardedAt ?? 'n/a')} local=${String(debugLocalComplete)} signedIn=${String(isSignedIn)}`}
-      </Text>
-    </View>
-  );
-
   if (checkingReturningUser) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
         <Spinner size="xlarge" />
-        {debugOverlay}
       </View>
     );
   }
 
-  return (
-    <View className="flex-1 bg-canvas">
-      {steps[step]}
-      {debugOverlay}
-    </View>
-  );
+  return <View className="flex-1 bg-canvas">{steps[step]}</View>;
 }

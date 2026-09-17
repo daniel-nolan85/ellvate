@@ -11,6 +11,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { CommunityNavBar } from '@/src/modules/community-shell';
+import { ProfileAvatarButton } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -104,6 +105,11 @@ export function SearchScreen() {
         className="items-center gap-2 border-b border-line px-[18px] pb-3"
         style={{ paddingTop: insets.top + 8 }}
       >
+        {/* This screen is a summoned overlay with no CommunityNavBar tab of
+            its own -- "Cancel" below gets back to wherever it was opened
+            from, but with no way to Profile directly, matching
+            notifications-screen.tsx's identical gap. */}
+        <ProfileAvatarButton />
         <View className="h-11 flex-1 flex-row items-center gap-2 rounded-full border border-content px-4">
           <Icon color="rgb(120,108,94)" name="Search" size={18} />
           <TextInput

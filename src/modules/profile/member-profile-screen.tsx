@@ -180,7 +180,12 @@ export function MemberProfileScreen({
           any RN-visible trace of doing so. Rather than try a fifth variant
           in the same zone, Block/Report now live as plain rows near the
           bottom of the ScrollView below instead, see there. */}
-      <HStack className='items-center justify-between px-5 pb-3 pt-6' collapsable={false}>
+      {/* pt-9, not this app's usual pt-6 -- see digest-screen.tsx's identical
+          WHY: the native grabber and the sheet's own rounded top corner
+          already take up real space above a formSheet's first row, so the
+          same fixed gap that reads fine on a plain pushed screen's header
+          reads as cramped here specifically. */}
+      <HStack className='items-center justify-between px-5 pb-3 pt-9' collapsable={false}>
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>
