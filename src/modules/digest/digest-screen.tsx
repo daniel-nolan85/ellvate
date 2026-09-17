@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
+import { StatChipCard } from '@/src/components/shared/stat-chip-card';
 import { Badge } from '@/src/components/ui/badge';
-import { GlowBackdrop } from '@/src/components/ui/glow-backdrop';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon } from '@/src/components/ui/icon';
@@ -75,17 +75,6 @@ function TabSwitcher({
         );
       })}
     </HStack>
-  );
-}
-
-function StatBox({ label, value }: { readonly label: string; readonly value: number }) {
-  return (
-    <VStack className="flex-1 items-center rounded-2xl bg-secondary py-3.5" space="xs">
-      <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
-      <Text className="text-text-muted" size="xs">
-        {label}
-      </Text>
-    </VStack>
   );
 }
 
@@ -276,14 +265,6 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
     // wrapper by RN's view-flattening optimization -- the same #3092 class
     // of bug the header fix below targets, but at the container level.
     <View className="bg-canvas" collapsable={false} style={{ height: '100%' }}>
-      {/* First stop of the app's own "subtle gradient" theming pass -- a
-          soft warm glow behind the header rather than a flat canvas fill.
-          Opacity is much lower than CommitStep's own use of this same
-          component: that screen's backdrop is dark (bg-primary), where a
-          0.35 glow reads as warm ambient light; on this screen's canvas
-          background, that same opacity would show up as a visible smudge
-          rather than a subtle wash. */}
-      <GlowBackdrop left={-70} opacity={0.14} size={240} top={-40} />
       {/* No manual close button -- this screen is presented as a native
           formSheet (see app/_layout.tsx and SHEET_SCREEN_OPTIONS), whose own
           grabber, swipe-to-dismiss, and tap-outside already cover closing
@@ -357,10 +338,34 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
               </Text>
 
               <HStack className="px-5 pb-2" space="sm">
-                <StatBox label="Posts" value={digest.data.stats.newPosts} />
-                <StatBox label="Events" value={digest.data.stats.eventsHeld} />
-                <StatBox label="Missions" value={digest.data.stats.missionsCompleted} />
-                <StatBox label="Active" value={digest.data.stats.activeMembers} />
+                <StatChipCard
+                  icon="MessageCircle"
+                  label="New posts"
+                  size="sm"
+                  tone="plum"
+                  value={digest.data.stats.newPosts}
+                />
+                <StatChipCard
+                  icon="CalendarDays"
+                  label="Events held"
+                  size="sm"
+                  tone="palm"
+                  value={digest.data.stats.eventsHeld}
+                />
+                <StatChipCard
+                  icon="Star"
+                  label="Missions completed"
+                  size="sm"
+                  tone="accent"
+                  value={digest.data.stats.missionsCompleted}
+                />
+                <StatChipCard
+                  icon="Users"
+                  label="Active members"
+                  size="sm"
+                  tone="lake"
+                  value={digest.data.stats.activeMembers}
+                />
               </HStack>
 
               <SectionHeader title="Popular Posts" />

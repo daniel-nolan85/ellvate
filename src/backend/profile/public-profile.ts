@@ -30,6 +30,13 @@ export interface PublicProfile {
 export interface PublicMemberStats {
   readonly level: number;
   readonly xp: number;
+  // Already computed as part of `progress` below (buildProgress) for the
+  // level-progress bar on the member's own Profile screen -- surfaced here
+  // too so MemberProfileScreen can render the same bar instead of a bare
+  // Level/XP/Missions card row.
+  readonly xpIntoLevel: number;
+  readonly xpForNextLevel: number;
+  readonly xpToNextLevel: number;
   readonly missionsCompleted: number;
   readonly missionsCreated: number;
   readonly postsCount: number;
@@ -182,6 +189,9 @@ export async function getPublicProfile(
       level: progress?.level ?? 1,
       missionsCompleted: progress?.missionsCompleted ?? 0,
       xp: progress?.xp ?? 0,
+      xpForNextLevel: progress?.xpForNextLevel ?? 0,
+      xpIntoLevel: progress?.xpIntoLevel ?? 0,
+      xpToNextLevel: progress?.xpToNextLevel ?? 0,
       ...activityCounts,
     },
   };

@@ -8,7 +8,7 @@ import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
-import { CactusMascot, Spinner } from '@/src/components/ui/spinner';
+import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
@@ -205,9 +205,8 @@ export function NotificationsScreen() {
           <Spinner size="xlarge" />
         </VStack>
       ) : items.length === 0 ? (
-        // CactusMascot, not Icon -- see activity-screen.tsx's identical WHY.
         <VStack className="items-center gap-3 px-8 py-16" space="sm">
-          <CactusMascot size={64} />
+          <Icon name="Bell" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
             All caught up — nothing here yet.
           </Text>

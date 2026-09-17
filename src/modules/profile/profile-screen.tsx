@@ -157,7 +157,13 @@ function Row({
   );
 }
 
-function LevelProgress({
+// Exported: MemberProfileScreen (viewing someone else's profile) reuses this
+// exact bar instead of duplicating it a second time, in place of its own
+// former top-of-screen Level/XP/Missions card row. No horizontal margin
+// here -- this screen renders it directly under ScreenTitle with no padded
+// wrapper of its own, so the caller below supplies mx-5; MemberProfileScreen
+// already renders inside a px-5 VStack, so it needs none.
+export function LevelProgress({
   level,
   xp,
   xpForNextLevel,
@@ -175,7 +181,7 @@ function LevelProgress({
     : 0;
 
   return (
-    <VStack className="mx-5 mt-3 gap-2 rounded-2xl border border-surface-hairline bg-paper px-4 py-3.5 shadow-card">
+    <VStack className="gap-2 rounded-2xl border border-surface-hairline bg-paper px-4 py-3.5 shadow-card">
       <HStack className="items-center justify-between">
         <Text className="font-inter-semibold text-content" size="sm">
           Level {level}
@@ -425,7 +431,7 @@ export function ProfileScreen() {
           <Pressable
             accessibilityLabel="View points history"
             accessibilityRole="button"
-            className="pt-4"
+            className="mx-5 pt-4"
             onPress={() => setActiveSheet('points-history')}
           >
             <LevelProgress

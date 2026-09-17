@@ -7,37 +7,18 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeOut,
-  runOnJS,
-  useAnimatedReaction,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
+import { StatChipCard } from '@/src/components/shared/stat-chip-card';
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
-import { ProgressRing } from '@/src/components/ui/progress-ring';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import {
-  CATEGORY_ACCENT_ICON_COLOR,
-  CATEGORY_CHIP_ACTIVE_TREATMENT,
-  type CategoryAccent,
-} from '@/src/lib/category-accent';
+import { type CategoryAccent } from '@/src/lib/category-accent';
 
-const RING_COLOR = 'rgb(181,80,44)';
-const RING_TRACK_COLOR = 'rgb(238,231,219)';
 const COUNT_UP_MS = 700;
-// Every stat card (StatCard and MissionProgressStatCard) shares this exact
-// height, so a 1-card tab and a 2-card tab read as the same size shelf
-// rather than jumping taller/shorter when the filter changes.
-const STAT_CARD_HEIGHT = 152;
 
 // Ticks a displayed integer from its previous value up (or down) to `target`
 // over COUNT_UP_MS, easing out -- plain requestAnimationFrame rather than
@@ -86,32 +67,6 @@ function useCountUp(target: number): number {
   }, [target]);
 
   return value;
-}
-
-// Animates ProgressRing's own `progress` prop toward `target` on mount/
-// change -- ProgressRing itself just draws whatever fraction it's given
-// (see its own file); CommitStep's hold-to-confirm ring is the existing
-// precedent for driving it from a Reanimated shared value instead of
-// jumping straight to the final fraction.
-function useAnimatedRingProgress(target: number): number {
-  const shared = useSharedValue(0);
-  const [display, setDisplay] = useState(0);
-
-  useAnimatedReaction(
-    () => shared.value,
-    (value) => {
-      runOnJS(setDisplay)(value);
-    },
-  );
-
-  useEffect(() => {
-    shared.value = withTiming(target, {
-      duration: COUNT_UP_MS,
-      easing: Easing.out(Easing.quad),
-    });
-  }, [target, shared]);
-
-  return display;
 }
 
 // Shared between ActivityScreen (your own activity) and MemberActivityScreen
@@ -258,53 +213,13 @@ export function StatBox({ label, value }: { readonly label: string; readonly val
   );
 }
 
-// A slow, subtle breathing pulse on the icon chip (scale + glow opacity) --
-// the "always something gently alive" touch a static card lacks, without
-// resorting to a scrolling ticker: nothing here moves the *number* itself,
-// which stays perfectly legible the whole time. -1 repeat count means loop
-// forever; the `true` reverses direction each cycle (yoyo) rather than
-// snapping back to 0, so the motion has no visible seam.
-function useBreathingPulse(): number {
-  const shared = useSharedValue(0);
-  const [display, setDisplay] = useState(0);
-
-  useAnimatedReaction(
-    () => shared.value,
-    (value) => {
-      runOnJS(setDisplay)(value);
-    },
-  );
-
-  useEffect(() => {
-    shared.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-  }, [shared]);
-
-  return display;
-}
-
-function StatIconChip({ tone, kind }: { readonly tone: CategoryAccent; readonly kind: ActivityKind }) {
-  const pulse = useBreathingPulse();
-  return (
-    <Animated.View
-      className={`h-11 w-11 items-center justify-center rounded-full ${CATEGORY_CHIP_ACTIVE_TREATMENT[tone].bg}`}
-      style={{ transform: [{ scale: 1 + pulse * 0.05 }] }}
-    >
-      <Icon color={CATEGORY_ACCENT_ICON_COLOR[tone]} name={KIND_ICON[kind]} size={19} />
-    </Animated.View>
-  );
-}
-
-// A "hero" stat card, sized to fill the space next to its 0-1 siblings
-// (flex-1, not a fixed width) -- ActivityStatPanel below only ever shows the
-// 1-2 cards relevant to whichever filter tab is active, so there's no long
-// row to keep a fixed width consistent against anymore. The fixed HEIGHT
-// still matters: a post/service/petition tab shows one card, an event/
-// mission tab shows two, and both should read as the same size shelf, not
-// jump taller or shorter when the filter changes.
+// A "hero" stat card -- ActivityStatPanel below only ever shows the 1-2
+// cards relevant to whichever filter tab is active. Thin wrapper around the
+// shared StatChipCard (icon chip + count-up + breathing pulse), fixed to
+// its 'lg' size so every card in this row reads as the same size shelf, not
+// jumping taller or shorter when the filter changes -- including "Missions
+// completed", which used to render as a differently-shaped progress ring
+// here and looked inconsistent with its siblings.
 export function StatCard({
   kind,
   label,
@@ -314,59 +229,7 @@ export function StatCard({
   readonly label: string;
   readonly value: number;
 }) {
-  const displayValue = useCountUp(value);
-  const tone = KIND_TONE[kind];
-  return (
-    <VStack
-      className="w-[160px] items-center justify-center gap-2.5 rounded-2xl border border-surface-hairline bg-paper px-3 py-4 shadow-card"
-      style={{ height: STAT_CARD_HEIGHT }}
-    >
-      <StatIconChip kind={kind} tone={tone} />
-      <Text className="font-inter-bold text-[26px] text-content">{displayValue}</Text>
-      <Text className="text-center text-text-muted" numberOfLines={2} size="xs">
-        {label}
-      </Text>
-    </VStack>
-  );
-}
-
-// The one stat with a natural "progress toward a goal" reading -- missions
-// you've engaged with (created or accepted) that are now done -- gets a
-// ring instead of a bare number+icon chip, echoing the same visual language
-// as the onboarding commit step and the Profile screen's own level-progress
-// bar rather than introducing a new one. completed/total both being 0 (no
-// mission activity yet) reads as an empty ring, not a divide-by-zero NaN.
-// Shares StatCard's exact fixed height so it lines up with its sibling card
-// when the Missions tab shows both this and "Missions created" side by side.
-export function MissionProgressStatCard({
-  completed,
-  total,
-}: {
-  readonly completed: number;
-  readonly total: number;
-}) {
-  const fraction = total > 0 ? completed / total : 0;
-  const ringProgress = useAnimatedRingProgress(fraction);
-  const displayCompleted = useCountUp(completed);
-  return (
-    <VStack
-      className="w-[160px] items-center justify-center gap-2.5 rounded-2xl border border-surface-hairline bg-paper px-3 py-4 shadow-card"
-      style={{ height: STAT_CARD_HEIGHT }}
-    >
-      <ProgressRing
-        color={RING_COLOR}
-        progress={ringProgress}
-        size={60}
-        strokeWidth={6}
-        trackColor={RING_TRACK_COLOR}
-      >
-        <Text className="font-inter-bold text-[18px] text-content">{displayCompleted}</Text>
-      </ProgressRing>
-      <Text className="text-center text-text-muted" numberOfLines={2} size="xs">
-        Missions completed
-      </Text>
-    </VStack>
-  );
+  return <StatChipCard icon={KIND_ICON[kind]} label={label} tone={KIND_TONE[kind]} value={value} />;
 }
 
 // Shows only the 1-2 stat cards relevant to `filter` instead of every kind
@@ -383,8 +246,8 @@ export function MissionProgressStatCard({
 // exiting props animate the swap) rather than an auto-scrolling ticker --
 // the ticker idea was tempting but numbers are the one thing on this card
 // that must stay legible; content sliding past on a loop is the opposite of
-// that, however "alive" it might look. StatIconChip's own slow breathing
-// pulse above is where the continuous motion actually lives instead,
+// that, however "alive" it might look. Each card's own slow breathing pulse
+// (see StatChipCard) is where the continuous motion actually lives instead,
 // without ever touching the number itself. No spring/bounce on the
 // transition, unlike the previous version -- matches CommitStep's own
 // plain duration-based ZoomIn rather than introducing a bouncier feel this
@@ -395,7 +258,6 @@ export function ActivityStatPanel({
   filter,
   missionsCompletedCount,
   missionsCreatedCount,
-  missionsEngagedCount,
   petitionsCount,
   postsCount,
   servicesCount,
@@ -406,7 +268,6 @@ export function ActivityStatPanel({
   readonly eventsAttendingCount: number;
   readonly missionsCreatedCount: number;
   readonly missionsCompletedCount: number;
-  readonly missionsEngagedCount: number;
   readonly servicesCount: number;
   readonly petitionsCount: number;
 }) {
@@ -419,9 +280,14 @@ export function ActivityStatPanel({
         <StatCard kind="event" label="Events attending" value={eventsAttendingCount} />
       </>
     ) : filter === 'mission' ? (
+      // Both cards share the same mission icon/tone -- consistent with the
+      // rest of this row, where "created" vs "attending/completed" is
+      // conveyed by the label alone, not by giving one card a different
+      // treatment (a progress ring used to single out "completed" here,
+      // which read as inconsistent with its sibling card).
       <>
         <StatCard kind="mission" label="Missions created" value={missionsCreatedCount} />
-        <MissionProgressStatCard completed={missionsCompletedCount} total={missionsEngagedCount} />
+        <StatCard kind="mission" label="Missions completed" value={missionsCompletedCount} />
       </>
     ) : filter === 'service' ? (
       <StatCard kind="service" label="Services" value={servicesCount} />

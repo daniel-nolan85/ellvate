@@ -23,6 +23,7 @@ import {
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
+import { LevelProgress } from './profile-screen';
 import { useBlockUser, useBlockedUsers, useReportMember } from './use-block-user';
 import { useMemberProfile } from './use-profile';
 
@@ -234,26 +235,20 @@ export function MemberProfileScreen({
           </VStack>
         ) : (
           <VStack className='gap-4 px-5 pt-4'>
-            <HStack space='sm'>
-              <StatCard
-                icon='Trophy'
-                label='Level'
-                tone='accent'
-                value={String(member.data.stats?.level ?? 1)}
-              />
-              <StatCard
-                icon='Sparkles'
-                label='XP'
-                tone='amber'
-                value={String(member.data.stats?.xp ?? 0)}
-              />
-              <StatCard
-                icon='Star'
-                label='Missions'
-                tone='palm'
-                value={String(member.data.stats?.missionsCompleted ?? 0)}
-              />
-            </HStack>
+            {/* Replaces the former Level/XP/Missions 3-card row -- the same
+                level-progress bar the signed-in user's own Profile screen
+                uses (see profile-screen.tsx's LevelProgress), not a second
+                copy of it. Missions stays covered exactly once, below, as
+                "Missions completed" in the Activity grid -- this bar only
+                needs Level/XP, so no duplicate reappears. No mx-5 (unlike
+                that screen's own usage): this VStack already carries px-5. */}
+            <LevelProgress
+              level={member.data.stats?.level ?? 1}
+              xp={member.data.stats?.xp ?? 0}
+              xpForNextLevel={member.data.stats?.xpForNextLevel ?? 0}
+              xpIntoLevel={member.data.stats?.xpIntoLevel ?? 0}
+              xpToNextLevel={member.data.stats?.xpToNextLevel ?? 0}
+            />
 
             <VStack space='sm'>
               <Text className='font-inter-bold text-content' size='sm'>

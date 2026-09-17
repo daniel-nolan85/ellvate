@@ -23,6 +23,14 @@ import {
 
 const THUMB_SIZE = 64;
 const THUMB_GAP = 8;
+// The most tiles (thumbnails + the "View all" tile, if shown) that fit in
+// one row without wrapping, on the narrowest width this app supports
+// (iPhone SE, 375pt). This row sits inside mission-detail-screen's
+// px-[18px] screen padding plus its card's own p-[18px] padding -- 72pt of
+// horizontal inset total, leaving 303pt. At THUMB_SIZE=64 and an 8pt gap
+// between tiles, n*64 + (n-1)*8 <= 303 solves to n <= 4.3, so 4 is the most
+// that ever fits on one row across every supported device width.
+const PREVIEW_MAX = 4;
 
 const toViewerItems = (photos: readonly MissionCheckInPhoto[]) =>
   photos.map((photo) => ({ filename: photo.id, url: photo.photoUrl }));
@@ -44,8 +52,12 @@ export function MissionCheckInThumbnailRow({
     return null;
   }
 
-  const hasMore = gallery.hasNextPage || photos.length > 10;
-  const preview = photos.slice(0, 10);
+  const hasMore = gallery.hasNextPage || photos.length > PREVIEW_MAX;
+  // Reserve one slot for the "View all" tile whenever there's more than
+  // fits here, so the total tile count (thumbnails + that tile) never
+  // exceeds PREVIEW_MAX -- see its own WHY for the row-width math this
+  // keeps this row within.
+  const preview = photos.slice(0, hasMore ? PREVIEW_MAX - 1 : PREVIEW_MAX);
 
   return (
     <VStack className="gap-2">
