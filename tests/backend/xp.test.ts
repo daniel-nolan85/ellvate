@@ -212,6 +212,7 @@ describe('XP ledger for the onboarding bonus', () => {
     await updateProfile(ctx(), {
       interests: ['Boating', 'Dining', 'Trails'],
       role: 'resident',
+      onboardingComplete: true,
     });
     // A later, unrelated update must not grant (or log) the bonus again.
     await updateProfile(ctx(), { name: 'Renamed' });

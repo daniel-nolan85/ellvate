@@ -6,7 +6,7 @@ import type { CommunityRole, NotificationPrefs } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
-import { ONBOARDING_MIN_INTERESTS, WELCOME_XP } from './profile';
+import { WELCOME_XP } from './profile';
 import type { ProfileResult, UpdateProfileResult, UserProfile } from './profile';
 import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
@@ -99,10 +99,8 @@ const mergedRow = (
       ? update.activityVisible
       : current.activity_visible;
   const prefs = mergedPrefs(current, update.notificationPrefs);
-  const complete =
-    role !== null && interests.length >= ONBOARDING_MIN_INTERESTS;
   const onboardedAt =
-    current.onboarded_at === null && complete
+    current.onboarded_at === null && update.onboardingComplete === true
       ? new Date().toISOString()
       : current.onboarded_at;
   return {

@@ -135,6 +135,15 @@ export function useOnboardingState() {
           ...(draft.name.trim() ? { name: draft.name.trim() } : {}),
           interests: draft.interests,
           notificationPrefs: draft.notificationPrefs,
+          // Explicit intent signal, not a field-completeness heuristic --
+          // see validate.ts's ProfileUpdate.onboardingComplete for why. Sent
+          // unconditionally here (this call only ever fires from the wizard's
+          // own commit step) regardless of whether role/interests were
+          // filled in or skipped, so onboardedAt gets set either way and the
+          // local "done" flag set right below never diverges from server
+          // truth again the way it did when this depended on role being set
+          // and 3+ interests being picked.
+          onboardingComplete: true,
           role: draft.role,
         },
         getAccessToken: session.getToken,

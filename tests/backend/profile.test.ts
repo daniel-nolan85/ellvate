@@ -376,10 +376,10 @@ describe('updateProfile', () => {
     expect((await getProfile(ctx())).profile.role).toBeNull();
   });
 
-  test('does not stamp onboardedAt until all onboarding fields are set', async () => {
+  test('does not stamp onboardedAt from a plain profile edit without onboardingComplete', async () => {
     const result = await updateProfile(ctx(), {
       role: 'resident',
-      interests: ['Boating', 'Dining'],
+      interests: ['Boating', 'Dining', 'Trails'],
     });
 
     expect(result.ok).toBe(true);
@@ -388,12 +388,13 @@ describe('updateProfile', () => {
     }
   });
 
-  test('stamps onboardedAt when role and 3+ interests are set', async () => {
+  test('stamps onboardedAt when onboardingComplete is sent, regardless of role/interests', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
 
     const result = await updateProfile(ctx(), {
-      role: 'resident',
-      interests: ['Boating', 'Dining', 'Trails'],
+      role: null,
+      interests: [],
+      onboardingComplete: true,
     });
 
     expect(result.ok).toBe(true);
@@ -402,15 +403,16 @@ describe('updateProfile', () => {
     }
   });
 
-  test('stamps onboardedAt across incremental updates', async () => {
+  test('stamps onboardedAt on a later update that sends the flag, not retroactively on an earlier one', async () => {
     setSystemTime(new Date('2026-07-12T10:00:00.000Z'));
     await updateProfile(ctx(), { role: 'new' });
     expect((await getProfile(ctx())).profile.onboardedAt).toBeNull();
 
-    await updateProfile(ctx(), { interests: ['A', 'B', 'C'] });
+    setSystemTime(new Date('2026-07-13T09:00:00.000Z'));
+    await updateProfile(ctx(), { interests: ['A', 'B', 'C'], onboardingComplete: true });
 
     expect((await getProfile(ctx())).profile.onboardedAt).toBe(
-      '2026-07-12T10:00:00.000Z',
+      '2026-07-13T09:00:00.000Z',
     );
   });
 
@@ -419,11 +421,13 @@ describe('updateProfile', () => {
     await updateProfile(ctx(), {
       role: 'resident',
       interests: ['Boating', 'Dining', 'Trails'],
+      onboardingComplete: true,
     });
 
     setSystemTime(new Date('2026-07-13T09:00:00.000Z'));
     const result = await updateProfile(ctx(), {
       interests: ['Boating', 'Dining', 'Trails', 'Events'],
+      onboardingComplete: true,
     });
 
     expect(result.ok).toBe(true);

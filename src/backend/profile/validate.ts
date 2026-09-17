@@ -26,6 +26,13 @@ export interface ProfileUpdate {
   readonly interests?: readonly string[];
   readonly notificationPrefs?: Partial<NotificationPrefs>;
   readonly activityVisible?: boolean;
+  // Explicit intent signal from the onboarding wizard's own commit step --
+  // see profile.ts's isOnboardingComplete for why this replaced a
+  // field-based heuristic (role set, 3+ interests). Never true from any
+  // other caller of this same PUT (e.g. a later edit from the Profile
+  // screen), so it can't retroactively "complete" an account that finished
+  // onboarding before this field existed some other way.
+  readonly onboardingComplete?: boolean;
 }
 
 export interface ProfileValidationFailure {
@@ -122,6 +129,16 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
     );
   }
 
+  if (
+    'onboardingComplete' in input &&
+    typeof input.onboardingComplete !== 'boolean'
+  ) {
+    return failure(
+      'invalid_onboarding_complete',
+      'onboardingComplete must be a boolean.',
+    );
+  }
+
   return {
     ok: true,
     update: {
@@ -139,6 +156,9 @@ export function validateProfileUpdate(input: unknown): ProfileValidationResult {
         : {}),
       ...('activityVisible' in input
         ? { activityVisible: input.activityVisible as boolean }
+        : {}),
+      ...('onboardingComplete' in input
+        ? { onboardingComplete: input.onboardingComplete as boolean }
         : {}),
     },
   };

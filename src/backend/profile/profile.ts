@@ -12,8 +12,6 @@ import { getProfileSupabase, updateProfileSupabase } from './profile-supabase';
 import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate, ProfileValidationFailure } from './validate';
 
-export const ONBOARDING_MIN_INTERESTS = 3;
-
 // Welcome bonus granted once, the first time a user finishes onboarding, so a
 // brand-new member starts with XP on the missions and leaderboard screens.
 export const WELCOME_XP = 50;
@@ -88,10 +86,6 @@ const applyUpdate = (
       : profile.activityVisible,
 });
 
-const isOnboardingComplete = (profile: StoredProfile): boolean =>
-  profile.role !== null &&
-  profile.interests.length >= ONBOARDING_MIN_INTERESTS;
-
 function getProfileMemory(userId: string): ProfileResult {
   const user = ensureUser(userId);
   return {
@@ -111,7 +105,7 @@ function updateProfileMemory(
   const current = ensureUser(userId).profile;
   const merged = applyUpdate(current, validation.update);
   const next =
-    current.onboardedAt === null && isOnboardingComplete(merged)
+    current.onboardedAt === null && validation.update.onboardingComplete === true
       ? { ...merged, onboardedAt: new Date().toISOString() }
       : merged;
   const justOnboarded =
