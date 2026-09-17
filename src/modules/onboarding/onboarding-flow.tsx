@@ -168,12 +168,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     <WelcomeStep key="welcome" onNext={goNext} />,
     <AuthStep key="auth" onBack={goBack} onNext={goNext} />,
     <RoleStep
-      // Not skippable -- see the WHY on the InterestsStep entry below, the
-      // same reasoning applies here: role is one of the two fields (with
-      // interests) the backend requires before it will ever set
-      // onboardedAt (see ONBOARDING_MIN_INTERESTS's usage in
-      // src/backend/profile/profile.ts's isOnboardingComplete).
-      chrome={chrome(false)}
+      chrome={chrome(true)}
       key="role"
       onNext={goNext}
       onPick={setRole}
@@ -187,21 +182,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
       value={draft.name}
     />,
     <InterestsStep
-      // Not skippable -- this step's own CTA already disables "Continue"
-      // below MIN_PICKS, but the header's Skip link used to call goNext()
-      // directly, bypassing that entirely and leaving draft.interests
-      // short (or role null, from the step above). completeOnboarding()
-      // still PUTs successfully and unconditionally marks the *local*
-      // AsyncStorage flag complete either way, but the backend's own
-      // isOnboardingComplete requires role !== null AND interests.length
-      // >= ONBOARDING_MIN_INTERESTS before it will ever set onboardedAt --
-      // so a skip here left onboardedAt permanently null server-side while
-      // the device-local flag read complete, which is exactly what
-      // app/index.tsx's own isComplete check (server truth for a real
-      // signed-in session, never the local flag) then read as "not
-      // onboarded" on every subsequent launch. Confirmed via the onboarding
-      // debug overlay: local=true, server onboardedAt=n/a.
-      chrome={chrome(false)}
+      chrome={chrome(true)}
       key="interests"
       onNext={goNext}
       onToggle={toggleInterest}

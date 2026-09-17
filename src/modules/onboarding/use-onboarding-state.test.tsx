@@ -84,6 +84,7 @@ describe('useOnboardingState', () => {
             petitions: true,
             replies: true,
           },
+          onboardingComplete: true,
           role: 'resident',
         },
         method: 'PUT',

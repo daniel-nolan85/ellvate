@@ -1,4 +1,4 @@
-export { getProfile, ONBOARDING_MIN_INTERESTS, updateProfile } from './profile';
+export { getProfile, updateProfile } from './profile';
 export type {
   ProfileResult,
   UpdateProfileResult,
