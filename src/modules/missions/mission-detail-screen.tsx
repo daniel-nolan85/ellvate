@@ -684,7 +684,7 @@ export function MissionDetailScreen({
                   {mission.status === 'done' && mission.accepted ? (
                     <VStack className="gap-2.5">
                       <Text className="font-inter-semibold text-[12px] text-text-muted">
-                        Your check-in photo
+                        Mission photo (optional)
                       </Text>
                       {myCheckInPhoto.data?.photoUrl ? (
                         <HStack className="items-center gap-2.5">
@@ -715,7 +715,7 @@ export function MissionDetailScreen({
                       ) : (
                         <Pressable
                           accessibilityRole="button"
-                          className="flex-row items-center gap-1.5 self-start"
+                          className="flex-row items-center gap-1.5 self-start rounded-full border border-line px-3 py-2"
                           disabled={updateMyCheckInPhoto.isPending}
                           onPress={() => void handleReplaceCompletionPhoto()}
                         >

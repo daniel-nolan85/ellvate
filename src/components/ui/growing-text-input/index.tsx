@@ -130,7 +130,16 @@ export const GrowingTextInput = forwardRef<TextInput, GrowingTextInputProps>(
     const atLimit = typeof maxLength === 'number' && value.length >= maxLength;
 
     return (
-      <View>
+      // WHY flex-1 here, not just on the caller's TextInput className: this
+      // View -- not the TextInput inside it -- is the actual flex participant
+      // its parent measures. A caller passing `flex-1` (e.g. a chat-style row
+      // composer sizing the field against a send button) had it land only on
+      // the TextInput, whose own parent (this View) stayed unsized and
+      // shrank to content width, so the whole field never actually grew to
+      // fill the row. Harmless in the other (column-form) usages, where this
+      // View is already the sole child of a VStack field and gets full width
+      // by default regardless.
+      <View className="flex-1">
         <TextInput
           autoFocus={autoFocus}
           className={`no-scrollbar ${className ?? ''}`}
