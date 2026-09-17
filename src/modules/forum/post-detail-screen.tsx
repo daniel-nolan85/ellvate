@@ -162,13 +162,17 @@ export function PostDetailScreen({
   // comments header's own onLayout gives its y position relative to
   // ListHeaderComponent's root, which is also its offset within the
   // FlatList's scroll content -- ListHeaderComponent is the very first
-  // thing in that content, with no padding above it. Guarded by a ref
-  // (not state) so a later re-layout (e.g. the post finishing its own
-  // load) never fires a second, jarring auto-scroll.
+  // thing in that content, with no padding above it. Gated on
+  // `!postQuery.isPending`: onLayout fires as soon as this VStack first
+  // mounts, which is while the post card above it is still just a small
+  // loading spinner -- scrolling to *that* offset undershoots badly once
+  // the real (much taller) post card renders a moment later. Waiting for
+  // the post to actually settle means this only ever fires once, against
+  // the final layout.
   const flatListRef = useRef<FlatList<ForumComment>>(null);
   const hasScrolledToComments = useRef(false);
   const handleCommentsHeaderLayout = (event: LayoutChangeEvent) => {
-    if (!focusComments || hasScrolledToComments.current) {
+    if (!focusComments || hasScrolledToComments.current || postQuery.isPending) {
       return;
     }
     hasScrolledToComments.current = true;

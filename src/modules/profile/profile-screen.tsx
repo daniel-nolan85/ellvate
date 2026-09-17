@@ -30,6 +30,7 @@ import { useSession } from '@/src/platform/session';
 
 import { AccountIdentifiersSheet } from './account-identifiers-sheet';
 import { PointsHistorySheet } from './points-history-sheet';
+import { XpHero } from './xp-hero';
 import {
   useDeleteAccount,
   useProfile,
@@ -157,48 +158,6 @@ function Row({
   );
 }
 
-// Exported: MemberProfileScreen (viewing someone else's profile) reuses this
-// exact bar instead of duplicating it a second time, in place of its own
-// former top-of-screen Level/XP/Missions card row. No horizontal margin
-// here -- this screen renders it directly under ScreenTitle with no padded
-// wrapper of its own, so the caller below supplies mx-5; MemberProfileScreen
-// already renders inside a px-5 VStack, so it needs none.
-export function LevelProgress({
-  level,
-  xp,
-  xpForNextLevel,
-  xpIntoLevel,
-  xpToNextLevel,
-}: {
-  readonly level: number;
-  readonly xp: number;
-  readonly xpIntoLevel: number;
-  readonly xpForNextLevel: number;
-  readonly xpToNextLevel: number;
-}) {
-  const pct = xpForNextLevel > 0
-    ? Math.min(100, Math.max(0, (xpIntoLevel / xpForNextLevel) * 100))
-    : 0;
-
-  return (
-    <VStack className="gap-2 rounded-2xl border border-surface-hairline bg-paper px-4 py-3.5 shadow-card">
-      <HStack className="items-center justify-between">
-        <Text className="font-inter-semibold text-content" size="sm">
-          Level {level}
-        </Text>
-        <Text className="text-text-muted" size="xs">
-          {xpToNextLevel} XP to Level {level + 1}
-        </Text>
-      </HStack>
-      {/* The former top-of-screen "XP" StatCard's total, moved here -- right
-          above the bar it explains -- now that that 3-card row is gone. */}
-      <Text className="font-inter-bold text-[20px] text-content">{xp} XP</Text>
-      <View className="h-2 overflow-hidden rounded-full bg-muted">
-        <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-      </View>
-    </VStack>
-  );
-}
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -434,8 +393,9 @@ export function ProfileScreen() {
             className="mx-5 pt-4"
             onPress={() => setActiveSheet('points-history')}
           >
-            <LevelProgress
+            <XpHero
               level={stats.data.level}
+              title={stats.data.title}
               xp={stats.data.xp}
               xpForNextLevel={stats.data.xpForNextLevel}
               xpIntoLevel={stats.data.xpIntoLevel}

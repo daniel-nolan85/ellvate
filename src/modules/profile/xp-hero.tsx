@@ -6,10 +6,20 @@ import { ProgressRing } from '@/src/components/ui/progress-ring';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 
-import type { UserProgress } from './use-missions';
-
+// Moved here from the missions module -- this is now shown on Profile (the
+// signed-in user's own) and MemberProfileScreen (someone else's) instead of
+// on the Missions screen itself, which didn't need its own copy of the same
+// level/XP summary already available one tab away. No self-margin (unlike
+// its missions-screen original): both callers already control their own
+// horizontal inset, one via a wrapping Pressable's className, the other via
+// its own px-5 container.
 interface XpHeroProps {
-  readonly progress: UserProgress;
+  readonly level: number;
+  readonly title: string;
+  readonly xp: number;
+  readonly xpIntoLevel: number;
+  readonly xpForNextLevel: number;
+  readonly xpToNextLevel: number;
 }
 
 function HeroGlow() {
@@ -31,18 +41,23 @@ function HeroGlow() {
   );
 }
 
-export function XpHero({ progress }: XpHeroProps) {
-  const ringProgress = progress.xpForNextLevel > 0
-    ? progress.xpIntoLevel / progress.xpForNextLevel
-    : 0;
+export function XpHero({
+  level,
+  title,
+  xp,
+  xpForNextLevel,
+  xpIntoLevel,
+  xpToNextLevel,
+}: XpHeroProps) {
+  const ringProgress = xpForNextLevel > 0 ? xpIntoLevel / xpForNextLevel : 0;
 
   return (
-    <View className="relative mx-5 overflow-hidden rounded-[24px] bg-primary p-5">
+    <View className="relative overflow-hidden rounded-[24px] bg-primary p-5">
       <HeroGlow />
       <HStack className="relative items-center gap-4">
         <ProgressRing progress={ringProgress} size={74} strokeWidth={6}>
           <Text className="font-inter-bold text-[20px] leading-[22px] text-primary-foreground">
-            {progress.level}
+            {level}
           </Text>
           <Text className="font-inter-semibold text-[8px] tracking-[1px] text-[rgba(250,250,250,0.55)]">
             LEVEL
@@ -50,16 +65,16 @@ export function XpHero({ progress }: XpHeroProps) {
         </ProgressRing>
         <VStack className="flex-1 gap-1">
           <Text className="font-inter-semibold text-[10px] tracking-[0.8px] text-[rgba(250,250,250,0.6)]">
-            {progress.title}
+            {title}
           </Text>
           <Text className="font-inter-bold text-[30px] leading-[32px] tracking-[-0.9px] text-primary-foreground">
-            {progress.xp.toLocaleString()}
+            {xp.toLocaleString()}
             <Text className="font-inter-semibold text-[15px] text-[rgba(250,250,250,0.55)]">
               {' '}XP
             </Text>
           </Text>
           <Text className="text-[rgba(250,250,250,0.7)]" size="xs">
-            {progress.xpToNextLevel} XP to Level {progress.level + 1}
+            {xpToNextLevel} XP to Level {level + 1}
           </Text>
         </VStack>
       </HStack>

@@ -1,6 +1,6 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, type CommunityRole } from '@/src/backend/store';
-import { getMissionsView } from '@/src/backend/missions';
+import { DEFAULT_PROGRESS_TITLE, getMissionsView } from '@/src/backend/missions';
 import { getMutedUserIds } from '@/src/backend/mutes';
 
 import {
@@ -31,12 +31,12 @@ export interface PublicMemberStats {
   readonly level: number;
   readonly xp: number;
   // Already computed as part of `progress` below (buildProgress) for the
-  // level-progress bar on the member's own Profile screen -- surfaced here
-  // too so MemberProfileScreen can render the same bar instead of a bare
-  // Level/XP/Missions card row.
+  // XpHero card on the member's own Profile screen -- surfaced here too so
+  // MemberProfileScreen can render the same card.
   readonly xpIntoLevel: number;
   readonly xpForNextLevel: number;
   readonly xpToNextLevel: number;
+  readonly title: string;
   readonly missionsCompleted: number;
   readonly missionsCreated: number;
   readonly postsCount: number;
@@ -188,6 +188,7 @@ export async function getPublicProfile(
     stats: {
       level: progress?.level ?? 1,
       missionsCompleted: progress?.missionsCompleted ?? 0,
+      title: progress?.title ?? DEFAULT_PROGRESS_TITLE,
       xp: progress?.xp ?? 0,
       xpForNextLevel: progress?.xpForNextLevel ?? 0,
       xpIntoLevel: progress?.xpIntoLevel ?? 0,

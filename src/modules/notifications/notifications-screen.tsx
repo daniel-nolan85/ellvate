@@ -151,14 +151,16 @@ export function NotificationsScreen() {
 
   return (
     <View className="flex-1 bg-canvas">
-      {/* No manual close button -- summoned like `assistant` (see
-          app/_layout.tsx), a plain pushed screen with a slide-up
-          transition, not a modal or formSheet -- keeping Notifications
-          specifically out of any special native presentation means
-          whatever it links to never presents over another presented
-          screen. A plain push renders flush with the physical top edge
-          (unlike modal/formSheet's own inset page-sheet behavior), so this
-          needs real insets.top, matching assistant-screen.tsx's own header.
+      {/* A plain pushed screen with a slide-up transition, not a modal or
+          formSheet -- keeping Notifications specifically out of any special
+          native presentation means whatever it links to never presents over
+          another presented screen. The close button below is just a plain
+          router.back() though, same as the back gesture already does -- it
+          doesn't change that presentation, only gives an explicit tap
+          target matching Search's own "Cancel". A plain push renders flush
+          with the physical top edge (unlike modal/formSheet's own inset
+          page-sheet behavior), so this needs real insets.top, matching
+          assistant-screen.tsx's own header.
           collapsable={false} works around a real react-native-screens bug
           (software-mansion/react-native-screens#3092): a screen whose root
           View has a background color can have RN's view-flattening
@@ -182,9 +184,13 @@ export function NotificationsScreen() {
         <Heading className="flex-1 text-center font-inter-bold" size="xl">
           Notifications
         </Heading>
-        {/* Balances ProfileAvatarButton's width so the centered heading
-            above doesn't visually skew toward the right edge. */}
-        <View className="h-8 w-8" />
+        <Pressable
+          accessibilityLabel="Close notifications"
+          className="h-8 w-8 items-center justify-center rounded-full bg-secondary"
+          onPress={() => router.back()}
+        >
+          <Icon name="Close" size={16} />
+        </Pressable>
       </HStack>
 
       {hasUnread ? (

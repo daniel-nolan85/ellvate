@@ -126,8 +126,12 @@ export function SearchScreen() {
             </Pressable>
           ) : null}
         </View>
-        <Pressable accessibilityLabel="Close search" onPress={() => router.back()}>
-          <Text className="font-inter-semibold text-[14px] text-accent">Cancel</Text>
+        <Pressable
+          accessibilityLabel="Close search"
+          className="h-8 w-8 items-center justify-center rounded-full bg-secondary"
+          onPress={() => router.back()}
+        >
+          <Icon color="rgb(37,30,23)" name="Close" size={16} />
         </Pressable>
       </HStack>
 

@@ -36,6 +36,7 @@ export interface MemberActivityStats {
   readonly xpIntoLevel: number;
   readonly xpForNextLevel: number;
   readonly xpToNextLevel: number;
+  readonly title: string;
   readonly missionsCompleted: number;
   readonly missionsCreated: number;
   readonly postsCount: number;
