@@ -72,7 +72,12 @@ export function CommentComposer({
           </Pressable>
         </View>
       ) : null}
-      <View className="flex-row items-end gap-2.5">
+      {/* items-center, not items-end: GrowingTextInput's char counter renders
+          as a second row below the field itself (see maxLength below), so
+          the field+counter block is taller than the round send button --
+          bottom-aligning them left extra space stacked entirely above the
+          button instead of split evenly around it. */}
+      <View className="flex-row items-center gap-2.5">
         {/* Sizes GrowingTextInput against the send button -- see that
             component's own WHY for why this lives here instead of on its
             own className. */}
