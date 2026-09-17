@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -7,13 +7,100 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import {
+  Easing,
+  runOnJS,
+  useAnimatedReaction,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { Badge } from '@/src/components/ui/badge';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
+import { ProgressRing } from '@/src/components/ui/progress-ring';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
+
+const RING_COLOR = 'rgb(181,80,44)';
+const RING_TRACK_COLOR = 'rgb(238,231,219)';
+const COUNT_UP_MS = 700;
+
+// Ticks a displayed integer from its previous value up (or down) to `target`
+// over COUNT_UP_MS, easing out -- plain requestAnimationFrame rather than
+// Reanimated, since nothing here is gesture-driven or needs to run on the UI
+// thread; a handful of RAF ticks moving a small integer is not something
+// Reanimated's worklet machinery is needed for. Re-triggers on every change
+// to `target` (e.g. a pull-to-refresh that changes a count), always
+// animating from wherever the previous tick left off rather than resetting
+// to 0 each time.
+function useCountUp(target: number): number {
+  const [value, setValue] = useState(target);
+  const fromRef = useRef(target);
+  const firstRunRef = useRef(true);
+
+  useEffect(() => {
+    // Skip the animation on first mount -- a card animating up from 0 the
+    // instant this screen appears reads as loading-in-progress; only a
+    // value that actually *changes* after that (a refresh, a new post)
+    // should visibly count.
+    if (firstRunRef.current) {
+      firstRunRef.current = false;
+      fromRef.current = target;
+      setValue(target);
+      return;
+    }
+    const from = fromRef.current;
+    const delta = target - from;
+    if (delta === 0) {
+      return;
+    }
+    let frame: number;
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const t = Math.min(1, elapsed / COUNT_UP_MS);
+      const eased = 1 - (1 - t) * (1 - t);
+      setValue(Math.round(from + delta * eased));
+      if (t < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = target;
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
+
+  return value;
+}
+
+// Animates ProgressRing's own `progress` prop toward `target` on mount/
+// change -- ProgressRing itself just draws whatever fraction it's given
+// (see its own file); CommitStep's hold-to-confirm ring is the existing
+// precedent for driving it from a Reanimated shared value instead of
+// jumping straight to the final fraction.
+function useAnimatedRingProgress(target: number): number {
+  const shared = useSharedValue(0);
+  const [display, setDisplay] = useState(0);
+
+  useAnimatedReaction(
+    () => shared.value,
+    (value) => {
+      runOnJS(setDisplay)(value);
+    },
+  );
+
+  useEffect(() => {
+    shared.value = withTiming(target, {
+      duration: COUNT_UP_MS,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [target, shared]);
+
+  return display;
+}
 
 // Shared between ActivityScreen (your own activity) and MemberActivityScreen
 // (a read-only view of someone else's) so both render posts/events/missions/
@@ -131,16 +218,99 @@ export function FilterChips({
 }
 
 export function StatBox({ label, value }: { readonly label: string; readonly value: number }) {
+  const displayValue = useCountUp(value);
   return (
     <VStack
       className="flex-1 items-center rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card"
       space="xs"
     >
-      <Text className="font-inter-bold text-[20px] text-content">{value}</Text>
+      <Text className="font-inter-bold text-[20px] text-content">{displayValue}</Text>
       <Text className="text-center text-text-muted" size="xs">
         {label}
       </Text>
     </VStack>
+  );
+}
+
+// A fixed-width sibling of StatBox for use inside StatRow's horizontal
+// scroll below -- flex-1 (StatBox's own sizing) only makes sense splitting
+// a fixed number of items evenly across a non-scrolling row.
+export function StatCard({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: number;
+}) {
+  const displayValue = useCountUp(value);
+  return (
+    <VStack
+      className="w-[96px] items-center rounded-2xl border border-surface-hairline bg-paper px-2 py-3.5 shadow-card"
+      space="xs"
+    >
+      <Text className="font-inter-bold text-[20px] text-content">{displayValue}</Text>
+      <Text className="text-center text-text-muted" size="xs">
+        {label}
+      </Text>
+    </VStack>
+  );
+}
+
+// The one stat with a natural "progress toward a goal" reading -- missions
+// you've engaged with (created or accepted) that are now done -- gets a
+// ring instead of a bare number, echoing the same visual language as the
+// onboarding commit step and the Profile screen's own level-progress bar
+// rather than introducing a new one. completed/total both being 0 (no
+// mission activity yet) reads as an empty ring, not a divide-by-zero NaN.
+export function MissionProgressStatCard({
+  completed,
+  total,
+}: {
+  readonly completed: number;
+  readonly total: number;
+}) {
+  const fraction = total > 0 ? completed / total : 0;
+  const ringProgress = useAnimatedRingProgress(fraction);
+  const displayCompleted = useCountUp(completed);
+  return (
+    <VStack
+      className="w-[96px] items-center rounded-2xl border border-surface-hairline bg-paper px-2 py-3.5 shadow-card"
+      space="xs"
+    >
+      <ProgressRing
+        color={RING_COLOR}
+        progress={ringProgress}
+        size={52}
+        strokeWidth={5}
+        trackColor={RING_TRACK_COLOR}
+      >
+        <Text className="font-inter-bold text-[15px] text-content">
+          {displayCompleted}
+        </Text>
+      </ProgressRing>
+      <Text className="text-center text-text-muted" size="xs">
+        Missions completed
+      </Text>
+    </VStack>
+  );
+}
+
+// A horizontally scrolling row of StatCard/MissionProgressStatCard --
+// unlike StatBox's flex-1 row (a fixed 5 items, no ambiguity to split
+// further), ActivityScreen's own stat row needs room for Events and
+// Missions each broken into two figures (created vs attended/completed) to
+// resolve what used to be one combined, ambiguous count -- 7 cards no
+// longer fit evenly in a fixed-width row the way 5 did.
+export function StatRow({ children }: { readonly children: ReactNode }) {
+  return (
+    <ScrollView
+      contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ flexGrow: 0 }}
+    >
+      {children}
+    </ScrollView>
   );
 }
 
