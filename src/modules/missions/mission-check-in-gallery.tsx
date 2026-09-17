@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { FlatList, Image, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MediaViewer } from '@/src/components/shared/media-gallery';
+import { router } from 'expo-router';
+
+import { MediaViewer, type MediaGalleryItem } from '@/src/components/shared/media-gallery';
 import {
   ReportSheetContent,
   type ReportSubmission,
@@ -18,6 +20,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import {
   useMissionCheckInPhotos,
   useReportMissionCheckInPhoto,
+  useToggleCheckInPhotoLike,
   type MissionCheckInPhoto,
 } from './use-mission-check-in-photos';
 
@@ -32,8 +35,15 @@ const THUMB_GAP = 8;
 // that ever fits on one row across every supported device width.
 const PREVIEW_MAX = 4;
 
-const toViewerItems = (photos: readonly MissionCheckInPhoto[]) =>
-  photos.map((photo) => ({ filename: photo.id, url: photo.photoUrl }));
+const toViewerItems = (photos: readonly MissionCheckInPhoto[]): readonly MediaGalleryItem[] =>
+  photos.map((photo) => ({
+    author: { id: photo.author.id, name: photo.author.name },
+    filename: photo.id,
+    liked: photo.liked,
+    likes: photo.likes,
+    timestamp: photo.completedAt,
+    url: photo.photoUrl,
+  }));
 
 // A bounded preview -- just the first loaded page, no fetch-more here.
 // "View all" is the paginated, unbounded surface (MissionCheckInGalleryScreen).
@@ -45,6 +55,7 @@ export function MissionCheckInThumbnailRow({
   readonly onOpenAll: () => void;
 }) {
   const gallery = useMissionCheckInPhotos(missionId);
+  const toggleLike = useToggleCheckInPhotoLike(missionId);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const photos = gallery.data?.pages[0]?.photos ?? [];
@@ -106,7 +117,16 @@ export function MissionCheckInThumbnailRow({
       {viewerIndex !== null ? (
         <MediaViewer
           media={toViewerItems(preview)}
+          // Closes the fullscreen Modal before navigating -- it renders in
+          // its own native layer above the navigator, so pushing a new
+          // screen while it's still open would leave it visually stuck on
+          // top rather than actually being replaced.
+          onAuthorPress={(authorId) => {
+            setViewerIndex(null);
+            router.push(`/member/${authorId}`);
+          }}
           onClose={() => setViewerIndex(null)}
+          onToggleLike={(item) => toggleLike.mutate(item.filename)}
           startIndex={viewerIndex}
         />
       ) : null}
@@ -131,6 +151,7 @@ export function MissionCheckInGalleryScreen({
   const insets = useSafeAreaInsets();
   const gallery = useMissionCheckInPhotos(missionId);
   const reportPhoto = useReportMissionCheckInPhoto();
+  const toggleLike = useToggleCheckInPhotoLike(missionId);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [reportTarget, setReportTarget] = useState<MissionCheckInPhoto | null>(
     null,
@@ -226,7 +247,12 @@ export function MissionCheckInGalleryScreen({
       {viewerIndex !== null ? (
         <MediaViewer
           media={toViewerItems(photos)}
+          onAuthorPress={(authorId) => {
+            setViewerIndex(null);
+            router.push(`/member/${authorId}`);
+          }}
           onClose={() => setViewerIndex(null)}
+          onToggleLike={(item) => toggleLike.mutate(item.filename)}
           startIndex={viewerIndex}
         />
       ) : null}

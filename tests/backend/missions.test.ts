@@ -19,6 +19,7 @@ import {
 import { GET as getCheckInPhotos } from '../../app/api/missions/[id]/check-in-photos+api';
 import { POST as postReport } from '../../app/api/missions/[id]/report+api';
 import { POST as postCheckInPhotoReport } from '../../app/api/mission-check-ins/[id]/report+api';
+import { POST as postCheckInPhotoLike } from '../../app/api/mission-check-ins/[id]/like+api';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import {
   acceptMission,
@@ -32,6 +33,7 @@ import {
   listMissionsPage,
   reportMission,
   reportMissionCheckInPhoto,
+  toggleCheckInPhotoLike,
   updateMission,
   updateMyCheckInPhoto,
 } from '../../src/backend/missions';
@@ -605,6 +607,84 @@ describe('reportMissionCheckInPhoto', () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ reported: true });
+  });
+});
+
+describe('toggleCheckInPhotoLike', () => {
+  test('likes then unlikes a check-in photo', async () => {
+    await checkIn(ctx('user-mia'), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    const [photo] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+    expect(photo).toBeDefined();
+
+    const liked = await toggleCheckInPhotoLike(ctx(), photo!.id);
+    expect(liked).toEqual({ id: photo!.id, likes: 1, liked: true });
+
+    const unliked = await toggleCheckInPhotoLike(ctx(), photo!.id);
+    expect(unliked).toEqual({ id: photo!.id, likes: 0, liked: false });
+  });
+
+  test('tracks likes per user independently', async () => {
+    await checkIn(ctx('user-mia'), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    const [photo] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+
+    await toggleCheckInPhotoLike(ctx(), photo!.id);
+    const second = await toggleCheckInPhotoLike(ctx('user-riley'), photo!.id);
+
+    expect(second).toEqual({ id: photo!.id, likes: 2, liked: true });
+  });
+
+  test('a like/unlike is reflected back through listMissionCheckInPhotos', async () => {
+    await checkIn(ctx('user-mia'), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    const [before] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+    expect(before).toMatchObject({ liked: false, likes: 0 });
+
+    await toggleCheckInPhotoLike(ctx(), before!.id);
+
+    const [after] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+    expect(after).toMatchObject({ liked: true, likes: 1 });
+    // A different viewer sees the same count but their own liked=false.
+    const [othersView] = (await listMissionCheckInPhotos(ctx('user-mia'), 'mission-1')).photos;
+    expect(othersView).toMatchObject({ liked: false, likes: 1 });
+  });
+
+  test('returns null for a check-in with no photo', async () => {
+    await checkIn(ctx(), 'mission-1');
+    const [checkInRow] = getState().missionCheckIns;
+    expect(checkInRow).toBeDefined();
+
+    expect(await toggleCheckInPhotoLike(ctx(), checkInRow!.id)).toBeNull();
+  });
+
+  test('returns null for an unknown check-in', async () => {
+    expect(await toggleCheckInPhotoLike(ctx(), 'does-not-exist')).toBeNull();
+  });
+
+  test('POST /api/mission-check-ins/:id/like toggles a like', async () => {
+    await checkIn(ctx('user-mia'), 'mission-1', {
+      checkInPhoto: { dataUrl: 'data:image/jpeg;base64,b25l', filename: 'proof.jpg' },
+    });
+    const [photo] = (await listMissionCheckInPhotos(ctx(), 'mission-1')).photos;
+
+    const response = await postCheckInPhotoLike(
+      new Request('http://localhost/api/mission-check-ins/x/like', { method: 'POST' }),
+      { id: photo!.id },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ id: photo!.id, likes: 1, liked: true });
+  });
+
+  test('POST /api/mission-check-ins/:id/like 404s for an unknown check-in', async () => {
+    const response = await postCheckInPhotoLike(
+      new Request('http://localhost/api/mission-check-ins/x/like', { method: 'POST' }),
+      { id: 'does-not-exist' },
+    );
+    expect(response.status).toBe(404);
   });
 });
 

@@ -1,5 +1,6 @@
 import { extractCheckInPhoto } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
+import { createNotificationMemory } from '@/src/backend/notifications';
 import {
   ensureUser,
   getState,
@@ -14,10 +15,12 @@ import {
   checkInSupabase,
   getMyCheckInPhotoSupabase,
   listMissionCheckInPhotosSupabase,
+  toggleCheckInPhotoLikeSupabase,
   updateMyCheckInPhotoSupabase,
 } from './missions-supabase';
 import type {
   CheckInResult,
+  LikeCheckInPhotoResult,
   Mission,
   MissionCheckInPhotosPage,
   MyCheckInPhotoResult,
@@ -75,6 +78,8 @@ async function checkInMemory(
     stopIndex: entry.stopsDone,
     completedAt: nowIso,
     photoUrl: photoUpload?.dataUrl ?? null,
+    likes: 0,
+    likedBy: [],
   };
 
   const next = setState((state) => ({
@@ -195,6 +200,8 @@ function listMissionCheckInPhotosMemory(
       author: toAuthorRef(state.users, checkInRow.userId),
       completedAt: checkInRow.completedAt,
       id: checkInRow.id,
+      liked: checkInRow.likedBy.includes(userId),
+      likes: checkInRow.likes,
       missionId: checkInRow.missionId,
       // Non-null by the filter above -- TypeScript can't see through
       // `.filter()`, so this is a plain assertion, not a runtime check.
@@ -306,5 +313,49 @@ export async function updateMyCheckInPhoto(
   return ctx.supabase
     ? updateMyCheckInPhotoSupabase(ctx.supabase, ctx.userId, missionId, input)
     : updateMyCheckInPhotoMemory(ctx.userId, missionId, input);
+}
+
+// Mirrors toggleLikeMemory (forum/posts.ts) exactly -- same optimistic
+// like/unlike-by-membership shape, same "notify on new like, never on
+// unlike or self-like" rule.
+function toggleCheckInPhotoLikeMemory(
+  userId: string,
+  checkInId: string,
+): LikeCheckInPhotoResult | null {
+  const existing = getState().missionCheckIns.find((row) => row.id === checkInId);
+  if (!existing || existing.photoUrl === null) {
+    return null;
+  }
+  const wasLiked = existing.likedBy.includes(userId);
+  const likes = Math.max(0, existing.likes + (wasLiked ? -1 : 1));
+  const likedBy = wasLiked
+    ? existing.likedBy.filter((id) => id !== userId)
+    : [...existing.likedBy, userId];
+  setState((current) => ({
+    ...current,
+    missionCheckIns: current.missionCheckIns.map((row) =>
+      row.id === checkInId ? { ...row, likedBy, likes } : row,
+    ),
+  }));
+  if (!wasLiked && existing.userId !== userId) {
+    const liker = getState().users.find((candidate) => candidate.id === userId);
+    createNotificationMemory(
+      existing.userId,
+      'like',
+      'New like on your check-in photo',
+      `${liker?.name ?? 'Someone'} liked your check-in photo`,
+      { missionId: existing.missionId },
+    );
+  }
+  return { id: checkInId, liked: !wasLiked, likes };
+}
+
+export async function toggleCheckInPhotoLike(
+  ctx: RequestContext,
+  checkInId: string,
+): Promise<LikeCheckInPhotoResult | null> {
+  return ctx.supabase
+    ? toggleCheckInPhotoLikeSupabase(ctx.supabase, ctx.userId, checkInId)
+    : toggleCheckInPhotoLikeMemory(ctx.userId, checkInId);
 }
 

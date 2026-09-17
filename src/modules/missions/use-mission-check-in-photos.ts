@@ -3,6 +3,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
 } from '@tanstack/react-query';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
@@ -23,6 +24,8 @@ export interface MissionCheckInPhoto {
   readonly photoUrl: string;
   readonly completedAt: string;
   readonly stopIndex: number;
+  readonly likes: number;
+  readonly liked: boolean;
 }
 
 interface MissionCheckInPhotosPage {
@@ -73,6 +76,64 @@ export function useReportMissionCheckInPhoto() {
         method: 'POST',
         path: `/api/mission-check-ins/${checkInId}/report`,
       }),
+  });
+}
+
+interface ToggleCheckInPhotoLikeResponse {
+  readonly id: string;
+  readonly likes: number;
+  readonly liked: boolean;
+}
+
+// Mirrors useToggleLike (forum/use-forum.ts) exactly: an optimistic patch
+// scoped to this one mission's check-in-photos infinite query, rolled back
+// on error, then a broad invalidation on settle to reconcile with the
+// server (also catches the "View all" gallery screen's own query, since it
+// shares the same ['missions','check-in-photos',missionId,...] key prefix).
+export function useToggleCheckInPhotoLike(missionId: string) {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const userId = session.userId ?? 'demo-user';
+  const queryKey = ['missions', 'check-in-photos', missionId, userId];
+
+  return useMutation({
+    mutationFn: (checkInId: string) =>
+      requestJson<ToggleCheckInPhotoLikeResponse>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/mission-check-ins/${checkInId}/like`,
+      }),
+    onMutate: async (checkInId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous =
+        queryClient.getQueryData<InfiniteData<MissionCheckInPhotosPage>>(queryKey);
+      const patchPhoto = (photo: MissionCheckInPhoto): MissionCheckInPhoto =>
+        photo.id === checkInId
+          ? { ...photo, liked: !photo.liked, likes: photo.likes + (photo.liked ? -1 : 1) }
+          : photo;
+      queryClient.setQueryData<InfiniteData<MissionCheckInPhotosPage>>(queryKey, (current) =>
+        current === undefined
+          ? current
+          : {
+              ...current,
+              pages: current.pages.map((page) => ({
+                ...page,
+                photos: page.photos.map(patchPhoto),
+              })),
+            },
+      );
+      return { previous };
+    },
+    onError: (_error, _checkInId, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['missions', 'check-in-photos', missionId],
+      });
+    },
   });
 }
 

@@ -151,11 +151,19 @@ export interface MissionCheckInPhoto {
   readonly photoUrl: string;
   readonly completedAt: string;
   readonly stopIndex: number;
+  readonly likes: number;
+  readonly liked: boolean;
 }
 
 export interface MissionCheckInPhotosPage {
   readonly photos: readonly MissionCheckInPhoto[];
   readonly nextCursor: string | null;
+}
+
+export interface LikeCheckInPhotoResult {
+  readonly id: string;
+  readonly likes: number;
+  readonly liked: boolean;
 }
 
 export type ReportMissionCheckInPhotoResult =
