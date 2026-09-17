@@ -1,7 +1,8 @@
+import { useCallback, useRef } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
@@ -74,6 +75,12 @@ function NotificationRow({
   );
 }
 
+// How long a formSheet destination's own dismiss transition (going back from
+// a previously-opened notification) can still be finishing natively after
+// this screen is already visually revealed and tappable again -- see the WHY
+// on the useFocusEffect guard below.
+const NAV_SETTLE_MS = 500;
+
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const notifications = useNotifications();
@@ -84,9 +91,40 @@ export function NotificationsScreen() {
     notifications.data?.pages.flatMap((page) => page.notifications) ?? [];
   const hasUnread = items.some((notification) => notification.readAt === null);
 
+  // Guards specifically against a *second* notification tap corrupting its
+  // destination's layout -- a first tap (opening a formSheet from a fully
+  // settled screen) never did, matching react-native-screens#3569's real
+  // precondition ("a formSheet presented directly over another still-
+  // transitioning presentation"): going back from the first notification's
+  // formSheet visually reveals this screen well before that formSheet's own
+  // native dismiss animation has actually finished, and a second tap fast
+  // enough to land in that window presents its destination formSheet right
+  // on top of it. hasFocusedBeforeRef skips the very first focus (initial
+  // mount, nothing to have been transitioning), so only a genuine return
+  // gets the cooldown.
+  const hasFocusedBeforeRef = useRef(false);
+  const canNavigateRef = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedBeforeRef.current) {
+        hasFocusedBeforeRef.current = true;
+        return;
+      }
+      canNavigateRef.current = false;
+      const timer = setTimeout(() => {
+        canNavigateRef.current = true;
+      }, NAV_SETTLE_MS);
+      return () => clearTimeout(timer);
+    }, []),
+  );
+
   const handlePress = (notification: Notification) => {
     if (notification.readAt === null) {
       markRead.mutate(notification.id);
+    }
+    if (!canNavigateRef.current) {
+      return;
     }
     const route = resolveNotificationRoute(notification.data);
     if (route) {
@@ -103,7 +141,9 @@ export function NotificationsScreen() {
       // presented natively in any special way, so there's nothing left to
       // sequence around. The destination simply pushes on top; going back
       // reveals Notifications again, same as going back from anything else
-      // reached by drilling into something.
+      // reached by drilling into something. That still leaves the
+      // destination formSheet's *own* dismiss transitioning when the user
+      // returns here -- see the useFocusEffect guard above for that half.
       router.push(route);
     }
   };
