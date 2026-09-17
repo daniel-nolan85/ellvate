@@ -5,6 +5,7 @@ import { canAccessCommunityRoutes } from '@/src/modules/authentication';
 import { Spinner } from '@/src/components/ui/spinner';
 import { useOnboardingComplete } from '@/src/modules/onboarding';
 import { useProfile } from '@/src/modules/profile';
+import { useWelcomeBackOnLaunch } from '@/src/platform/notices';
 import { useSession } from '@/src/platform/session';
 
 export default function IndexRoute() {
@@ -23,6 +24,28 @@ export default function IndexRoute() {
   // out/loading/disabled states have no account to ask.
   const profile = useProfile({ enabled: isRealSignedIn });
 
+  // Boolean(...), not `!== null` -- profile.data is undefined while pending
+  // and stays undefined on a fetch error too, and `undefined !== null` is
+  // true, which would wrongly treat a failed/incomplete fetch as onboarded
+  // and let the account straight into the app. Defaulting to false here
+  // means a transient error shows the wizard rather than silently granting
+  // access. Computed above the loading check below (not just above the
+  // redirect) so useWelcomeBackOnLaunch, a hook, can be called unconditionally
+  // on every render rather than after an early return.
+  const isComplete = isRealSignedIn
+    ? Boolean(profile.data?.profile.onboardedAt)
+    : localComplete;
+
+  // Only for a real account (not the local-flag-only demo/disabled-auth
+  // path, which has no fetched name to greet with) landing straight on the
+  // community routes -- the common "just reopened the app" case. See the
+  // hook's own WHY for how this differs from onboarding-flow.tsx's own
+  // welcome-back trigger.
+  useWelcomeBackOnLaunch(
+    profile.data?.profile.name,
+    Boolean(isRealSignedIn && isComplete && canAccessCommunityRoutes(session.status)),
+  );
+
   // session.status starts 'loading' on every fresh boot (Clerk hasn't
   // restored the session yet -- on web that's every page reload, not just a
   // cold app launch). Deciding before it settles falls through to the
@@ -40,16 +63,6 @@ export default function IndexRoute() {
       </View>
     );
   }
-
-  // Boolean(...), not `!== null` -- profile.data is undefined while pending
-  // and stays undefined on a fetch error too, and `undefined !== null` is
-  // true, which would wrongly treat a failed/incomplete fetch as onboarded
-  // and let the account straight into the app. Defaulting to false here
-  // means a transient error shows the wizard rather than silently granting
-  // access.
-  const isComplete = isRealSignedIn
-    ? Boolean(profile.data?.profile.onboardedAt)
-    : localComplete;
 
   if (isComplete && canAccessCommunityRoutes(session.status)) {
     return <Redirect href="/(tabs)/forum" />;
