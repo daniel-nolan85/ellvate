@@ -111,6 +111,21 @@ export function PostDetailScreen({
   );
   const [actionsFor, setActionsFor] = useState<ForumComment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // WHY not bind the FlatList's `refreshing` straight to postQuery/comments'
+  // own isRefetching, matching every other list screen in this app: that
+  // flips true for *any* refetch, including TanStack Query's own automatic
+  // background refetch-on-mount of stale cached data, not just a user's pull
+  // gesture. iOS's native RefreshControl only animates cleanly into its
+  // "active" state when a real touch-drag precedes it -- triggered
+  // programmatically instead (exactly what an automatic refetch does), it
+  // can render stuck: a lingering gap and spinner above content that's
+  // already fully loaded from cache, looking like a second surface layered
+  // on top rather than part of the same scroll view. A post reached from a
+  // notification is more likely to actually need that background refetch
+  // (it can be old news by the time it's tapped) than one reached by tapping
+  // straight out of an already-fresh forum list, which is why this reads as
+  // notification-specific even though the underlying condition isn't.
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   // A single Sheet whose content switches by mode, rather than separate Sheet
   // (or Sheet + native Modal) instances -- closing one and opening another in
   // quick succession briefly presents two native Modals at once (a Sheet
@@ -586,10 +601,12 @@ export function PostDetailScreen({
           }}
           onEndReachedThreshold={0.5}
           onRefresh={() => {
-            void postQuery.refetch();
-            void comments.refetch();
+            setIsManualRefreshing(true);
+            void Promise.all([postQuery.refetch(), comments.refetch()]).finally(() =>
+              setIsManualRefreshing(false),
+            );
           }}
-          refreshing={postQuery.isRefetching || comments.isRefetching}
+          refreshing={isManualRefreshing}
           renderItem={({ item }) => (
             <View className="mb-4 px-[18px]">
               <CommentItem
