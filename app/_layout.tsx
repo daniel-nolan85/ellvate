@@ -37,6 +37,13 @@ export const unstable_settings = {
 // too, something it never did while it only lived inside the tab bar.
 const UNPROTECTED_ROUTES = new Set(['index', 'onboarding', 'auth']);
 
+// Content detail screens that dock their own composer (a comment or review
+// field + send button) at the very bottom -- the assistant button's fixed
+// offset below is calibrated for the floating tab bar's height, which these
+// screens don't render, so without this exclusion it floats on top of
+// whatever's actually sitting there instead.
+const COMPOSER_DOCKED_ROUTES = new Set(['mission', 'post', 'event', 'petition', 'service']);
+
 function AppNavigator() {
   const session = useSession();
   const welcomeBack = useWelcomeBackNotice();
@@ -44,6 +51,7 @@ function AppNavigator() {
   const segments = useSegments();
   const canAccessCommunity = canAccessCommunityRoutes(session.status);
   const onProtectedRoute = segments.length > 0 && !UNPROTECTED_ROUTES.has(segments[0]);
+  const hasDockedComposer = segments.length > 0 && COMPOSER_DOCKED_ROUTES.has(segments[0]);
 
   return (
     <ClerkAuthGate>
@@ -122,11 +130,12 @@ function AppNavigator() {
           <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
         </Stack.Protected>
       </Stack>
-      {canAccessCommunity && onProtectedRoute ? (
+      {canAccessCommunity && onProtectedRoute && !hasDockedComposer ? (
         // Floats persistently above the tab bar (which sits at
         // max(20, insets.bottom + 8), 68px tall -- see FloatingTabBar) on
         // every protected screen, tabs and non-tab alike, so it no longer
-        // needs to be threaded through CommunityNavBar per-screen.
+        // needs to be threaded through CommunityNavBar per-screen. Excluded
+        // on COMPOSER_DOCKED_ROUTES -- see that const's own WHY.
         <AssistantButton
           onPress={() => router.push('/assistant')}
           style={{

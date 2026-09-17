@@ -950,7 +950,7 @@ export async function getMyCheckInPhotoSupabase(
 ): Promise<MyCheckInPhotoResult> {
   const { data: mission, error: missionError } = await supabase
     .from('missions')
-    .select('id')
+    .select('id,stops_total')
     .eq('id', missionId)
     .maybeSingle();
   throwIfSupabaseError(missionError, 'load mission');
@@ -965,12 +965,18 @@ export async function getMyCheckInPhotoSupabase(
 
   const { data: progress, error: progressError } = await supabase
     .from('mission_progress')
-    .select('status')
+    .select('stops_done')
     .eq('mission_id', missionId)
     .eq('user_id', userId)
     .maybeSingle();
   throwIfSupabaseError(progressError, 'load mission progress');
-  if ((progress as { status: MissionStatus } | null)?.status !== 'done') {
+  const stopsDone = (progress as { stops_done: number } | null)?.stops_done ?? 0;
+  // Derived the same way toMissionView/resolveStatus compute a viewer's
+  // mission status for display, rather than trusting mission_progress's
+  // own stored `status` column -- keeps this check by construction unable
+  // to disagree with whatever decided the mission detail screen even shows
+  // this UI in the first place.
+  if (stopsDone < (mission as { stops_total: number }).stops_total) {
     return NOT_COMPLETED_RESULT;
   }
 
