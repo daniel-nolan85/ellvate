@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react-native';
 
-import { Spinner } from './index';
+import { CactusMascot, Spinner } from './index';
 
 describe('Spinner', () => {
   test('renders the dancing cactus glyph with a default accessible label', async () => {
@@ -30,5 +30,23 @@ describe('Spinner', () => {
 
     const root = view.toJSON();
     expect(root?.props.style).toMatchObject({ height: 96, width: 96 });
+  });
+});
+
+describe('CactusMascot', () => {
+  test('renders the same glyph as Spinner, standing still at a default size', async () => {
+    const view = await render(<CactusMascot />);
+
+    const root = view.toJSON();
+    expect(root?.props.style).toMatchObject({ height: 96, width: 96 });
+    const tree = JSON.stringify(root);
+    expect(tree).toContain('RNSVGPath');
+  });
+
+  test('accepts a custom size and color', async () => {
+    const view = await render(<CactusMascot color="rgb(255,0,0)" size={64} />);
+
+    const root = view.toJSON();
+    expect(root?.props.style).toMatchObject({ height: 64, width: 64 });
   });
 });

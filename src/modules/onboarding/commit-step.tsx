@@ -12,8 +12,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
+import { GlowBackdrop } from '@/src/components/ui/glow-backdrop';
 import { Icon } from '@/src/components/ui/icon';
 import { ProgressRing } from '@/src/components/ui/progress-ring';
 import { Text } from '@/src/components/ui/text';
@@ -22,25 +22,6 @@ const ACCENT = 'rgb(181,80,44)';
 const WHITE = 'rgb(255,255,255)';
 const HOLD_DURATION_MS = 750;
 const CELEBRATION_MS = 1400;
-
-function GlowBackdrop() {
-  return (
-    <View
-      className="absolute h-[300px] w-[300px]"
-      style={{ left: -80, top: -60 }}
-    >
-      <Svg height={300} viewBox="0 0 300 300" width={300}>
-        <Defs>
-          <RadialGradient cx="50%" cy="50%" id="commit-glow" r="50%">
-            <Stop offset="0%" stopColor={ACCENT} stopOpacity={0.35} />
-            <Stop offset="70%" stopColor={ACCENT} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={150} cy={150} fill="url(#commit-glow)" r={150} />
-      </Svg>
-    </View>
-  );
-}
 
 function Celebration() {
   return (

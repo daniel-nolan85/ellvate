@@ -5,9 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { ScopedSearchScreen } from '@/src/components/shared/scoped-search-screen';
-import { Icon } from '@/src/components/ui/icon';
 import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
-import { Spinner } from '@/src/components/ui/spinner';
+import { CactusMascot, Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
@@ -499,8 +498,14 @@ export function ActivityScreen() {
           <Spinner size="xlarge" />
         </VStack>
       ) : !hasAnything ? (
-        <VStack className="items-center gap-2 px-8 py-16" space="sm">
-          <Icon name="Star" size={28} />
+        // CactusMascot, not Icon -- the first theming-pass empty state to try
+        // the app's own dancing-cactus glyph (see Spinner) standing still as
+        // a brand mascot rather than a generic icon. Static (animated left
+        // off, its default) since this is "genuinely nothing here yet," not
+        // "still loading" -- a dancing cactus in an empty state would send
+        // the wrong signal.
+        <VStack className="items-center gap-3 px-8 py-16" space="sm">
+          <CactusMascot size={64} />
           <Text className="text-center text-[14px] text-text-muted">
             Nothing here yet — posts, events, missions, services, and
             petitions you create will show up in one place.
