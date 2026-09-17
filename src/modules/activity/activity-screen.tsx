@@ -10,7 +10,6 @@ import { CLOSE_DURATION, Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { HStack } from '@/src/components/ui/hstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
@@ -47,7 +46,9 @@ import { useSession } from '@/src/platform/session';
 import {
   ActivitySectionList,
   FilterChips,
-  StatBox,
+  MissionProgressStatCard,
+  StatCard,
+  StatRow,
   isActivityFilter,
   type ActivityFilter,
   type ActivityListItem,
@@ -366,6 +367,25 @@ export function ActivityScreen() {
     myServiceItems.length > 0 ||
     myPetitionItems.length > 0;
 
+  // Splits the two stats that used to be a single ambiguous combined count
+  // (an "Events" or "Missions" number that could mean created, attended, or
+  // both) into their own figures. Events created/attending are mutually
+  // exclusive by construction (see the `going` flag above, which already
+  // excludes the item's own author) -- Missions created/completed are not
+  // (a mission you made and later completed yourself counts toward both),
+  // matching how the rest of the app already tracks these independently
+  // (see PublicMemberStats).
+  const eventsCreatedCount = myEventItems.filter(
+    (item) => item.event.author.id === userId,
+  ).length;
+  const eventsAttendingCount = myEventItems.filter((item) => item.going).length;
+  const missionsCreatedCount = myMissionItems.filter(
+    (item) => item.mission.author.id === userId,
+  ).length;
+  const missionsCompletedCount = myMissionItems.filter(
+    (item) => item.completed,
+  ).length;
+
   // ActivitySectionList (see activity-parts.tsx) always renders exactly one
   // section here -- there's no "All" filter combining several at once (see
   // FILTERS in activity-parts.tsx for why) -- and it actually virtualizes,
@@ -492,14 +512,25 @@ export function ActivityScreen() {
         <>
           {/* collapsable={false}: the same real react-native-screens#3092
               view-flattening workaround used on four other screens in this
-              app (see e.g. notifications-screen.tsx). */}
-          <HStack className="px-5 pb-3" collapsable={false} space="sm">
-            <StatBox label="Posts" value={myPostItems.length} />
-            <StatBox label="Events" value={myEventItems.length} />
-            <StatBox label="Missions" value={myMissionItems.length} />
-            <StatBox label="Services" value={myServiceItems.length} />
-            <StatBox label="Petitions" value={myPetitionItems.length} />
-          </HStack>
+              app (see e.g. notifications-screen.tsx). Events and Missions
+              are each split into two cards (created vs attended/completed)
+              instead of one combined, ambiguous count -- see the WHY on
+              eventsCreatedCount above -- which is also why this row scrolls
+              horizontally now rather than splitting a fixed row 5 ways. */}
+          <View className="pb-3" collapsable={false}>
+            <StatRow>
+              <StatCard label="Posts" value={myPostItems.length} />
+              <StatCard label="Events created" value={eventsCreatedCount} />
+              <StatCard label="Events attending" value={eventsAttendingCount} />
+              <StatCard label="Missions created" value={missionsCreatedCount} />
+              <MissionProgressStatCard
+                completed={missionsCompletedCount}
+                total={myMissionItems.length}
+              />
+              <StatCard label="Services" value={myServiceItems.length} />
+              <StatCard label="Petitions" value={myPetitionItems.length} />
+            </StatRow>
+          </View>
 
           <FilterChips active={filter} onSelect={setFilter} />
 
