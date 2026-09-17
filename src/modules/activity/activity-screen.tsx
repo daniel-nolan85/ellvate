@@ -519,16 +519,37 @@ export function ActivityScreen() {
               horizontally now rather than splitting a fixed row 5 ways. */}
           <View className="pb-3" collapsable={false}>
             <StatRow>
-              <StatCard label="Posts" value={myPostItems.length} />
-              <StatCard label="Events created" value={eventsCreatedCount} />
-              <StatCard label="Events attending" value={eventsAttendingCount} />
-              <StatCard label="Missions created" value={missionsCreatedCount} />
+              <StatCard index={0} kind="post" label="Posts" value={myPostItems.length} />
+              <StatCard
+                index={1}
+                kind="event"
+                label="Events created"
+                value={eventsCreatedCount}
+              />
+              <StatCard
+                index={2}
+                kind="event"
+                label="Events attending"
+                value={eventsAttendingCount}
+              />
+              <StatCard
+                index={3}
+                kind="mission"
+                label="Missions created"
+                value={missionsCreatedCount}
+              />
               <MissionProgressStatCard
                 completed={missionsCompletedCount}
+                index={4}
                 total={myMissionItems.length}
               />
-              <StatCard label="Services" value={myServiceItems.length} />
-              <StatCard label="Petitions" value={myPetitionItems.length} />
+              <StatCard index={5} kind="service" label="Services" value={myServiceItems.length} />
+              <StatCard
+                index={6}
+                kind="petition"
+                label="Petitions"
+                value={myPetitionItems.length}
+              />
             </StatRow>
           </View>
 
