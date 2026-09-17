@@ -13,6 +13,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { CommunityNavBar } from '@/src/modules/community-shell';
+import { ProfileAvatarButton } from '@/src/modules/profile';
 
 import {
   resolveNotificationRoute,
@@ -170,9 +171,20 @@ export function NotificationsScreen() {
         collapsable={false}
         style={{ paddingTop: insets.top + 16 }}
       >
-        <Heading className="font-inter-bold" size="xl">
+        {/* This screen is a plain pushed screen (see the comment at the
+            bottom of this component), reached from a persistent bell icon
+            with no CommunityNavBar tab of its own -- without a way back to
+            Profile from here directly, the only way out is the back
+            gesture/button, unlike every tab screen's own ScreenTitle header
+            (avatar + search + bell) which always keeps Profile one tap
+            away. */}
+        <ProfileAvatarButton />
+        <Heading className="flex-1 text-center font-inter-bold" size="xl">
           Notifications
         </Heading>
+        {/* Balances ProfileAvatarButton's width so the centered heading
+            above doesn't visually skew toward the right edge. */}
+        <View className="h-8 w-8" />
       </HStack>
 
       {hasUnread ? (

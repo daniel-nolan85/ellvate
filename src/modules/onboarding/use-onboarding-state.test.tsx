@@ -49,9 +49,11 @@ describe('useOnboardingState', () => {
     jest.clearAllMocks();
   });
 
-  test('invalidates the profile, forum, and leaderboard queries once onboarding completes', async () => {
-    mockedRequestJson.mockResolvedValueOnce(undefined);
+  test('writes the response straight into the profile cache and invalidates forum/leaderboard once onboarding completes', async () => {
+    const response = { profile: { onboardedAt: '2026-09-17T00:00:00.000Z' } };
+    mockedRequestJson.mockResolvedValueOnce(response);
     const queryClient = new QueryClient();
+    const setQueryDataSpy = jest.spyOn(queryClient, 'setQueryData');
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
 
     const { result } = await renderHook(() => useOnboardingState(), {
@@ -88,9 +90,18 @@ describe('useOnboardingState', () => {
         path: '/api/me/profile',
       }),
     );
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['profile'] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['forum'] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['leaderboard'] });
+    // setQueryData, not invalidateQueries, for the profile key -- see
+    // completeOnboarding's own WHY for why an invalidate-and-refetch loses
+    // this race in practice even with refetchType: 'all'.
+    expect(setQueryDataSpy).toHaveBeenCalledWith(['profile', 'me'], response);
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['forum'],
+      refetchType: 'all',
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['leaderboard'],
+      refetchType: 'all',
+    });
   });
 
   test('includes a trimmed name in the request body when the name step was filled in', async () => {

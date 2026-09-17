@@ -294,7 +294,12 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
           which then lets the content below render on top of it instead of
           below it -- forcing this view to actually exist natively is the
           documented fix. */}
-      <HStack className="items-center justify-between px-5 pb-1 pt-6" collapsable={false}>
+      {/* pt-9, not the pt-6 every other row on this screen uses -- the
+          native grabber and the sheet's own rounded top corner already take
+          up real space above this content, so the same fixed gap that reads
+          fine on a plain pushed screen's header reads as cramped for a
+          formSheet's first row specifically. */}
+      <HStack className="items-center justify-between px-5 pb-1 pt-9" collapsable={false}>
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap
         </Heading>
