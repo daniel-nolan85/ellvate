@@ -96,24 +96,24 @@ function AppNavigator() {
               a normal pushed screen with a slide-up transition instead of a
               true modal presentation, to keep the chat input reachable. */}
           <Stack.Screen name="assistant" options={{ animation: 'slide_from_bottom' }} />
-          {/* Profile/Leaderboard/Activity/Bookmarks/Blocked-users are full
-              screens (their own ScreenTitle header + the floating
-              CommunityNavBar) reached from a persistent icon or a tap inside
-              another full screen -- peer sections, not a modal and not a
-              drill-in from a list. `presentation: 'modal'` stacked
+          {/* Profile/Leaderboard/Activity/Bookmarks/Blocked-users/Points
+              history are full screens (their own ScreenTitle header + the
+              floating CommunityNavBar) reached from a persistent icon or a
+              tap inside another full screen -- peer sections, not a modal
+              and not a drill-in from a list. `presentation: 'modal'` stacked
               modal-on-modal when reached from Profile and made their normal
               header read as "inside a modal"; the platform's default push
               animation (a right-to-left slide) instead made switching to one
               feel like navigating deeper rather than switching sections, the
               way tapping a different tab never does. `animation: 'none'`
               matches that "just switch" feel while staying a plain pushed
-              screen. */}
+              screen. Points history has only one entry point (Profile's
+              XpHero card) rather than a persistent icon, but its header has
+              no back chevron either -- the ScreenTitle avatar button routes
+              back to Profile the same way it does everywhere else -- so it
+              gets the same peer-section treatment as the rest. */}
           <Stack.Screen name="profile" options={{ animation: 'none' }} />
-          {/* A drill-in from Profile's XpHero card, not a peer section --
-              default push (right-to-left slide), unlike profile itself
-              above. Declared explicitly rather than left for Expo Router's
-              auto-registration, same reasoning as post/[id] etc. above. */}
-          <Stack.Screen name="points-history" />
+          <Stack.Screen name="points-history" options={{ animation: 'none' }} />
           <Stack.Screen name="leaderboard" options={{ animation: 'none' }} />
           <Stack.Screen name="activity" options={{ animation: 'none' }} />
           <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
