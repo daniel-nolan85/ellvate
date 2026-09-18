@@ -2,16 +2,14 @@ import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router } from 'expo-router';
-
 import { EmptyState } from '@/src/components/shared/empty-state';
-import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 
 import { RankList } from './rank-list';
 import { useProfileStats } from './use-profile';
@@ -302,31 +300,19 @@ export function PointsHistoryScreen() {
 
   return (
     <View className="flex-1 bg-canvas">
-      {/* Eyebrow + big heading matches the ScreenTitle look every peer
-          section (Bookmarks, Blocked users, ...) uses -- kept as a
-          drill-in with a back chevron rather than switching to ScreenTitle
-          itself, since this screen is reached from Profile's XpHero card,
-          not a persistent nav icon (see app/_layout.tsx's Stack.Screen
-          comment for "points-history"). */}
-      <HStack className="items-center gap-3 px-5 pb-2" style={{ paddingTop: insets.top + 12 }}>
-        <Pressable accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()}>
-          <Icon name="ChevronLeft" size={22} />
-        </Pressable>
-        <VStack className="flex-1 gap-1">
-          <Text className="font-inter-bold text-[11px] uppercase tracking-[1.4px] text-accent">
-            Your progress
-          </Text>
-          <Heading className="font-inter-extrabold tracking-[-0.9px]" size="2xl">
-            Points History
-          </Heading>
-        </VStack>
-      </HStack>
+      {/* Same ScreenTitle + CommunityNavBar pairing every peer screen
+          (Bookmarks, Blocked users, ...) uses, avatar button included --
+          no back chevron, since the avatar already routes back to Profile
+          and the floating nav bar covers everything else. */}
+      <View style={{ paddingTop: insets.top }}>
+        <ScreenTitle eyebrow="Your progress" title="Points History" />
+      </View>
 
       <TabSwitcher active={tab} onSelect={setTab} />
 
       {tab === 'ranks' ? (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40, paddingTop: 4 }}
+          contentContainerStyle={{ paddingBottom: 130, paddingTop: 4 }}
           refreshControl={
             <RefreshControl onRefresh={() => void stats.refetch()} refreshing={stats.isRefetching} />
           }
@@ -341,7 +327,7 @@ export function PointsHistoryScreen() {
         </ScrollView>
       ) : tab === 'history' ? (
         <FlatList
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          contentContainerStyle={{ paddingBottom: 130 }}
           data={entries}
           keyExtractor={(entry) => entry.id}
           ListEmptyComponent={
@@ -404,7 +390,7 @@ export function PointsHistoryScreen() {
         />
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          contentContainerStyle={{ paddingBottom: 130 }}
           refreshControl={
             <RefreshControl onRefresh={() => void growth.refetch()} refreshing={growth.isRefetching} />
           }
@@ -424,6 +410,8 @@ export function PointsHistoryScreen() {
           )}
         </ScrollView>
       )}
+
+      <CommunityNavBar />
     </View>
   );
 }
