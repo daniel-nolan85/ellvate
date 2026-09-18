@@ -25,12 +25,12 @@ import {
 import { useXpGrowth } from './use-xp-growth';
 import { XpGrowthChart } from './xp-growth-chart';
 
-type PointsHistoryTab = 'ranks' | 'history' | 'growth';
+type PointsHistoryTab = 'history' | 'growth' | 'ranks';
 
 const TABS: readonly { readonly key: PointsHistoryTab; readonly label: string }[] = [
-  { key: 'ranks', label: 'Ranks' },
   { key: 'history', label: 'History' },
   { key: 'growth', label: 'Growth' },
+  { key: 'ranks', label: 'Ranks' },
 ];
 
 const FILTERS: readonly { readonly key: PointsHistoryFilter; readonly label: string }[] = [
@@ -64,18 +64,23 @@ interface MonthOption {
   readonly label: string;
 }
 
-// "All Time" plus the last 12 calendar months, newest first -- a rolling
-// window rather than every month the account has ever had activity, since
-// listing every month back to account creation would make this chip row
-// itself grow unbounded for a long-tenured member (exactly the "very long"
-// problem this filter exists to solve for the list below it).
-function monthOptions(): readonly MonthOption[] {
+// How far back the year stepper can go -- a bound rather than unlimited
+// scrollback, for the same reason the old rolling-12-months list was
+// bounded: nothing stops a long-tenured member from tapping "previous
+// year" forever otherwise.
+const MIN_YEAR = new Date().getFullYear() - 10;
+
+// Every month in `year` up to (and including) the current month if `year`
+// is the current year, or all 12 if it's a past year -- future months
+// never have data, so they're never offered.
+function monthsForYear(year: number): readonly MonthOption[] {
   const now = new Date();
-  const options: MonthOption[] = [{ key: 'all', label: 'All Time' }];
-  for (let offset = 0; offset < 12; offset += 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const lastMonthIndex = year === now.getFullYear() ? now.getMonth() : 11;
+  const options: MonthOption[] = [];
+  for (let index = 0; index <= lastMonthIndex; index += 1) {
+    const date = new Date(year, index, 1);
+    const key = `${year}-${String(index + 1).padStart(2, '0')}`;
+    const label = date.toLocaleDateString('en-US', { month: 'short' });
     options.push({ key: key as PointsHistoryMonth, label });
   }
   return options;
@@ -152,41 +157,115 @@ function FilterChips({
   );
 }
 
-function MonthFilter({
-  active,
-  onSelect,
+// A single year chip (e.g. "2026") with prev/next steppers instead of a
+// flat month list, since listing every month back to account creation
+// doesn't scale -- tapping the year expands the months within it below,
+// and the steppers browse other years without ever needing to.
+function YearMonthFilter({
+  activeMonth,
+  onChangeYear,
+  onSelectAllTime,
+  onSelectMonth,
+  onToggleYear,
+  selectedYear,
+  yearExpanded,
 }: {
-  readonly active: PointsHistoryMonth;
-  readonly onSelect: (month: PointsHistoryMonth) => void;
+  readonly activeMonth: PointsHistoryMonth;
+  readonly onChangeYear: (delta: 1 | -1) => void;
+  readonly onSelectAllTime: () => void;
+  readonly onSelectMonth: (month: PointsHistoryMonth) => void;
+  readonly onToggleYear: () => void;
+  readonly selectedYear: number;
+  readonly yearExpanded: boolean;
 }) {
+  const currentYear = new Date().getFullYear();
+  const isAllTime = activeMonth === 'all';
+  const isYearActive = !isAllTime && activeMonth.startsWith(`${selectedYear}-`);
+  const canGoBack = selectedYear > MIN_YEAR;
+  const canGoForward = selectedYear < currentYear;
+
   return (
-    <ScrollView
-      contentContainerStyle={{ alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 2 }}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ flexGrow: 0 }}
-    >
-      {monthOptions().map((month) => {
-        const isActive = month.key === active;
-        return (
-          <Pressable
-            className={`shrink-0 rounded-full px-3.5 py-[7px] ${
-              isActive ? 'bg-accent' : 'bg-secondary'
+    <VStack className="gap-2">
+      <HStack className="items-center gap-2 px-5">
+        <Pressable
+          className={`shrink-0 rounded-full px-3.5 py-[7px] ${
+            isAllTime ? 'bg-accent' : 'bg-secondary'
+          }`}
+          onPress={onSelectAllTime}
+        >
+          <Text
+            className={`font-inter-medium text-[13px] leading-[18px] ${
+              isAllTime ? 'text-accent-foreground' : 'text-secondary-foreground'
             }`}
-            key={month.key}
-            onPress={() => onSelect(month.key)}
+          >
+            All Time
+          </Text>
+        </Pressable>
+        <HStack className="flex-1 items-center justify-end gap-1">
+          <Pressable
+            accessibilityLabel="Previous year"
+            disabled={!canGoBack}
+            hitSlop={8}
+            onPress={() => onChangeYear(-1)}
+            style={{ opacity: canGoBack ? 1 : 0.3 }}
+          >
+            <Icon name="ChevronLeft" size={18} />
+          </Pressable>
+          <Pressable
+            className={`rounded-full px-3.5 py-[7px] ${
+              isYearActive || yearExpanded ? 'bg-accent' : 'bg-secondary'
+            }`}
+            onPress={onToggleYear}
           >
             <Text
               className={`font-inter-medium text-[13px] leading-[18px] ${
-                isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
+                isYearActive || yearExpanded ? 'text-accent-foreground' : 'text-secondary-foreground'
               }`}
             >
-              {month.label}
+              {selectedYear}
             </Text>
           </Pressable>
-        );
-      })}
-    </ScrollView>
+          <Pressable
+            accessibilityLabel="Next year"
+            disabled={!canGoForward}
+            hitSlop={8}
+            onPress={() => onChangeYear(1)}
+            style={{ opacity: canGoForward ? 1 : 0.3 }}
+          >
+            <Icon name="ChevronRight" size={18} />
+          </Pressable>
+        </HStack>
+      </HStack>
+      {yearExpanded ? (
+        <ScrollView
+          contentContainerStyle={{ alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 2 }}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+        >
+          {monthsForYear(selectedYear).map((month) => {
+            const isActive = month.key === activeMonth;
+            return (
+              <Pressable
+                className={`shrink-0 rounded-full px-3.5 py-[7px] ${
+                  isActive ? 'bg-accent' : 'bg-secondary'
+                }`}
+                key={month.key}
+                onPress={() => onSelectMonth(month.key)}
+              >
+                <Text
+                  className={`font-inter-medium text-[13px] leading-[18px] ${
+                    isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
+                  }`}
+                >
+                  {month.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+    </VStack>
   );
 }
 
@@ -211,9 +290,11 @@ function HistoryRow({ entry }: { readonly entry: PointsHistoryEntry }) {
 
 export function PointsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<PointsHistoryTab>('ranks');
+  const [tab, setTab] = useState<PointsHistoryTab>('history');
   const [filter, setFilter] = useState<PointsHistoryFilter>('all');
   const [month, setMonth] = useState<PointsHistoryMonth>('all');
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [yearExpanded, setYearExpanded] = useState(false);
   const stats = useProfileStats();
   const history = usePointsHistory(filter, month, tab === 'history');
   const growth = useXpGrowth(tab === 'growth');
@@ -221,16 +302,24 @@ export function PointsHistoryScreen() {
 
   return (
     <View className="flex-1 bg-canvas">
-      <HStack
-        className="items-center gap-2 border-b border-line px-[18px] pb-3"
-        style={{ paddingTop: insets.top + 16 }}
-      >
-        <Pressable accessibilityLabel="Back" onPress={() => router.back()}>
+      {/* Eyebrow + big heading matches the ScreenTitle look every peer
+          section (Bookmarks, Blocked users, ...) uses -- kept as a
+          drill-in with a back chevron rather than switching to ScreenTitle
+          itself, since this screen is reached from Profile's XpHero card,
+          not a persistent nav icon (see app/_layout.tsx's Stack.Screen
+          comment for "points-history"). */}
+      <HStack className="items-center gap-3 px-5 pb-2" style={{ paddingTop: insets.top + 12 }}>
+        <Pressable accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()}>
           <Icon name="ChevronLeft" size={22} />
         </Pressable>
-        <Heading className="flex-1 font-inter-bold text-[16px]" size="sm">
-          Points History
-        </Heading>
+        <VStack className="flex-1 gap-1">
+          <Text className="font-inter-bold text-[11px] uppercase tracking-[1.4px] text-accent">
+            Your progress
+          </Text>
+          <Heading className="font-inter-extrabold tracking-[-0.9px]" size="2xl">
+            Points History
+          </Heading>
+        </VStack>
       </HStack>
 
       <TabSwitcher active={tab} onSelect={setTab} />
@@ -286,7 +375,21 @@ export function PointsHistoryScreen() {
           ListHeaderComponent={
             <VStack className="gap-2 pb-1" space="xs">
               <FilterChips active={filter} onSelect={setFilter} />
-              <MonthFilter active={month} onSelect={setMonth} />
+              <YearMonthFilter
+                activeMonth={month}
+                onChangeYear={(delta) => setSelectedYear((year) => year + delta)}
+                onSelectAllTime={() => {
+                  setMonth('all');
+                  setYearExpanded(false);
+                }}
+                onSelectMonth={(selected) => {
+                  setMonth(selected);
+                  setYearExpanded(false);
+                }}
+                onToggleYear={() => setYearExpanded((expanded) => !expanded)}
+                selectedYear={selectedYear}
+                yearExpanded={yearExpanded}
+              />
             </VStack>
           }
           onEndReached={() => {
