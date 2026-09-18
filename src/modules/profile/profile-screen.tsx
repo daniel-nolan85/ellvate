@@ -29,7 +29,6 @@ import { pickAvatarImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import { AccountIdentifiersSheet } from './account-identifiers-sheet';
-import { PointsHistorySheet } from './points-history-sheet';
 import { XpHero } from './xp-hero';
 import {
   useDeleteAccount,
@@ -174,9 +173,7 @@ export function ProfileScreen() {
   // safe to render in every auth mode.
   const clerkReady = getClerkConfiguration().status === 'ready';
 
-  const [activeSheet, setActiveSheet] = useState<
-    'edit' | 'identifiers' | 'points-history' | null
-  >(null);
+  const [activeSheet, setActiveSheet] = useState<'edit' | 'identifiers' | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftRole, setDraftRole] = useState<CommunityRole | null>(null);
   const [draftInterests, setDraftInterests] = useState<readonly string[]>([]);
@@ -391,7 +388,7 @@ export function ProfileScreen() {
             accessibilityLabel="View points history"
             accessibilityRole="button"
             className="mx-5 pt-4"
-            onPress={() => setActiveSheet('points-history')}
+            onPress={() => router.push('/points-history')}
           >
             <XpHero
               level={stats.data.level}
@@ -694,11 +691,6 @@ export function ProfileScreen() {
           visible={activeSheet === 'identifiers'}
         />
       ) : null}
-
-      <PointsHistorySheet
-        onClose={() => setActiveSheet(null)}
-        visible={activeSheet === 'points-history'}
-      />
 
       <ConfirmModal
         confirmLabel="Sign out"

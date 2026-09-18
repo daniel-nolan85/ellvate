@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, setSystemTime, test } from 'bun:test';
 
+import { GET as getXpGrowthRoute } from '../../app/api/me/xp-growth+api';
 import { GET as getXpLedgerRoute } from '../../app/api/me/xp-ledger+api';
 import { createEvent } from '../../src/backend/events';
 import { createPost } from '../../src/backend/forum';
@@ -8,7 +9,7 @@ import { checkIn, createMission, getUserProgress } from '../../src/backend/missi
 import { updateProfile } from '../../src/backend/profile';
 import { createServiceListing } from '../../src/backend/services';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
-import { CREATE_CONTENT_XP, getXpLedger } from '../../src/backend/xp';
+import { CREATE_CONTENT_XP, getXpGrowth, getXpLedger } from '../../src/backend/xp';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -280,5 +281,60 @@ describe('getXpLedger', () => {
     const other = await getXpLedger(ctx('user-mia'), {});
     expect(other.entries).toHaveLength(0);
     expect(getState().xpLedger).toHaveLength(1);
+  });
+});
+
+describe('getXpGrowth', () => {
+  test('buckets by UTC week, filling gap weeks with a flat running total', async () => {
+    // 2026-07-13, -20, -27 are each a UTC Monday, one week apart.
+    setSystemTime(new Date('2026-07-13T10:00:00.000Z'));
+    await createPost(ctx(), { excerpt: 'e', forum: 'Dining', title: 'Post A' });
+    setSystemTime(new Date('2026-07-15T12:00:00.000Z'));
+    await createMission(ctx(), {
+      description: 'd',
+      stops: ['Stop 1'],
+      title: 'Mission A',
+      xp: 30,
+    });
+    // 2026-07-20 (the week between) gets no activity at all -- its point
+    // should still appear, flat at the running total.
+    setSystemTime(new Date('2026-07-27T09:00:00.000Z'));
+    await createEvent(ctx(), { date: futureDate(30), place: 'Marina', tag: 'Outdoors', time: '18:00', title: 'Sunset Kayak' });
+
+    const growth = await getXpGrowth(ctx());
+    expect(growth.points).toEqual([
+      { cumulativeXp: 2 * CREATE_CONTENT_XP, weekStart: '2026-07-13', xpEarned: 2 * CREATE_CONTENT_XP },
+      { cumulativeXp: 2 * CREATE_CONTENT_XP, weekStart: '2026-07-20', xpEarned: 0 },
+      { cumulativeXp: 3 * CREATE_CONTENT_XP, weekStart: '2026-07-27', xpEarned: CREATE_CONTENT_XP },
+    ]);
+  });
+
+  test('a user with no XP history gets an empty points array', async () => {
+    const growth = await getXpGrowth(ctx());
+    expect(growth.points).toEqual([]);
+  });
+
+  test('GET /api/me/xp-growth returns the caller’s own growth', async () => {
+    setSystemTime(new Date('2026-07-13T10:00:00.000Z'));
+    await createPost(ctx(), { excerpt: 'e', forum: 'Dining', title: 'Post A' });
+
+    const response = await getXpGrowthRoute(
+      new Request('http://localhost/api/me/xp-growth'),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      points: readonly { weekStart: string; xpEarned: number; cumulativeXp: number }[];
+    };
+    expect(body.points).toEqual([
+      { cumulativeXp: CREATE_CONTENT_XP, weekStart: '2026-07-13', xpEarned: CREATE_CONTENT_XP },
+    ]);
+  });
+
+  test('is scoped to the caller -- a different user sees no points', async () => {
+    setSystemTime(new Date('2026-07-13T10:00:00.000Z'));
+    await createPost(ctx(), { excerpt: 'e', forum: 'Dining', title: 'Post A' });
+
+    const other = await getXpGrowth(ctx('user-mia'));
+    expect(other.points).toEqual([]);
   });
 });

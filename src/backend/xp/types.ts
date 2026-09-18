@@ -20,3 +20,14 @@ export interface GrantXpInput {
   readonly reason: XpReason;
   readonly refId?: string | null;
 }
+
+export interface XpGrowthPoint {
+  // Monday (UTC) of the bucketed week, as YYYY-MM-DD.
+  readonly weekStart: string;
+  readonly xpEarned: number;
+  readonly cumulativeXp: number;
+}
+
+export interface XpGrowthResponse {
+  readonly points: readonly XpGrowthPoint[];
+}

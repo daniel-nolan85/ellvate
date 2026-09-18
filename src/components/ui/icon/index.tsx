@@ -50,6 +50,7 @@ import {
   Star,
   Store,
   Sun,
+  TrendingUp,
   Trophy,
   Users,
   UtensilsCrossed,
@@ -117,7 +118,8 @@ export type AppIconName =
   | 'Utensils'
   | 'Footprints'
   | 'Users'
-  | 'ShieldUser';
+  | 'ShieldUser'
+  | 'TrendingUp';
 
 const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   MessageCircle,
@@ -175,6 +177,7 @@ const ICON_MAP: Readonly<Record<AppIconName, IconComponent>> = {
   Footprints,
   Users,
   ShieldUser,
+  TrendingUp,
 };
 
 Object.values(ICON_MAP).forEach((component) => {
