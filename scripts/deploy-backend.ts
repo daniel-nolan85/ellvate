@@ -110,7 +110,13 @@ try {
   const childEnv = { ...process.env, ...Object.fromEntries(overrides) };
 
   run('bun run check:production', childEnv);
-  run('bunx expo export --platform web', childEnv);
+  // --max-workers 2 -- the default worker pool (one per CPU core) has been
+  // observed to hang indefinitely after printing "Exported: dist": Metro's
+  // jest-worker child processes sometimes never shut down cleanly once the
+  // bundle is written, leaving this execSync waiting forever on a process
+  // that's already done its real work. A small, fixed worker count avoids
+  // triggering that hang, at the cost of a somewhat slower export.
+  run('bunx expo export --platform web --max-workers 2', childEnv);
   // Expo bundles every app/api/**/*+api.ts route as its own independent
   // server function, and each one's sourcemap embeds a full copy of the
   // shared backend code it imports -- so total sourcemap size scales with
