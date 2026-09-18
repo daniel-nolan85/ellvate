@@ -14,7 +14,7 @@
 // restores .env.local afterward -- so local development is never left
 // pointed at production credentials, and a bad override value is caught
 // before anything ships rather than after.
-import { execSync } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import {
   copyFileSync,
   existsSync,
@@ -72,6 +72,57 @@ function run(command: string, env: NodeJS.ProcessEnv): void {
   execSync(command, { env, stdio: 'inherit' });
 }
 
+// expo export's underlying Metro/jest-worker process pool has been observed
+// to hang indefinitely right after printing its "Exported: <dir>" success
+// line -- the real work (writing dist/) is done by then every time this has
+// been seen, but the worker processes never shut down on their own,
+// stranding a plain execSync waiting forever on an already-finished job.
+// Reducing --max-workers did not help (the hang reproduced identically at
+// 2 workers), so rather than trust the process to exit naturally, this
+// watches stdout for that success line itself and force-kills the whole
+// process tree a few seconds after seeing it.
+function runExport(command: string, env: NodeJS.ProcessEnv): Promise<void> {
+  console.log(`\n$ ${command}`);
+  const [cmd, ...args] = command.split(' ');
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(cmd, args, { env, stdio: ['inherit', 'pipe', 'inherit'] });
+    let exported = false;
+    let settled = false;
+
+    const finish = (error?: Error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (error) {
+        reject(error);
+      } else {
+        resolvePromise();
+      }
+    };
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      process.stdout.write(chunk);
+      if (!exported && chunk.toString().includes('Exported:')) {
+        exported = true;
+        // A short grace period in case it does exit on its own -- only
+        // force-kill if it's still hanging around after the real work is
+        // clearly done.
+        setTimeout(() => {
+          if (!settled) {
+            child.kill('SIGKILL');
+          }
+        }, 5000);
+      }
+    });
+
+    child.on('error', (error) => finish(error));
+    child.on('exit', (code) => {
+      finish(exported || code === 0 ? undefined : new Error(`${command} exited with code ${code}`));
+    });
+  });
+}
+
 if (!existsSync(envLocalPath)) {
   console.error('.env.local not found -- run `cp .env.example .env.local` first.');
   process.exit(1);
@@ -110,13 +161,7 @@ try {
   const childEnv = { ...process.env, ...Object.fromEntries(overrides) };
 
   run('bun run check:production', childEnv);
-  // --max-workers 2 -- the default worker pool (one per CPU core) has been
-  // observed to hang indefinitely after printing "Exported: dist": Metro's
-  // jest-worker child processes sometimes never shut down cleanly once the
-  // bundle is written, leaving this execSync waiting forever on a process
-  // that's already done its real work. A small, fixed worker count avoids
-  // triggering that hang, at the cost of a somewhat slower export.
-  run('bunx expo export --platform web --max-workers 2', childEnv);
+  await runExport('bunx expo export --platform web', childEnv);
   // Expo bundles every app/api/**/*+api.ts route as its own independent
   // server function, and each one's sourcemap embeds a full copy of the
   // shared backend code it imports -- so total sourcemap size scales with
