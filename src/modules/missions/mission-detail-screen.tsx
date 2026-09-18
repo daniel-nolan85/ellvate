@@ -50,6 +50,7 @@ import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionCheckInThumbnailRow } from './mission-check-in-gallery';
 import { MissionComposer } from './mission-composer';
 import { missionThemeIcon } from './mission-theme';
+import { RankUpCelebrationModal } from './rank-up-celebration-modal';
 import { useMyCheckInPhoto, useUpdateMyCheckInPhoto } from './use-mission-check-in-photos';
 import {
   useCreateMissionComment,
@@ -1076,7 +1077,12 @@ export function MissionDetailScreen({
         onClose={() => setCelebration(null)}
       />
       <LevelUpCelebrationModal
-        newLevel={celebration?.leveledUpTo ?? null}
+        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
+        onClose={() => setCelebration(null)}
+        title={celebration?.title ?? ''}
+      />
+      <RankUpCelebrationModal
+        newTitle={celebration?.rankedUpTo ?? null}
         onClose={() => setCelebration(null)}
       />
 

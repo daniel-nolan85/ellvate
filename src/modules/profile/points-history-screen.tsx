@@ -19,14 +19,16 @@ import {
   usePointsHistory,
   type PointsHistoryEntry,
   type PointsHistoryFilter,
+  type PointsHistoryMonth,
   type PointsHistoryReason,
 } from './use-points-history';
 import { useXpGrowth } from './use-xp-growth';
 import { XpGrowthChart } from './xp-growth-chart';
 
-type PointsHistoryTab = 'history' | 'growth';
+type PointsHistoryTab = 'ranks' | 'history' | 'growth';
 
 const TABS: readonly { readonly key: PointsHistoryTab; readonly label: string }[] = [
+  { key: 'ranks', label: 'Ranks' },
   { key: 'history', label: 'History' },
   { key: 'growth', label: 'Growth' },
 ];
@@ -56,6 +58,28 @@ const REASON_LABEL: Readonly<Record<PointsHistoryReason, string>> = {
   post_created: 'Posted in the forum',
   service_created: 'Listed a service',
 };
+
+interface MonthOption {
+  readonly key: PointsHistoryMonth;
+  readonly label: string;
+}
+
+// "All Time" plus the last 12 calendar months, newest first -- a rolling
+// window rather than every month the account has ever had activity, since
+// listing every month back to account creation would make this chip row
+// itself grow unbounded for a long-tenured member (exactly the "very long"
+// problem this filter exists to solve for the list below it).
+function monthOptions(): readonly MonthOption[] {
+  const now = new Date();
+  const options: MonthOption[] = [{ key: 'all', label: 'All Time' }];
+  for (let offset = 0; offset < 12; offset += 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    options.push({ key: key as PointsHistoryMonth, label });
+  }
+  return options;
+}
 
 function TabSwitcher({
   active,
@@ -128,6 +152,44 @@ function FilterChips({
   );
 }
 
+function MonthFilter({
+  active,
+  onSelect,
+}: {
+  readonly active: PointsHistoryMonth;
+  readonly onSelect: (month: PointsHistoryMonth) => void;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={{ alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 2 }}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ flexGrow: 0 }}
+    >
+      {monthOptions().map((month) => {
+        const isActive = month.key === active;
+        return (
+          <Pressable
+            className={`shrink-0 rounded-full px-3.5 py-[7px] ${
+              isActive ? 'bg-accent' : 'bg-secondary'
+            }`}
+            key={month.key}
+            onPress={() => onSelect(month.key)}
+          >
+            <Text
+              className={`font-inter-medium text-[13px] leading-[18px] ${
+                isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
+              }`}
+            >
+              {month.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 function HistoryRow({ entry }: { readonly entry: PointsHistoryEntry }) {
   return (
     <HStack className="items-center gap-3 px-5 py-2.5">
@@ -149,10 +211,11 @@ function HistoryRow({ entry }: { readonly entry: PointsHistoryEntry }) {
 
 export function PointsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<PointsHistoryTab>('history');
+  const [tab, setTab] = useState<PointsHistoryTab>('ranks');
   const [filter, setFilter] = useState<PointsHistoryFilter>('all');
+  const [month, setMonth] = useState<PointsHistoryMonth>('all');
   const stats = useProfileStats();
-  const history = usePointsHistory(filter, tab === 'history');
+  const history = usePointsHistory(filter, month, tab === 'history');
   const growth = useXpGrowth(tab === 'growth');
   const entries = history.data?.pages.flatMap((page) => page.entries) ?? [];
 
@@ -160,7 +223,7 @@ export function PointsHistoryScreen() {
     <View className="flex-1 bg-canvas">
       <HStack
         className="items-center gap-2 border-b border-line px-[18px] pb-3"
-        style={{ paddingTop: insets.top + 8 }}
+        style={{ paddingTop: insets.top + 16 }}
       >
         <Pressable accessibilityLabel="Back" onPress={() => router.back()}>
           <Icon name="ChevronLeft" size={22} />
@@ -172,7 +235,22 @@ export function PointsHistoryScreen() {
 
       <TabSwitcher active={tab} onSelect={setTab} />
 
-      {tab === 'history' ? (
+      {tab === 'ranks' ? (
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40, paddingTop: 4 }}
+          refreshControl={
+            <RefreshControl onRefresh={() => void stats.refetch()} refreshing={stats.isRefetching} />
+          }
+        >
+          {stats.data ? (
+            <RankList level={stats.data.level} />
+          ) : (
+            <View className="items-center py-16">
+              <Spinner size="xlarge" />
+            </View>
+          )}
+        </ScrollView>
+      ) : tab === 'history' ? (
         <FlatList
           contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
           data={entries}
@@ -184,10 +262,14 @@ export function PointsHistoryScreen() {
               </View>
             ) : (
               <EmptyState
-                heading={filter === 'all' ? 'No points earned yet' : 'Nothing in this category yet'}
+                heading={
+                  filter === 'all' && month === 'all'
+                    ? 'No points earned yet'
+                    : 'Nothing in this range yet'
+                }
                 icon="Star"
                 subtext={
-                  filter === 'all'
+                  filter === 'all' && month === 'all'
                     ? 'Complete missions, post, and join events to start earning XP.'
                     : 'Try a different filter.'
                 }
@@ -202,9 +284,9 @@ export function PointsHistoryScreen() {
             ) : null
           }
           ListHeaderComponent={
-            <VStack className="gap-3 pb-1" space="xs">
-              {stats.data ? <RankList level={stats.data.level} /> : null}
+            <VStack className="gap-2 pb-1" space="xs">
               <FilterChips active={filter} onSelect={setFilter} />
+              <MonthFilter active={month} onSelect={setMonth} />
             </VStack>
           }
           onEndReached={() => {

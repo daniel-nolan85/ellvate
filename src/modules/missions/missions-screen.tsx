@@ -18,6 +18,7 @@ import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCard } from './mission-card';
 import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
+import { RankUpCelebrationModal } from './rank-up-celebration-modal';
 import {
   useCreateMission,
   useMissionsProgress,
@@ -297,7 +298,12 @@ export function MissionsScreen({
         onClose={() => setCelebration(null)}
       />
       <LevelUpCelebrationModal
-        newLevel={celebration?.leveledUpTo ?? null}
+        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
+        onClose={() => setCelebration(null)}
+        title={celebration?.title ?? ''}
+      />
+      <RankUpCelebrationModal
+        newTitle={celebration?.rankedUpTo ?? null}
         onClose={() => setCelebration(null)}
       />
     </>

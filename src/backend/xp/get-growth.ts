@@ -30,10 +30,15 @@ interface GrowthSourceEntry {
   readonly createdAt: string;
 }
 
-// One point per week from the user's first XP event through the current
-// week, each carrying both that week's own total and the running sum so
-// far. A week with no activity still gets a point (xpEarned: 0) so the
-// chart shows a flat plateau instead of silently skipping it.
+// One point per week from the week BEFORE the user's first XP event (a
+// fixed zero-XP anchor) through the current week, each carrying both that
+// week's own total and the running sum so far. A week with no activity
+// still gets a point (xpEarned: 0) so the chart shows a flat plateau
+// instead of silently skipping it. The leading zero anchor exists so a
+// brand-new account (all its history in a single week) still has two
+// points to draw a real line between, instead of one lone dot -- without
+// it, the very common "just started this week" case renders nothing
+// visibly different from an empty chart.
 function buildGrowthPoints(
   entries: readonly GrowthSourceEntry[],
 ): readonly XpGrowthPoint[] {
@@ -51,8 +56,9 @@ function buildGrowthPoints(
     }
   }
   const lastWeek = weekStartIso(new Date().toISOString());
+  const anchorWeek = addWeeks(firstWeek, -1);
 
-  const points: XpGrowthPoint[] = [];
+  const points: XpGrowthPoint[] = [{ cumulativeXp: 0, weekStart: anchorWeek, xpEarned: 0 }];
   let cumulativeXp = 0;
   for (let week = firstWeek; week <= lastWeek; week = addWeeks(week, 1)) {
     const xpEarned = earnedByWeek.get(week) ?? 0;

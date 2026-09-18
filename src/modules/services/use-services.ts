@@ -197,10 +197,11 @@ export function useCreateServiceListing() {
       void queryClient.invalidateQueries({ queryKey: ['services'] });
       // Listing a service also grants a small amount of XP -- see
       // src/backend/xp -- which the profile's XP/level stat and the
-      // points-history list both need to pick up.
+      // points-history list and growth chart all need to pick up.
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
   });
 }

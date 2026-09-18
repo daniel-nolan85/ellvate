@@ -20,6 +20,7 @@ import {
   LevelUpCelebrationModal,
   MissionCard,
   MissionCelebrationModal,
+  RankUpCelebrationModal,
   type CheckInCelebration,
 } from '@/src/modules/missions';
 import { PetitionRow } from '@/src/modules/petitions';
@@ -331,7 +332,12 @@ export function BookmarksScreen() {
         onClose={() => setCelebration(null)}
       />
       <LevelUpCelebrationModal
-        newLevel={celebration?.leveledUpTo ?? null}
+        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
+        onClose={() => setCelebration(null)}
+        title={celebration?.title ?? ''}
+      />
+      <RankUpCelebrationModal
+        newTitle={celebration?.rankedUpTo ?? null}
         onClose={() => setCelebration(null)}
       />
     </View>
