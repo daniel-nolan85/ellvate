@@ -31,7 +31,7 @@ import type {
   UpdateMissionResult,
   UserProgress,
 } from './types';
-import { buildProgress, DEFAULT_PROGRESS_TITLE } from './user-progress';
+import { buildProgress } from './user-progress';
 import { validateMissionInput } from './validation';
 
 // The embedded `author` relation (same pattern already used by posts,
@@ -111,7 +111,6 @@ async function loadProgressCounts(
 interface UserRow {
   readonly xp: number;
   readonly missions_completed: number;
-  readonly title: string;
 }
 
 type UploadMissionMediaResult =
@@ -269,7 +268,7 @@ const loadUserRow = async (
 ): Promise<UserRow | null> => {
   const { data, error } = await supabase
     .from('app_users')
-    .select('xp,missions_completed,title')
+    .select('xp,missions_completed')
     .eq('id', userId)
     .maybeSingle();
   throwIfSupabaseError(error, 'load mission user');
@@ -314,7 +313,6 @@ export async function getMissionsViewSupabase(
     progress: buildProgress({
       xp: userRow?.xp ?? 0,
       missionsCompleted: userRow?.missions_completed ?? 0,
-      title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
     }),
   };
 }
@@ -406,7 +404,6 @@ export async function getUserProgressSupabase(
   return buildProgress({
     xp: userRow?.xp ?? 0,
     missionsCompleted: userRow?.missions_completed ?? 0,
-    title: userRow?.title ?? DEFAULT_PROGRESS_TITLE,
   });
 }
 
@@ -792,7 +789,6 @@ export async function checkInSupabase(
   const userRow = await loadUserRow(supabase, userId);
   const baseXp = userRow?.xp ?? 0;
   const baseMissions = userRow?.missions_completed ?? 0;
-  const title = userRow?.title ?? DEFAULT_PROGRESS_TITLE;
 
   if (completed) {
     const { error: userUpdateError } = await supabase
@@ -840,7 +836,6 @@ export async function checkInSupabase(
       progress: buildProgress({
         xp: completed ? baseXp + mission.xp : baseXp,
         missionsCompleted: completed ? baseMissions + 1 : baseMissions,
-        title,
       }),
     },
   };

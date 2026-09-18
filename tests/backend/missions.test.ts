@@ -129,7 +129,7 @@ describe('getMissionsView', () => {
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
       missionsCompleted: 21,
-      title: 'LAKE EXPLORER',
+      title: 'Lake Local',
     });
     expect(progress.level).toBe(6);
     expect(progress.xpToNextLevel).toBe(61);
@@ -154,7 +154,7 @@ describe('getMissionsView', () => {
       xpForNextLevel: 300,
       xpToNextLevel: 300,
       missionsCompleted: 0,
-      title: 'LAKE EXPLORER',
+      title: 'Lake Explorer',
     });
   });
 });
@@ -246,7 +246,7 @@ describe('checkIn', () => {
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
       missionsCompleted: 22,
-      title: 'LAKE EXPLORER',
+      title: 'Lake Regular',
     });
     expect(result.body.progress.level).toBe(7);
   });
@@ -1209,7 +1209,7 @@ describe('getUserProgress / GET /api/missions/progress', () => {
       xpForNextLevel: breakdown.xpForNextLevel,
       xpToNextLevel: breakdown.xpToNextLevel,
       missionsCompleted: 21,
-      title: 'LAKE EXPLORER',
+      title: 'Lake Local',
     });
   });
 
@@ -1225,7 +1225,7 @@ describe('getUserProgress / GET /api/missions/progress', () => {
     expect(body.progress).toMatchObject({
       xp: 1980,
       level: 6,
-      title: 'LAKE EXPLORER',
+      title: 'Lake Local',
     });
   });
 });
