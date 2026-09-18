@@ -164,9 +164,10 @@ export function useUpdateProfile() {
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       // Finishing onboarding grants a one-time XP bonus -- see
       // src/backend/xp -- which the missions progress query (XP/level) and
-      // the points-history list both need to pick up.
+      // the points-history list and growth chart all need to pick up.
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
   });
 }

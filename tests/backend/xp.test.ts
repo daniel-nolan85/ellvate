@@ -303,6 +303,9 @@ describe('getXpGrowth', () => {
 
     const growth = await getXpGrowth(ctx());
     expect(growth.points).toEqual([
+      // A zero-XP anchor point the week before the first real activity --
+      // see buildGrowthPoints' own WHY for why the chart always needs one.
+      { cumulativeXp: 0, weekStart: '2026-07-06', xpEarned: 0 },
       { cumulativeXp: 2 * CREATE_CONTENT_XP, weekStart: '2026-07-13', xpEarned: 2 * CREATE_CONTENT_XP },
       { cumulativeXp: 2 * CREATE_CONTENT_XP, weekStart: '2026-07-20', xpEarned: 0 },
       { cumulativeXp: 3 * CREATE_CONTENT_XP, weekStart: '2026-07-27', xpEarned: CREATE_CONTENT_XP },
@@ -326,6 +329,7 @@ describe('getXpGrowth', () => {
       points: readonly { weekStart: string; xpEarned: number; cumulativeXp: number }[];
     };
     expect(body.points).toEqual([
+      { cumulativeXp: 0, weekStart: '2026-07-06', xpEarned: 0 },
       { cumulativeXp: CREATE_CONTENT_XP, weekStart: '2026-07-13', xpEarned: CREATE_CONTENT_XP },
     ]);
   });
@@ -336,5 +340,29 @@ describe('getXpGrowth', () => {
 
     const other = await getXpGrowth(ctx('user-mia'));
     expect(other.points).toEqual([]);
+  });
+
+  test('a brand-new account with activity in only one week still gets a real two-point line', async () => {
+    setSystemTime(new Date('2026-07-13T10:00:00.000Z'));
+    await createPost(ctx(), { excerpt: 'e', forum: 'Dining', title: 'Post A' });
+    setSystemTime(new Date('2026-07-14T09:00:00.000Z'));
+    await createMission(ctx(), {
+      description: 'd',
+      stops: ['Stop 1'],
+      title: 'Mission A',
+      xp: 30,
+    });
+
+    const growth = await getXpGrowth(ctx());
+    // Both writes land in the same week (2026-07-13), so without the
+    // leading zero anchor this would be a single point -- no line to draw.
+    expect(growth.points).toEqual([
+      { cumulativeXp: 0, weekStart: '2026-07-06', xpEarned: 0 },
+      {
+        cumulativeXp: 2 * CREATE_CONTENT_XP,
+        weekStart: '2026-07-13',
+        xpEarned: 2 * CREATE_CONTENT_XP,
+      },
+    ]);
   });
 });

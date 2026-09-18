@@ -10,15 +10,23 @@ const WHITE = 'rgb(255,255,255)';
 
 interface LevelUpCelebrationModalProps {
   readonly newLevel: number | null;
+  // The rank the level currently sits in (unchanged by this level-up --
+  // when it DOES change, RankUpCelebrationModal fires instead of this one).
+  // Shown so a level-up always reminds the user where they stand, not just
+  // the bare number.
+  readonly title: string;
   readonly onClose: () => void;
 }
 
 // Deliberately bigger/rarer than MissionCelebrationModal's routine XP toast
 // -- a level-up doesn't happen on every check-in, so it gets its own beat
 // (amber badge instead of the plain success check, an entrance animation)
-// rather than reusing the same shell with a different label.
+// rather than reusing the same shell with a different label. Still smaller
+// than RankUpCelebrationModal -- most level-ups stay within the same rank
+// tier, so that bigger moment is reserved for when the rank itself changes.
 export function LevelUpCelebrationModal({
   newLevel,
+  title,
   onClose,
 }: LevelUpCelebrationModalProps) {
   return (
@@ -49,6 +57,11 @@ export function LevelUpCelebrationModal({
           <Text className="font-inter-bold text-[24px] text-content">
             You reached Level {newLevel}
           </Text>
+          {title ? (
+            <Text className="font-inter-semibold text-[13px] text-text-muted">
+              {title}
+            </Text>
+          ) : null}
           <Text className="text-center text-text-muted" size="sm">
             Keep completing missions to climb the leaderboard.
           </Text>

@@ -4,6 +4,7 @@ export { MissionCelebrationModal } from './mission-celebration-modal';
 export { MissionCheckInGalleryScreen } from './mission-check-in-gallery';
 export { MissionDetailScreen } from './mission-detail-screen';
 export { MissionsScreen } from './missions-screen';
+export { RankUpCelebrationModal } from './rank-up-celebration-modal';
 export {
   useMissionsView,
   useMyMissionsView,

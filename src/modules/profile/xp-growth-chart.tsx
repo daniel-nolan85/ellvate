@@ -65,6 +65,9 @@ export function XpGrowthChart({
 
   return (
     <VStack className="gap-1 px-5 pt-2" space="xs">
+      <Text className="font-inter-semibold text-[11px] uppercase tracking-[1px] text-text-muted">
+        Cumulative XP over time
+      </Text>
       <Text className="font-inter-bold text-[24px] text-content">
         {last.cumulativeXp.toLocaleString()}
         <Text className="font-inter-semibold text-[13px] text-text-muted"> total XP</Text>

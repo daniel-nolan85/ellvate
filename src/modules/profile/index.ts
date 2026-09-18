@@ -11,5 +11,6 @@ export { usePointsHistory } from './use-points-history';
 export type {
   PointsHistoryEntry,
   PointsHistoryFilter,
+  PointsHistoryMonth,
   PointsHistoryReason,
 } from './use-points-history';

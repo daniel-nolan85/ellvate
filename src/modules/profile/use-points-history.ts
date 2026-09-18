@@ -40,8 +40,14 @@ const FILTER_REASONS: Readonly<Record<PointsHistoryFilter, readonly PointsHistor
 
 const PAGE_SIZE = 20;
 
+// 'all' passes no month filter through to the API at all. Any other value
+// is a "YYYY-MM" string -- see monthOptions() in the screen module for how
+// those are generated.
+export type PointsHistoryMonth = 'all' | `${number}-${string}`;
+
 const pointsHistoryPath = (
   filter: PointsHistoryFilter,
+  month: PointsHistoryMonth,
   cursor: string | null,
 ): `/${string}` => {
   const reasons = FILTER_REASONS[filter];
@@ -49,13 +55,20 @@ const pointsHistoryPath = (
   if (reasons.length > 0) {
     params.set('reasons', reasons.join(','));
   }
+  if (month !== 'all') {
+    params.set('month', month);
+  }
   if (cursor) {
     params.set('cursor', cursor);
   }
   return `/api/me/xp-ledger?${params.toString()}`;
 };
 
-export function usePointsHistory(filter: PointsHistoryFilter, enabled: boolean) {
+export function usePointsHistory(
+  filter: PointsHistoryFilter,
+  month: PointsHistoryMonth,
+  enabled: boolean,
+) {
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
 
@@ -66,9 +79,9 @@ export function usePointsHistory(filter: PointsHistoryFilter, enabled: boolean) 
     queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
       requestJson<PointsHistoryPage>({
         getAccessToken: session.getToken,
-        path: pointsHistoryPath(filter, pageParam),
+        path: pointsHistoryPath(filter, month, pageParam),
         signal,
       }),
-    queryKey: ['xp', 'ledger', userId, filter],
+    queryKey: ['xp', 'ledger', userId, filter, month],
   });
 }

@@ -37,3 +37,7 @@ export function currentRankIndex(level: number): number {
   }
   return index;
 }
+
+export function titleForLevel(level: number): string {
+  return RANK_TIERS[currentRankIndex(level)].title;
+}

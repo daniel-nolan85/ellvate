@@ -19,6 +19,12 @@ export interface GetXpLedgerOptions {
   readonly limit?: number;
   readonly cursor?: string | null;
   readonly reasons?: readonly XpReason[];
+  // Both ISO timestamps, [from, to) -- lets the History tab's month filter
+  // narrow the query server-side instead of fetching everything and
+  // filtering client-side, which matters once an account's ledger spans
+  // years.
+  readonly from?: string;
+  readonly to?: string;
 }
 
 function getXpLedgerMemory(
@@ -26,12 +32,16 @@ function getXpLedgerMemory(
   limit: number,
   cursor: string | null,
   reasons: readonly XpReason[] | undefined,
+  from: string | undefined,
+  to: string | undefined,
 ): XpLedgerPage {
   const state = getState();
   const reasonSet = reasons && reasons.length > 0 ? new Set(reasons) : null;
   const filtered = state.xpLedger
     .filter((entry) => entry.userId === userId)
     .filter((entry) => !reasonSet || reasonSet.has(entry.reason))
+    .filter((entry) => !from || entry.createdAt >= from)
+    .filter((entry) => !to || entry.createdAt < to)
     .map((entry) => ({ ...entry, sortKey: entry.createdAt }));
   const page = paginateInMemory(filtered, limit, cursor);
 
@@ -77,6 +87,8 @@ async function getXpLedgerSupabase(
   limit: number,
   cursor: string | null,
   reasons: readonly XpReason[] | undefined,
+  from: string | undefined,
+  to: string | undefined,
 ): Promise<XpLedgerPage> {
   let query = supabase
     .from('xp_ledger')
@@ -88,6 +100,12 @@ async function getXpLedgerSupabase(
 
   if (reasons && reasons.length > 0) {
     query = query.in('reason', reasons);
+  }
+  if (from) {
+    query = query.gte('created_at', from);
+  }
+  if (to) {
+    query = query.lt('created_at', to);
   }
 
   const cursorFilter = safeCursorOrFilter(cursor ? decodeCursor(cursor) : null);
@@ -127,6 +145,14 @@ export async function getXpLedger(
   );
   const cursor = options.cursor ?? null;
   return ctx.supabase
-    ? getXpLedgerSupabase(ctx.supabase, ctx.userId, limit, cursor, options.reasons)
-    : getXpLedgerMemory(ctx.userId, limit, cursor, options.reasons);
+    ? getXpLedgerSupabase(
+        ctx.supabase,
+        ctx.userId,
+        limit,
+        cursor,
+        options.reasons,
+        options.from,
+        options.to,
+      )
+    : getXpLedgerMemory(ctx.userId, limit, cursor, options.reasons, options.from, options.to);
 }

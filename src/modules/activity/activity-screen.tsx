@@ -30,6 +30,7 @@ import {
   LevelUpCelebrationModal,
   MissionCard,
   MissionCelebrationModal,
+  RankUpCelebrationModal,
   useMyMissionsView,
   type CheckInCelebration,
   type Mission,
@@ -617,7 +618,12 @@ export function ActivityScreen() {
         onClose={() => setCelebration(null)}
       />
       <LevelUpCelebrationModal
-        newLevel={celebration?.leveledUpTo ?? null}
+        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
+        onClose={() => setCelebration(null)}
+        title={celebration?.title ?? ''}
+      />
+      <RankUpCelebrationModal
+        newTitle={celebration?.rankedUpTo ?? null}
         onClose={() => setCelebration(null)}
       />
     </View>

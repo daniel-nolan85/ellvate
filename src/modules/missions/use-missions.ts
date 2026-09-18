@@ -11,7 +11,7 @@ import { maybeRequestReviewAfterFirstMissionComplete } from '@/src/platform/revi
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
-import { computeLeveledUpTo } from './level-up';
+import { computeLeveledUpTo, computeRankedUpTo } from './level-up';
 
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
@@ -248,8 +248,9 @@ export function useCreateMission() {
       // missions endpoints, so it isn't covered by the invalidation above.
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       // Also grants a small amount of XP -- see src/backend/xp -- which the
-      // points-history list needs to pick up too.
+      // points-history list and growth chart need to pick up too.
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
   });
 }
@@ -369,6 +370,15 @@ export interface CheckInCelebration {
   // Set only when this check-in's XP crossed a level boundary -- the level
   // reached, for a bigger/rarer celebration than the routine XP toast.
   readonly leveledUpTo: number | null;
+  // Set only when the level-up above also crossed into a new rank tier --
+  // rarer still, so it gets an even bigger celebration than a plain
+  // level-up (see RankUpCelebrationModal). Never set without leveledUpTo
+  // also being set.
+  readonly rankedUpTo: string | null;
+  // The rank the user is in *after* this check-in, regardless of whether
+  // it changed -- shown on LevelUpCelebrationModal so a plain level-up
+  // still reminds the user where they stand.
+  readonly title: string;
 }
 
 export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration) => void) {
@@ -410,6 +420,7 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
       void queryClient.invalidateQueries({
         queryKey: ['missions', 'check-in-photos', missionId],
       });
@@ -437,6 +448,11 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
             context?.previousLevel,
             result.progress.level,
           ),
+          rankedUpTo: computeRankedUpTo(
+            context?.previousLevel,
+            result.progress.level,
+          ),
+          title: result.progress.title,
         });
       }
     },
