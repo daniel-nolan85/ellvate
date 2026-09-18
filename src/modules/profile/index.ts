@@ -3,7 +3,7 @@ export { MemberProfileScreen } from './member-profile-screen';
 export { useOpenProfile } from './use-open-profile';
 export { useBlockUser, useBlockedUsers, useReportMember } from './use-block-user';
 export type { BlockedMember } from './use-block-user';
-export { PointsHistorySheet } from './points-history-sheet';
+export { PointsHistoryScreen } from './points-history-screen';
 export { ProfileAvatarButton } from './profile-avatar-button';
 export { ProfileScreen } from './profile-screen';
 export { useMemberProfile, useProfile } from './use-profile';

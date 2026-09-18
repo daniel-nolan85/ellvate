@@ -109,6 +109,11 @@ function AppNavigator() {
               matches that "just switch" feel while staying a plain pushed
               screen. */}
           <Stack.Screen name="profile" options={{ animation: 'none' }} />
+          {/* A drill-in from Profile's XpHero card, not a peer section --
+              default push (right-to-left slide), unlike profile itself
+              above. Declared explicitly rather than left for Expo Router's
+              auto-registration, same reasoning as post/[id] etc. above. */}
+          <Stack.Screen name="points-history" />
           <Stack.Screen name="leaderboard" options={{ animation: 'none' }} />
           <Stack.Screen name="activity" options={{ animation: 'none' }} />
           <Stack.Screen name="bookmarks" options={{ animation: 'none' }} />
