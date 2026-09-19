@@ -84,6 +84,7 @@ export function useOnboardingState() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
   const [completionError, setCompletionError] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
   const maestroProfileSyncFailure = useRef(false);
 
   const setName = useCallback((name: string) => {
@@ -114,7 +115,16 @@ export function useOnboardingState() {
   }, []);
 
   const completeOnboarding = useCallback(async () => {
+    // Guards against a double-tap on "Try again" firing two overlapping
+    // completion requests -- see 0064_atomic_grant_xp.sql for why the
+    // backend itself no longer double-grants the welcome bonus even if this
+    // guard is somehow bypassed, but there's no reason to send the second
+    // request in the first place.
+    if (isCompleting) {
+      return false;
+    }
     setCompletionError(null);
+    setIsCompleting(true);
     try {
       if (
         __DEV__ &&
@@ -189,13 +199,16 @@ export function useOnboardingState() {
           : 'We could not save your profile. Check your connection and try again.',
       );
       return false;
+    } finally {
+      setIsCompleting(false);
     }
-  }, [draft, queryClient, session]);
+  }, [draft, queryClient, session, isCompleting]);
 
   return {
     completeOnboarding,
     completionError,
     draft,
+    isCompleting,
     setName,
     setRole,
     toggleInterest,

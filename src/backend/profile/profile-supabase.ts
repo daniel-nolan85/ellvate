@@ -142,6 +142,20 @@ export async function updateProfileSupabase(
   const justOnboarded =
     current.onboarded_at === null && next.onboarded_at !== null;
 
+  // Granted before the profile row itself is updated, and safe to retry:
+  // grant_xp_and_log is a no-op the second time around (its unique index on
+  // (user_id, reason, ref_id) blocks a second onboarding_bonus row for the
+  // same user), so if the profile update below fails after this succeeds,
+  // the next retry just re-attempts stamping onboarded_at without
+  // re-granting XP -- see that function's own WHY.
+  if (justOnboarded) {
+    const { error: grantError } = await supabase.rpc('grant_xp_and_log', {
+      p_amount: WELCOME_XP,
+      p_reason: 'onboarding_bonus',
+    });
+    throwIfSupabaseError(grantError, 'grant onboarding xp');
+  }
+
   let payload: Record<string, unknown> = {
     ...next,
     ...(validation.update.name ? { name: validation.update.name } : {}),
@@ -161,19 +175,6 @@ export async function updateProfileSupabase(
       payload = { ...payload, avatar_url: avatarUrl };
       replacedAvatarUrl = current.avatar_url;
     }
-  }
-
-  if (justOnboarded) {
-    const { data: xpRow, error: xpError } = await supabase
-      .from('app_users')
-      .select('xp')
-      .eq('id', userId)
-      .single();
-    throwIfSupabaseError(xpError, 'load profile welcome XP');
-    payload = {
-      ...payload,
-      xp: ((xpRow?.xp as number | undefined) ?? 0) + WELCOME_XP,
-    };
   }
 
   const { data, error } = await supabase

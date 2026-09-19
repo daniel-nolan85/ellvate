@@ -23,39 +23,37 @@ function grantXpMemory(userId: string, input: GrantXpInput): void {
   }));
 }
 
+// Bumps app_users.xp and inserts the matching xp_ledger row in one atomic,
+// dedupe-safe call -- see grant_xp_and_log in
+// supabase/migrations/0064_atomic_grant_xp.sql for why this replaced two
+// separate writes (a ledger-insert failure after a committed xp bump used
+// to leave app_users.xp permanently ahead of the ledger's own sum).
 async function grantXpSupabase(
   supabase: SupabaseClient,
-  userId: string,
   input: GrantXpInput,
 ): Promise<void> {
-  const { data, error } = await supabase
-    .from('app_users')
-    .select('xp')
-    .eq('id', userId)
-    .maybeSingle();
-  throwIfSupabaseError(error, 'load user xp');
-  const baseXp = (data as { xp: number } | null)?.xp ?? 0;
-
-  const { error: updateError } = await supabase
-    .from('app_users')
-    .update({ xp: baseXp + input.amount })
-    .eq('id', userId);
-  throwIfSupabaseError(updateError, 'grant xp');
+  const { error } = await supabase.rpc('grant_xp_and_log', {
+    p_amount: input.amount,
+    p_ref_id: input.refId ?? null,
+    p_reason: input.reason,
+  });
+  throwIfSupabaseError(error, 'grant xp');
 }
 
 // Bumps the caller's xp and records the matching ledger entry together --
 // for XP-earning actions that don't already have their own xp-mutation code
 // elsewhere (creating a mission/post/event/service). Mission completion and
 // the onboarding bonus keep their own existing xp updates and call
-// recordXpLedgerEntry directly instead, so this never touches either.
+// recordXpLedgerEntry (Supabase: grant_xp_and_log) directly instead, so
+// this never touches either.
 export async function grantXp(
   ctx: RequestContext,
   input: GrantXpInput,
 ): Promise<void> {
   if (ctx.supabase) {
-    await grantXpSupabase(ctx.supabase, ctx.userId, input);
-  } else {
-    grantXpMemory(ctx.userId, input);
+    await grantXpSupabase(ctx.supabase, input);
+    return;
   }
+  grantXpMemory(ctx.userId, input);
   await recordXpLedgerEntry(ctx, input);
 }

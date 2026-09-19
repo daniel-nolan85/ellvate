@@ -152,10 +152,15 @@ export async function checkIn(
   missionId: string,
   input?: unknown,
 ): Promise<CheckInResult> {
-  const result = ctx.supabase
-    ? await checkInSupabase(ctx.supabase, ctx.userId, missionId, input)
-    : await checkInMemory(ctx.userId, missionId, input);
+  // Supabase: checkInSupabase grants the xp and its ledger entry together
+  // via grant_xp_and_log, atomically -- see that function's own WHY. Only
+  // the memory backend still needs the ledger entry recorded separately
+  // here, since its xp bump happens inline in checkInMemory above.
+  if (ctx.supabase) {
+    return checkInSupabase(ctx.supabase, ctx.userId, missionId, input);
+  }
 
+  const result = await checkInMemory(ctx.userId, missionId, input);
   if (result.ok && result.body.awardedXp > 0) {
     await recordXpLedgerEntry(ctx, {
       amount: result.body.awardedXp,
@@ -163,7 +168,6 @@ export async function checkIn(
       refId: missionId,
     });
   }
-
   return result;
 }
 

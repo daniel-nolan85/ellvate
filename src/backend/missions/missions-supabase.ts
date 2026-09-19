@@ -789,16 +789,29 @@ export async function checkInSupabase(
   const userRow = await loadUserRow(supabase, userId);
   const baseXp = userRow?.xp ?? 0;
   const baseMissions = userRow?.missions_completed ?? 0;
+  let finalXp = baseXp;
+  let finalMissions = baseMissions;
 
   if (completed) {
-    const { error: userUpdateError } = await supabase
-      .from('app_users')
-      .update({
-        xp: baseXp + mission.xp,
-        missions_completed: baseMissions + 1,
-      })
-      .eq('id', userId);
-    throwIfSupabaseError(userUpdateError, 'save mission user progress');
+    // Atomic + dedupe-safe: bumps app_users.xp and inserts the matching
+    // xp_ledger row together, and no-ops (returns null) if this exact
+    // (user, mission_completed, missionId) grant was already recorded --
+    // see grant_xp_and_log in supabase/migrations/0064_atomic_grant_xp.sql.
+    const { data: xpResult, error: grantError } = await supabase.rpc('grant_xp_and_log', {
+      p_amount: mission.xp,
+      p_ref_id: missionId,
+      p_reason: 'mission_completed',
+    });
+    throwIfSupabaseError(grantError, 'grant mission xp');
+    if (xpResult !== null) {
+      finalXp = xpResult as number;
+      finalMissions = baseMissions + 1;
+      const { error: missionCountError } = await supabase
+        .from('app_users')
+        .update({ missions_completed: finalMissions })
+        .eq('id', userId);
+      throwIfSupabaseError(missionCountError, 'save mission user progress');
+    }
   }
 
   const authorNameById = await nameMapFor(supabase, mission.created_by);
@@ -834,8 +847,8 @@ export async function checkInSupabase(
       mission: missionView,
       awardedXp,
       progress: buildProgress({
-        xp: completed ? baseXp + mission.xp : baseXp,
-        missionsCompleted: completed ? baseMissions + 1 : baseMissions,
+        xp: finalXp,
+        missionsCompleted: finalMissions,
       }),
     },
   };

@@ -62,7 +62,7 @@ const emptyProfile = (): StoredProfile => ({
   interests: [],
   notificationPrefs: defaultNotificationPrefs,
   onboardedAt: null,
-  activityVisible: false,
+  activityVisible: true,
 });
 
 interface SeedUserInput {

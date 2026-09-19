@@ -52,7 +52,7 @@ function unlockPetitions(): void {
       pinnedPostId: null,
       previousRank: null,
       profile: {
-        activityVisible: false,
+        activityVisible: true,
         interests: [],
         notificationPrefs: {
           digest: true,

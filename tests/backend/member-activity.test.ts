@@ -12,12 +12,15 @@ afterEach(() => {
 const request = () =>
   new Request('http://localhost/api/users/user-mia/activity');
 
-// Detailed activity is opt-in (defaults to private) — seeded members must
-// explicitly share before another user (the DEMO_USER_ID requester baked
-// into withRequestContext for these unauthenticated route tests) can view
-// their detailed list.
+// Detailed activity is visible by default; a member can opt out. `share`
+// is a no-op against the default for these seeded members (already visible)
+// but still exercises the same code path an opted-out member's "turn
+// sharing back on" would use. `hide` opts a member out, for testing that
+// side of the gate.
 const share = (userId: string) =>
   updateProfile(memoryContext(userId), { activityVisible: true });
+const hide = (userId: string) =>
+  updateProfile(memoryContext(userId), { activityVisible: false });
 
 describe('GET /api/users/[userId]/activity', () => {
   test('returns a snapshot of the given member’s activity, not the requester’s', async () => {
@@ -96,7 +99,7 @@ describe('GET /api/users/[userId]/activity', () => {
   });
 
   test('returns 403 for a member who has not shared their activity', async () => {
-    // Seed default: user-mia's profile.activityVisible is false.
+    await hide('user-mia');
     const response = await getMemberActivityRoute(request(), {
       userId: 'user-mia',
     });
