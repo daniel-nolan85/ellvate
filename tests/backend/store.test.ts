@@ -188,7 +188,7 @@ describe('seed data', () => {
         petitions: true,
       },
       onboardedAt: null,
-      activityVisible: false,
+      activityVisible: true,
     });
   });
 });

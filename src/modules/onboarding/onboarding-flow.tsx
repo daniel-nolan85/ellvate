@@ -45,6 +45,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     completeOnboarding,
     completionError,
     draft,
+    isCompleting,
     setName,
     setRole,
     toggleInterest,
@@ -236,6 +237,7 @@ export function OnboardingFlow({ onFinished }: OnboardingFlowProps) {
     ...(includePasskey ? [<PasskeyStep key="passkey" onNext={goNext} />] : []),
     <CommitStep
       error={completionError}
+      isRetrying={isCompleting}
       key="commit"
       onDone={() => void handleDone()}
       onRetry={() => void handleDone()}

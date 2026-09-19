@@ -16,7 +16,7 @@ export const defaultProfile = (): StoredProfile => ({
   interests: [],
   notificationPrefs: defaultNotificationPrefs(),
   onboardedAt: null,
-  activityVisible: false,
+  activityVisible: true,
 });
 
 // A deterministic per-user fallback name for anyone who hasn't set their own

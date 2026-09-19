@@ -148,16 +148,21 @@ export async function updateProfile(
   ctx: RequestContext,
   input: unknown,
 ): Promise<UpdateProfileResult> {
-  const result = ctx.supabase
-    ? await updateProfileSupabase(ctx.supabase, ctx.userId, input)
-    : updateProfileMemory(ctx.userId, input);
+  // Supabase: updateProfileSupabase grants the welcome bonus and its ledger
+  // entry together via grant_xp_and_log, atomically, before it even touches
+  // the profile row -- see that call's own WHY. Only the memory backend
+  // still needs the ledger entry recorded separately here, since its xp
+  // bump happens inline in updateProfileMemory above.
+  if (ctx.supabase) {
+    return updateProfileSupabase(ctx.supabase, ctx.userId, input);
+  }
 
+  const result = updateProfileMemory(ctx.userId, input);
   if (result.ok && result.justOnboarded) {
     await recordXpLedgerEntry(ctx, {
       amount: WELCOME_XP,
       reason: 'onboarding_bonus',
     });
   }
-
   return result;
 }

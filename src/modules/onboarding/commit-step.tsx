@@ -51,11 +51,12 @@ function Celebration() {
 
 interface CommitStepProps {
   readonly error?: string | null;
+  readonly isRetrying?: boolean;
   readonly onDone: () => void;
   readonly onRetry?: () => void;
 }
 
-export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
+export function CommitStep({ error, isRetrying = false, onDone, onRetry }: CommitStepProps) {
   const holdProgress = useSharedValue(0);
   const [ringProgress, setRingProgress] = useState(0);
   const [complete, setComplete] = useState(false);
@@ -120,10 +121,17 @@ export function CommitStep({ error, onDone, onRetry }: CommitStepProps) {
             <Pressable
               accessibilityRole="button"
               className="rounded-full bg-primary-foreground px-6 py-3"
-              onPress={onRetry}
+              disabled={isRetrying}
+              // Prevents a double-tap from firing two overlapping completion
+              // requests while the first is still in flight -- see
+              // completeOnboarding's own isCompleting guard for why.
+              onPress={isRetrying ? undefined : onRetry}
+              style={{ opacity: isRetrying ? 0.6 : 1 }}
               testID="onboarding-completion-retry"
             >
-              <Text className="font-inter-semibold text-primary">Try again</Text>
+              <Text className="font-inter-semibold text-primary">
+                {isRetrying ? 'Retrying…' : 'Try again'}
+              </Text>
             </Pressable>
           </View>
         ) : complete ? (

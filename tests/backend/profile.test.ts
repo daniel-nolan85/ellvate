@@ -56,7 +56,7 @@ describe('getProfile', () => {
         interests: [],
         notificationPrefs: defaultPrefs,
         onboardedAt: null,
-        activityVisible: false,
+        activityVisible: true,
       },
     });
   });
@@ -76,7 +76,7 @@ describe('getProfile', () => {
       interests: [],
       notificationPrefs: defaultPrefs,
       onboardedAt: null,
-      activityVisible: false,
+      activityVisible: true,
     });
     expect(getState().users.some((user) => user.id === 'user-ghost')).toBe(
       true,
@@ -106,7 +106,7 @@ describe('getPublicProfile (requester differs from member)', () => {
       avatarUrl: null,
       role: null,
       interests: [],
-      activityVisible: false,
+      activityVisible: true,
     });
     expect(summary?.stats).toMatchObject({
       xp: 3820,
@@ -188,13 +188,13 @@ describe('getPublicProfile (requester differs from member)', () => {
 
   test('surfaces the member’s own activityVisible choice, not the requester’s', async () => {
     expect((await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible).toBe(
-      false,
+      true,
     );
 
-    await updateProfile(ctx('user-mia'), { activityVisible: true });
+    await updateProfile(ctx('user-mia'), { activityVisible: false });
 
     expect((await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible).toBe(
-      true,
+      false,
     );
   });
 });
@@ -284,20 +284,20 @@ describe('updateProfile', () => {
     }
   });
 
-  test('defaults activityVisible to false and round-trips it on update', async () => {
-    expect((await getProfile(ctx())).profile.activityVisible).toBe(false);
-
-    const shared = await updateProfile(ctx(), { activityVisible: true });
-    expect(shared.ok).toBe(true);
-    if (shared.ok) {
-      expect(shared.profile.activityVisible).toBe(true);
-    }
+  test('defaults activityVisible to true and round-trips it on update', async () => {
     expect((await getProfile(ctx())).profile.activityVisible).toBe(true);
 
     const hidden = await updateProfile(ctx(), { activityVisible: false });
     expect(hidden.ok).toBe(true);
     if (hidden.ok) {
       expect(hidden.profile.activityVisible).toBe(false);
+    }
+    expect((await getProfile(ctx())).profile.activityVisible).toBe(false);
+
+    const shared = await updateProfile(ctx(), { activityVisible: true });
+    expect(shared.ok).toBe(true);
+    if (shared.ok) {
+      expect(shared.profile.activityVisible).toBe(true);
     }
   });
 
@@ -505,7 +505,7 @@ describe('GET /api/me/profile', () => {
         interests: [],
         notificationPrefs: defaultPrefs,
         onboardedAt: null,
-        activityVisible: false,
+        activityVisible: true,
       },
     });
   });
