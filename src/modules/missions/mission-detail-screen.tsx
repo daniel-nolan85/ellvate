@@ -65,6 +65,7 @@ import {
   useCheckIn,
   useDeleteMission,
   useMission,
+  useMissionsProgress,
   useReportMission,
   useUpdateMission,
   type CheckInCelebration,
@@ -138,6 +139,17 @@ export function MissionDetailScreen({
   );
 
   const missionQuery = useMission(missionId);
+  // Not read directly -- keeps the shared missions-progress query cache
+  // warm so useCheckIn's onMutate can read a real "level before this
+  // check-in" off it. Before check-in moved here (see mission-card.tsx),
+  // it only ever fired from screens that already called this (the Missions
+  // tab) or its profile-module twin (useProfileStats), so the cache was
+  // reliably warm; this is now the only place check-ins happen, and
+  // without its own fetch here a level-up/rank-up reached from a cold
+  // cache (e.g. a mission opened straight from a notification or deep
+  // link, or a cache entry that expired) would silently show no
+  // celebration at all instead of the one earned.
+  useMissionsProgress();
   const acceptMission = useAcceptMission();
   const checkIn = useCheckIn(setCelebration);
   const updateMission = useUpdateMission();
