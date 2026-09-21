@@ -32,7 +32,7 @@ function getMissionsViewMemory(userId: string): MissionsView {
 
   return {
     missions: state.missions.map((mission) =>
-      toMissionView(mission, userId, state.users),
+      toMissionView(mission, userId, state.users, state.missionCheckIns),
     ),
     progress: buildUserProgress(state.users.find((user) => user.id === userId)),
   };
@@ -74,7 +74,7 @@ function listMissionsPageMemory(
     .map((mission, index) => ({
       index,
       mission,
-      view: toMissionView(mission, userId, state.users),
+      view: toMissionView(mission, userId, state.users, state.missionCheckIns),
     }))
     .filter(({ view }) => matchesMissionFilter(view, filter))
     .map(({ index, view }) => ({
@@ -124,7 +124,7 @@ function getMyMissionsViewMemory(
 
   return {
     missions: page.items.map((item) =>
-      toMissionView(item.mission, userId, state.users),
+      toMissionView(item.mission, userId, state.users, state.missionCheckIns),
     ),
     nextCursor: page.nextCursor,
   };
@@ -140,7 +140,7 @@ function getMissionsByIdsMemory(
   const idSet = new Set(ids);
   return state.missions
     .filter((mission) => idSet.has(mission.id))
-    .map((mission) => toMissionView(mission, userId, state.users));
+    .map((mission) => toMissionView(mission, userId, state.users, state.missionCheckIns));
 }
 
 export async function getMissionsView(

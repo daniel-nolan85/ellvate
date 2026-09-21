@@ -228,6 +228,59 @@ describe('checkIn', () => {
     expect(result.body.progress.missionsCompleted).toBe(41);
   });
 
+  test('checks into a specific stop out of order via an explicit stopIndex', async () => {
+    const result = await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 2 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.body.mission.status).toBe('active');
+    expect(result.body.mission.stopsDone).toBe(1);
+    expect(result.body.mission.completedStopIndices).toEqual([2]);
+  });
+
+  test('rejects checking into the same stop twice', async () => {
+    await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 1 });
+
+    expect(
+      await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 1 }),
+    ).toMatchObject({
+      ok: false,
+      status: 409,
+      code: 'stop_already_complete',
+    });
+  });
+
+  test('rejects an out-of-range stopIndex with 400 invalid_stop_index', async () => {
+    expect(
+      await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 99 }),
+    ).toMatchObject({
+      ok: false,
+      status: 400,
+      code: 'invalid_stop_index',
+    });
+    expect(
+      await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: -1 }),
+    ).toMatchObject({
+      ok: false,
+      status: 400,
+      code: 'invalid_stop_index',
+    });
+  });
+
+  test('checking every stop in any order still completes the mission and awards XP once', async () => {
+    await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 2 });
+    await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 0 });
+    const result = await checkIn(ctx('user-mia'), 'mission-2', { stopIndex: 1 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.body.mission.status).toBe('done');
+    expect(result.body.mission.completedStopIndices).toEqual([0, 1, 2]);
+    expect(result.body.awardedXp).toBe(120);
+  });
+
   test('completing the final stop marks the mission done and awards its XP', async () => {
     const result = await checkIn(ctx(), 'mission-2');
 

@@ -47,6 +47,21 @@ const invalid = (message: string): MissionValidation => ({
   ok: false,
 });
 
+// Three-state: undefined ("stopIndex" omitted -- caller should default to the
+// next not-yet-completed stop, preserving old sequential-only behavior for
+// every existing caller), null (present but not a valid integer -- reject),
+// or the requested index itself.
+export function parseStopIndex(input: unknown): number | null | undefined {
+  const raw =
+    typeof input === 'object' && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
+  if (raw.stopIndex === undefined) {
+    return undefined;
+  }
+  return asInteger(raw.stopIndex);
+}
+
 export function validateMissionInput(input: unknown): MissionValidation {
   const raw =
     typeof input === 'object' && input !== null

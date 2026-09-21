@@ -18,14 +18,7 @@ import {
   type CommunityEvent,
 } from '@/src/modules/events';
 import { PostCard, useToggleLike, type ForumPost } from '@/src/modules/forum';
-import {
-  LevelUpCelebrationModal,
-  MissionCard,
-  MissionCelebrationModal,
-  RankUpCelebrationModal,
-  type CheckInCelebration,
-  type Mission,
-} from '@/src/modules/missions';
+import { MissionCard, type Mission } from '@/src/modules/missions';
 import { PetitionRow, type Petition } from '@/src/modules/petitions';
 import { useMemberProfile } from '@/src/modules/profile';
 import {
@@ -115,7 +108,6 @@ export function MemberActivityScreen({
   const [openMission, setOpenMission] = useState<Mission | null>(null);
   const [openService, setOpenService] = useState<ServiceListing | null>(null);
   const [openPetition, setOpenPetition] = useState<Petition | null>(null);
-  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   const closeThenNavigate = (
     path:
@@ -440,7 +432,6 @@ export function MemberActivityScreen({
           <View className="px-1 pb-4">
             <MissionCard
               mission={openMission}
-              onMissionComplete={setCelebration}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -468,20 +459,6 @@ export function MemberActivityScreen({
           </View>
         ) : null}
       </Sheet>
-
-      <MissionCelebrationModal
-        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
-        onClose={() => setCelebration(null)}
-      />
-      <LevelUpCelebrationModal
-        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
-        onClose={() => setCelebration(null)}
-        title={celebration?.title ?? ''}
-      />
-      <RankUpCelebrationModal
-        newTitle={celebration?.rankedUpTo ?? null}
-        onClose={() => setCelebration(null)}
-      />
     </View>
   );
 }

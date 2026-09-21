@@ -12,13 +12,7 @@ import { formatDateOnly } from '@/src/lib/date-only';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 
 import { missionThemeIcon } from './mission-theme';
-import {
-  useAcceptMission,
-  useCheckIn,
-  type CheckInCelebration,
-  type Mission,
-  type MissionStatus,
-} from './use-missions';
+import { useAcceptMission, type Mission, type MissionStatus } from './use-missions';
 
 const ACCENT = 'rgb(181,80,44)';
 const AMBER = 'rgb(217,123,41)';
@@ -35,21 +29,14 @@ const STATUS_BADGE: Readonly<Record<
 interface MissionCardProps {
   readonly mission: Mission;
   readonly onOpen?: (missionId: string) => void;
-  readonly onMissionComplete?: (celebration: CheckInCelebration) => void;
   // Fires after a successful accept -- lets the screen follow the mission
   // across to the "In progress" filter instead of leaving the user staring
   // at the "Available" list while the card they just tapped vanishes from it.
   readonly onAccepted?: () => void;
 }
 
-export function MissionCard({
-  mission,
-  onAccepted,
-  onMissionComplete,
-  onOpen,
-}: MissionCardProps) {
+export function MissionCard({ mission, onAccepted, onOpen }: MissionCardProps) {
   const acceptMission = useAcceptMission();
-  const checkIn = useCheckIn(onMissionComplete);
 
   const done = mission.status === 'done';
   const badge = STATUS_BADGE[mission.status];
@@ -60,10 +47,13 @@ export function MissionCard({
     acceptMission.mutate(mission.id, { onSuccess: () => onAccepted?.() });
   };
 
-  const handleCheckIn = (event: { stopPropagation: () => void }) => {
+  // A mission can have multiple stops that may now be checked into in any
+  // order (see MissionDetailScreen), so checking in directly from this card
+  // no longer makes sense -- it always opens the detail screen instead,
+  // same as tapping the rest of the card.
+  const handleView = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
-    void Haptics.selectionAsync().catch(() => undefined);
-    checkIn.mutate({ missionId: mission.id });
+    onOpen?.(mission.id);
   };
 
   return (
@@ -143,13 +133,12 @@ export function MissionCard({
       {mission.status === 'active' && mission.accepted ? (
         <Button
           className="self-start rounded-full bg-accent"
-          isDisabled={checkIn.isPending}
-          onPress={handleCheckIn}
+          onPress={handleView}
           size="sm"
         >
-          <Icon color={WHITE} name="CheckCircle" size={15} />
+          <Icon color={WHITE} name="Eye" size={15} />
           <ButtonText className="font-inter-semibold text-accent-foreground">
-            Check in
+            View
           </ButtonText>
         </Button>
       ) : null}

@@ -32,7 +32,7 @@ import type {
   UserProgress,
 } from './types';
 import { buildProgress } from './user-progress';
-import { validateMissionInput } from './validation';
+import { parseStopIndex, validateMissionInput } from './validation';
 
 // The embedded `author` relation (same pattern already used by posts,
 // comments, petitions, etc. -- see e.g. posts-supabase.ts's POST_SELECT)
@@ -81,6 +81,35 @@ interface ProgressCounts {
 }
 
 const ZERO_COUNTS: ProgressCounts = { accepted: 0, completed: 0 };
+
+// The viewer's own completed stop indices per mission, batched into one
+// query across every mission in the view rather than one per mission --
+// mirrors loadProgressCounts's batching for the same reason.
+async function loadCompletedStopIndices(
+  supabase: SupabaseClient,
+  userId: string,
+  missionIds: readonly string[],
+): Promise<ReadonlyMap<string, readonly number[]>> {
+  if (missionIds.length === 0) {
+    return new Map();
+  }
+  const { data, error } = await supabase
+    .from('mission_check_ins')
+    .select('mission_id,stop_index')
+    .eq('user_id', userId)
+    .in('mission_id', missionIds);
+  throwIfSupabaseError(error, 'load completed mission stops');
+  const byMission = new Map<string, number[]>();
+  for (const row of (data ?? []) as { mission_id: string; stop_index: number }[]) {
+    const current = byMission.get(row.mission_id) ?? [];
+    current.push(row.stop_index);
+    byMission.set(row.mission_id, current);
+  }
+  for (const indices of byMission.values()) {
+    indices.sort((a, b) => a - b);
+  }
+  return byMission;
+}
 
 // Community-wide accept/complete counts, not scoped to any one requesting
 // user (unlike ProgressRow above) -- one grouped query per missions fetch
@@ -155,6 +184,7 @@ const toMissionView = (
   entry: ProgressRow | undefined,
   nameById: ReadonlyMap<string, PersonLookup>,
   counts: ReadonlyMap<string, ProgressCounts> = new Map(),
+  completedIndicesByMission: ReadonlyMap<string, readonly number[]> = new Map(),
 ): Mission => {
   const stopsDone = entry?.stops_done ?? 0;
   const author = nameById.get(row.created_by);
@@ -174,6 +204,7 @@ const toMissionView = (
     status: resolveStatus(stopsDone, row.stops_total),
     accepted: entry !== undefined,
     stopsDone,
+    completedStopIndices: completedIndicesByMission.get(row.id) ?? [],
     stopsTotal: row.stops_total,
     stops: row.stops ?? [],
     theme: row.theme as MissionTheme | null,
@@ -301,14 +332,23 @@ export async function getMissionsViewSupabase(
   const userRow = await loadUserRow(supabase, userId);
 
   const nameById = nameByIdFromRows(missionRows);
-  const counts = await loadProgressCounts(
+  const missionIds = missionRows.map((row) => row.id);
+  const counts = await loadProgressCounts(supabase, missionIds);
+  const completedIndicesByMission = await loadCompletedStopIndices(
     supabase,
-    missionRows.map((row) => row.id),
+    userId,
+    missionIds,
   );
 
   return {
     missions: missionRows.map((row) =>
-      toMissionView(row, progressByMission.get(row.id), nameById, counts),
+      toMissionView(
+        row,
+        progressByMission.get(row.id),
+        nameById,
+        counts,
+        completedIndicesByMission,
+      ),
     ),
     progress: buildProgress({
       xp: userRow?.xp ?? 0,
@@ -372,15 +412,24 @@ export async function listMissionsPageSupabase(
   );
 
   const nameById = nameByIdFromRows(missionRows);
-  const counts = await loadProgressCounts(
+  const missionIds = missionRows.map((row) => row.id);
+  const counts = await loadProgressCounts(supabase, missionIds);
+  const completedIndicesByMission = await loadCompletedStopIndices(
     supabase,
-    missionRows.map((row) => row.id),
+    userId,
+    missionIds,
   );
 
   const filtered = missionRows
     .map((row, index) => ({
       index,
-      view: toMissionView(row, progressByMission.get(row.id), nameById, counts),
+      view: toMissionView(
+        row,
+        progressByMission.get(row.id),
+        nameById,
+        counts,
+        completedIndicesByMission,
+      ),
     }))
     .filter(({ view }) => matchesMissionFilter(view, filter))
     .map(({ index, view }) => ({
@@ -453,9 +502,12 @@ export async function getMyMissionsViewSupabase(
   const progressByMission = new Map(myProgress.map((row) => [row.mission_id, row]));
 
   const nameById = nameByIdFromRows(missionRows);
-  const counts = await loadProgressCounts(
+  const missionIds = missionRows.map((row) => row.id);
+  const counts = await loadProgressCounts(supabase, missionIds);
+  const completedIndicesByMission = await loadCompletedStopIndices(
     supabase,
-    missionRows.map((row) => row.id),
+    userId,
+    missionIds,
   );
 
   const wrapped = missionRows.map((row) => ({
@@ -467,7 +519,13 @@ export async function getMyMissionsViewSupabase(
 
   return {
     missions: page.items.map((item) =>
-      toMissionView(item.row, progressByMission.get(item.row.id), nameById, counts),
+      toMissionView(
+        item.row,
+        progressByMission.get(item.row.id),
+        nameById,
+        counts,
+        completedIndicesByMission,
+      ),
     ),
     nextCursor: page.nextCursor,
   };
@@ -495,13 +553,22 @@ export async function getMissionsByIdsSupabase(
   );
 
   const nameById = nameByIdFromRows(missionRows);
-  const counts = await loadProgressCounts(
+  const missionIds = missionRows.map((row) => row.id);
+  const counts = await loadProgressCounts(supabase, missionIds);
+  const completedIndicesByMission = await loadCompletedStopIndices(
     supabase,
-    missionRows.map((row) => row.id),
+    userId,
+    missionIds,
   );
 
   return missionRows.map((row) =>
-    toMissionView(row, progressByMission.get(row.id), nameById, counts),
+    toMissionView(
+      row,
+      progressByMission.get(row.id),
+      nameById,
+      counts,
+      completedIndicesByMission,
+    ),
   );
 }
 
@@ -671,9 +738,12 @@ export async function updateMissionSupabase(
   const entry = (entryData as ProgressRow | null) ?? undefined;
   const nameById = await nameMapFor(supabase, userId);
   const counts = await loadProgressCounts(supabase, [missionId]);
+  const completedIndicesByMission = await loadCompletedStopIndices(supabase, userId, [
+    missionId,
+  ]);
   return {
     ok: true,
-    mission: toMissionView(row, entry, nameById, counts),
+    mission: toMissionView(row, entry, nameById, counts, completedIndicesByMission),
   };
 }
 
@@ -749,6 +819,57 @@ export async function checkInSupabase(
     };
   }
 
+  const { data: existingCheckInRows, error: existingCheckInsError } = await supabase
+    .from('mission_check_ins')
+    .select('stop_index')
+    .eq('mission_id', missionId)
+    .eq('user_id', userId);
+  throwIfSupabaseError(existingCheckInsError, 'load existing mission check-ins');
+  const completedIndices = ((existingCheckInRows ?? []) as { stop_index: number }[])
+    .map((row) => row.stop_index)
+    .sort((a, b) => a - b);
+  const completedSet = new Set(completedIndices);
+
+  // Omitted -- default to the lowest not-yet-completed stop, preserving the
+  // old always-sequential behavior for any caller that doesn't specify one.
+  // Provided -- any stop can be checked into, in any order; only its own
+  // completion state (not stops before it) is validated. The table's own
+  // unique (mission_id, user_id, stop_index) constraint (0025) is the
+  // race-safe backstop below if two requests somehow pass this check for
+  // the same stop at once.
+  const requestedStopIndex = parseStopIndex(input);
+  let stopIndex: number;
+  if (requestedStopIndex === undefined) {
+    stopIndex = 0;
+    while (completedSet.has(stopIndex)) {
+      stopIndex += 1;
+    }
+  } else if (
+    requestedStopIndex === null ||
+    requestedStopIndex < 0 ||
+    requestedStopIndex >= mission.stops_total
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'invalid_stop_index',
+      message: 'That stop doesn’t exist on this mission.',
+    };
+  } else if (completedSet.has(requestedStopIndex)) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'stop_already_complete',
+      message: 'You’ve already checked into this stop.',
+    };
+  } else {
+    stopIndex = requestedStopIndex;
+  }
+
+  // currentStopsDone (mission_progress's own counter) stays the source of
+  // truth for the count and mission-complete decision, unchanged from
+  // before -- completedIndices (actual mission_check_ins rows) only drives
+  // stop selection/dedup above and the response's completedStopIndices.
   const stopsDone = currentStopsDone + 1;
   const completed = stopsDone >= mission.stops_total;
   const awardedXp = completed ? mission.xp : 0;
@@ -769,9 +890,17 @@ export async function checkInSupabase(
   const { error: checkInInsertError } = await supabase.from('mission_check_ins').insert({
     mission_id: missionId,
     user_id: userId,
-    stop_index: currentStopsDone,
+    stop_index: stopIndex,
     photo_url: photoUrl,
   });
+  if (checkInInsertError?.code === '23505') {
+    return {
+      ok: false,
+      status: 409,
+      code: 'stop_already_complete',
+      message: 'You’ve already checked into this stop.',
+    };
+  }
   throwIfSupabaseError(checkInInsertError, 'save mission check-in');
 
   const { error: progressWriteError } = await supabase.from('mission_progress').upsert(
@@ -832,6 +961,7 @@ export async function checkInSupabase(
     status: completed ? 'done' : 'active',
     accepted: true,
     stopsDone,
+    completedStopIndices: [...completedIndices, stopIndex].sort((a, b) => a - b),
     stopsTotal: mission.stops_total,
     stops: mission.stops ?? [],
     theme: mission.theme as MissionTheme | null,
@@ -994,9 +1124,10 @@ export async function toggleCheckInPhotoLikeSupabase(
   return { id: checkInId, liked: !existing, likes: updated?.like_count ?? 0 };
 }
 
-// The check-in that actually finished the mission for this user -- the row
-// with the highest stop_index, mirroring findCompletingCheckIn's memory-
-// backend counterpart in check-in.ts.
+// The check-in that actually finished the mission for this user -- the most
+// recently completed row, mirroring findCompletingCheckIn's memory-backend
+// counterpart in check-in.ts (stops can be checked into in any order, so the
+// highest stop_index is no longer necessarily the last one recorded).
 async function loadCompletingCheckInRow(
   supabase: SupabaseClient,
   userId: string,
@@ -1007,7 +1138,7 @@ async function loadCompletingCheckInRow(
     .select('id,photo_url')
     .eq('mission_id', missionId)
     .eq('user_id', userId)
-    .order('stop_index', { ascending: false })
+    .order('completed_at', { ascending: false })
     .limit(1)
     .maybeSingle();
   throwIfSupabaseError(error, 'load completing mission check-in');
@@ -1204,7 +1335,13 @@ export async function acceptMissionSupabase(
 
   const nameById = await nameMapFor(supabase, mission.created_by);
   const counts = await loadProgressCounts(supabase, [missionId]);
-  return { ok: true, mission: toMissionView(mission, entry, nameById, counts) };
+  const completedIndicesByMission = await loadCompletedStopIndices(supabase, userId, [
+    missionId,
+  ]);
+  return {
+    ok: true,
+    mission: toMissionView(mission, entry, nameById, counts, completedIndicesByMission),
+  };
 }
 
 export async function reportMissionSupabase(

@@ -10,7 +10,12 @@ import {
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { recordXpLedgerEntry } from '@/src/backend/xp';
 
-import { getUserMissionEntry, resolveMissionStatus, toAuthorRef } from './mission-view';
+import {
+  completedStopIndicesFor,
+  getUserMissionEntry,
+  resolveMissionStatus,
+  toAuthorRef,
+} from './mission-view';
 import {
   checkInSupabase,
   getMyCheckInPhotoSupabase,
@@ -25,6 +30,7 @@ import type {
   MissionCheckInPhotosPage,
   MyCheckInPhotoResult,
 } from './types';
+import { parseStopIndex } from './validation';
 import { buildUserProgress } from './user-progress';
 
 export const DEFAULT_CHECK_IN_PHOTOS_PAGE_SIZE = 20;
@@ -59,6 +65,53 @@ async function checkInMemory(
     };
   }
 
+  // Derived from actual check-in rows, used only to pick/validate a stop
+  // index (below) and to report completedStopIndices in the response --
+  // entry.stopsDone (progressByUser's own counter) stays the source of
+  // truth for the count and mission-complete decision, unchanged from
+  // before, since a handful of seed fixtures set that counter directly
+  // without inserting matching check-in rows.
+  const completedIndices = completedStopIndicesFor(
+    getState().missionCheckIns,
+    missionId,
+    userId,
+  );
+  const completedSet = new Set(completedIndices);
+
+  // Omitted -- default to the lowest not-yet-completed stop, preserving the
+  // old always-sequential behavior for any caller that doesn't specify one
+  // (existing tests, and the "check in whatever's next" case). Provided --
+  // any stop can be checked into, in any order; only its own completion
+  // state (not stops before it) is validated.
+  const requestedStopIndex = parseStopIndex(input);
+  let stopIndex: number;
+  if (requestedStopIndex === undefined) {
+    stopIndex = 0;
+    while (completedSet.has(stopIndex)) {
+      stopIndex += 1;
+    }
+  } else if (
+    requestedStopIndex === null ||
+    requestedStopIndex < 0 ||
+    requestedStopIndex >= mission.stopsTotal
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'invalid_stop_index',
+      message: 'That stop doesn’t exist on this mission.',
+    };
+  } else if (completedSet.has(requestedStopIndex)) {
+    return {
+      ok: false,
+      status: 409,
+      code: 'stop_already_complete',
+      message: 'You’ve already checked into this stop.',
+    };
+  } else {
+    stopIndex = requestedStopIndex;
+  }
+
   const stopsDone = entry.stopsDone + 1;
   const completed = stopsDone >= mission.stopsTotal;
   const awardedXp = completed ? mission.xp : 0;
@@ -75,7 +128,7 @@ async function checkInMemory(
     id: `check-in-${crypto.randomUUID()}`,
     missionId,
     userId,
-    stopIndex: entry.stopsDone,
+    stopIndex,
     completedAt: nowIso,
     photoUrl: photoUpload?.dataUrl ?? null,
     likes: 0,
@@ -126,6 +179,7 @@ async function checkInMemory(
     status: completed ? 'done' : 'active',
     accepted: true,
     stopsDone,
+    completedStopIndices: [...completedIndices, stopIndex].sort((a, b) => a - b),
     stopsTotal: mission.stopsTotal,
     stops: mission.stops,
     theme: mission.theme,
@@ -230,11 +284,12 @@ export async function listMissionCheckInPhotos(
     : listMissionCheckInPhotosMemory(ctx.userId, missionId, limit, cursor);
 }
 
-// The check-in that actually finished the mission for this user -- the row
-// with the highest stopIndex, since a done mission's final check-in is
-// always the last one recorded. Editing a photo only ever targets this one
-// row, not every stop's check-in, mirroring how the UI shows a single "your
-// check-in photo" slot on a completed mission rather than a per-stop gallery.
+// The check-in that actually finished the mission for this user -- the most
+// recently completed row, since stops can now be checked into in any order
+// (the highest stopIndex is no longer necessarily the last one recorded).
+// Editing a photo only ever targets this one row, not every stop's check-in,
+// mirroring how the UI shows a single "your check-in photo" slot on a
+// completed mission rather than a per-stop gallery.
 function findCompletingCheckIn(
   userId: string,
   missionId: string,
@@ -242,7 +297,7 @@ function findCompletingCheckIn(
   return getState().missionCheckIns
     .filter((row) => row.missionId === missionId && row.userId === userId)
     .reduce<StoredMissionCheckIn | undefined>(
-      (latest, row) => (!latest || row.stopIndex > latest.stopIndex ? row : latest),
+      (latest, row) => (!latest || row.completedAt > latest.completedAt ? row : latest),
       undefined,
     );
 }

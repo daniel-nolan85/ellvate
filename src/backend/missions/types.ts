@@ -28,6 +28,10 @@ export interface Mission {
   readonly stopsDone: number;
   readonly stopsTotal: number;
   readonly stops: readonly string[];
+  // Which specific stop indices the viewer has already checked into --
+  // stops can be completed in any order, so `stopsDone` alone (a count)
+  // isn't enough to know which ones. Always sorted ascending.
+  readonly completedStopIndices: readonly number[];
   readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
@@ -120,7 +124,11 @@ export interface CheckInResponse {
   readonly progress: UserProgress;
 }
 
-export type CheckInErrorCode = 'mission_not_found' | 'mission_complete';
+export type CheckInErrorCode =
+  | 'mission_not_found'
+  | 'mission_complete'
+  | 'invalid_stop_index'
+  | 'stop_already_complete';
 
 export interface CheckInFailure {
   readonly ok: false;

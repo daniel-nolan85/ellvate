@@ -16,13 +16,7 @@ import { formatRelativeTime } from '@/src/lib/relative-time';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
-import {
-  LevelUpCelebrationModal,
-  MissionCard,
-  MissionCelebrationModal,
-  RankUpCelebrationModal,
-  type CheckInCelebration,
-} from '@/src/modules/missions';
+import { MissionCard } from '@/src/modules/missions';
 import { PetitionRow } from '@/src/modules/petitions';
 import { ServiceListingCard } from '@/src/modules/services';
 
@@ -193,7 +187,6 @@ export function BookmarksScreen() {
 
   const [openItem, setOpenItem] = useState<BookmarkedItem | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [celebration, setCelebration] = useState<CheckInCelebration | null>(null);
 
   // Close the sheet first and let it slide down, then navigate once the
   // close animation finishes — navigating immediately would unmount the
@@ -291,7 +284,6 @@ export function BookmarksScreen() {
           <View className="px-1 pb-4">
             <MissionCard
               mission={openItem.mission}
-              onMissionComplete={setCelebration}
               onOpen={(missionId) => closeThenNavigate(`/mission/${missionId}`)}
             />
           </View>
@@ -326,20 +318,6 @@ export function BookmarksScreen() {
       />
 
       <CommunityNavBar />
-
-      <MissionCelebrationModal
-        awardedXp={celebration && celebration.leveledUpTo === null ? celebration.awardedXp : null}
-        onClose={() => setCelebration(null)}
-      />
-      <LevelUpCelebrationModal
-        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
-        onClose={() => setCelebration(null)}
-        title={celebration?.title ?? ''}
-      />
-      <RankUpCelebrationModal
-        newTitle={celebration?.rankedUpTo ?? null}
-        onClose={() => setCelebration(null)}
-      />
     </View>
   );
 }

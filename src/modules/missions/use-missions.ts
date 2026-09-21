@@ -40,6 +40,10 @@ export interface Mission {
   readonly stopsDone: number;
   readonly stopsTotal: number;
   readonly stops: readonly string[];
+  // Which specific stop indices the viewer has already checked into -- stops
+  // can be completed in any order, so stopsDone (a count) alone can't say
+  // which ones. Always sorted ascending.
+  readonly completedStopIndices: readonly number[];
   readonly theme: MissionTheme | null;
   readonly media?: readonly MissionMedia[];
   readonly editedAt: string | null;
@@ -360,6 +364,11 @@ export interface CheckInPhotoInput {
 
 export interface CheckInInput {
   readonly missionId: string;
+  // Which stop to check into. Omitted defaults to the next not-yet-completed
+  // stop server-side (see check-in.ts) -- MissionDetailScreen always passes
+  // one explicitly now that stops can be checked into in any order, but this
+  // stays optional so nothing else calling this mutation has to change.
+  readonly stopIndex?: number;
   // Entirely optional -- an honor-system add-on to the gallery, never a
   // requirement to complete a check-in.
   readonly photo?: CheckInPhotoInput;
@@ -387,8 +396,11 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
   const userId = session.userId ?? 'demo-user';
 
   return useMutation<CheckInResult, Error, CheckInInput, MissionDetailMutationContext>({
-    mutationFn: ({ missionId, photo }) => requestJson<CheckInResult>({
-      body: photo ? { checkInPhoto: photo } : undefined,
+    mutationFn: ({ missionId, photo, stopIndex }) => requestJson<CheckInResult>({
+      body: {
+        ...(stopIndex !== undefined ? { stopIndex } : {}),
+        ...(photo ? { checkInPhoto: photo } : {}),
+      },
       getAccessToken: session.getToken,
       method: 'POST',
       path: `/api/missions/${missionId}/check-in`,
