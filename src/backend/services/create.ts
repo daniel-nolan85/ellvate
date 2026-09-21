@@ -5,13 +5,13 @@ import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
 
 import { createServiceListingSupabase } from './services-supabase';
 import { toServiceListingView } from './service-view';
-import type { CreateServiceListingResult } from './types';
+import type { CreatedServiceListingResult, CreateServiceListingResult } from './types';
 import { validateServiceListingInput } from './validation';
 
 function createServiceListingMemory(
   userId: string,
   input: unknown,
-): CreateServiceListingResult {
+): CreatedServiceListingResult {
   const validation = validateServiceListingInput(input);
   if (!validation.ok) {
     return validation;
@@ -60,13 +60,15 @@ export async function createServiceListing(
     ? await createServiceListingSupabase(ctx.supabase, ctx.userId, input)
     : createServiceListingMemory(ctx.userId, input);
 
-  if (result.ok) {
-    await grantXp(ctx, {
-      amount: CREATE_CONTENT_XP,
-      reason: 'service_created',
-      refId: result.listing.id,
-    });
+  if (!result.ok) {
+    return result;
   }
 
-  return result;
+  const xpAward = await grantXp(ctx, {
+    amount: CREATE_CONTENT_XP,
+    reason: 'service_created',
+    refId: result.listing.id,
+  });
+
+  return { ...result, xpAward };
 }

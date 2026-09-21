@@ -1,3 +1,5 @@
+import type { XpGrantOutcome } from '@/src/backend/xp';
+
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
@@ -92,8 +94,19 @@ export type EventValidation =
       readonly message: string;
     };
 
-export type CreateEventResult =
+// What createEventMemory/createEventSupabase themselves return -- the XP
+// grant happens one level up, in createEvent, so these two don't have an
+// xpAward to report yet.
+export type CreatedEventResult =
   | { readonly ok: true; readonly event: CommunityEvent }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_event' | 'media_upload_failed';
+      readonly message: string;
+    };
+
+export type CreateEventResult =
+  | { readonly ok: true; readonly event: CommunityEvent; readonly xpAward: XpGrantOutcome }
   | {
       readonly ok: false;
       readonly code: 'invalid_event' | 'media_upload_failed';

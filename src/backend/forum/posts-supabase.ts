@@ -7,7 +7,7 @@ import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import type {
-  CreatePostResult,
+  CreatedPostResult,
   ForumPost,
   ForumPostsPage,
   LikeResult,
@@ -383,7 +383,7 @@ export async function createPostSupabase(
   supabase: SupabaseClient,
   userId: string,
   input: unknown,
-): Promise<CreatePostResult> {
+): Promise<CreatedPostResult> {
   const validation = validatePostInput(input, await listForumNames(supabase));
   if (!validation.ok) {
     return validation;

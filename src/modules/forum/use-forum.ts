@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -95,6 +96,7 @@ interface ToggleLikeResponse {
 
 interface CreatePostResponse {
   readonly post: ForumPost;
+  readonly xpAward: XpAwardOutcome;
 }
 
 const queryMeta = { persist: true, sensitive: false } as const;
@@ -276,6 +278,7 @@ export function useCreatePost() {
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.userId ?? 'demo-user';
+  const notifyXpAwarded = useNotifyXpAwarded();
 
   return useMutation({
     mutationFn: (input: CreatePostInput) =>
@@ -297,6 +300,7 @@ export function useCreatePost() {
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
+    onSuccess: (result) => notifyXpAwarded(result.xpAward),
   });
 }
 

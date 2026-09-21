@@ -8,6 +8,7 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -167,16 +168,17 @@ export function useEventAttendees(eventId: string, enabled: boolean) {
 export function useCreateEvent() {
   const session = useSession();
   const queryClient = useQueryClient();
+  const notifyXpAwarded = useNotifyXpAwarded();
 
   return useMutation({
     mutationFn: (input: CreateEventInput) =>
-      requestJson<{ readonly event: CommunityEvent }>({
+      requestJson<{ readonly event: CommunityEvent; readonly xpAward: XpAwardOutcome }>({
         body: input,
         getAccessToken: session.getToken,
         method: 'POST',
         path: '/api/events',
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['events'] });
       // Creating an event also grants a small amount of XP -- see
       // src/backend/xp -- which the profile's XP/level stat and the
@@ -185,6 +187,7 @@ export function useCreateEvent() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      notifyXpAwarded(result.xpAward);
     },
   });
 }

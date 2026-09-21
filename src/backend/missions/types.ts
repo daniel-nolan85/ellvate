@@ -1,4 +1,5 @@
 import type { MissionStatus, MissionTheme } from '@/src/backend/store';
+import type { XpGrantOutcome } from '@/src/backend/xp';
 
 export interface MissionMedia {
   readonly url: string;
@@ -98,8 +99,19 @@ export type MissionValidation =
       readonly message: string;
     };
 
-export type CreateMissionResult =
+// What createMissionMemory/createMissionSupabase themselves return -- the
+// XP grant happens one level up, in createMission, so these two don't have
+// an xpAward to report yet.
+export type CreatedMissionResult =
   | { readonly ok: true; readonly mission: Mission }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_mission' | 'media_upload_failed';
+      readonly message: string;
+    };
+
+export type CreateMissionResult =
+  | { readonly ok: true; readonly mission: Mission; readonly xpAward: XpGrantOutcome }
   | {
       readonly ok: false;
       readonly code: 'invalid_mission' | 'media_upload_failed';

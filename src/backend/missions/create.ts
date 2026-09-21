@@ -5,10 +5,10 @@ import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
 
 import { toMissionView } from './mission-view';
 import { createMissionSupabase } from './missions-supabase';
-import type { CreateMissionResult } from './types';
+import type { CreatedMissionResult, CreateMissionResult } from './types';
 import { validateMissionInput } from './validation';
 
-function createMissionMemory(userId: string, input: unknown): CreateMissionResult {
+function createMissionMemory(userId: string, input: unknown): CreatedMissionResult {
   const validation = validateMissionInput(input);
   if (!validation.ok) {
     return validation;
@@ -49,13 +49,15 @@ export async function createMission(
     ? await createMissionSupabase(ctx.supabase, ctx.userId, input)
     : createMissionMemory(ctx.userId, input);
 
-  if (result.ok) {
-    await grantXp(ctx, {
-      amount: CREATE_CONTENT_XP,
-      reason: 'mission_created',
-      refId: result.mission.id,
-    });
+  if (!result.ok) {
+    return result;
   }
 
-  return result;
+  const xpAward = await grantXp(ctx, {
+    amount: CREATE_CONTENT_XP,
+    reason: 'mission_created',
+    refId: result.mission.id,
+  });
+
+  return { ...result, xpAward };
 }

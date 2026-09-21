@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
+import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -184,16 +185,17 @@ export function useMyServiceListingsView() {
 export function useCreateServiceListing() {
   const session = useSession();
   const queryClient = useQueryClient();
+  const notifyXpAwarded = useNotifyXpAwarded();
 
   return useMutation({
     mutationFn: (input: CreateServiceListingInput) =>
-      requestJson<{ readonly listing: ServiceListing }>({
+      requestJson<{ readonly listing: ServiceListing; readonly xpAward: XpAwardOutcome }>({
         body: input,
         getAccessToken: session.getToken,
         method: 'POST',
         path: '/api/services',
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['services'] });
       // Listing a service also grants a small amount of XP -- see
       // src/backend/xp -- which the profile's XP/level stat and the
@@ -202,6 +204,7 @@ export function useCreateServiceListing() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      notifyXpAwarded(result.xpAward);
     },
   });
 }

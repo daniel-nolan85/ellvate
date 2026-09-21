@@ -4,6 +4,7 @@ export { CREATE_CONTENT_XP, grantXp } from './grant';
 export { recordXpLedgerEntry } from './record';
 export type {
   GrantXpInput,
+  XpGrantOutcome,
   XpGrowthPoint,
   XpGrowthResponse,
   XpLedgerEntry,

@@ -22,6 +22,7 @@ import {
 } from './events-supabase';
 import type {
   CommunityEvent,
+  CreatedEventResult,
   CreateEventResult,
   EventAttendeesPage,
   EventsPage,
@@ -272,7 +273,7 @@ function getMyEventsViewMemory(
   };
 }
 
-function createEventMemory(userId: string, input: unknown): CreateEventResult {
+function createEventMemory(userId: string, input: unknown): CreatedEventResult {
   const validation = validateEventInput(input);
   if (!validation.ok) {
     return validation;
@@ -552,15 +553,17 @@ export async function createEvent(
     ? await createEventSupabase(ctx.supabase, ctx.userId, input)
     : createEventMemory(ctx.userId, input);
 
-  if (result.ok) {
-    await grantXp(ctx, {
-      amount: CREATE_CONTENT_XP,
-      reason: 'event_created',
-      refId: result.event.id,
-    });
+  if (!result.ok) {
+    return result;
   }
 
-  return result;
+  const xpAward = await grantXp(ctx, {
+    amount: CREATE_CONTENT_XP,
+    reason: 'event_created',
+    refId: result.event.id,
+  });
+
+  return { ...result, xpAward };
 }
 
 export async function toggleJoin(

@@ -7,11 +7,10 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { maybeRequestReviewAfterFirstMissionComplete } from '@/src/platform/review-prompt';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
-
-import { computeLeveledUpTo, computeRankedUpTo } from './level-up';
 
 export type MissionStatus = 'active' | 'done';
 export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
@@ -241,16 +240,17 @@ export function useMyMissionsView() {
 export function useCreateMission() {
   const session = useSession();
   const queryClient = useQueryClient();
+  const notifyXpAwarded = useNotifyXpAwarded();
 
   return useMutation({
     mutationFn: (input: CreateMissionInput) =>
-      requestJson<{ readonly mission: Mission }>({
+      requestJson<{ readonly mission: Mission; readonly xpAward: XpAwardOutcome }>({
         body: input,
         getAccessToken: session.getToken,
         method: 'POST',
         path: '/api/missions',
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       // Bumps the creator's "missions created" count on their profile --
       // that count is served by the member-profile endpoint, not the
@@ -260,6 +260,7 @@ export function useCreateMission() {
       // points-history list and growth chart need to pick up too.
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      notifyXpAwarded(result.xpAward);
     },
   });
 }
@@ -375,26 +376,11 @@ export interface CheckInInput {
   readonly photo?: CheckInPhotoInput;
 }
 
-export interface CheckInCelebration {
-  readonly awardedXp: number;
-  // Set only when this check-in's XP crossed a level boundary -- the level
-  // reached, for a bigger/rarer celebration than the routine XP toast.
-  readonly leveledUpTo: number | null;
-  // Set only when the level-up above also crossed into a new rank tier --
-  // rarer still, so it gets an even bigger celebration than a plain
-  // level-up (see RankUpCelebrationModal). Never set without leveledUpTo
-  // also being set.
-  readonly rankedUpTo: string | null;
-  // The rank the user is in *after* this check-in, regardless of whether
-  // it changed -- shown on LevelUpCelebrationModal so a plain level-up
-  // still reminds the user where they stand.
-  readonly title: string;
-}
-
-export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration) => void) {
+export function useCheckIn() {
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.userId ?? 'demo-user';
+  const notifyXpAwarded = useNotifyXpAwarded();
 
   return useMutation<CheckInResult, Error, CheckInInput, MissionDetailMutationContext>({
     mutationFn: ({ missionId, photo, stopIndex }) => requestJson<CheckInResult>({
@@ -452,23 +438,16 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
         // callback, which is gated on the observer still having listeners —
         // and the calling MissionCard can unmount before this resolves (its
         // mission gets optimistically filtered out of "In progress" first).
-        //
-        // result.previousLevel (not the client-cached context.previousLevel
-        // this used to read) is computed server-side from the user's real
-        // stored XP right before this grant -- immune to a cold or stale
-        // local query cache, e.g. a second device, a long-backgrounded app,
-        // or XP earned elsewhere since the cache last refreshed, any of
-        // which could otherwise silently swallow a real celebration.
-        onMissionComplete?.({
+        // notifyXpAwarded (from the app-root-mounted XpFeedbackProvider, see
+        // src/modules/xp) renders the toast/celebration itself, so it's
+        // never lost even if the screen that triggered this unmounts before
+        // it fires -- result.previousLevel is computed server-side from the
+        // user's real stored XP right before this grant, immune to a cold or
+        // stale local query cache.
+        notifyXpAwarded({
           awardedXp: result.awardedXp,
-          leveledUpTo: computeLeveledUpTo(
-            result.previousLevel,
-            result.progress.level,
-          ),
-          rankedUpTo: computeRankedUpTo(
-            result.previousLevel,
-            result.progress.level,
-          ),
+          newLevel: result.progress.level,
+          previousLevel: result.previousLevel,
           title: result.progress.title,
         });
       }

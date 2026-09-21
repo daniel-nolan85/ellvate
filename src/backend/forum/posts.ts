@@ -22,6 +22,7 @@ import {
   updatePostSupabase,
 } from './posts-supabase';
 import type {
+  CreatedPostResult,
   CreatePostResult,
   ForumPost,
   ForumPostsPage,
@@ -199,7 +200,7 @@ function getPostsByIdsMemory(
 const createdAtNow = (): string =>
   new Date(Math.max(Date.now(), Date.parse(SEED_NOW_ISO))).toISOString();
 
-function createPostMemory(userId: string, input: unknown): CreatePostResult {
+function createPostMemory(userId: string, input: unknown): CreatedPostResult {
   const validation = validatePostInput(input, getState().subforums);
   if (!validation.ok) {
     return validation;
@@ -444,15 +445,17 @@ export async function createPost(
     ? await createPostSupabase(ctx.supabase, ctx.userId, input)
     : createPostMemory(ctx.userId, input);
 
-  if (result.ok) {
-    await grantXp(ctx, {
-      amount: CREATE_CONTENT_XP,
-      reason: 'post_created',
-      refId: result.post.id,
-    });
+  if (!result.ok) {
+    return result;
   }
 
-  return result;
+  const xpAward = await grantXp(ctx, {
+    amount: CREATE_CONTENT_XP,
+    reason: 'post_created',
+    refId: result.post.id,
+  });
+
+  return { ...result, xpAward };
 }
 
 export async function toggleLike(

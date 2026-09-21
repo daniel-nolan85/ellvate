@@ -1,3 +1,5 @@
+import type { XpGrantOutcome } from '@/src/backend/xp';
+
 export interface PersonRef {
   readonly id: string;
   readonly name: string;
@@ -25,8 +27,19 @@ export interface ForumPost {
   readonly pinned: boolean;
 }
 
-export type CreatePostResult =
+// What createPostMemory/createPostSupabase themselves return -- the XP
+// grant happens one level up, in createPost, so these two don't have an
+// xpAward to report yet.
+export type CreatedPostResult =
   | { readonly ok: true; readonly post: ForumPost }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_post' | 'media_upload_failed';
+      readonly message: string;
+    };
+
+export type CreatePostResult =
+  | { readonly ok: true; readonly post: ForumPost; readonly xpAward: XpGrantOutcome }
   | {
       readonly ok: false;
       readonly code: 'invalid_post' | 'media_upload_failed';
