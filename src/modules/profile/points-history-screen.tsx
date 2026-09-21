@@ -11,6 +11,7 @@ import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 
+import { LevelCostList } from './level-cost-list';
 import { RankList } from './rank-list';
 import { useProfileStats } from './use-profile';
 import {
@@ -318,7 +319,13 @@ export function PointsHistoryScreen() {
           }
         >
           {stats.data ? (
-            <RankList level={stats.data.level} />
+            <>
+              <RankList level={stats.data.level} />
+              <Text className="px-5 pb-2 pt-6 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
+                XP per level
+              </Text>
+              <LevelCostList level={stats.data.level} />
+            </>
           ) : (
             <View className="items-center py-16">
               <Spinner size="xlarge" />

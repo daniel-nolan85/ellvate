@@ -41,3 +41,37 @@ export function currentRankIndex(level: number): number {
 export function titleForLevel(level: number): string {
   return RANK_TIERS[currentRankIndex(level)].title;
 }
+
+// Mirrors src/backend/progress/level.ts's xpSpanForLevel (same "frontend
+// never imports from backend" precedent as RANK_TIERS above) -- 5% growth
+// from a 300 XP base, capped at 900 XP/level so the climb settles into a
+// steady rate instead of spiralling upward forever.
+const LEVEL_XP_BASE = 300;
+const LEVEL_XP_GROWTH = 1.05;
+export const LEVEL_XP_CAP = 900;
+
+function xpSpanForLevel(level: number): number {
+  return Math.min(LEVEL_XP_CAP, Math.round(LEVEL_XP_BASE * LEVEL_XP_GROWTH ** (level - 1)));
+}
+
+export interface LevelCost {
+  readonly level: number;
+  readonly xp: number;
+}
+
+// Every level's XP cost up to and including the first one that hits the
+// flat LEVEL_XP_CAP -- from there every further level costs exactly the
+// same, so the list stops growing once that transition has been shown
+// once (the caller renders that last entry as open-ended, e.g. "24+").
+export function levelCosts(): readonly LevelCost[] {
+  const costs: LevelCost[] = [];
+  let level = 1;
+  let xp = xpSpanForLevel(level);
+  while (xp < LEVEL_XP_CAP) {
+    costs.push({ level, xp });
+    level += 1;
+    xp = xpSpanForLevel(level);
+  }
+  costs.push({ level, xp });
+  return costs;
+}
