@@ -21,8 +21,19 @@ import type { StoredPetition } from '../../src/backend/store';
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 const TEST_USER = 'user-delete-me';
 
+// getEventsView filters to upcoming events against the real clock (see
+// isUpcoming in events.ts) -- a hardcoded date eventually rolls into the
+// past and silently drops this test's event from the view it asserts
+// against. Matches the futureDate helper events.test.ts already uses for
+// the same reason.
+const futureDate = (daysFromNow: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const eventInput = {
-  date: '2026-09-18',
+  date: futureDate(30),
   place: 'Village Marina',
   tag: 'Outdoors',
   time: '18:00',
