@@ -56,22 +56,29 @@ function xpSpanForLevel(level: number): number {
 
 export interface LevelCost {
   readonly level: number;
+  // Cumulative XP required to *reach* this level -- level 1 is free (0),
+  // level 2 is xpSpanForLevel(1), level 3 is xpSpanForLevel(1) +
+  // xpSpanForLevel(2), and so on. Not the level's own span: that's the gap
+  // between this row and the next one's xp.
   readonly xp: number;
 }
 
-// Every level's XP cost up to and including the first one that hits the
-// flat LEVEL_XP_CAP -- from there every further level costs exactly the
-// same, so the list stops growing once that transition has been shown
-// once (the caller renders that last entry as open-ended, e.g. "24+").
+// Cumulative XP needed to reach every level up to and including the first
+// one whose own span hits the flat LEVEL_XP_CAP -- from there every further
+// level adds exactly LEVEL_XP_CAP more, so the list stops growing once that
+// transition has been shown once (the caller renders that last entry as
+// open-ended, e.g. "24+").
 export function levelCosts(): readonly LevelCost[] {
   const costs: LevelCost[] = [];
   let level = 1;
-  let xp = xpSpanForLevel(level);
-  while (xp < LEVEL_XP_CAP) {
-    costs.push({ level, xp });
+  let cumulative = 0;
+  let span = xpSpanForLevel(level);
+  while (span < LEVEL_XP_CAP) {
+    costs.push({ level, xp: cumulative });
+    cumulative += span;
     level += 1;
-    xp = xpSpanForLevel(level);
+    span = xpSpanForLevel(level);
   }
-  costs.push({ level, xp });
+  costs.push({ level, xp: cumulative });
   return costs;
 }

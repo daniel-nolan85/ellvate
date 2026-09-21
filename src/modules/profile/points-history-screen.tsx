@@ -322,7 +322,7 @@ export function PointsHistoryScreen() {
             <>
               <RankList level={stats.data.level} />
               <Text className="px-5 pb-2 pt-6 font-inter-bold text-[11px] uppercase tracking-[1px] text-muted-foreground">
-                XP per level
+                XP to reach each level
               </Text>
               <LevelCostList level={stats.data.level} />
             </>

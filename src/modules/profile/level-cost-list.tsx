@@ -4,11 +4,12 @@ import { VStack } from '@/src/components/ui/vstack';
 
 import { levelCosts } from './ranks';
 
-// How much XP each level takes to complete, shown alongside RankList so a
-// member can see not just which rank they're building toward but how much
-// each individual level along the way actually costs. Growth flattens out
-// at a fixed cap (see ranks.ts's levelCosts), so the last row covers every
-// level from there on instead of listing each one individually forever.
+// The cumulative XP a member needs to have earned to reach each level,
+// shown alongside RankList so they can see not just which rank they're
+// building toward but exactly how much total XP each level requires --
+// level 1 is free (0 XP). Growth flattens out at a fixed cap (see
+// ranks.ts's levelCosts), so the last row covers the cumulative total to
+// reach that level, with every level after it adding a flat amount more.
 export function LevelCostList({ level }: { readonly level: number }) {
   const costs = levelCosts();
 
@@ -36,7 +37,7 @@ export function LevelCostList({ level }: { readonly level: number }) {
                 isCurrent ? 'text-[rgba(250,250,250,0.75)]' : 'text-text-muted'
               }`}
             >
-              {cost.xp} XP{isLast ? ' each' : ''}
+              {cost.xp.toLocaleString()} XP{isLast ? ', +900/level after' : ''}
             </Text>
           </HStack>
         );
