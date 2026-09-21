@@ -226,6 +226,9 @@ describe('checkIn', () => {
     expect(result.body.awardedXp).toBe(0);
     expect(result.body.progress.xp).toBe(3820);
     expect(result.body.progress.missionsCompleted).toBe(41);
+    // No XP awarded, so the level before and after this check-in are the
+    // same real value.
+    expect(result.body.previousLevel).toBe(result.body.progress.level);
   });
 
   test('checks into a specific stop out of order via an explicit stopIndex', async () => {
@@ -302,6 +305,11 @@ describe('checkIn', () => {
       title: 'Lake Regular',
     });
     expect(result.body.progress.level).toBe(7);
+    // Computed server-side from the demo user's real stored XP (1980, level
+    // 6 -- see "progress matches computeProgress for the seed demo-user"
+    // above) right before this grant, regardless of what any client-side
+    // query cache might believe the level was.
+    expect(result.body.previousLevel).toBe(6);
   });
 
   test('single-stop mission completes and awards full XP on one check-in', async () => {

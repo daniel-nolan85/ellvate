@@ -6,6 +6,7 @@ import {
   extractMediaUploads,
 } from '@/src/backend/media';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
+import { computeProgress } from '@/src/backend/progress';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
@@ -872,7 +873,10 @@ export async function checkInSupabase(
   // stop selection/dedup above and the response's completedStopIndices.
   const stopsDone = currentStopsDone + 1;
   const completed = stopsDone >= mission.stops_total;
-  const awardedXp = completed ? mission.xp : 0;
+  // Provisional -- flipped back to 0 below if the XP grant itself turns out
+  // to be a dedupe no-op (already recorded), so the response never claims
+  // XP that wasn't actually granted.
+  let awardedXp = completed ? mission.xp : 0;
 
   // WHY: no photo/face-detection gate -- a good-faith honor system instead.
   // An "is a face present" check was trivially beaten by any photo of any
@@ -940,6 +944,8 @@ export async function checkInSupabase(
         .update({ missions_completed: finalMissions })
         .eq('id', userId);
       throwIfSupabaseError(missionCountError, 'save mission user progress');
+    } else {
+      awardedXp = 0;
     }
   }
 
@@ -976,6 +982,7 @@ export async function checkInSupabase(
     body: {
       mission: missionView,
       awardedXp,
+      previousLevel: computeProgress(baseXp).level,
       progress: buildProgress({
         xp: finalXp,
         missionsCompleted: finalMissions,
