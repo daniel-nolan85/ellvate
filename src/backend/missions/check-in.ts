@@ -8,6 +8,7 @@ import {
   type StoredMissionCheckIn,
 } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
+import { computeProgress } from '@/src/backend/progress';
 import { recordXpLedgerEntry } from '@/src/backend/xp';
 
 import {
@@ -115,6 +116,8 @@ async function checkInMemory(
   const stopsDone = entry.stopsDone + 1;
   const completed = stopsDone >= mission.stopsTotal;
   const awardedXp = completed ? mission.xp : 0;
+  const previousXp = getState().users.find((user) => user.id === userId)?.xp ?? 0;
+  const previousLevel = computeProgress(previousXp).level;
 
   // WHY: no photo/face-detection gate -- a good-faith honor system instead.
   // An "is a face present" check was trivially beaten by any photo of any
@@ -194,6 +197,7 @@ async function checkInMemory(
     body: {
       mission: missionView,
       awardedXp,
+      previousLevel,
       progress: buildUserProgress(
         next.users.find((user) => user.id === userId),
       ),

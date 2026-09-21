@@ -83,6 +83,11 @@ export interface CheckInResult {
   readonly mission: Mission;
   readonly awardedXp: number;
   readonly progress: UserProgress;
+  // Computed server-side from the user's real stored XP right before this
+  // check-in -- see backend/missions/types.ts's CheckInResponse for why this
+  // (not the client's local query cache) is what level-up/rank-up detection
+  // is based on.
+  readonly previousLevel: number;
 }
 
 export interface NewMissionMediaInput {
@@ -306,7 +311,6 @@ export function useDeleteMission() {
 // broad ['missions'] invalidation for correctness instead.
 interface MissionDetailMutationContext {
   readonly previous: Mission | undefined;
-  readonly previousLevel: number | undefined;
 }
 
 export function useAcceptMission() {
@@ -339,9 +343,6 @@ export function useAcceptMission() {
       const previous = queryClient.getQueryData<{ readonly mission: Mission }>(
         detailKey,
       )?.mission;
-      const previousLevel = queryClient.getQueryData<{
-        readonly progress: UserProgress;
-      }>(missionsProgressKey(userId))?.progress.level;
 
       if (previous) {
         queryClient.setQueryData(detailKey, {
@@ -349,7 +350,7 @@ export function useAcceptMission() {
         });
       }
 
-      return { previous, previousLevel };
+      return { previous };
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
@@ -418,15 +419,12 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
       const previous = queryClient.getQueryData<{ readonly mission: Mission }>(
         detailKey,
       )?.mission;
-      const previousLevel = queryClient.getQueryData<{
-        readonly progress: UserProgress;
-      }>(missionsProgressKey(userId))?.progress.level;
 
       if (previous) {
         queryClient.setQueryData(detailKey, { mission: advanceMission(previous) });
       }
 
-      return { previous, previousLevel };
+      return { previous };
     },
     onSettled: (_result, _error, { missionId }) => {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
@@ -437,7 +435,7 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
         queryKey: ['missions', 'check-in-photos', missionId],
       });
     },
-    onSuccess: (result, _input, context) => {
+    onSuccess: (result) => {
       if (result.awardedXp > 0) {
         void Haptics
           .notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -454,14 +452,21 @@ export function useCheckIn(onMissionComplete?: (celebration: CheckInCelebration)
         // callback, which is gated on the observer still having listeners —
         // and the calling MissionCard can unmount before this resolves (its
         // mission gets optimistically filtered out of "In progress" first).
+        //
+        // result.previousLevel (not the client-cached context.previousLevel
+        // this used to read) is computed server-side from the user's real
+        // stored XP right before this grant -- immune to a cold or stale
+        // local query cache, e.g. a second device, a long-backgrounded app,
+        // or XP earned elsewhere since the cache last refreshed, any of
+        // which could otherwise silently swallow a real celebration.
         onMissionComplete?.({
           awardedXp: result.awardedXp,
           leveledUpTo: computeLeveledUpTo(
-            context?.previousLevel,
+            result.previousLevel,
             result.progress.level,
           ),
           rankedUpTo: computeRankedUpTo(
-            context?.previousLevel,
+            result.previousLevel,
             result.progress.level,
           ),
           title: result.progress.title,

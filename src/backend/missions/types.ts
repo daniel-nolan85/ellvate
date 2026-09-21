@@ -122,6 +122,12 @@ export interface CheckInResponse {
   readonly mission: Mission;
   readonly awardedXp: number;
   readonly progress: UserProgress;
+  // The user's level immediately before this check-in, computed server-side
+  // from their real stored XP -- not the client's local query cache, which
+  // can be cold or stale (a second device, a long-backgrounded app, or XP
+  // earned from posts/events/services since the cache last refreshed) and
+  // would otherwise silently swallow a real level-up/rank-up celebration.
+  readonly previousLevel: number;
 }
 
 export type CheckInErrorCode =
