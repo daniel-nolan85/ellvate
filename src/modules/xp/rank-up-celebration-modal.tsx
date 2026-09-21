@@ -30,7 +30,7 @@ function RankGlow() {
   );
 }
 
-// The biggest of the three check-in celebrations (the routine XP toast <
+// The biggest of the three XP-award celebrations (the routine XpToast <
 // LevelUpCelebrationModal < this) -- fires only when a level-up also
 // crosses into a new rank tier (see computeRankedUpTo), which happens far
 // less often than a plain level-up, so it earns a distinctly bigger

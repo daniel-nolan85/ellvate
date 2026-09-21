@@ -1,4 +1,5 @@
 import type { ServiceCategory } from '@/src/backend/store';
+import type { XpGrantOutcome } from '@/src/backend/xp';
 
 export interface ServiceMedia {
   readonly url: string;
@@ -75,8 +76,19 @@ export type ServiceListingValidation =
       readonly message: string;
     };
 
-export type CreateServiceListingResult =
+// What createServiceListingMemory/createServiceListingSupabase themselves
+// return -- the XP grant happens one level up, in createServiceListing, so
+// these two don't have an xpAward to report yet.
+export type CreatedServiceListingResult =
   | { readonly ok: true; readonly listing: ServiceListing }
+  | {
+      readonly ok: false;
+      readonly code: 'invalid_service_listing' | 'media_upload_failed';
+      readonly message: string;
+    };
+
+export type CreateServiceListingResult =
+  | { readonly ok: true; readonly listing: ServiceListing; readonly xpAward: XpGrantOutcome }
   | {
       readonly ok: false;
       readonly code: 'invalid_service_listing' | 'media_upload_failed';

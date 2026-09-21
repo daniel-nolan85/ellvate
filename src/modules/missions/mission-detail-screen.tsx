@@ -45,12 +45,9 @@ import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
-import { LevelUpCelebrationModal } from './level-up-celebration-modal';
-import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionCheckInThumbnailRow } from './mission-check-in-gallery';
 import { MissionComposer } from './mission-composer';
 import { missionThemeIcon } from './mission-theme';
-import { RankUpCelebrationModal } from './rank-up-celebration-modal';
 import { useMyCheckInPhoto, useUpdateMyCheckInPhoto } from './use-mission-check-in-photos';
 import {
   useCreateMissionComment,
@@ -67,7 +64,6 @@ import {
   useMission,
   useReportMission,
   useUpdateMission,
-  type CheckInCelebration,
   type MissionStatus,
 } from './use-missions';
 
@@ -133,13 +129,9 @@ export function MissionDetailScreen({
   const userId = session.userId ?? 'demo-user';
   const openProfile = useOpenProfile();
 
-  const [celebration, setCelebration] = useState<CheckInCelebration | null>(
-    null,
-  );
-
   const missionQuery = useMission(missionId);
   const acceptMission = useAcceptMission();
-  const checkIn = useCheckIn(setCelebration);
+  const checkIn = useCheckIn();
   const updateMission = useUpdateMission();
   const deleteMission = useDeleteMission();
   const blockUser = useBlockUser();
@@ -1091,24 +1083,6 @@ export function MissionDetailScreen({
           </View>
         )}
       </Sheet>
-
-      <MissionCelebrationModal
-        awardedXp={
-          celebration && celebration.leveledUpTo === null
-            ? celebration.awardedXp
-            : null
-        }
-        onClose={() => setCelebration(null)}
-      />
-      <LevelUpCelebrationModal
-        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
-        onClose={() => setCelebration(null)}
-        title={celebration?.title ?? ''}
-      />
-      <RankUpCelebrationModal
-        newTitle={celebration?.rankedUpTo ?? null}
-        onClose={() => setCelebration(null)}
-      />
 
       {toast ? (
         <View

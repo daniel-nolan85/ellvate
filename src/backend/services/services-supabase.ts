@@ -14,7 +14,7 @@ import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 import { defaultDisplayName, type ServiceCategory } from '@/src/backend/store';
 
 import type {
-  CreateServiceListingResult,
+  CreatedServiceListingResult,
   MyServiceListingsPage,
   ServiceListing,
   ServiceMedia,
@@ -359,7 +359,7 @@ export async function createServiceListingSupabase(
   supabase: SupabaseClient,
   userId: string,
   input: unknown,
-): Promise<CreateServiceListingResult> {
+): Promise<CreatedServiceListingResult> {
   const validation = validateServiceListingInput(input);
   if (!validation.ok) {
     return validation;

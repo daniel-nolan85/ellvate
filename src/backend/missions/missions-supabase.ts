@@ -17,7 +17,7 @@ import { uploadReportEvidence, type ValidReportSubmission } from '../reports/rep
 import type {
   AcceptMissionResult,
   CheckInResult,
-  CreateMissionResult,
+  CreatedMissionResult,
   LikeCheckInPhotoResult,
   Mission,
   MissionCheckInPhotosPage,
@@ -577,7 +577,7 @@ export async function createMissionSupabase(
   supabase: SupabaseClient,
   userId: string,
   input: unknown,
-): Promise<CreateMissionResult> {
+): Promise<CreatedMissionResult> {
   const validation = validateMissionInput(input);
   if (!validation.ok) {
     return validation;

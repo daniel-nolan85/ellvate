@@ -10,7 +10,7 @@ import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
 import type {
   CommunityEvent,
-  CreateEventResult,
+  CreatedEventResult,
   EventAttendeesPage,
   EventMedia,
   EventsPage,
@@ -601,7 +601,7 @@ export async function createEventSupabase(
   supabase: SupabaseClient,
   userId: string,
   input: unknown,
-): Promise<CreateEventResult> {
+): Promise<CreatedEventResult> {
   const validation = validateEventInput(input);
   if (!validation.ok) {
     return validation;

@@ -18,12 +18,12 @@ interface LevelUpCelebrationModalProps {
   readonly onClose: () => void;
 }
 
-// Deliberately bigger/rarer than MissionCelebrationModal's routine XP toast
-// -- a level-up doesn't happen on every check-in, so it gets its own beat
-// (amber badge instead of the plain success check, an entrance animation)
-// rather than reusing the same shell with a different label. Still smaller
-// than RankUpCelebrationModal -- most level-ups stay within the same rank
-// tier, so that bigger moment is reserved for when the rank itself changes.
+// Deliberately bigger/rarer than XpToast's routine "+N XP" pill -- a
+// level-up doesn't happen on every XP-earning action, so it gets its own
+// beat (amber badge instead of a plain pill, an entrance animation) rather
+// than reusing the same shell with a different label. Still smaller than
+// RankUpCelebrationModal -- most level-ups stay within the same rank tier,
+// so that bigger moment is reserved for when the rank itself changes.
 export function LevelUpCelebrationModal({
   newLevel,
   title,
@@ -63,7 +63,7 @@ export function LevelUpCelebrationModal({
             </Text>
           ) : null}
           <Text className="text-center text-text-muted" size="sm">
-            Keep completing missions to climb the leaderboard.
+            Keep earning XP to climb the leaderboard.
           </Text>
           <VStack className="w-full pt-2">
             <Button className="w-full rounded-full bg-accent" onPress={onClose} size="sm">
