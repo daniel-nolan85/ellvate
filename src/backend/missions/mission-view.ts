@@ -2,6 +2,7 @@ import type {
   MissionStatus,
   MissionUserProgress,
   StoredMission,
+  StoredMissionCheckIn,
   StoredUser,
 } from '@/src/backend/store';
 
@@ -18,6 +19,17 @@ export function getUserMissionEntry(
   userId: string,
 ): MissionUserProgress {
   return mission.progressByUser[userId] ?? DEFAULT_ENTRY;
+}
+
+export function completedStopIndicesFor(
+  missionCheckIns: readonly StoredMissionCheckIn[],
+  missionId: string,
+  userId: string,
+): readonly number[] {
+  return missionCheckIns
+    .filter((row) => row.missionId === missionId && row.userId === userId)
+    .map((row) => row.stopIndex)
+    .sort((a, b) => a - b);
 }
 
 export function resolveMissionStatus(
@@ -45,6 +57,7 @@ export function toMissionView(
   mission: StoredMission,
   userId: string,
   users: readonly StoredUser[] = [],
+  missionCheckIns: readonly StoredMissionCheckIn[] = [],
 ): Mission {
   const entry = getUserMissionEntry(mission, userId);
   const allProgress = Object.values(mission.progressByUser);
@@ -59,6 +72,7 @@ export function toMissionView(
     status: resolveMissionStatus(mission, entry),
     accepted: userId in mission.progressByUser,
     stopsDone: entry.stopsDone,
+    completedStopIndices: completedStopIndicesFor(missionCheckIns, mission.id, userId),
     stopsTotal: mission.stopsTotal,
     stops: mission.stops,
     theme: mission.theme,

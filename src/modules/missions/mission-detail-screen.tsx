@@ -190,11 +190,6 @@ export function MissionDetailScreen({
   const badge = mission ? STATUS_BADGE[mission.status] : null;
   const myCheckInPhoto = useMyCheckInPhoto(missionId, done);
   const updateMyCheckInPhoto = useUpdateMyCheckInPhoto();
-  const isFinalStop =
-    !!mission &&
-    mission.status === 'active' &&
-    mission.accepted &&
-    mission.stopsDone + 1 >= mission.stopsTotal;
 
   const showToast = (message: string) => {
     setToast(message);
@@ -260,7 +255,7 @@ export function MissionDetailScreen({
     );
   };
 
-  const handleCheckIn = () => {
+  const handleCheckIn = (stopIndex: number) => {
     if (!mission) {
       return;
     }
@@ -268,6 +263,7 @@ export function MissionDetailScreen({
     checkIn.mutate(
       {
         missionId: mission.id,
+        stopIndex,
         photo: checkInPhoto
           ? {
               dataUrl: `data:${checkInPhoto.mimeType};base64,${checkInPhoto.base64}`,
@@ -636,20 +632,6 @@ export function MissionDetailScreen({
                     </HStack>
                   </HStack>
 
-                  {mission.status === 'active' &&
-                  mission.accepted &&
-                  mission.stops[mission.stopsDone] ? (
-                    <Text className="text-[13px] text-text-muted">
-                      <Text
-                        className="font-inter-semibold text-content"
-                        size="xs"
-                      >
-                        Next:{' '}
-                      </Text>
-                      {mission.stops[mission.stopsDone]}
-                    </Text>
-                  ) : null}
-
                   {mission.status === 'active' && !mission.accepted ? (
                     <Button
                       className="self-start rounded-full bg-accent"
@@ -697,17 +679,59 @@ export function MissionDetailScreen({
                           </Text>
                         </Pressable>
                       )}
-                      <Button
-                        className="self-start rounded-full bg-accent"
-                        isDisabled={checkIn.isPending}
-                        onPress={handleCheckIn}
-                        size="sm"
-                      >
-                        <Icon color={WHITE} name="CheckCircle" size={15} />
-                        <ButtonText className="font-inter-semibold text-accent-foreground">
-                          {isFinalStop ? 'Complete mission' : 'Check in'}
-                        </ButtonText>
-                      </Button>
+                      {/* Every stop gets its own row so stops can be checked
+                          into in any order, not just top-to-bottom -- the
+                          last remaining stop's button reads "Complete"
+                          instead of "Check in" since tapping it finishes
+                          the mission. */}
+                      <VStack className="gap-2">
+                        {mission.stops.map((stop, index) => {
+                          const isStopDone =
+                            mission.completedStopIndices.includes(index);
+                          const isLastRemaining =
+                            !isStopDone &&
+                            mission.completedStopIndices.length ===
+                              mission.stopsTotal - 1;
+                          return (
+                            <HStack className="items-center gap-2.5" key={index}>
+                              <View
+                                className={`h-6 w-6 items-center justify-center rounded-full ${
+                                  isStopDone ? 'bg-success' : 'bg-secondary'
+                                }`}
+                              >
+                                {isStopDone ? (
+                                  <Icon color={WHITE} name="Check" size={13} />
+                                ) : (
+                                  <Text className="font-inter-bold text-[11px] text-muted-foreground">
+                                    {index + 1}
+                                  </Text>
+                                )}
+                              </View>
+                              <Text
+                                className={`flex-1 text-[14px] ${
+                                  isStopDone
+                                    ? 'text-text-muted line-through'
+                                    : 'text-content'
+                                }`}
+                              >
+                                {stop}
+                              </Text>
+                              {isStopDone ? null : (
+                                <Button
+                                  className="rounded-full bg-accent"
+                                  isDisabled={checkIn.isPending}
+                                  onPress={() => handleCheckIn(index)}
+                                  size="sm"
+                                >
+                                  <ButtonText className="font-inter-semibold text-accent-foreground">
+                                    {isLastRemaining ? 'Complete' : 'Check in'}
+                                  </ButtonText>
+                                </Button>
+                              )}
+                            </HStack>
+                          );
+                        })}
+                      </VStack>
                     </VStack>
                   ) : null}
 

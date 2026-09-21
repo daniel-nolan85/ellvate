@@ -14,18 +14,9 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
 
-import { LevelUpCelebrationModal } from './level-up-celebration-modal';
 import { MissionCard } from './mission-card';
-import { MissionCelebrationModal } from './mission-celebration-modal';
 import { MissionComposer } from './mission-composer';
-import { RankUpCelebrationModal } from './rank-up-celebration-modal';
-import {
-  useCreateMission,
-  useMissionsProgress,
-  useMissionsView,
-  type CheckInCelebration,
-  type MissionFilter,
-} from './use-missions';
+import { useCreateMission, useMissionsProgress, useMissionsView, type MissionFilter } from './use-missions';
 
 const COLOR_ACCENT_FOREGROUND = 'rgb(255,255,255)';
 
@@ -138,9 +129,6 @@ export function MissionsScreen({
   const progress = useMissionsProgress();
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
-  const [celebration, setCelebration] = useState<CheckInCelebration | null>(
-    null,
-  );
 
   const missions =
     missionsView.data?.pages.flatMap((page) => page.missions) ?? [];
@@ -258,7 +246,6 @@ export function MissionsScreen({
             <MissionCard
               mission={item}
               onAccepted={() => setFilter('in-progress')}
-              onMissionComplete={setCelebration}
               onOpen={onOpenMission}
             />
           </View>
@@ -288,24 +275,6 @@ export function MissionsScreen({
           />
         )}
       </Sheet>
-
-      <MissionCelebrationModal
-        awardedXp={
-          celebration && celebration.leveledUpTo === null
-            ? celebration.awardedXp
-            : null
-        }
-        onClose={() => setCelebration(null)}
-      />
-      <LevelUpCelebrationModal
-        newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
-        onClose={() => setCelebration(null)}
-        title={celebration?.title ?? ''}
-      />
-      <RankUpCelebrationModal
-        newTitle={celebration?.rankedUpTo ?? null}
-        onClose={() => setCelebration(null)}
-      />
     </>
   );
 }
