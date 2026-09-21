@@ -938,26 +938,46 @@ export async function checkInSupabase(
     throwIfSupabaseError(grantError, 'grant mission xp');
     if (xpResult !== null) {
       finalXp = xpResult as number;
-      finalMissions = baseMissions + 1;
+      // Best-effort, same reasoning as loadProgressCounts below -- the XP
+      // grant above already fully committed, so a transient failure on this
+      // purely-cosmetic display counter must never make an otherwise-
+      // successful check-in look like it failed. Worst case it's off by one
+      // until the next successful write catches it back up; finalMissions
+      // stays at baseMissions (not incremented) so the response never
+      // claims a count the database doesn't actually have.
+      const nextMissions = baseMissions + 1;
       const { error: missionCountError } = await supabase
         .from('app_users')
-        .update({ missions_completed: finalMissions })
+        .update({ missions_completed: nextMissions })
         .eq('id', userId);
-      throwIfSupabaseError(missionCountError, 'save mission user progress');
+      if (!missionCountError) {
+        finalMissions = nextMissions;
+      }
     } else {
       awardedXp = 0;
     }
   }
 
-  const authorNameById = await nameMapFor(supabase, mission.created_by);
-  const author = authorNameById.get(mission.created_by);
-  const counts = (await loadProgressCounts(supabase, [missionId])).get(missionId) ?? ZERO_COUNTS;
+  // mission.author already comes embedded from the MISSION_SELECT fetch
+  // above -- no need to look it up again via nameMapFor, which was doing a
+  // second, redundant read here.
+  const author = mission.author;
+  // Best-effort: this is purely a response-decoration read (the mission's
+  // accepted/completed headcount), not part of the check-in itself, which
+  // has already fully committed by this point (the check-in row, progress
+  // update, and XP grant above). A transient failure here must never make
+  // an otherwise-successful check-in look like it failed -- the client
+  // refetches the real counts moments later anyway via onSettled's
+  // ['missions'] invalidation.
+  const counts = await loadProgressCounts(supabase, [missionId])
+    .then((map) => map.get(missionId) ?? ZERO_COUNTS)
+    .catch(() => ZERO_COUNTS);
   const missionView: Mission = {
     id: mission.id,
     author: {
-      avatarUrl: author?.avatarUrl ?? null,
+      avatarUrl: author?.avatar_url ?? null,
       id: mission.created_by,
-      isAdmin: author?.isAdmin ?? false,
+      isAdmin: author?.is_admin ?? false,
       name: author?.name ?? 'Member',
     },
     title: mission.title,
