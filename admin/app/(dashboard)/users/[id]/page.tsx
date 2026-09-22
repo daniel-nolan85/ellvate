@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { getClerkUserEmail } from '@/lib/clerk';
 import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
@@ -36,6 +37,7 @@ export default async function UserDetailPage({
     notFound();
   }
   const user = data as UserRow;
+  const email = await getClerkUserEmail(user.id);
 
   return (
     <DetailLayout
@@ -47,6 +49,7 @@ export default async function UserDetailPage({
         table: 'app_users',
       }}
       fields={[
+        { label: 'Email', value: email ?? '—' },
         { label: 'Role', value: user.role ?? '—' },
         { label: 'XP', value: user.xp },
         { label: 'Missions completed', value: user.missions_completed },
