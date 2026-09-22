@@ -7,7 +7,12 @@ import { ApiError, requestJson } from '@/src/services/api';
 import { reportError } from '@/src/services/crash-reporting';
 
 export interface AssistantToolCall {
-  readonly tool: 'search_events' | 'search_missions' | 'search_posts' | 'search_services';
+  readonly tool:
+    | 'search_events'
+    | 'search_missions'
+    | 'search_petitions'
+    | 'search_posts'
+    | 'search_services';
   readonly label: string;
 }
 

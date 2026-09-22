@@ -11,11 +11,62 @@ import {
 } from '../../src/backend/assistant';
 import { createPost } from '../../src/backend/forum';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
-import { resetStore } from '../../src/backend/store';
+import { resetStore, setState } from '../../src/backend/store';
+import type { StoredPetition } from '../../src/backend/store';
 
 const ctx = memoryContext('demo-user');
 
 const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
+const originalFetch = globalThis.fetch;
+
+// Inserts a petition directly into the store (mirrors tests/backend/petitions.test.ts's
+// seedPetition), bypassing createPetition's unlock-threshold gate -- irrelevant here,
+// since only listPetitionsPage (which searchPetitions/browsePetitions call) is under test.
+function seedPetition(overrides: Partial<StoredPetition> = {}): StoredPetition {
+  const stored: StoredPetition = {
+    category: 'maintenance',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    createdBy: 'demo-user',
+    deadlineAt: '2026-12-31T00:00:00.000Z',
+    deadlineDays: 30,
+    description: 'Restore the historic clock tower at the village entrance.',
+    hoaEmailSentAt: null,
+    hoaResponse: null,
+    hoaResponseAt: null,
+    id: 'fixture-petition-clock-tower',
+    requiredSignatures: 50,
+    signatureCount: 3,
+    status: 'open',
+    succeededAt: null,
+    title: 'Restore the Clock Tower',
+    ...overrides,
+  };
+  setState((current) => ({ ...current, petitions: [...current.petitions, stored] }));
+  return stored;
+}
+
+// A minimal Anthropic Messages API response shape, matching what
+// respondViaAnthropic reads (content blocks + stop_reason).
+function anthropicToolUse(toolName: string, query: string) {
+  return Response.json({
+    content: [
+      {
+        type: 'tool_use',
+        id: `tool-${toolName}`,
+        name: toolName,
+        input: { query },
+      },
+    ],
+    stop_reason: 'tool_use',
+  });
+}
+
+function anthropicFinalText(text: string) {
+  return Response.json({
+    content: [{ type: 'text', text }],
+    stop_reason: 'end_turn',
+  });
+}
 
 beforeAll(() => {
   delete process.env.ANTHROPIC_API_KEY;
@@ -33,6 +84,8 @@ afterEach(() => {
   resetStore();
   resetAssistantRateLimit();
   resetWriteRateLimits();
+  globalThis.fetch = originalFetch;
+  delete process.env.ANTHROPIC_API_KEY;
 });
 
 const chatRequest = (body: unknown): Request =>
@@ -276,6 +329,71 @@ describe('respondToChat fallback mode', () => {
       { tool: 'search_events', label: 'Searching events…' },
     ]);
     expect(reply.reply.length).toBeGreaterThan(0);
+  });
+});
+
+// Regression test for the real-world report that prompted this fix: a resident
+// created a petition about restoring the community clock tower, then asked the
+// assistant about it and got "I don't know" back. The model called
+// search_events (an entirely reasonable guess for a "clock tower" question)
+// but never thought to also try search_petitions, and its own ungrounded
+// answer was returned as-is. respondViaAnthropic now falls back to the
+// exhaustive local search (which always checks every content type, petitions
+// included) whenever the model tried searching but came back empty-handed
+// everywhere it looked.
+describe('respondToChat Anthropic path', () => {
+  test('falls back to exhaustive local search when the model searches the wrong category and comes up empty', async () => {
+    seedPetition();
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    let callCount = 0;
+    globalThis.fetch = (async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return anthropicToolUse('search_events', 'clock tower');
+      }
+      return anthropicFinalText("I don't have any information about that.");
+    }) as unknown as typeof fetch;
+
+    const reply = await respondToChat(ctx, [
+      { role: 'user', text: 'Any news about the clock tower?' },
+    ]);
+
+    expect(reply.reply).toContain('Restore the Clock Tower');
+    expect(reply.toolCalls).toEqual([
+      { tool: 'search_petitions', label: 'Searching petitions…' },
+    ]);
+  });
+
+  test('returns the model reply as-is once it finds real grounding', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    let callCount = 0;
+    globalThis.fetch = (async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return anthropicToolUse('search_events', 'mixer');
+      }
+      return anthropicFinalText('The Locals Networking Mixer is coming up!');
+    }) as unknown as typeof fetch;
+
+    const reply = await respondToChat(ctx, [
+      { role: 'user', text: 'Any events this weekend?' },
+    ]);
+
+    expect(reply.reply).toBe('The Locals Networking Mixer is coming up!');
+    expect(reply.toolCalls).toEqual([
+      { tool: 'search_events', label: 'Searching events…' },
+    ]);
+  });
+
+  test('leaves a benign reply alone when the model never attempted a search', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    globalThis.fetch = (async () =>
+      anthropicFinalText('Happy to help — ask me about events, missions, or petitions!')) as unknown as typeof fetch;
+
+    const reply = await respondToChat(ctx, [{ role: 'user', text: 'Hi there!' }]);
+
+    expect(reply.reply).toBe('Happy to help — ask me about events, missions, or petitions!');
+    expect(reply.toolCalls).toEqual([]);
   });
 });
 

@@ -214,6 +214,11 @@ async function respondViaAnthropic(
     (message) => ({ role: message.role, content: message.text }),
   );
   let toolCalls: readonly AssistantToolCall[] = [];
+  // Tracks whether the model tried searching at all, and whether anything it
+  // tried actually turned up real data -- see the ungrounded-answer fallback
+  // below, right after the loop's early-return and its post-loop exit.
+  let attemptedAnyToolCall = false;
+  let hasGroundedResult = false;
 
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
     const remaining = deadline - Date.now();
@@ -258,6 +263,18 @@ async function respondViaAnthropic(
     );
 
     if (data.stop_reason !== 'tool_use' || toolUses.length === 0) {
+      // The model gave a final answer without ever finding real data to
+      // ground it in -- this is exactly the gap that let a real petition go
+      // unreported: the model tried search_events/search_posts for a query
+      // that didn't obviously name "petition," never thought to try
+      // search_petitions, and gave up. Its own tool choices don't guarantee
+      // coverage of every content type, so when it tried searching at all
+      // but came back empty-handed everywhere, fall back to the exhaustive
+      // local search instead of trusting its ungrounded reply. A model that
+      // never attempted a search (e.g. replying to "thanks!") is left alone.
+      if (attemptedAnyToolCall && !hasGroundedResult) {
+        return respondWithLocalSearch(ctx, messages);
+      }
       const reply = extractText(content);
       return {
         reply:
@@ -268,6 +285,7 @@ async function respondViaAnthropic(
       };
     }
 
+    attemptedAnyToolCall = true;
     toolCalls = [
       ...toolCalls,
       ...toolUses
@@ -279,15 +297,19 @@ async function respondViaAnthropic(
     ];
 
     const toolResults = await Promise.all(
-      toolUses.map(async (block) => ({
-        type: 'tool_result',
-        tool_use_id: block.id,
-        content: JSON.stringify(
-          isAssistantTool(block.name)
-            ? await runSearchTool(ctx, block.name, extractQuery(block.input))
-            : [],
-        ),
-      })),
+      toolUses.map(async (block) => {
+        const results = isAssistantTool(block.name)
+          ? await runSearchTool(ctx, block.name, extractQuery(block.input))
+          : [];
+        if (results.length > 0) {
+          hasGroundedResult = true;
+        }
+        return {
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: JSON.stringify(results),
+        };
+      }),
     );
 
     conversation = [
@@ -297,6 +319,9 @@ async function respondViaAnthropic(
     ];
   }
 
+  if (attemptedAnyToolCall && !hasGroundedResult) {
+    return respondWithLocalSearch(ctx, messages);
+  }
   return {
     reply:
       'I gathered results but ran out of time composing a reply. Try asking again about events, missions, or forum posts.',
