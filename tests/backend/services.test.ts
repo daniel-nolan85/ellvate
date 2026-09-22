@@ -39,6 +39,7 @@ import {
 } from '../../src/backend/services';
 import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import { CREATE_CONTENT_XP } from '../../src/backend/xp';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
@@ -864,7 +865,15 @@ describe('service routes', () => {
       }),
     );
     expect(created.status).toBe(201);
-    const { listing } = (await created.json()) as { listing: { id: string } };
+    const { listing, xpAward } = (await created.json()) as {
+      listing: { id: string };
+      xpAward: { awardedXp: number };
+    };
+    // Regression: the route handler used to hand-pick only `listing` off
+    // the backend result, silently dropping xpAward -- the client's
+    // useNotifyXpAwarded then crashed on the missing field, breaking the
+    // composer's own onSuccess before it could run.
+    expect(xpAward.awardedXp).toBe(CREATE_CONTENT_XP);
 
     const listed = await getServices(new Request('http://localhost/api/services'));
     const { listings } = (await listed.json()) as {

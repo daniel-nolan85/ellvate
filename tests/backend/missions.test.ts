@@ -40,6 +40,7 @@ import {
 import { toggleMute } from '../../src/backend/mutes';
 import { computeProgress } from '../../src/backend/progress';
 import type { ValidReportSubmission } from '@/src/backend/reports';
+import { CREATE_CONTENT_XP } from '../../src/backend/xp';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -1157,12 +1158,18 @@ describe('POST /api/missions', () => {
     expect(response.status).toBe(201);
     const body = (await response.json()) as {
       mission: { title: string; status: string; scheduledFor: string | null };
+      xpAward: { awardedXp: number };
     };
     expect(body.mission).toMatchObject({
       title: 'Beach Day',
       status: 'active',
       scheduledFor: '2026-07-19',
     });
+    // Regression: the route handler used to hand-pick only `mission` off
+    // the backend result, silently dropping xpAward -- the client's
+    // useNotifyXpAwarded then crashed on the missing field, breaking the
+    // composer's own onSuccess (which closes the modal) before it could run.
+    expect(body.xpAward.awardedXp).toBe(CREATE_CONTENT_XP);
   });
 
   test('400s with the ApiError envelope on invalid input', async () => {

@@ -29,6 +29,7 @@ import { updateProfile } from '../../src/backend/profile';
 import { reportPost } from '../../src/backend/reports';
 import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import { CREATE_CONTENT_XP } from '../../src/backend/xp';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
@@ -727,12 +728,18 @@ describe('POST /api/forum/posts', () => {
     expect(response.status).toBe(201);
     const body = (await response.json()) as {
       post: { author: unknown; forum: string; title: string };
+      xpAward: { awardedXp: number };
     };
     expect(body.post).toMatchObject({
       forum: 'Buy & Sell',
       title: 'Kayak for sale',
       author: { id: DEMO_USER_ID, name: 'You' },
     });
+    // Regression: the route handler used to hand-pick only `post` off the
+    // backend result, silently dropping xpAward -- the client's
+    // useNotifyXpAwarded then crashed on the missing field, breaking the
+    // composer's own onSuccess before it could run.
+    expect(body.xpAward.awardedXp).toBe(CREATE_CONTENT_XP);
   });
 
   test('returns a 400 ApiError envelope for an invalid body', async () => {
