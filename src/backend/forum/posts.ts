@@ -7,7 +7,7 @@ import {
   type StoredPost,
   type StoredUser,
 } from '@/src/backend/store';
-import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
+import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD } from '@/src/backend/xp';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
@@ -449,11 +449,16 @@ export async function createPost(
     return result;
   }
 
+  // The post is already fully saved by this point -- a failure in this
+  // purely secondary XP grant must never make an otherwise-successful post
+  // creation look like it failed to the client (mirrors checkInSupabase's
+  // own reasoning for the same "already succeeded, don't let a later step
+  // report it as failed" bug).
   const xpAward = await grantXp(ctx, {
     amount: CREATE_CONTENT_XP,
     reason: 'post_created',
     refId: result.post.id,
-  });
+  }).catch(() => NO_XP_AWARD);
 
   return { ...result, xpAward };
 }

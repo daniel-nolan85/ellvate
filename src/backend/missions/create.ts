@@ -1,7 +1,7 @@
 import { extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { setState, type StoredMission } from '@/src/backend/store';
-import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
+import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD } from '@/src/backend/xp';
 
 import { toMissionView } from './mission-view';
 import { createMissionSupabase } from './missions-supabase';
@@ -53,11 +53,14 @@ export async function createMission(
     return result;
   }
 
+  // The mission is already fully saved by this point -- a failure in this
+  // purely secondary XP grant must never make an otherwise-successful
+  // mission creation look like it failed to the client.
   const xpAward = await grantXp(ctx, {
     amount: CREATE_CONTENT_XP,
     reason: 'mission_created',
     refId: result.mission.id,
-  });
+  }).catch(() => NO_XP_AWARD);
 
   return { ...result, xpAward };
 }

@@ -2,7 +2,7 @@ import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
-import { CREATE_CONTENT_XP, grantXp } from '@/src/backend/xp';
+import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD } from '@/src/backend/xp';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import type { ValidReportSubmission } from '../reports/report-submission';
@@ -557,11 +557,14 @@ export async function createEvent(
     return result;
   }
 
+  // The event is already fully saved by this point -- a failure in this
+  // purely secondary XP grant must never make an otherwise-successful
+  // event creation look like it failed to the client.
   const xpAward = await grantXp(ctx, {
     amount: CREATE_CONTENT_XP,
     reason: 'event_created',
     refId: result.event.id,
-  });
+  }).catch(() => NO_XP_AWARD);
 
   return { ...result, xpAward };
 }
