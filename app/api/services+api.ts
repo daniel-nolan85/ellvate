@@ -25,6 +25,6 @@ export async function POST(request: Request): Promise<Response> {
     if (!result.ok) {
       return jsonError(400, result.code, result.message);
     }
-    return jsonOk({ listing: result.listing }, { status: 201 });
+    return jsonOk({ listing: result.listing, xpAward: result.xpAward }, { status: 201 });
   });
 }

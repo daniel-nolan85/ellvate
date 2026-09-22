@@ -27,6 +27,7 @@ import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { toggleMute } from '../../src/backend/mutes';
 import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
+import { CREATE_CONTENT_XP } from '../../src/backend/xp';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 const TEST_REPORT_SUBMISSION: ValidReportSubmission = {
@@ -310,12 +311,18 @@ describe('POST /api/events', () => {
     expect(response.status).toBe(201);
     const body = (await response.json()) as {
       event: { title: string; dayLabel: string; timeLabel: string };
+      xpAward: { awardedXp: number };
     };
     expect(body.event).toMatchObject({
       title: 'Market Day',
       dayLabel: 'SUN',
       timeLabel: '10:00 AM',
     });
+    // Regression: the route handler used to hand-pick only `event` off the
+    // backend result, silently dropping xpAward -- the client's
+    // useNotifyXpAwarded then crashed on the missing field, breaking the
+    // composer's own onSuccess before it could run.
+    expect(body.xpAward.awardedXp).toBe(CREATE_CONTENT_XP);
   });
 
   test('400s with the ApiError envelope on invalid input', async () => {

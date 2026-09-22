@@ -46,6 +46,6 @@ export async function POST(request: Request): Promise<Response> {
     if (!result.ok) {
       return jsonError(400, result.code, result.message);
     }
-    return jsonOk({ mission: result.mission }, { status: 201 });
+    return jsonOk({ mission: result.mission, xpAward: result.xpAward }, { status: 201 });
   });
 }
