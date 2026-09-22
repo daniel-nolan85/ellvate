@@ -3,7 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import { useSession } from '@/src/platform/session';
-import { requestJson } from '@/src/services/api';
+import { ApiError, requestJson } from '@/src/services/api';
+import { reportError } from '@/src/services/crash-reporting';
 
 export interface AssistantToolCall {
   readonly tool: 'search_events' | 'search_missions' | 'search_posts' | 'search_services';
@@ -38,6 +39,17 @@ const SUGGESTIONS: readonly string[] = [
 const APOLOGY_TEXT =
   'Sorry — I could not reach the assistant just now. Please try again in a moment.';
 
+// The generic apology above used to be the ONLY thing shown for every
+// failure -- a real backend error (bad config, rate limiting) looked
+// identical to a plain network blip, with no way to tell them apart short
+// of digging through deployment logs. Appending the actual code/status
+// (when this was a real HTTP response, not a network-level failure) makes
+// the failure self-diagnosing straight from the screen.
+const describeFailure = (error: unknown): string =>
+  error instanceof ApiError
+    ? `${APOLOGY_TEXT} (${error.code ?? 'unknown'} · ${error.status})`
+    : APOLOGY_TEXT;
+
 const toMessages = (
   entries: readonly ChatEntry[],
 ): readonly AssistantChatMessage[] =>
@@ -63,8 +75,9 @@ export function useAssistantChat() {
         path: '/api/assistant/chat',
       }),
     mutationKey: ['assistant', 'chat', session.userId ?? 'demo-user'],
-    onError: () => {
-      appendEntries([{ kind: 'assistant', text: APOLOGY_TEXT }]);
+    onError: (error) => {
+      reportError(error, { source: 'assistant-chat' });
+      appendEntries([{ kind: 'assistant', text: describeFailure(error) }]);
     },
     onSuccess: (reply) => {
       // The tool-call labels (e.g. "Searching events…") only matter while the
