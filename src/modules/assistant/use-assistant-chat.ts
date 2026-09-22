@@ -42,13 +42,12 @@ const APOLOGY_TEXT =
 // The generic apology above used to be the ONLY thing shown for every
 // failure -- a real backend error (bad config, rate limiting) looked
 // identical to a plain network blip, with no way to tell them apart short
-// of digging through deployment logs. Showing the server's own message
-// (when this was a real HTTP response, not a network-level failure) plus
-// the code/status makes the failure self-diagnosing straight from the
-// screen.
+// of digging through deployment logs. Appending the actual code/status
+// (when this was a real HTTP response, not a network-level failure) makes
+// the failure self-diagnosing straight from the screen.
 const describeFailure = (error: unknown): string =>
   error instanceof ApiError
-    ? `${error.message} (${error.code ?? 'unknown'} · ${error.status})`
+    ? `${APOLOGY_TEXT} (${error.code ?? 'unknown'} · ${error.status})`
     : APOLOGY_TEXT;
 
 const toMessages = (
