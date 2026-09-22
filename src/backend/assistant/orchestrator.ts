@@ -536,14 +536,20 @@ export async function handleAssistantChat(request: Request): Promise<Response> {
           );
 
     if (rateLimitDecision.status === 'unavailable') {
-      console.error(
-        '[assistant] rate limiter unavailable, request blocked:',
-        'reason' in rateLimitDecision ? rateLimitDecision.reason : 'unknown reason',
-      );
+      const reason =
+        'reason' in rateLimitDecision ? rateLimitDecision.reason : 'unknown reason';
+      console.error('[assistant] rate limiter unavailable, request blocked:', reason);
+      // Temporary: the reason string describes config/connectivity state only
+      // (never the URL or token values themselves), and is folded into the
+      // client-visible message so it shows up on-device -- EAS Hosting's own
+      // deployment logs have not been showing anything for this route despite
+      // this exact console.error being reachable, so this is the only way
+      // this information has actually reached anyone so far. Revert once the
+      // underlying rate-limiter-unavailable cause is confirmed fixed.
       return jsonError(
         503,
         'assistant_rate_limit_unavailable',
-        'The assistant is temporarily unavailable. Try again shortly.',
+        `The assistant is temporarily unavailable. Try again shortly. [${reason}]`,
       );
     }
 
