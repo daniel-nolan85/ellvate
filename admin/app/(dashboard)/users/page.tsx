@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { getClerkUserEmail } from '@/lib/clerk';
 import { formatDate } from '@/lib/format-date';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { applyDescCursor, encodeCursor, LIST_PAGE_SIZE } from '@/lib/pagination';
@@ -45,6 +46,10 @@ export default async function UsersPage({
   }
   const rows = (data ?? []) as readonly UserRow[];
   const users = rows.slice(0, LIST_PAGE_SIZE);
+  // Best-effort: Clerk is the source of truth for email, never mirrored into
+  // app_users -- a failed/unconfigured lookup just shows "—" for that row
+  // rather than breaking the page (see getClerkUserEmail).
+  const emails = await Promise.all(users.map((user) => getClerkUserEmail(user.id)));
   const nextCursor =
     rows.length > LIST_PAGE_SIZE
       ? encodeCursor({ sortKey: users[users.length - 1]!.created_at, id: users[users.length - 1]!.id })
@@ -88,6 +93,7 @@ export default async function UsersPage({
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted">
             <th className="pb-2 font-normal">Name</th>
+            <th className="pb-2 font-normal">Email</th>
             <th className="pb-2 font-normal">Role</th>
             <th className="pb-2 font-normal">XP</th>
             <th className="pb-2 font-normal">Missions done</th>
@@ -99,12 +105,12 @@ export default async function UsersPage({
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td className="py-4 text-sm text-muted" colSpan={7}>
+              <td className="py-4 text-sm text-muted" colSpan={8}>
                 {query ? `No members match "${query}".` : 'No members yet.'}
               </td>
             </tr>
           ) : (
-            users.map((user) => (
+            users.map((user, index) => (
               <tr className="border-b border-border last:border-0" key={user.id}>
                 <td className="py-2 pr-4 text-sm text-content">
                   <Link className="flex items-center gap-2 hover:underline" href={`/users/${user.id}`}>
@@ -119,6 +125,7 @@ export default async function UsersPage({
                     {user.name}
                   </Link>
                 </td>
+                <td className="py-2 pr-4 text-xs text-muted">{emails[index] ?? '—'}</td>
                 <td className="py-2 pr-4 text-xs text-muted">{user.role ?? '—'}</td>
                 <td className="py-2 pr-4 text-xs text-muted">{user.xp}</td>
                 <td className="py-2 pr-4 text-xs text-muted">{user.missions_completed}</td>
