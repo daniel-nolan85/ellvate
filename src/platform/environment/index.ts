@@ -6,6 +6,9 @@ export {
   type PublicEnvironment,
 } from './environment';
 export {
+  assertServerRuntimeEnvironmentConfigured,
+  ServerEnvironmentError,
   validateProductionEnvironment,
+  validateServerRuntimeEnvironment,
   type ProductionEnvironmentInput,
 } from './server-environment';

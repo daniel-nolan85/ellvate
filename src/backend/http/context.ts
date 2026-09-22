@@ -2,6 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { MediaValidationError } from '@/src/backend/media';
 import {
+  assertServerRuntimeEnvironmentConfigured,
+  ServerEnvironmentError,
+} from '@/src/platform/environment/server-environment';
+import {
   createRequestClientFor,
   getRequestClerkToken,
   SupabaseRequestError,
@@ -32,6 +36,8 @@ export interface RequestContext {
 export async function createRequestContext(
   request: Request,
 ): Promise<RequestContext> {
+  assertServerRuntimeEnvironmentConfigured();
+
   const userId = await getRequestUserId(request);
   const supabase = createRequestClientFor(request);
 
@@ -60,6 +66,10 @@ export async function withRequestContext(
     }
     if (error instanceof RequestDataError) {
       return jsonError(error.status, error.code, error.message);
+    }
+    if (error instanceof ServerEnvironmentError) {
+      console.error('[environment] server runtime misconfigured:', error.message);
+      return jsonError(500, 'server_environment_invalid', error.message);
     }
     if (error instanceof MediaValidationError) {
       return jsonError(error.status, error.code, error.message);
