@@ -498,7 +498,11 @@ export async function respondToChat(
 
   try {
     return await respondViaAnthropic(apiKey, messages, ctx);
-  } catch {
+  } catch (error) {
+    console.error(
+      '[assistant] Anthropic call failed, falling back to local search:',
+      error instanceof Error ? error.message : error,
+    );
     return respondWithLocalSearch(ctx, messages);
   }
 }
@@ -532,6 +536,10 @@ export async function handleAssistantChat(request: Request): Promise<Response> {
           );
 
     if (rateLimitDecision.status === 'unavailable') {
+      console.error(
+        '[assistant] rate limiter unavailable, request blocked:',
+        'reason' in rateLimitDecision ? rateLimitDecision.reason : 'unknown reason',
+      );
       return jsonError(
         503,
         'assistant_rate_limit_unavailable',
