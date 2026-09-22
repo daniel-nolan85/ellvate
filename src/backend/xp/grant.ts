@@ -8,6 +8,19 @@ import { throwIfSupabaseError } from '@/src/services/supabase';
 import { recordXpLedgerEntry } from './record';
 import type { GrantXpInput, XpGrantOutcome } from './types';
 
+// A safe placeholder for a create-content result's xpAward when the grant
+// itself fails after the entity was already fully created -- see
+// createPost/createEvent/createMission/createServiceListing's own WHY.
+// awardedXp: 0 means the client's useNotifyXpAwarded no-ops on it, so this
+// never shows a bogus toast/celebration for XP that wasn't actually
+// granted.
+export const NO_XP_AWARD: XpGrantOutcome = {
+  awardedXp: 0,
+  newLevel: 0,
+  previousLevel: 0,
+  title: '',
+};
+
 // Small enough to sit well below the lowest real mission-completion reward
 // (the smallest seeded mission is worth 25 XP), so actually completing a
 // mission always outweighs just posting content. Keeping this amount small
@@ -37,27 +50,34 @@ function grantXpMemory(userId: string, input: GrantXpInput): XpGrantOutcome {
 // supabase/migrations/0064_atomic_grant_xp.sql for why this replaced two
 // separate writes (a ledger-insert failure after a committed xp bump used
 // to leave app_users.xp permanently ahead of the ledger's own sum).
+//
+// previousXp is derived from the RPC's own returned new xp (newXp -
+// input.amount) rather than a separate read beforehand -- an earlier
+// version of this function did read first, which added a second network
+// round-trip purely to compute a number this one already implies.
 async function grantXpSupabase(
   supabase: SupabaseClient,
-  userId: string,
   input: GrantXpInput,
 ): Promise<XpGrantOutcome> {
-  const { data: userRow, error: userError } = await supabase
-    .from('app_users')
-    .select('xp')
-    .eq('id', userId)
-    .maybeSingle();
-  throwIfSupabaseError(userError, 'load user xp');
-  const previousXp = (userRow as { xp: number } | null)?.xp ?? 0;
-
-  const { error } = await supabase.rpc('grant_xp_and_log', {
+  const { data, error } = await supabase.rpc('grant_xp_and_log', {
     p_amount: input.amount,
     p_ref_id: input.refId ?? null,
     p_reason: input.reason,
   });
   throwIfSupabaseError(error, 'grant xp');
 
-  const newLevel = computeProgress(previousXp + input.amount).level;
+  // null means this exact (user, reason, ref_id) grant was already
+  // recorded (a dedupe no-op) -- essentially impossible for the create-
+  // content callers below, since refId is always the entity's own
+  // freshly generated id, but handled defensively rather than assumed
+  // away: no XP was actually granted, so there's no real level to report.
+  if (data === null) {
+    return NO_XP_AWARD;
+  }
+
+  const newXp = data as number;
+  const previousXp = newXp - input.amount;
+  const newLevel = computeProgress(newXp).level;
   return {
     awardedXp: input.amount,
     newLevel,
@@ -79,7 +99,7 @@ export async function grantXp(
   input: GrantXpInput,
 ): Promise<XpGrantOutcome> {
   if (ctx.supabase) {
-    return grantXpSupabase(ctx.supabase, ctx.userId, input);
+    return grantXpSupabase(ctx.supabase, input);
   }
   const outcome = grantXpMemory(ctx.userId, input);
   await recordXpLedgerEntry(ctx, input);
