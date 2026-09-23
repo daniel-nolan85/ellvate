@@ -12,6 +12,11 @@ node_modules
 # it can sit in a worktree without ever showing as untracked.
 app/api/dev-seed+api.ts
 
+# Real photos supplied for the same promo/screenshot capture (served locally
+# as demo-seed avatar images) -- personal images of real people, never meant
+# to enter a public repo's history.
+/public/
+
 # Expo
 .expo/
 dist/
