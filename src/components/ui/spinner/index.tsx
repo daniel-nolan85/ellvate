@@ -1,5 +1,5 @@
 import { useEffect, useId } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -24,6 +24,19 @@ import Svg, {
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
+
+// react-native-svg's web WebShape.setNativeProps (the imperative path
+// Reanimated's useAnimatedProps drives) merges its `props.style` argument
+// into the element's props via a raw Object.assign, which leaks a bare
+// RN-style transform array straight through to the DOM `style` attribute
+// instead of a flattened value -- React DOM's setValueForStyles then does
+// `for (styleName in styles)`, walks the array's numeric indices, and
+// throws "Indexed property setter is not supported" on the very first
+// mount. Native is unaffected (its setNativeProps path is different), so
+// the animated SVG primitives below are native-only; web renders the same
+// glyph frozen at the animation's midpoint via plain (non-Animated)
+// primitives with a literal SVG transform string instead.
+const IS_WEB = Platform.OS === 'web';
 
 const DEFAULT_COLOR = 'rgb(110,127,74)';
 const SPIKE_COLOR = 'rgb(201,138,58)';
@@ -52,6 +65,16 @@ const SIZE_PX: Readonly<Record<'small' | 'large' | 'xlarge', number>> = {
   small: 20,
   xlarge: 96,
 };
+
+// Web's frozen pose (see IS_WEB above) -- the animation's midpoint
+// (progress === 0), same translate/rotate/translate-back pivots as the
+// animated transforms below, but as a literal SVG transform string instead
+// of an RN-style array, since a plain (non-Animated) primitive's `transform`
+// prop goes through react-native-svg's normal, unaffected prop handling.
+const SHADOW_REST_TRANSFORM = 'translate(12,23) scale(0.925,1) translate(-12,-23)';
+const BODY_REST_TRANSFORM = 'translate(0,-0.75) translate(12,24) rotate(0) translate(-12,-24)';
+const ARM_L_REST_TRANSFORM = 'translate(9.3,13.2) rotate(-2) translate(-9.3,-13.2)';
+const ARM_R_REST_TRANSFORM = 'translate(14.7,9) rotate(2) translate(-14.7,-9)';
 
 interface SpinnerProps {
   readonly size?: 'small' | 'large' | 'xlarge';
@@ -137,6 +160,60 @@ function CactusGlyph({
   const bodyStroke = shade(color, -0.35);
   const crownStroke = shade(CROWN_COLOR, -0.4);
 
+  const armL = (
+    <>
+      <Rect fill={`url(#${bodyGradientId})`} height={8} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={3.4} x={3.5} y={6} />
+      <Rect fill={`url(#${bodyGradientId})`} height={3.4} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={6.3} x={3.5} y={11.5} />
+      <Rect fill={SHINE_COLOR} height={6.4} opacity={0.22} rx={0.4} width={0.8} x={4.1} y={6.8} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={3.6} x2={2.7} y1={7.5} y2={7.1} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={3.6} x2={2.7} y1={10.5} y2={10.1} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={3.6} x2={2.7} y1={13} y2={12.6} />
+    </>
+  );
+  const armR = (
+    <>
+      <Rect fill={`url(#${bodyGradientId})`} height={8} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={3.4} x={17.1} y={2} />
+      <Rect fill={`url(#${bodyGradientId})`} height={3.4} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={6.3} x={14.2} y={7.3} />
+      <Rect fill={SHINE_COLOR} height={6.4} opacity={0.22} rx={0.4} width={0.8} x={17.7} y={2.8} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={20.4} x2={21.3} y1={3.5} y2={3.1} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={20.4} x2={21.3} y1={6} y2={5.6} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={20.4} x2={21.3} y1={8.5} y2={8.1} />
+    </>
+  );
+  const bodyCore = (
+    <>
+      <Rect fill={`url(#${bodyGradientId})`} height={17} rx={2.7} stroke={bodyStroke} strokeWidth={0.25} width={5.4} x={9.3} y={5} />
+      <Rect fill={SHINE_COLOR} height={14.5} opacity={0.2} rx={0.5} width={1} x={10} y={6} />
+
+      <Rect fill={`url(#${crownGradientId})`} height={1.1} rx={0.4} stroke={crownStroke} strokeWidth={0.25} width={5.4} x={9.3} y={4.3} />
+      <Path
+        d="M 9.3 4.3 L 9.7 2.7 L 10.7 3.8 L 12 2.1 L 13.3 3.8 L 14.3 2.7 L 14.7 4.3 Z"
+        fill={`url(#${crownGradientId})`}
+        stroke={crownStroke}
+        strokeLinejoin="round"
+        strokeWidth={0.25}
+      />
+      <Rect fill={SHINE_COLOR} height={0.9} opacity={0.28} rx={0.2} width={0.6} x={9.75} y={4.35} />
+      <Ellipse cx={12} cy={2.35} fill={SHINE_COLOR} opacity={0.85} rx={0.28} ry={0.18} />
+
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={13} y2={13.5} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={16} y2={16.5} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={19} y2={19.5} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={14.5} x2={15.4} y1={14.5} y2={15} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={14.5} x2={15.4} y1={17.5} y2={18} />
+      <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={14.5} x2={15.4} y1={20.5} y2={21} />
+
+      <Rect fill={SHADE_COLOR} height={0.4} rx={0.2} width={0.6} x={9.3} y={8.2} />
+      <Rect fill={SHADE_COLOR} height={0.4} rx={0.2} width={0.6} x={14.15} y={8.2} />
+      <Rect fill={SHADE_COLOR} height={0.55} rx={0.25} width={0.9} x={11.55} y={8} />
+      <Circle cx={10.9} cy={8.4} fill={`url(#${lensGradientId})`} r={1.05} />
+      <Circle cx={13.1} cy={8.4} fill={`url(#${lensGradientId})`} r={1.05} />
+      <Ellipse cx={10.55} cy={8.05} fill={SHINE_COLOR} opacity={0.85} rx={0.32} ry={0.2} />
+      <Ellipse cx={12.75} cy={8.05} fill={SHINE_COLOR} opacity={0.85} rx={0.32} ry={0.2} />
+      <Path d="M 10.6 10.3 Q 12 11.3 13.4 10.3" fill="none" stroke={MOUTH_COLOR} strokeLinecap="round" strokeWidth={0.55} />
+    </>
+  );
+
   return (
     <Svg height="100%" viewBox="0 0 24 24" width="100%">
       <Defs>
@@ -155,63 +232,40 @@ function CactusGlyph({
           <Stop offset="100%" stopColor={shade(CROWN_COLOR, -0.25)} />
         </LinearGradient>
       </Defs>
-      <AnimatedEllipse
-        animatedProps={shadowProps}
-        cx={12}
-        cy={23}
-        fill={SHADOW_COLOR}
-        opacity={0.12}
-        rx={7}
-        ry={1.4}
-      />
-      <AnimatedG animatedProps={bodyProps}>
-        <AnimatedG animatedProps={armLProps}>
-          <Rect fill={`url(#${bodyGradientId})`} height={8} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={3.4} x={3.5} y={6} />
-          <Rect fill={`url(#${bodyGradientId})`} height={3.4} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={6.3} x={3.5} y={11.5} />
-          <Rect fill={SHINE_COLOR} height={6.4} opacity={0.22} rx={0.4} width={0.8} x={4.1} y={6.8} />
-          <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={3.6} x2={2.7} y1={7.5} y2={7.1} />
-          <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={3.6} x2={2.7} y1={10.5} y2={10.1} />
-          <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={3.6} x2={2.7} y1={13} y2={12.6} />
-        </AnimatedG>
-        <AnimatedG animatedProps={armRProps}>
-          <Rect fill={`url(#${bodyGradientId})`} height={8} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={3.4} x={17.1} y={2} />
-          <Rect fill={`url(#${bodyGradientId})`} height={3.4} rx={1.7} stroke={bodyStroke} strokeWidth={0.25} width={6.3} x={14.2} y={7.3} />
-          <Rect fill={SHINE_COLOR} height={6.4} opacity={0.22} rx={0.4} width={0.8} x={17.7} y={2.8} />
-          <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={20.4} x2={21.3} y1={3.5} y2={3.1} />
-          <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={20.4} x2={21.3} y1={6} y2={5.6} />
-          <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={20.4} x2={21.3} y1={8.5} y2={8.1} />
-        </AnimatedG>
-
-        <Rect fill={`url(#${bodyGradientId})`} height={17} rx={2.7} stroke={bodyStroke} strokeWidth={0.25} width={5.4} x={9.3} y={5} />
-        <Rect fill={SHINE_COLOR} height={14.5} opacity={0.2} rx={0.5} width={1} x={10} y={6} />
-
-        <Rect fill={`url(#${crownGradientId})`} height={1.1} rx={0.4} stroke={crownStroke} strokeWidth={0.25} width={5.4} x={9.3} y={4.3} />
-        <Path
-          d="M 9.3 4.3 L 9.7 2.7 L 10.7 3.8 L 12 2.1 L 13.3 3.8 L 14.3 2.7 L 14.7 4.3 Z"
-          fill={`url(#${crownGradientId})`}
-          stroke={crownStroke}
-          strokeLinejoin="round"
-          strokeWidth={0.25}
+      {IS_WEB ? (
+        <Ellipse
+          cx={12}
+          cy={23}
+          fill={SHADOW_COLOR}
+          opacity={0.12}
+          rx={7}
+          ry={1.4}
+          transform={SHADOW_REST_TRANSFORM}
         />
-        <Rect fill={SHINE_COLOR} height={0.9} opacity={0.28} rx={0.2} width={0.6} x={9.75} y={4.35} />
-        <Ellipse cx={12} cy={2.35} fill={SHINE_COLOR} opacity={0.85} rx={0.28} ry={0.18} />
-
-        <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={13} y2={13.5} />
-        <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={16} y2={16.5} />
-        <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={9.5} x2={8.6} y1={19} y2={19.5} />
-        <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={14.5} x2={15.4} y1={14.5} y2={15} />
-        <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={14.5} x2={15.4} y1={17.5} y2={18} />
-        <Line stroke={SPIKE_COLOR} strokeLinecap="round" strokeWidth={0.35} x1={14.5} x2={15.4} y1={20.5} y2={21} />
-
-        <Rect fill={SHADE_COLOR} height={0.4} rx={0.2} width={0.6} x={9.3} y={8.2} />
-        <Rect fill={SHADE_COLOR} height={0.4} rx={0.2} width={0.6} x={14.15} y={8.2} />
-        <Rect fill={SHADE_COLOR} height={0.55} rx={0.25} width={0.9} x={11.55} y={8} />
-        <Circle cx={10.9} cy={8.4} fill={`url(#${lensGradientId})`} r={1.05} />
-        <Circle cx={13.1} cy={8.4} fill={`url(#${lensGradientId})`} r={1.05} />
-        <Ellipse cx={10.55} cy={8.05} fill={SHINE_COLOR} opacity={0.85} rx={0.32} ry={0.2} />
-        <Ellipse cx={12.75} cy={8.05} fill={SHINE_COLOR} opacity={0.85} rx={0.32} ry={0.2} />
-        <Path d="M 10.6 10.3 Q 12 11.3 13.4 10.3" fill="none" stroke={MOUTH_COLOR} strokeLinecap="round" strokeWidth={0.55} />
-      </AnimatedG>
+      ) : (
+        <AnimatedEllipse
+          animatedProps={shadowProps}
+          cx={12}
+          cy={23}
+          fill={SHADOW_COLOR}
+          opacity={0.12}
+          rx={7}
+          ry={1.4}
+        />
+      )}
+      {IS_WEB ? (
+        <G transform={BODY_REST_TRANSFORM}>
+          <G transform={ARM_L_REST_TRANSFORM}>{armL}</G>
+          <G transform={ARM_R_REST_TRANSFORM}>{armR}</G>
+          {bodyCore}
+        </G>
+      ) : (
+        <AnimatedG animatedProps={bodyProps}>
+          <AnimatedG animatedProps={armLProps}>{armL}</AnimatedG>
+          <AnimatedG animatedProps={armRProps}>{armR}</AnimatedG>
+          {bodyCore}
+        </AnimatedG>
+      )}
     </Svg>
   );
 }

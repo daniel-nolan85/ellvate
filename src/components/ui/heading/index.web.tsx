@@ -1,4 +1,5 @@
 import React, { forwardRef, memo } from 'react';
+import { StyleSheet } from 'react-native';
 import { headingStyle } from './styles';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 type IHeadingProps = VariantProps<typeof headingStyle> &
@@ -18,10 +19,16 @@ const MappedHeading = memo(
       sub,
       italic,
       highlight,
+      style,
       ...props
     },
     ref
   ) {
+    // See box/index.web.tsx's WHY -- NativeWind's cssInterop wrapping
+    // around these raw `hN` elements can hand this a React Native-style
+    // array with a null/undefined hole instead of a plain CSSProperties
+    // object; StyleSheet.flatten collapses it to what React DOM expects.
+    const flatStyle = StyleSheet.flatten(style);
     switch (size) {
       case '5xl':
       case '4xl':
@@ -40,6 +47,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );
@@ -58,6 +66,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );
@@ -76,6 +85,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );
@@ -94,6 +104,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );
@@ -112,6 +123,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );
@@ -131,6 +143,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );
@@ -149,6 +162,7 @@ const MappedHeading = memo(
               class: className,
             })}
             {...props}
+            style={flatStyle}
             ref={ref}
           />
         );

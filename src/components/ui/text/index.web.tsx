@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';
 import { textStyle } from './styles';
 
@@ -16,6 +17,7 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
       sub,
       italic,
       highlight,
+      style,
       ...props
     }: { className?: string } & ITextProps,
     ref
@@ -34,6 +36,11 @@ const Text = React.forwardRef<React.ComponentRef<'span'>, ITextProps>(
           class: className,
         })}
         {...props}
+        // See box/index.web.tsx's WHY -- NativeWind's cssInterop wrapping
+        // around this raw `span` can hand this a React Native-style array
+        // with a null/undefined hole instead of a plain CSSProperties
+        // object; StyleSheet.flatten collapses it to what React DOM expects.
+        style={StyleSheet.flatten(style)}
         ref={ref}
       />
     );
