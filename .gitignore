@@ -2,6 +2,15 @@
 
 # dependencies
 node_modules/
+# Trailing-slash patterns only match real directories -- a worktree whose
+# node_modules is a symlink (e.g. shared from the main checkout to save a
+# reinstall) falls through the pattern above and shows up as untracked.
+node_modules
+
+# Local-only demo seed route for promo/screenshot capture -- never meant to
+# ship; deleted before any branch using it is committed. Ignored outright so
+# it can sit in a worktree without ever showing as untracked.
+app/api/dev-seed+api.ts
 
 # Expo
 .expo/
