@@ -23,6 +23,7 @@ import {
   reportBusinessListing,
   updateBusinessListing,
 } from '../../src/backend/business-listings';
+import { fetchWebsiteSummary } from '../../src/backend/business-listings/website-fetch';
 import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
 import { CREATE_CONTENT_XP } from '../../src/backend/xp';
@@ -66,16 +67,23 @@ const unresolvedInput = {
 } as const;
 
 describe('createBusinessListing verification pipeline', () => {
-  test('a matching contact-email domain verifies instantly via domain_match', async () => {
+  // The core regression test for the anti-impersonation fix: a matching
+  // domain used to verify a listing on its own, with no check that the
+  // domain was real, reachable, or an actual Lake Las Vegas business --
+  // anyone could fabricate a matching website + email pair. Domain match is
+  // now only ever an input signal to the classifier (see verification.ts),
+  // so without a working classifier (no ANTHROPIC_API_KEY in this test
+  // environment) it must fail closed exactly like every other case.
+  test('a matching contact-email domain alone does not verify without a working classifier', async () => {
     const result = await createBusinessListing(ctx(), domainMatchedInput);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.listing).toMatchObject({
-      verificationStatus: 'verified',
-      verificationMethod: 'domain_match',
+      verificationStatus: 'pending',
+      verificationMethod: null,
     });
-    expect(result.listing.verifiedAt).not.toBeNull();
+    expect(result.listing.verifiedAt).toBeNull();
   });
 
   test('no website and no configured Anthropic key fails closed to pending', async () => {
@@ -157,6 +165,45 @@ describe('createBusinessListing verification pipeline', () => {
   });
 });
 
+describe('fetchWebsiteSummary (SSRF guard)', () => {
+  test('a nonexistent domain is treated as unreachable, not thrown', async () => {
+    // The .example TLD is reserved by IANA to never resolve (RFC 2606) --
+    // deterministic without mocking DNS.
+    const result = await fetchWebsiteSummary('https://totally-fake-business.example');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+
+  test('rejects a non-http(s) scheme outright', async () => {
+    const result = await fetchWebsiteSummary('file:///etc/passwd');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+
+  test('rejects an unparseable URL outright', async () => {
+    const result = await fetchWebsiteSummary('not a url');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+
+  test('blocks a loopback address', async () => {
+    const result = await fetchWebsiteSummary('http://127.0.0.1/');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+
+  test('blocks the cloud-metadata link-local address', async () => {
+    const result = await fetchWebsiteSummary('http://169.254.169.254/latest/meta-data/');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+
+  test('blocks a private RFC1918 address', async () => {
+    const result = await fetchWebsiteSummary('http://10.0.0.5/');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+
+  test('blocks "localhost" by name', async () => {
+    const result = await fetchWebsiteSummary('http://localhost:5432/');
+    expect(result).toEqual({ reachable: false, summary: null });
+  });
+});
+
 describe('memory-mode verified-or-own visibility filter', () => {
   test('getBusinessesView hides a pending listing from everyone but its owner', async () => {
     const created = await createBusinessListing(ctx('user-riley'), unresolvedInput);
@@ -172,13 +219,11 @@ describe('memory-mode verified-or-own visibility filter', () => {
   });
 
   test('a verified listing is visible to everyone', async () => {
-    const created = await createBusinessListing(ctx('user-riley'), domainMatchedInput);
-    if (!created.ok) throw new Error('setup failed');
-
+    // business-1 is seeded already verified (see store/seed.ts) -- creating
+    // a fresh one here would need a working classifier to ever become
+    // verified, which this test isn't about.
     const strangerView = await getBusinessesView(ctx('user-mia'));
-    expect(strangerView.listings.some((listing) => listing.id === created.listing.id)).toBe(
-      true,
-    );
+    expect(strangerView.listings.some((listing) => listing.id === 'business-1')).toBe(true);
   });
 
   test('listBusinessesPage applies the same filter and excludes muted authors', async () => {
@@ -272,12 +317,18 @@ describe('updateBusinessListing', () => {
   });
 
   test('editing an unrelated field on a verified listing leaves verification untouched', async () => {
-    const created = await createBusinessListing(ctx(), domainMatchedInput);
-    if (!created.ok) throw new Error('setup failed');
-    expect(created.listing.verificationStatus).toBe('verified');
-
-    const result = await updateBusinessListing(ctx(), created.listing.id, {
-      ...domainMatchedInput,
+    // business-1 is seeded already verified (see store/seed.ts), owned by
+    // user-jordan -- editing a fresh listing here would need a working
+    // classifier to ever become verified in the first place.
+    const result = await updateBusinessListing(ctx('user-jordan'), 'business-1', {
+      businessName: 'Marina Sunset Grill',
+      category: 'restaurants-bars',
+      description: 'Lakefront dining with a full bar.',
+      contactPhone: '(702) 555-0176',
+      contactEmail: 'hello@marinasunsetgrill.example',
+      contactWebsite: 'https://marinasunsetgrill.example',
+      address: '10 Marina Way, Lake Las Vegas Village',
+      hours: 'Mon–Sun 11am–10pm',
       currentSpecial: 'New weekend special.',
     });
     expect(result.ok).toBe(true);
@@ -288,17 +339,18 @@ describe('updateBusinessListing', () => {
   });
 
   test('changing the business name on a verified listing re-triggers verification', async () => {
-    const created = await createBusinessListing(ctx(), domainMatchedInput);
-    if (!created.ok) throw new Error('setup failed');
-    expect(created.listing.verificationStatus).toBe('verified');
-
     // Swap in a mismatched contact email alongside the name change so
     // re-verification actually fails closed to pending, proving it re-ran
     // rather than just leaving the prior 'verified' status in place.
-    const result = await updateBusinessListing(ctx(), created.listing.id, {
-      ...domainMatchedInput,
+    const result = await updateBusinessListing(ctx('user-jordan'), 'business-1', {
       businessName: 'A Totally Different Name',
+      category: 'restaurants-bars',
+      description: 'Lakefront dining with a full bar.',
+      contactPhone: '(702) 555-0176',
       contactEmail: 'someone@unrelated.example',
+      contactWebsite: 'https://marinasunsetgrill.example',
+      address: '10 Marina Way, Lake Las Vegas Village',
+      hours: 'Mon–Sun 11am–10pm',
     });
     expect(result.ok).toBe(true);
     if (result.ok) {

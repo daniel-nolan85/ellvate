@@ -1,13 +1,27 @@
 // Shared by both the memory-mode and Supabase create paths (create.ts /
-// business-listings-supabase.ts) so the two-tier verification pipeline
-// itself lives in exactly one place. Runs after a listing's core fields are
-// validated, before the row is persisted as pending -- callers attach the
-// result to the row they're about to write.
+// business-listings-supabase.ts) so the verification pipeline itself lives
+// in exactly one place. Runs after a listing's core fields are validated,
+// before the row is persisted as pending -- callers attach the result to
+// the row they're about to write.
+//
+// A matching contact-email/website domain is deliberately NOT sufficient on
+// its own to verify a listing: anyone can register a domain and a matching
+// mailbox for a business that doesn't exist, isn't local to Lake Las Vegas,
+// or isn't appropriate for the app. Domain match is instead folded into the
+// classifier call as one input signal, alongside the business's own fetched
+// website content and submitted address -- only Claude's own "confident"
+// verdict (see verification-classifier.ts's system prompt) ever verifies a
+// listing. `method` still distinguishes 'domain_match' from 'ai_auto' for
+// the admin queue/analytics, but both now require the same classifier pass.
 
 import { getAccountEmail } from '@/src/backend/clerk';
 
-import { classifyBusinessListing } from './verification-classifier';
+import {
+  classifyBusinessListing,
+  type VerificationClassifierInput,
+} from './verification-classifier';
 import { extractDomain } from './validation';
+import { fetchWebsiteSummary } from './website-fetch';
 import type { ValidatedBusinessListing } from './types';
 
 export interface VerificationOutcome {
@@ -18,38 +32,50 @@ export interface VerificationOutcome {
 
 const PENDING_UNREVIEWED: VerificationOutcome = { method: null, notes: null, status: 'pending' };
 
+async function resolveDomainMatch(userId: string, value: ValidatedBusinessListing): Promise<boolean> {
+  const websiteDomain = extractDomain(value.contactWebsite);
+  if (!websiteDomain) {
+    return false;
+  }
+  const contactDomain = extractDomain(value.contactEmail);
+  if (contactDomain === websiteDomain) {
+    return true;
+  }
+  const accountEmail = await getAccountEmail(userId);
+  return extractDomain(accountEmail) === websiteDomain;
+}
+
 export async function resolveVerification(
   userId: string,
   value: ValidatedBusinessListing,
   photoUrl: string | null,
 ): Promise<VerificationOutcome> {
-  const websiteDomain = extractDomain(value.contactWebsite);
+  const [domainMatched, website] = await Promise.all([
+    resolveDomainMatch(userId, value),
+    // Fetched whenever a website is declared, regardless of domain match --
+    // real content is a stronger positive signal than a matching string,
+    // and an unreachable declared site is itself a red flag either way.
+    value.contactWebsite ? fetchWebsiteSummary(value.contactWebsite) : Promise.resolve(null),
+  ]);
 
-  // Deterministic tier: no AI call, and always tried first since it's
-  // free and instant when it resolves.
-  if (websiteDomain) {
-    const contactDomain = extractDomain(value.contactEmail);
-    const accountEmail = await getAccountEmail(userId);
-    const accountDomain = extractDomain(accountEmail);
-    if (contactDomain === websiteDomain || accountDomain === websiteDomain) {
-      return { method: 'domain_match', notes: null, status: 'verified' };
-    }
-  }
-
-  // Assisted tier: only reached when the deterministic tier couldn't
-  // resolve it (no website, or a genuine mismatch). Fails closed into
-  // 'pending' on any error, timeout, or missing API key -- see
-  // verification-classifier.ts's own module comment for why.
-  const verdict = await classifyBusinessListing({
+  const classifierInput: VerificationClassifierInput = {
+    address: value.address,
     businessName: value.businessName,
     category: value.category,
     contactEmail: value.contactEmail,
     contactWebsite: value.contactWebsite,
     description: value.description,
+    domainMatched,
     photoUrl,
-  });
+    website,
+  };
+
+  // Fails closed into 'pending' on any error, timeout, missing API key, or
+  // an explicit "uncertain" verdict -- see verification-classifier.ts's own
+  // module comment for why this is the only path that can ever verify.
+  const verdict = await classifyBusinessListing(classifierInput);
   if (verdict?.verdict === 'confident') {
-    return { method: 'ai_auto', notes: null, status: 'verified' };
+    return { method: domainMatched ? 'domain_match' : 'ai_auto', notes: null, status: 'verified' };
   }
   if (verdict?.verdict === 'uncertain') {
     return { method: null, notes: verdict.reasoning, status: 'pending' };
