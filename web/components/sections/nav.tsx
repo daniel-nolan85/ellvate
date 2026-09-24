@@ -7,7 +7,7 @@ import { CactusMark } from '@/components/brand/cactus-mark';
 import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
 
-// Services isn't its own nav link -- it's one of the features, reachable
+// Directory isn't its own nav link -- it's one of the features, reachable
 // from the Features overview strip (#features) like any other, so listing
 // it again here was redundant.
 const LINKS = [

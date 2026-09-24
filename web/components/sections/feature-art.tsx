@@ -1,4 +1,4 @@
-import { ArrowUp, FileSignature, Heart, MessageCircle, Plus, Sparkles, Star, Sun, Utensils } from 'lucide-react';
+import { ArrowUp, FileSignature, Heart, MessageCircle, Plus, Sparkles, Star, Sun } from 'lucide-react';
 
 import { DigestDateRange } from './digest-date-range';
 
@@ -142,27 +142,6 @@ export function MissionsArt() {
   );
 }
 
-export function ServicesArt() {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-paper p-4 shadow-sm">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-subtle">
-        <Utensils className="h-5 w-5 text-amber" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold">Lakeside Bistro</p>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="rounded-full bg-amber-subtle px-2 py-0.5 text-xs font-medium text-amber">Dining</span>
-          <span className="flex items-center gap-1 text-xs">
-            <Star className="h-3 w-3 text-amber" fill="currentColor" />
-            <span className="font-semibold">4.8</span>
-            <span className="text-muted-foreground">(32)</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function LeaderboardArt() {
   return (
     <div className="flex flex-col gap-2.5">
@@ -233,6 +212,9 @@ export function DigestArt() {
   );
 }
 
+// 'directory' has no entry here -- it's special-cased in feature-detail.tsx
+// (ServiceCategoryGrid + VerifiedBusinessCard) instead of a single static
+// panel, since it represents two sections rather than one.
 export const FEATURE_ART: Record<string, () => React.ReactNode> = {
   forum: () => <ForumArt />,
   events: () => <EventsArt />,
@@ -240,6 +222,5 @@ export const FEATURE_ART: Record<string, () => React.ReactNode> = {
   missions: () => <MissionsArt />,
   leaderboard: () => <LeaderboardArt />,
   digest: () => <DigestArt />,
-  services: () => <ServicesArt />,
   assistant: () => <AssistantArt />,
 };

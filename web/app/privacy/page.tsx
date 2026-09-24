@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 6, 2026';
+const LAST_UPDATED = 'September 24, 2026';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -53,9 +53,11 @@ export default function PrivacyPolicyPage() {
         <p>
           <strong className="text-foreground">Content you create.</strong> Forum
           posts and comments, event and mission listings, service directory
-          listings and reviews, petitions and petition comments, and any photos
-          you attach to them. Visible to other members of the community unless
-          you delete it or your account.
+          listings and reviews, business listings, petitions and petition
+          comments, and any photos you attach to them. Visible to other
+          members of the community unless you delete it or your account — a
+          business listing stays visible only to you until it&rsquo;s
+          verified (see Who we share it with, below, for how that works).
         </p>
         <p>
           <strong className="text-foreground">Activity within the app.</strong>{' '}
@@ -84,7 +86,7 @@ export default function PrivacyPolicyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>
             To operate the core features of the app — forum, events, missions,
-            services, petitions, and notifications.
+            services, business listings, petitions, and notifications.
           </li>
           <li>To let you sign in securely without managing a password.</li>
           <li>To respond when you contact us or report content.</li>
@@ -123,8 +125,15 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-foreground">Anthropic</strong> — powers the
-            in-app AI Assistant. Messages you send it are shared with Anthropic
-            to generate a response, but are not used to train their models.
+            in-app AI Assistant, and helps verify business listings. Messages
+            you send the Assistant are shared with Anthropic to generate a
+            response. When you submit a business listing, its details (name,
+            description, category, address, and contact info) and, if you
+            provided one, a copy of the photo and the visible text of your
+            declared website are shared with Anthropic to help confirm it
+            plausibly describes a real, local business before it&rsquo;s shown
+            to the community. None of this is used to train Anthropic&rsquo;s
+            models.
           </li>
           <li>
             <strong className="text-foreground">Apple and Google</strong> —
@@ -151,8 +160,9 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-foreground">Blocking</strong> — hide another
-            member&rsquo;s posts, comments, events, missions, services, and
-            petitions from your own feeds, without notifying them.
+            member&rsquo;s posts, comments, events, missions, services,
+            business listings, and petitions from your own feeds, without
+            notifying them.
           </li>
           <li>
             <strong className="text-foreground">Reporting</strong> — flag

@@ -98,18 +98,18 @@ export const features: readonly Feature[] = [
     icon: 'Trophy',
   },
   {
-    id: 'services',
-    title: 'Services',
-    hook: 'Local business, found by neighbors.',
+    id: 'directory',
+    title: 'Directory',
+    hook: 'Local business, found by neighbors — and verified.',
     description:
-      'A directory of local businesses and tradespeople, recommended by people who actually live here — home services, pet care, automotive, pool & spa, beauty, tech & web, dining, and more — each with honest, rating-only reviews from real residents.',
+      'Two directories in one tab: Services, for the tradespeople neighbors actually recommend — home services, pet care, automotive, pool & spa, beauty, tech & web, dining, and more, each with honest, rating-only reviews. And Businesses, where the restaurants, bars, and shops of Lake Las Vegas post their own hours, current specials, and photos, with a Verified badge so you know the listing is really run by the business it claims to be.',
     highlights: [
-      'Eight categories covering the trades neighbors ask about most',
-      'Rating-only reviews — no essay required, just a real score',
-      'Photos and contact info on every listing',
-      'Add a listing for a business you personally trust',
+      'Services: eight categories, rating-only reviews — no essay required',
+      'Businesses: hours, one current special, and photos, kept up to date by the business itself',
+      'A Verified badge confirms a real connection to the business before a listing goes public',
+      'Free to list, for both sections — add a service you trust or the business you run',
     ],
-    goodFor: 'Anyone who has ever typed "does anyone have a good pool guy?" into a group chat and waited.',
+    goodFor: 'Anyone who has ever typed "does anyone have a good pool guy?" into a group chat and waited — or wanted to know if the new place on the marina is actually open yet.',
     accent: 'lake',
     icon: 'Store',
   },
@@ -192,5 +192,10 @@ export const faqs = [
   {
     question: 'What devices will it support?',
     answer: 'iOS and Android at launch, built as a single native app for both.',
+  },
+  {
+    question: 'Can I list my own business?',
+    answer:
+      "If you run a restaurant, bar, or shop in Lake Las Vegas, yes — free, in the Directory tab's Businesses section. We check that a listing plausibly belongs to a real, local business before it goes public, so it may show as pending for a short review rather than appearing instantly.",
   },
 ] as const;

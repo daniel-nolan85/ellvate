@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { BadgeCheck, Check } from 'lucide-react';
 
 import { Reveal, RevealGroup, RevealItem, RevealScale } from '@/components/motion/reveal';
 import { ICONS } from '@/lib/icons';
@@ -58,8 +58,11 @@ export function FeatureDetail({ feature, reversed }: { feature: Feature; reverse
           </p>
         </Reveal>
 
-        {feature.id === 'services' ? (
-          <ServiceCategoryGrid />
+        {feature.id === 'directory' ? (
+          <div className="space-y-3">
+            <ServiceCategoryGrid />
+            <VerifiedBusinessCard />
+          </div>
         ) : (
           <RevealScale delay={0.1}>
             <FeatureArtPanel feature={feature} />
@@ -75,6 +78,28 @@ function FeatureArtPanel({ feature }: { feature: Feature }) {
   return (
     <div className={`flex items-center justify-center rounded-2xl p-8 sm:p-10 ${ACCENT_BG[feature.accent]}`}>
       <div className="w-full max-w-sm">{art ? art() : null}</div>
+    </div>
+  );
+}
+
+// The Businesses side's own sample, next to ServiceCategoryGrid's Services
+// sample -- a Verified badge and a current-special line, the two things
+// that distinguish a business listing from a service listing.
+function VerifiedBusinessCard() {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-paper p-4 shadow-sm">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lake-subtle">
+        {ICONS.Store ? <ICONS.Store className="h-5 w-5 text-lake" /> : null}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-sm font-semibold">Marina Sunset Grill</p>
+          <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-lake" />
+        </div>
+        <p className="mt-1 truncate text-xs text-muted-foreground">
+          Half-off appetizers, 4–6pm daily
+        </p>
+      </div>
     </div>
   );
 }

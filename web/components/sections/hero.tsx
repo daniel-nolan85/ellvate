@@ -26,8 +26,9 @@ export function Hero() {
         <FadeIn delay={0.16}>
           <p className="mt-6 max-w-xl text-lg text-muted-foreground text-balance">
             <Wordmark className="text-foreground text-xl" /> brings {BRAND.community} together — forum discussions, a
-            shared events calendar, neighborhood missions, a local services directory,
-            and an assistant that knows the community — all in one app.
+            shared events calendar, neighborhood missions, a directory of local
+            services and verified businesses, and an assistant that knows the
+            community — all in one app.
           </p>
         </FadeIn>
         <FadeIn delay={0.24} className="w-full max-w-md">

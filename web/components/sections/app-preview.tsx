@@ -6,7 +6,7 @@ import { Reveal, RevealScale } from '@/components/motion/reveal';
 // and its UI is still moving. Mirrors the real nav exactly
 // (../../../src/modules/community-shell/floating-tab-bar.tsx +
 // assistant-button.tsx): five equal tabs -- Forum, Events, Missions,
-// Services, Petitions -- in the dark pill, with the assistant as a separate
+// Directory, Petitions -- in the dark pill, with the assistant as a separate
 // glowing button that floats above it in the bottom right, mounted once at
 // the root layout rather than living inside the tab bar. No "Ranks" tab --
 // the leaderboard isn't in the tab bar, it lives elsewhere.
@@ -20,7 +20,7 @@ export function AppPreview() {
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">A closer look</h2>
           <p className="mt-4 max-w-md text-muted-foreground">
-            Forum, Events, Missions, Services, and Petitions — one tap away in the tab
+            Forum, Events, Missions, Directory, and Petitions — one tap away in the tab
             bar, with the assistant given its own permanent home button in the corner.
             Built to feel like it belongs on your phone from day one.
           </p>
@@ -37,7 +37,7 @@ const TABS = [
   { label: 'Forum', icon: MessageCircle },
   { label: 'Events', icon: CalendarDays },
   { label: 'Missions', icon: Star },
-  { label: 'Services', icon: Store },
+  { label: 'Directory', icon: Store },
   { label: 'Petitions', icon: FileSignature },
 ];
 
