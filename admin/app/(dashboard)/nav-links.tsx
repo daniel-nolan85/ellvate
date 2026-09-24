@@ -10,6 +10,7 @@ export const NAV_LINKS = [
   { href: '/events', label: 'Events' },
   { href: '/missions', label: 'Missions' },
   { href: '/services', label: 'Services' },
+  { href: '/business-listings', label: 'Business listings' },
   { href: '/petitions', label: 'Petitions' },
   { href: '/users', label: 'Users' },
   { href: '/reports', label: 'Reports' },
@@ -23,6 +24,7 @@ interface NavLinksProps {
   readonly contactUnseenCount?: number;
   readonly contactHref?: string;
   readonly waitlistUnseenCount?: number;
+  readonly businessListingsUnseenCount?: number;
 }
 
 export function NavLinks({
@@ -30,6 +32,7 @@ export function NavLinks({
   contactUnseenCount = 0,
   contactHref = '/contact',
   waitlistUnseenCount = 0,
+  businessListingsUnseenCount = 0,
 }: NavLinksProps) {
   const pathname = usePathname();
 
@@ -45,7 +48,9 @@ export function NavLinks({
               ? contactUnseenCount
               : link.href === '/waitlist'
                 ? waitlistUnseenCount
-                : 0;
+                : link.href === '/business-listings'
+                  ? businessListingsUnseenCount
+                  : 0;
         const href = link.href === '/contact' ? contactHref : link.href;
 
         return (

@@ -1,5 +1,6 @@
 export type {
   BookmarkTargetType,
+  BusinessCategory,
   CommunityRole,
   ContactMessageCategory,
   MissionTheme,
@@ -8,6 +9,8 @@ export type {
   NotificationPrefs,
   ServiceCategory,
   StoredBookmark,
+  StoredBusinessListing,
+  StoredBusinessListingReport,
   StoredComment,
   StoredContactMessage,
   StoredCommentReport,

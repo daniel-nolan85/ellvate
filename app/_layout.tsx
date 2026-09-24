@@ -85,7 +85,8 @@ function AppNavigator() {
             <Stack.Screen name="mission/[id]" />
             <Stack.Screen name="event/[id]" />
             <Stack.Screen name="service/[id]" />
-            {/* formSheet duplicates of the 4 screens above, used only by
+            <Stack.Screen name="business/[id]" />
+            {/* formSheet duplicates of the 5 screens above, used only by
                 Notifications -- see app/notification/post/[id].tsx. formSheet
                 (not MODAL_SCREEN_OPTIONS) for the native grabber; safe here
                 since Notifications is a plain screen, not another formSheet
@@ -94,6 +95,7 @@ function AppNavigator() {
             <Stack.Screen name="notification/event/[id]" options={SHEET_SCREEN_OPTIONS} />
             <Stack.Screen name="notification/mission/[id]" options={SHEET_SCREEN_OPTIONS} />
             <Stack.Screen name="notification/petition/[id]" options={SHEET_SCREEN_OPTIONS} />
+            <Stack.Screen name="notification/business/[id]" options={SHEET_SCREEN_OPTIONS} />
             <Stack.Screen name="protected" />
             {/* A native `presentation: 'modal'` screen isn't flush with the
                 real screen origin (iOS presents it as an inset page sheet),

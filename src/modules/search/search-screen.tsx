@@ -32,6 +32,7 @@ interface GlobalSearchResults {
   readonly missions: readonly SearchResultItem[];
   readonly services: readonly SearchResultItem[];
   readonly petitions: readonly SearchResultItem[];
+  readonly businesses: readonly SearchResultItem[];
 }
 
 // Mirrors MIN_SEARCH_QUERY_LENGTH in src/backend/search/types.ts -- kept as
@@ -43,6 +44,7 @@ const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 
 const EMPTY_RESULTS: GlobalSearchResults = {
+  businesses: [],
   events: [],
   missions: [],
   petitions: [],
@@ -59,6 +61,7 @@ const GROUPS: readonly {
   { href: (id) => `/event/${id}` as Href, key: 'events', label: 'Events' },
   { href: (id) => `/mission/${id}` as Href, key: 'missions', label: 'Missions' },
   { href: (id) => `/service/${id}` as Href, key: 'services', label: 'Services' },
+  { href: (id) => `/business/${id}` as Href, key: 'businesses', label: 'Businesses' },
   { href: (id) => `/petition/${id}` as Href, key: 'petitions', label: 'Petitions' },
 ];
 
@@ -143,7 +146,7 @@ export function SearchScreen() {
         <VStack space="md">
           {!isQueryLongEnough ? (
             <Text className="px-1 py-6 text-center text-text-muted" size="sm">
-              Keep typing to search posts, events, missions, services, and petitions.
+              Keep typing to search posts, events, missions, services, businesses, and petitions.
             </Text>
           ) : results.isPending ? (
             <View className="items-center py-6">

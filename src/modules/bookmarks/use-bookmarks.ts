@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
+import type { BusinessListing } from '@/src/modules/businesses';
 import type { CommunityEvent } from '@/src/modules/events';
 import type { ForumPost } from '@/src/modules/forum';
 import type { Mission } from '@/src/modules/missions';
@@ -13,7 +14,13 @@ import type { ServiceListing } from '@/src/modules/services';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
-export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
+export type BookmarkTargetType =
+  | 'post'
+  | 'event'
+  | 'mission'
+  | 'service'
+  | 'petition'
+  | 'business';
 
 export type BookmarkedItem =
   | {
@@ -45,6 +52,12 @@ export type BookmarkedItem =
       readonly bookmarkId: string;
       readonly bookmarkedAt: string;
       readonly petition: Petition;
+    }
+  | {
+      readonly kind: 'business';
+      readonly bookmarkId: string;
+      readonly bookmarkedAt: string;
+      readonly listing: BusinessListing;
     };
 
 export interface BookmarksPage {

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 6, 2026';
+const LAST_UPDATED = 'September 24, 2026';
 
 export default function TermsOfServicePage() {
   return (
@@ -130,9 +130,13 @@ export default function TermsOfServicePage() {
         <p>
           {BRAND.appName} is provided &ldquo;as is,&rdquo; without warranties of any kind.
           We don&rsquo;t verify the accuracy of content posted by members, including event
-          details, service listings, or reviews, and we&rsquo;re not responsible for
-          interactions between members that happen outside the app. Use your own judgment
-          when meeting up with people or businesses you find through {BRAND.appName}.
+          details, service listings, business listings, or reviews, and we&rsquo;re not
+          responsible for interactions between members that happen outside the app. Use
+          your own judgment when meeting up with people or businesses you find through
+          {' '}{BRAND.appName}. A &ldquo;Verified&rdquo; badge on a business listing means
+          only that we confirmed a plausible connection between the person who created the
+          listing and the business itself &mdash; it is not a guarantee that the listing is
+          accurate or complete, and it is not an endorsement of the business.
         </p>
         <p>
           To the fullest extent permitted by law, {BRAND.companyLegalName} is not liable for any

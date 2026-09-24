@@ -8,7 +8,7 @@ const TAB_IDS: readonly CommunityTabId[] = [
   'forum',
   'events',
   'missions',
-  'services',
+  'directory',
   'petitions',
 ];
 
@@ -54,7 +54,7 @@ export default function CommunityTabsLayout() {
       <Tabs.Screen name="forum" />
       <Tabs.Screen name="events" />
       <Tabs.Screen name="missions" />
-      <Tabs.Screen name="services" />
+      <Tabs.Screen name="directory" />
       <Tabs.Screen name="petitions" />
     </Tabs>
   );

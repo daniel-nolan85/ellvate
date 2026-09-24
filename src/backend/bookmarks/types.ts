@@ -1,3 +1,4 @@
+import type { BusinessListing } from '@/src/backend/business-listings';
 import type { CommunityEvent } from '@/src/backend/events';
 import type { ForumPost } from '@/src/backend/forum';
 import type { Mission } from '@/src/backend/missions';
@@ -37,6 +38,12 @@ export type BookmarkedItem =
       readonly bookmarkId: string;
       readonly bookmarkedAt: string;
       readonly petition: Petition;
+    }
+  | {
+      readonly kind: 'business';
+      readonly bookmarkId: string;
+      readonly bookmarkedAt: string;
+      readonly listing: BusinessListing;
     };
 
 export interface BookmarksPage {

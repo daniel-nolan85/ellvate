@@ -9,6 +9,7 @@ export type XpReason =
   | 'post_created'
   | 'event_created'
   | 'service_created'
+  | 'business_listing_created'
   | 'onboarding_bonus';
 
 export interface NotificationPrefs {
@@ -279,6 +280,59 @@ export interface StoredServiceReviewReport {
   readonly evidenceImageUrl: string | null;
 }
 
+// Deliberately separate from ServiceCategory: the Directory tab shows a
+// Services section and a Businesses section side by side, and a category
+// chip literally reading "Services" inside the Businesses section would be
+// confusing -- 'professional-trade' covers that bucket instead.
+export type BusinessCategory =
+  | 'restaurants-bars'
+  | 'goods'
+  | 'hospitality'
+  | 'professional-trade';
+
+export interface StoredBusinessListing {
+  readonly id: string;
+  readonly authorId: string;
+  readonly businessName: string;
+  readonly category: BusinessCategory;
+  readonly description: string;
+  readonly contactPhone: string | null;
+  readonly contactEmail: string | null;
+  readonly contactWebsite: string | null;
+  // Businesses are fixed-location, unlike a service provider's mobile
+  // service area.
+  readonly address: string | null;
+  readonly hours: string | null;
+  // One active special, replaced on every edit -- not a running feed of
+  // promotional posts.
+  readonly currentSpecial: string | null;
+  readonly specialUpdatedAt: string | null;
+  readonly logo?: StoredMedia;
+  readonly media?: readonly StoredMedia[];
+  // 'pending': visible only to authorId. 'verified': public. No 'rejected'
+  // state -- rejection is deletion, mirroring every other report-resolution
+  // flow in this app.
+  readonly verificationStatus: 'pending' | 'verified';
+  readonly verificationMethod: 'domain_match' | 'ai_auto' | 'admin_manual' | null;
+  // Claude's reasoning, populated only when the assisted tier routes to an
+  // admin -- null for domain_match/ai_auto and while still unreviewed.
+  readonly verificationNotes: string | null;
+  readonly verifiedAt: string | null;
+  readonly claimedBy: string | null;
+  readonly createdAt: string;
+  readonly editedAt: string | null;
+}
+
+export interface StoredBusinessListingReport {
+  readonly id: string;
+  readonly businessListingId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
+}
+
 export interface StoredWeekDay {
   readonly dayLabel: string;
   readonly dateLabel: string;
@@ -391,7 +445,7 @@ export interface StoredXpLedgerEntry {
   readonly createdAt: string;
 }
 
-export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition';
+export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition' | 'business';
 
 export interface StoredBookmark {
   readonly id: string;
@@ -420,6 +474,8 @@ export interface StoreState {
   readonly serviceListings: readonly StoredServiceListing[];
   readonly serviceReviews: readonly StoredServiceReview[];
   readonly serviceReviewReports: readonly StoredServiceReviewReport[];
+  readonly businessListings: readonly StoredBusinessListing[];
+  readonly businessListingReports: readonly StoredBusinessListingReport[];
   readonly notifications: readonly StoredNotification[];
   readonly contactMessages: readonly StoredContactMessage[];
   readonly petitions: readonly StoredPetition[];

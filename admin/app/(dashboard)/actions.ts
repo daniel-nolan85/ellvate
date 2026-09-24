@@ -34,6 +34,69 @@ export async function toggleEventFeaturedAction(
   revalidatePath(`/events/${eventId}`);
 }
 
+// Manual approval for a business listing the automated verification tiers
+// (domain match, then the Claude classifier -- see
+// src/backend/business-listings/verification.ts) couldn't clear on their
+// own. Rejection has no dedicated action: it's just the generic
+// deleteContentAction with 'business_listings' in DELETABLE_CONTENT below,
+// matching how every other report/queue resolution in this app already
+// works (delete, don't soft-reject).
+export async function approveBusinessListingAction(listingId: string) {
+  await requireAdminEmail();
+
+  const admin = createSupabaseAdminClient();
+  const { data: existing, error: existingError } = await admin
+    .from('business_listings')
+    .select('id, business_name, created_by')
+    .eq('id', listingId)
+    .maybeSingle();
+  if (existingError) {
+    throw existingError;
+  }
+  if (!existing) {
+    throw new Error('business_listing_not_found');
+  }
+
+  const { data, error } = await admin
+    .from('business_listings')
+    .update({
+      verification_status: 'verified',
+      verification_method: 'admin_manual',
+      verification_notes: null,
+      verified_at: new Date().toISOString(),
+      claimed_by: existing.created_by,
+    })
+    .eq('id', listingId)
+    .select('id, business_name, created_by')
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  if (!data) {
+    throw new Error('business_listing_not_found');
+  }
+
+  // Reuses the app's existing notification system end to end -- read by
+  // src/backend/notifications/, routed by resolveNotificationRoute's
+  // businessId case, no new delivery mechanism needed for this feature.
+  const { error: notifyError } = await admin.from('notifications').insert({
+    user_id: data.created_by,
+    kind: 'business_listing_verified',
+    title: 'Your listing is live',
+    body: `${data.business_name} is now verified and visible in the Businesses directory.`,
+    data: { businessId: data.id },
+  });
+  if (notifyError) {
+    // Best-effort: the listing is already verified at this point, and a
+    // failure to notify the owner shouldn't roll that back or surface as an
+    // approval failure to the admin.
+    console.error(`[admin] failed to notify ${data.created_by} of listing approval`, notifyError);
+  }
+
+  revalidatePath('/business-listings');
+  revalidatePath(`/business-listings/${listingId}`);
+}
+
 // Distinct from dashboard_admins above -- this flags an app_users row (a
 // community member) whose content gets an "admin" mark in the mobile app,
 // not who may sign in to this moderation tool.
@@ -102,6 +165,7 @@ const DELETABLE_CONTENT = {
   missions: '/missions',
   mission_check_ins: '/missions',
   service_listings: '/services',
+  business_listings: '/business-listings',
   app_users: '/users',
   contact_messages: '/contact',
   landing_contact_messages: '/contact',

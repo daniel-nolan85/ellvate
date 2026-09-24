@@ -8,6 +8,7 @@ import {
   DEMO_USER_ID,
   resetStore,
   setState,
+  type StoredBusinessListing,
   type StoredEvent,
   type StoredMission,
   type StoredPetition,
@@ -99,9 +100,31 @@ function seedMatchingContent(authorId: string = DEMO_USER_ID): void {
     succeededAt: null,
     title: `${NEEDLE} repairs`,
   };
+  const business: StoredBusinessListing = {
+    address: null,
+    authorId,
+    businessName: `${NEEDLE} Grill`,
+    category: 'restaurants-bars',
+    claimedBy: authorId,
+    contactEmail: null,
+    contactPhone: null,
+    contactWebsite: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    currentSpecial: null,
+    description: 'Lakefront dining.',
+    editedAt: null,
+    hours: null,
+    id: 'fixture-business-search',
+    specialUpdatedAt: null,
+    verificationMethod: 'domain_match',
+    verificationNotes: null,
+    verificationStatus: 'verified',
+    verifiedAt: '2026-01-01T00:00:00.000Z',
+  };
 
   setState((current) => ({
     ...current,
+    businessListings: [...current.businessListings, business],
     events: [...current.events, event],
     missions: [...current.missions, mission],
     petitions: [...current.petitions, petition],
@@ -120,8 +143,16 @@ describe('searchAll (memory)', () => {
       readonly missions: readonly unknown[];
       readonly services: readonly unknown[];
       readonly petitions: readonly unknown[];
+      readonly businesses: readonly unknown[];
     };
-    expect(body).toEqual({ events: [], missions: [], petitions: [], posts: [], services: [] });
+    expect(body).toEqual({
+      businesses: [],
+      events: [],
+      missions: [],
+      petitions: [],
+      posts: [],
+      services: [],
+    });
   });
 
   test('finds a matching item in every content type by its title field', async () => {
@@ -132,9 +163,31 @@ describe('searchAll (memory)', () => {
     expect(results.events.map((item) => item.id)).toEqual(['fixture-event-search']);
     expect(results.missions.map((item) => item.id)).toEqual(['fixture-mission-search']);
     expect(results.petitions.map((item) => item.id)).toEqual(['fixture-petition-search']);
-    // Services search by business_name, not a "title" field -- this is the
-    // one entity whose title-equivalent column is named differently.
+    // Services and businesses search by business_name, not a "title" field
+    // -- these are the entities whose title-equivalent column is named
+    // differently.
     expect(results.services.map((item) => item.id)).toEqual(['fixture-service-search']);
+    expect(results.businesses.map((item) => item.id)).toEqual(['fixture-business-search']);
+  });
+
+  test('excludes a pending business listing owned by someone else', async () => {
+    seedMatchingContent('user-riley');
+    setState((current) => ({
+      ...current,
+      businessListings: current.businessListings.map((listing) =>
+        listing.id === 'fixture-business-search'
+          ? { ...listing, verificationStatus: 'pending' as const }
+          : listing,
+      ),
+    }));
+
+    const results = await searchAll(ctx(DEMO_USER_ID), NEEDLE);
+    expect(results.businesses).toHaveLength(0);
+
+    const ownerResults = await searchAll(ctx('user-riley'), NEEDLE);
+    expect(ownerResults.businesses.map((item) => item.id)).toEqual([
+      'fixture-business-search',
+    ]);
   });
 
   test('is case-insensitive', async () => {
@@ -154,6 +207,7 @@ describe('searchAll (memory)', () => {
     expect(results.missions).toHaveLength(0);
     expect(results.services).toHaveLength(0);
     expect(results.petitions).toHaveLength(0);
+    expect(results.businesses).toHaveLength(0);
   });
 
   test('the GET /api/search route returns the same shape', async () => {

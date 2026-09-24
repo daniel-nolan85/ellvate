@@ -1,5 +1,6 @@
 import type {
   NotificationPrefs,
+  StoredBusinessListing,
   StoredComment,
   StoredEvent,
   StoredMission,
@@ -488,6 +489,78 @@ const seedServiceReviews = (): readonly StoredServiceReview[] => [
   },
 ];
 
+// Two verified (one domain-matched, one admin-approved) and one pending --
+// so the "Pending review" badge and the memory-mode verified-or-own filter
+// both have something to exercise. The pending one is owned by DEMO_USER_ID
+// so it's actually visible to whoever is signed in as the demo user.
+const seedBusinessListings = (): readonly StoredBusinessListing[] => [
+  {
+    id: 'business-1',
+    authorId: 'user-jordan',
+    businessName: 'Marina Sunset Grill',
+    category: 'restaurants-bars',
+    description:
+      'Lakefront dining with a full bar, live music on Fridays, and a happy hour every weeknight.',
+    contactPhone: '(702) 555-0176',
+    contactEmail: 'hello@marinasunsetgrill.example',
+    contactWebsite: 'https://marinasunsetgrill.example',
+    address: '10 Marina Way, Lake Las Vegas Village',
+    hours: 'Mon–Sun 11am–10pm',
+    currentSpecial: 'Half-off appetizers, 4–6pm daily.',
+    specialUpdatedAt: isoHoursBeforeSeedNow(30),
+    verificationStatus: 'verified',
+    verificationMethod: 'domain_match',
+    verificationNotes: null,
+    verifiedAt: isoHoursBeforeSeedNow(200),
+    claimedBy: 'user-jordan',
+    createdAt: isoHoursBeforeSeedNow(200),
+    editedAt: isoHoursBeforeSeedNow(30),
+  },
+  {
+    id: 'business-2',
+    authorId: 'user-sam',
+    businessName: 'Village Golf Carts',
+    category: 'professional-trade',
+    description: 'Golf cart sales, rentals, and repairs, with same-day service for residents.',
+    contactPhone: '(702) 555-0134',
+    contactEmail: null,
+    contactWebsite: null,
+    address: '4 Promenade Drive, Lake Las Vegas Village',
+    hours: 'Mon–Sat 9am–5pm',
+    currentSpecial: null,
+    specialUpdatedAt: null,
+    verificationStatus: 'verified',
+    verificationMethod: 'admin_manual',
+    verificationNotes: null,
+    verifiedAt: isoHoursBeforeSeedNow(150),
+    claimedBy: 'user-sam',
+    createdAt: isoHoursBeforeSeedNow(160),
+    editedAt: null,
+  },
+  {
+    id: 'business-3',
+    authorId: DEMO_USER_ID,
+    businessName: 'Promenade Coffee Roasters',
+    category: 'restaurants-bars',
+    description: 'Small-batch coffee roaster and cafe, opening soon on the promenade.',
+    contactPhone: null,
+    contactEmail: null,
+    contactWebsite: null,
+    address: '7 Promenade Drive, Lake Las Vegas Village',
+    hours: null,
+    currentSpecial: null,
+    specialUpdatedAt: null,
+    verificationStatus: 'pending',
+    verificationMethod: null,
+    verificationNotes:
+      'No matching website domain was provided, and the description alone was not enough to confidently confirm a real connection to this business.',
+    verifiedAt: null,
+    claimedBy: null,
+    createdAt: isoHoursBeforeSeedNow(2),
+    editedAt: null,
+  },
+];
+
 // Dummy dev-only content so the three petition status tabs (open, succeeded,
 // expired) all have something to look at -- required signature counts here
 // are hand-picked for a plausible-looking progress bar, not derived from
@@ -633,6 +706,8 @@ export const createSeedState = (): StoreState => {
     serviceListings: seedServiceListings(),
     serviceReviews: seedServiceReviews(),
     serviceReviewReports: [],
+    businessListings: seedBusinessListings(),
+    businessListingReports: [],
     notifications: [],
     contactMessages: [],
     petitions: seedPetitions(),

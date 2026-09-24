@@ -72,6 +72,7 @@ export async function loadReports(
     petitionCommentReports,
     memberReports,
     missionCheckInPhotoReports,
+    businessListingReports,
   ] = await Promise.all([
     markSeen,
     withReporterFilter(
@@ -173,6 +174,15 @@ export async function loadReports(
     )
       .order('created_at', { ascending: false })
       .limit(FETCH_CAP),
+    withReporterFilter(
+      admin
+        .from('business_listing_reports')
+        .select(
+          'id, business_listing_id, created_at, reason, details, evidence_image_url, reporter:app_users!inner(name), business_listing:business_listings(business_name)',
+        ),
+    )
+      .order('created_at', { ascending: false })
+      .limit(FETCH_CAP),
   ]);
 
   for (const result of [
@@ -187,6 +197,7 @@ export async function loadReports(
     petitionCommentReports,
     memberReports,
     missionCheckInPhotoReports,
+    businessListingReports,
   ]) {
     if (result.error) {
       throw result.error;
@@ -487,6 +498,32 @@ export async function loadReports(
       created_at: r.created_at,
       deleteTable: 'mission_check_ins',
       deleteId: r.check_in_id,
+      reason: r.reason,
+      details: r.details,
+      evidenceImageUrl: r.evidence_image_url,
+    });
+  }
+
+  for (const r of (businessListingReports.data ?? []) as unknown as readonly {
+    id: string;
+    business_listing_id: string;
+    created_at: string;
+    reason: string | null;
+    details: string | null;
+    evidence_image_url: string | null;
+    reporter: { name: string } | null;
+    business_listing: { business_name: string } | null;
+  }[]) {
+    rows.push({
+      id: r.id,
+      type: 'Business listing',
+      snippet: r.business_listing?.business_name ?? 'Unknown listing',
+      photoUrl: null,
+      detailHref: `/business-listings/${r.business_listing_id}`,
+      reporter: r.reporter?.name ?? 'Unknown',
+      created_at: r.created_at,
+      deleteTable: 'business_listings',
+      deleteId: r.business_listing_id,
       reason: r.reason,
       details: r.details,
       evidenceImageUrl: r.evidence_image_url,

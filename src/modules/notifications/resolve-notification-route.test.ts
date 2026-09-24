@@ -27,6 +27,12 @@ describe('resolveNotificationRoute', () => {
     );
   });
 
+  test('routes a "listing is live" notification to its business modal', () => {
+    expect(resolveNotificationRoute({ businessId: 'business-1' })).toBe(
+      '/notification/business/business-1',
+    );
+  });
+
   test('prefers postId over eventId and missionId when multiple are present', () => {
     expect(
       resolveNotificationRoute({

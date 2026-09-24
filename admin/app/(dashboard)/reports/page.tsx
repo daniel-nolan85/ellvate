@@ -25,10 +25,10 @@ export default async function ReportsPage({
         <h1 className="text-lg font-semibold text-content">Reports</h1>
         <p className="text-sm text-muted">
           Every report filed across posts, events, missions, petitions,
-          comments, reviews, mission check-in photos, and member profiles
-          directly, newest first. Deleting the reported content (or, for a
-          &quot;Member&quot; row, the reported account itself) clears its
-          report too.
+          comments, reviews, business listings, mission check-in photos, and
+          member profiles directly, newest first. Deleting the reported
+          content (or, for a &quot;Member&quot; row, the reported account
+          itself) clears its report too.
         </p>
       </div>
 

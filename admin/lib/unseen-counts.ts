@@ -18,6 +18,7 @@ const REPORT_TABLES = [
   'mission_reports',
   'member_reports',
   'mission_check_in_photo_reports',
+  'business_listing_reports',
 ] as const;
 
 const EPOCH = new Date(0).toISOString();
@@ -77,16 +78,33 @@ export async function countUnseenWaitlistSignups(sinceIso: string | null): Promi
   return count ?? 0;
 }
 
+// Only pending listings count toward this badge -- one that was instantly
+// domain- or AI-verified needed no admin action, so it shouldn't read as
+// "waiting on me" the way Reports' badge otherwise mirrors.
+export async function countUnseenBusinessListings(sinceIso: string | null): Promise<number> {
+  const { count, error } = await createSupabaseAdminClient()
+    .from('business_listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('verification_status', 'pending')
+    .gt('created_at', sinceIso ?? EPOCH);
+  if (error) {
+    throw error;
+  }
+  return count ?? 0;
+}
+
 export interface AdminSeenState {
   readonly reportsLastSeenAt: string | null;
   readonly contactMessagesLastSeenAt: string | null;
   readonly landingContactLastSeenAt: string | null;
   readonly waitlistLastSeenAt: string | null;
+  readonly businessListingsLastSeenAt: string | null;
 }
 
 export async function getAdminSeenState(email: string | null): Promise<AdminSeenState> {
   if (!email) {
     return {
+      businessListingsLastSeenAt: null,
       contactMessagesLastSeenAt: null,
       landingContactLastSeenAt: null,
       reportsLastSeenAt: null,
@@ -96,7 +114,7 @@ export async function getAdminSeenState(email: string | null): Promise<AdminSeen
   const { data, error } = await createSupabaseAdminClient()
     .from('dashboard_admins')
     .select(
-      'reports_last_seen_at, contact_messages_last_seen_at, landing_contact_last_seen_at, waitlist_last_seen_at',
+      'reports_last_seen_at, contact_messages_last_seen_at, landing_contact_last_seen_at, waitlist_last_seen_at, business_listings_last_seen_at',
     )
     .eq('email', email)
     .maybeSingle();
@@ -104,6 +122,7 @@ export async function getAdminSeenState(email: string | null): Promise<AdminSeen
     throw error;
   }
   return {
+    businessListingsLastSeenAt: data?.business_listings_last_seen_at ?? null,
     contactMessagesLastSeenAt: data?.contact_messages_last_seen_at ?? null,
     landingContactLastSeenAt: data?.landing_contact_last_seen_at ?? null,
     reportsLastSeenAt: data?.reports_last_seen_at ?? null,

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getCurrentAdminEmail } from '@/lib/auth';
 import {
+  countUnseenBusinessListings,
   countUnseenContactMessages,
   countUnseenLandingContactMessages,
   countUnseenReports,
@@ -23,13 +24,19 @@ export default async function DashboardLayout({
 
   const adminEmail = await getCurrentAdminEmail();
   const seenState = await getAdminSeenState(adminEmail);
-  const [reportsUnseenCount, appContactUnseenCount, landingContactUnseenCount, waitlistUnseenCount] =
-    await Promise.all([
-      countUnseenReports(seenState.reportsLastSeenAt),
-      countUnseenContactMessages(seenState.contactMessagesLastSeenAt),
-      countUnseenLandingContactMessages(seenState.landingContactLastSeenAt),
-      countUnseenWaitlistSignups(seenState.waitlistLastSeenAt),
-    ]);
+  const [
+    reportsUnseenCount,
+    appContactUnseenCount,
+    landingContactUnseenCount,
+    waitlistUnseenCount,
+    businessListingsUnseenCount,
+  ] = await Promise.all([
+    countUnseenReports(seenState.reportsLastSeenAt),
+    countUnseenContactMessages(seenState.contactMessagesLastSeenAt),
+    countUnseenLandingContactMessages(seenState.landingContactLastSeenAt),
+    countUnseenWaitlistSignups(seenState.waitlistLastSeenAt),
+    countUnseenBusinessListings(seenState.businessListingsLastSeenAt),
+  ]);
   // One nav badge covers both contact sources (in-app + landing site) --
   // they read as the same kind of thing to an admin ("messages waiting on
   // me"), even though they're tracked as separate seen-timestamps so
@@ -52,6 +59,7 @@ export default async function DashboardLayout({
             <span className="block text-xs font-normal text-muted">Admin</span>
           </p>
           <NavLinks
+            businessListingsUnseenCount={businessListingsUnseenCount}
             contactHref={contactHref}
             contactUnseenCount={contactUnseenCount}
             reportsUnseenCount={reportsUnseenCount}

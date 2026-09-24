@@ -9,6 +9,14 @@ export type { RateLimitPolicy } from '@/src/services/rate-limit';
 // reviews are naturally rarer, and reports get the tightest limit since mass-
 // reporting is itself an abuse vector distinct from the content it targets.
 export const WRITE_RATE_LIMIT_POLICIES = {
+  // Tighter than the other write policies: each submission can trigger an
+  // Anthropic classification call (see business-listings/verification.ts),
+  // so this doubles as cheap defense against burning API spend via spam.
+  businessListing: {
+    keyPrefix: 'ellvate:write:business-listing',
+    maxRequests: 5,
+    windowMs: 60 * 60_000,
+  },
   comment: { keyPrefix: 'ellvate:write:comment', maxRequests: 20, windowMs: 5 * 60_000 },
   contact: { keyPrefix: 'ellvate:write:contact', maxRequests: 5, windowMs: 60 * 60_000 },
   petition: { keyPrefix: 'ellvate:write:petition', maxRequests: 5, windowMs: 60 * 60_000 },

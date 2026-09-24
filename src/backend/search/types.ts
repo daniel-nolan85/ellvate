@@ -1,4 +1,4 @@
-export type SearchResultKind = 'post' | 'event' | 'mission' | 'service' | 'petition';
+export type SearchResultKind = 'post' | 'event' | 'mission' | 'service' | 'petition' | 'business';
 
 export interface SearchResultItem {
   readonly id: string;
@@ -13,6 +13,7 @@ export interface GlobalSearchResults {
   readonly missions: readonly SearchResultItem[];
   readonly services: readonly SearchResultItem[];
   readonly petitions: readonly SearchResultItem[];
+  readonly businesses: readonly SearchResultItem[];
 }
 
 // Per-group cap -- a search result sheet is a jump-to-it list, not a full

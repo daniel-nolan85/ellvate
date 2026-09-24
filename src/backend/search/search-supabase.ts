@@ -61,6 +61,13 @@ interface PetitionSearchRow {
   readonly description: string;
 }
 
+interface BusinessSearchRow {
+  readonly id: string;
+  readonly created_by: string;
+  readonly business_name: string;
+  readonly description: string;
+}
+
 const searchTable = async <Row>(
   supabase: SupabaseClient,
   table: string,
@@ -82,36 +89,67 @@ export async function searchAllSupabase(
   userId: string,
   query: string,
 ): Promise<GlobalSearchResults> {
-  const [postRows, eventRows, missionRows, serviceRows, petitionRows, mutedUserIds] =
-    await Promise.all([
-      searchTable<PostSearchRow>(supabase, 'posts', 'id,author_id,title,excerpt', 'title', query),
-      searchTable<EventSearchRow>(supabase, 'events', 'id,created_by,title,place', 'title', query),
-      searchTable<MissionSearchRow>(
-        supabase,
-        'missions',
-        'id,created_by,title,description',
-        'title',
-        query,
-      ),
-      searchTable<ServiceSearchRow>(
-        supabase,
-        'service_listings',
-        'id,created_by,business_name,description',
-        'business_name',
-        query,
-      ),
-      searchTable<PetitionSearchRow>(
-        supabase,
-        'petitions',
-        'id,created_by,title,description',
-        'title',
-        query,
-      ),
-      getMutedUserIdsSupabase(supabase, userId),
-    ]);
+  const [
+    postRows,
+    eventRows,
+    missionRows,
+    serviceRows,
+    petitionRows,
+    businessRows,
+    mutedUserIds,
+  ] = await Promise.all([
+    searchTable<PostSearchRow>(supabase, 'posts', 'id,author_id,title,excerpt', 'title', query),
+    searchTable<EventSearchRow>(supabase, 'events', 'id,created_by,title,place', 'title', query),
+    searchTable<MissionSearchRow>(
+      supabase,
+      'missions',
+      'id,created_by,title,description',
+      'title',
+      query,
+    ),
+    searchTable<ServiceSearchRow>(
+      supabase,
+      'service_listings',
+      'id,created_by,business_name,description',
+      'business_name',
+      query,
+    ),
+    searchTable<PetitionSearchRow>(
+      supabase,
+      'petitions',
+      'id,created_by,title,description',
+      'title',
+      query,
+    ),
+    // No manual verified-or-own filter needed here -- RLS on
+    // business_listings (see migration 0066) already restricts this select
+    // to `verification_status = 'verified' OR created_by = self`, the same
+    // way every other Supabase-backed business-listing read in this app
+    // relies on RLS rather than filtering in application code.
+    searchTable<BusinessSearchRow>(
+      supabase,
+      'business_listings',
+      'id,created_by,business_name,description',
+      'business_name',
+      query,
+    ),
+    getMutedUserIdsSupabase(supabase, userId),
+  ]);
   const mutedSet = new Set(mutedUserIds);
 
   return {
+    businesses: toGroup(
+      businessRows.map((row) => ({
+        authorId: row.created_by,
+        item: {
+          id: row.id,
+          kind: 'business',
+          subtitle: row.description,
+          title: row.business_name,
+        },
+      })),
+      mutedSet,
+    ),
     events: toGroup(
       eventRows.map((row) => ({
         authorId: row.created_by,

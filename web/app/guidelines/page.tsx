@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 6, 2026';
+const LAST_UPDATED = 'September 24, 2026';
 
 export default function CommunityGuidelinesPage() {
   return (
@@ -111,14 +111,37 @@ export default function CommunityGuidelinesPage() {
         </p>
       </LegalSection>
 
+      <LegalSection id="business-listings" title="Business listings">
+        <p>
+          The Businesses section of the Directory is for restaurants, bars,
+          shops, and other established local businesses to post their hours,
+          a current special, and photos for the community — it&rsquo;s free,
+          and it&rsquo;s meant to be run by someone with a genuine connection
+          to the business, not a customer or a competitor. A listing is the
+          business&rsquo;s own claim about itself; we don&rsquo;t
+          independently verify that everything in it is accurate.
+        </p>
+        <p>
+          New listings are checked before they go public — automatically when
+          possible, or by an admin when it isn&rsquo;t — so that a
+          &ldquo;Verified&rdquo; badge means we confirmed a plausible
+          connection between whoever created the listing and the business
+          itself, not that we&rsquo;ve audited its contents. If you believe a
+          listing is fake, or run by someone with no real connection to the
+          business it claims to represent, please report it — we may remove
+          or unverify a listing at our discretion.
+        </p>
+      </LegalSection>
+
       <LegalSection id="tools" title="Tools you have">
         <p>
           If a post bothers you, you don&rsquo;t have to just scroll past it:{' '}
           <strong className="text-foreground">Report</strong> flags it for our
           moderators, and <strong className="text-foreground">Block</strong>{' '}
           hides that member&rsquo;s posts, comments, events, missions, services,
-          and petitions from you entirely — you can manage who you&rsquo;ve
-          blocked, and unblock them, any time from your profile.
+          business listings, and petitions from you entirely — you can manage
+          who you&rsquo;ve blocked, and unblock them, any time from your
+          profile.
         </p>
         <p>
           A small &ldquo;Admin&rdquo; badge next to a member&rsquo;s name means

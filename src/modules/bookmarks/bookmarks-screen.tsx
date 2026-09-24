@@ -13,6 +13,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
+import { BusinessListingCard } from '@/src/modules/businesses';
 import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
@@ -25,6 +26,7 @@ import { useBookmarks, type BookmarkedItem, type BookmarkTargetType } from './us
 type BookmarksFilter = 'all' | BookmarkTargetType;
 
 const KIND_ICON: Readonly<Record<BookmarkTargetType, AppIconName>> = {
+  business: 'Store',
   event: 'CalendarDays',
   mission: 'Star',
   petition: 'FileSignature',
@@ -33,6 +35,7 @@ const KIND_ICON: Readonly<Record<BookmarkTargetType, AppIconName>> = {
 };
 
 const KIND_LABEL: Readonly<Record<BookmarkTargetType, string>> = {
+  business: 'Bookmarked business',
   event: 'Bookmarked event',
   mission: 'Bookmarked mission',
   petition: 'Bookmarked petition',
@@ -46,6 +49,7 @@ const FILTERS: readonly { readonly key: BookmarksFilter; readonly label: string 
   { key: 'event', label: 'Events' },
   { key: 'mission', label: 'Missions' },
   { key: 'service', label: 'Services' },
+  { key: 'business', label: 'Businesses' },
   { key: 'petition', label: 'Petitions' },
 ];
 
@@ -129,6 +133,8 @@ function subtitleFor(item: BookmarkedItem): string {
       return formatRelativeTime(item.bookmarkedAt);
     case 'service':
       return item.listing.serviceArea ?? formatRelativeTime(item.bookmarkedAt);
+    case 'business':
+      return item.listing.address ?? formatRelativeTime(item.bookmarkedAt);
   }
 }
 
@@ -143,6 +149,8 @@ function titleFor(item: BookmarkedItem): string {
     case 'post':
       return item.post.title;
     case 'service':
+      return item.listing.businessName;
+    case 'business':
       return item.listing.businessName;
   }
 }
@@ -197,6 +205,7 @@ export function BookmarksScreen() {
       | `/event/${string}`
       | `/mission/${string}`
       | `/service/${string}`
+      | `/business/${string}`
       | `/petition/${string}`,
   ) => {
     setOpenItem(null);
@@ -229,7 +238,7 @@ export function BookmarksScreen() {
         <EmptyState
           heading="Nothing bookmarked yet"
           icon="Bookmark"
-          subtext="Tap the bookmark icon on a post, event, mission, service listing, or petition to save it here."
+          subtext="Tap the bookmark icon on a post, event, mission, service listing, business, or petition to save it here."
         />
       ) : (
         // FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
@@ -293,6 +302,14 @@ export function BookmarksScreen() {
             <ServiceListingCard
               listing={openItem.listing}
               onOpen={(listingId) => closeThenNavigate(`/service/${listingId}`)}
+            />
+          </View>
+        ) : null}
+        {openItem?.kind === 'business' ? (
+          <View className="px-1 pb-4">
+            <BusinessListingCard
+              listing={openItem.listing}
+              onOpen={(listingId) => closeThenNavigate(`/business/${listingId}`)}
             />
           </View>
         ) : null}

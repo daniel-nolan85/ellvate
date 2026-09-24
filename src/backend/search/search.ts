@@ -28,6 +28,28 @@ function searchAllMemory(userId: string, query: string): GlobalSearchResults {
   const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
 
   return {
+    businesses: toGroup(
+      state.businessListings
+        // The verified-or-own filter Postgres RLS applies automatically on
+        // the Supabase path (see business-listings-view.ts's isVisible) has
+        // no equivalent here -- memory mode has no RLS, so it's applied by
+        // hand before the search even runs.
+        .filter(
+          (listing) =>
+            listing.verificationStatus === 'verified' || listing.authorId === userId,
+        )
+        .filter((listing) => matches(listing.businessName, needle))
+        .map((listing) => ({
+          authorId: listing.authorId,
+          item: {
+            id: listing.id,
+            kind: 'business',
+            subtitle: listing.description,
+            title: listing.businessName,
+          },
+        })),
+      mutedUserIds,
+    ),
     events: toGroup(
       state.events
         .filter((event) => matches(event.title, needle))

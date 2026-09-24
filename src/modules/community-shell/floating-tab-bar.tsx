@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type AppIconName } from '@/src/components/ui/icon';
 import { Text } from '@/src/components/ui/text';
 
-export type CommunityTabId = 'forum' | 'events' | 'missions' | 'services' | 'petitions';
+export type CommunityTabId = 'forum' | 'events' | 'missions' | 'directory' | 'petitions';
 
 interface FloatingTabBarProps {
   readonly activeTab: CommunityTabId | null;
@@ -21,7 +21,7 @@ const TABS: readonly TabDefinition[] = [
   { id: 'forum', label: 'Forum', icon: 'MessageCircle' },
   { id: 'events', label: 'Events', icon: 'CalendarDays' },
   { id: 'missions', label: 'Missions', icon: 'Star' },
-  { id: 'services', label: 'Services', icon: 'Store' },
+  { id: 'directory', label: 'Directory', icon: 'Store' },
   { id: 'petitions', label: 'Petitions', icon: 'FileSignature' },
 ];
 
