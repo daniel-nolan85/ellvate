@@ -164,24 +164,30 @@ export const features: readonly Feature[] = [
   },
 ] as const;
 
+// Dining and Other are deliberately left off this LP grid -- Dining would
+// sit right above Restaurants & Bars (the Businesses grid below) showing the
+// same Utensils icon for a visually near-duplicate category, and Other adds
+// a vague catch-all after it with nothing to anchor it. The app itself still
+// has both (src/modules/services/service-category.ts); this is LP copy only.
 export const serviceCategories = [
-  { label: 'Home services', icon: 'Wrench' },
+  { label: 'Home services', icon: 'Home' },
   { label: 'Pet care', icon: 'PawPrint' },
   { label: 'Automotive', icon: 'Car' },
   { label: 'Pool & spa', icon: 'Waves' },
   { label: 'Beauty', icon: 'Sparkles' },
   { label: 'Tech & web', icon: 'Laptop' },
-  { label: 'Dining', icon: 'Utensils' },
-  { label: 'Other', icon: 'Store' },
 ] as const;
 
-// Mirrors src/modules/businesses/business-category.ts's BUSINESS_CATEGORY_LABEL
-// and its icon choices exactly -- keep these two in sync if the app's
-// business categories ever change.
+// Labels mirror src/modules/businesses/business-category.ts's
+// BUSINESS_CATEGORY_LABEL exactly -- keep those in sync if the app's
+// business categories ever change. Icons are chosen independently from the
+// app's own BUSINESS_CATEGORY_ICON so every box in this grid, and in
+// serviceCategories above (shown in the same panel), reads as visually
+// distinct at a glance.
 export const businessCategories = [
   { label: 'Restaurants & Bars', icon: 'Utensils' },
-  { label: 'Goods', icon: 'Store' },
-  { label: 'Hospitality', icon: 'Sparkles' },
+  { label: 'Goods', icon: 'ShoppingBag' },
+  { label: 'Hospitality', icon: 'ConciergeBell' },
   { label: 'Professional & Trade', icon: 'Wrench' },
 ] as const;
 

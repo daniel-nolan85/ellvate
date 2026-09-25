@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 24, 2026';
+const LAST_UPDATED = 'September 25, 2026';
 
 export default function TermsOfServicePage() {
   return (
@@ -61,7 +61,11 @@ export default function TermsOfServicePage() {
 
       <LegalSection id="conduct" title="4. Community conduct">
         <p>
-          {BRAND.appName} works because people are decent to each other on it. Our{' '}
+          {BRAND.appName} works because people are decent to each other on it. We have{' '}
+          <strong>zero tolerance for objectionable content or abusive behavior</strong> of
+          any kind — harassment, hate speech, threats, sexual content involving minors, or
+          content that promotes violence or illegal activity will get content removed and
+          accounts suspended or terminated, without warning for serious violations. Our{' '}
           <Link className="underline" href="/guidelines">
             Community Guidelines
           </Link>{' '}
