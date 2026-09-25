@@ -35,6 +35,16 @@ export async function sendBusinessListingPendingReviewEmail(
   const to = process.env.BUSINESS_LISTING_ADMIN_EMAIL;
 
   if (!apiKey || !from || !to) {
+    console.warn(
+      '[pending-review-email] skipped: missing env var(s):',
+      [
+        !apiKey && 'RESEND_API_KEY',
+        !from && 'ADMIN_FROM_EMAIL',
+        !to && 'BUSINESS_LISTING_ADMIN_EMAIL',
+      ]
+        .filter(Boolean)
+        .join(', '),
+    );
     return false;
   }
 
@@ -52,10 +62,18 @@ export async function sendBusinessListingPendingReviewEmail(
         text: body(listing),
       }),
     });
+    if (!response.ok) {
+      console.error(
+        '[pending-review-email] Resend rejected the request:',
+        response.status,
+        await response.text().catch(() => '<no body>'),
+      );
+    }
     return response.ok;
-  } catch {
+  } catch (error) {
     // Best-effort -- the listing is already saved regardless of whether the
     // admin notification actually sends.
+    console.error('[pending-review-email] fetch failed:', error);
     return false;
   }
 }
