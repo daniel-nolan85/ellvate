@@ -1,6 +1,10 @@
 import Link from 'next/link';
 
 import { formatDateTime } from '@/lib/format-date';
+import {
+  getFeaturedSuggestions,
+  type FeaturedSuggestionFlag,
+} from '@/lib/featured-suggestions';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { decodeCursor, escapeOrSearchTerm, LIST_PAGE_SIZE } from '@/lib/pagination';
 
@@ -8,6 +12,12 @@ import { DeleteButton } from '../delete-button';
 import { MediaThumbnails } from '../media-thumbnails';
 
 import { FeaturedToggle } from './featured-toggle';
+
+const FLAG_LABEL: Readonly<Record<FeaturedSuggestionFlag, string>> = {
+  hoa: '🏛️ HOA / Town Hall',
+  most_rsvp: '🔥 Most RSVPs',
+  saturday_night: '🎉 Saturday night',
+};
 
 interface StoredMedia {
   readonly url: string;
@@ -55,6 +65,8 @@ export default async function EventsPage({
   const params = await searchParams;
   const query = params.q?.trim() ?? '';
 
+  const suggestions = await getFeaturedSuggestions();
+
   const admin = createSupabaseAdminClient();
   let request = admin.from('events').select('id, title, starts_at, place, featured, media');
 
@@ -89,6 +101,48 @@ export default async function EventsPage({
           screen. Deleting an event also removes its comments and RSVPs.
         </p>
       </div>
+
+      {suggestions.length > 0 ? (
+        <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
+          <p className="text-xs font-medium text-muted">
+            Suggested to feature — signals, not a decision. Worth a look
+            over the next 14 days:
+          </p>
+          <ul className="space-y-2">
+            {suggestions.map((suggestion) => (
+              <li
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-surface-raised px-3 py-2"
+                key={suggestion.id}
+              >
+                <div className="min-w-0">
+                  <Link
+                    className="text-sm font-medium text-content hover:underline"
+                    href={`/events/${suggestion.id}`}
+                  >
+                    {suggestion.title}
+                  </Link>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                    <span>{formatDateTime(suggestion.startsAt)}</span>
+                    <span>·</span>
+                    <span>{suggestion.place}</span>
+                    <span>·</span>
+                    <span>{suggestion.going} going</span>
+                    {suggestion.flags.map((flag) => (
+                      <span
+                        className="rounded-full bg-surface px-2 py-0.5 text-content"
+                        key={flag}
+                      >
+                        {FLAG_LABEL[flag]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <FeaturedToggle eventId={suggestion.id} featured={false} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <form className="flex gap-2" method="get">
         <input
