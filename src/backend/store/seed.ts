@@ -1,6 +1,7 @@
 import type {
   NotificationPrefs,
   StoredBusinessListing,
+  StoredBusinessListingReview,
   StoredComment,
   StoredEvent,
   StoredMission,
@@ -561,6 +562,31 @@ const seedBusinessListings = (): readonly StoredBusinessListing[] => [
   },
 ];
 
+// Mirrors seedServiceReviews above: one review each on the two verified
+// listings (business-1, business-2), authored by someone other than the
+// listing's own owner (self-review is forbidden). business-3 is pending and
+// owned by DEMO_USER_ID, so it deliberately has no seeded review.
+const seedBusinessListingReviews = (): readonly StoredBusinessListingReview[] => [
+  {
+    id: 'business-review-1',
+    listingId: 'business-1',
+    authorId: 'user-mia',
+    rating: 5,
+    body: 'Best patio on the lake — the happy hour app specials are unbeatable.',
+    createdAt: isoHoursBeforeSeedNow(25),
+    editedAt: null,
+  },
+  {
+    id: 'business-review-2',
+    listingId: 'business-2',
+    authorId: DEMO_USER_ID,
+    rating: 4,
+    body: 'Fixed our cart same-day and the price was fair.',
+    createdAt: isoHoursBeforeSeedNow(10),
+    editedAt: null,
+  },
+];
+
 // Dummy dev-only content so the three petition status tabs (open, succeeded,
 // expired) all have something to look at -- required signature counts here
 // are hand-picked for a plausible-looking progress bar, not derived from
@@ -708,6 +734,8 @@ export const createSeedState = (): StoreState => {
     serviceReviewReports: [],
     businessListings: seedBusinessListings(),
     businessListingReports: [],
+    businessListingReviews: seedBusinessListingReviews(),
+    businessListingReviewReports: [],
     notifications: [],
     contactMessages: [],
     petitions: seedPetitions(),

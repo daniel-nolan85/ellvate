@@ -20,10 +20,32 @@ import type { BusinessListing } from './use-businesses';
 
 const COLOR_MUTED = 'rgb(169,156,139)';
 const COLOR_SPECIAL = 'rgb(181,80,44)';
+const COLOR_STAR = 'rgb(217,123,41)';
 
 interface BusinessListingCardProps {
   readonly listing: BusinessListing;
   readonly onOpen?: (listingId: string) => void;
+}
+
+function RatingSummary({ listing }: { readonly listing: BusinessListing }) {
+  if (listing.averageRating === null) {
+    return (
+      <Text className="shrink-0 text-text-muted" numberOfLines={1} size="xs">
+        No reviews yet
+      </Text>
+    );
+  }
+  return (
+    <HStack className="shrink-0 items-center gap-1">
+      <Icon color={COLOR_STAR} fill={COLOR_STAR} name="Star" size={12} />
+      <Text className="font-inter-semibold text-[12px] text-content">
+        {listing.averageRating.toFixed(1)}
+      </Text>
+      <Text className="text-text-muted" size="xs">
+        ({listing.reviewCount})
+      </Text>
+    </HStack>
+  );
 }
 
 export function BusinessListingCard({ listing, onOpen }: BusinessListingCardProps) {
@@ -80,6 +102,7 @@ export function BusinessListingCard({ listing, onOpen }: BusinessListingCardProp
           {isOwner && listing.verificationStatus === 'pending' ? (
             <Badge variant="muted">Pending review</Badge>
           ) : null}
+          <RatingSummary listing={listing} />
         </HStack>
         {listing.currentSpecial ? (
           <HStack className="items-center gap-1">

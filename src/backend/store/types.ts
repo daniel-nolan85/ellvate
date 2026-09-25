@@ -333,6 +333,27 @@ export interface StoredBusinessListingReport {
   readonly evidenceImageUrl: string | null;
 }
 
+export interface StoredBusinessListingReview {
+  readonly id: string;
+  readonly listingId: string;
+  readonly authorId: string;
+  readonly rating: 1 | 2 | 3 | 4 | 5;
+  readonly body: string | null;
+  readonly createdAt: string;
+  // Null until the author edits the review at least once.
+  readonly editedAt: string | null;
+}
+
+export interface StoredBusinessListingReviewReport {
+  readonly id: string;
+  readonly businessListingReviewId: string;
+  readonly reporterId: string;
+  readonly createdAt: string;
+  readonly reason: ReportReason | null;
+  readonly details: string | null;
+  readonly evidenceImageUrl: string | null;
+}
+
 export interface StoredWeekDay {
   readonly dayLabel: string;
   readonly dateLabel: string;
@@ -476,6 +497,8 @@ export interface StoreState {
   readonly serviceReviewReports: readonly StoredServiceReviewReport[];
   readonly businessListings: readonly StoredBusinessListing[];
   readonly businessListingReports: readonly StoredBusinessListingReport[];
+  readonly businessListingReviews: readonly StoredBusinessListingReview[];
+  readonly businessListingReviewReports: readonly StoredBusinessListingReviewReport[];
   readonly notifications: readonly StoredNotification[];
   readonly contactMessages: readonly StoredContactMessage[];
   readonly petitions: readonly StoredPetition[];

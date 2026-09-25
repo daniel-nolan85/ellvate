@@ -119,7 +119,7 @@ async function updateBusinessListingMemory(
     };
   }
   return {
-    listing: toBusinessListingView(updated, next.users),
+    listing: toBusinessListingView(updated, next.users, next.businessListingReviews),
     ok: true,
   };
 }

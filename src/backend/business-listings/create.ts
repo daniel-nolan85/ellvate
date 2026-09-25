@@ -62,7 +62,7 @@ async function createBusinessListingMemory(
     businessListings: [...current.businessListings, stored],
   }));
   return {
-    listing: toBusinessListingView(stored, next.users),
+    listing: toBusinessListingView(stored, next.users, next.businessListingReviews),
     ok: true,
   };
 }

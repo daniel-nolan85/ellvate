@@ -42,7 +42,7 @@ function getBusinessesViewMemory(
     .filter((listing) => !category || listing.category === category)
     .slice()
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    .map((listing) => toBusinessListingView(listing, state.users));
+    .map((listing) => toBusinessListingView(listing, state.users, state.businessListingReviews));
   return { listings };
 }
 
@@ -67,7 +67,9 @@ function listBusinessesPageMemory(
   const page = paginateInMemory(filtered, limit, cursor);
 
   return {
-    listings: page.items.map((item) => toBusinessListingView(item.listing, state.users)),
+    listings: page.items.map((item) =>
+      toBusinessListingView(item.listing, state.users, state.businessListingReviews),
+    ),
     nextCursor: page.nextCursor,
   };
 }
@@ -90,7 +92,9 @@ function getMyBusinessListingsViewMemory(
     }));
   const page = paginateInMemory(mine, limit, cursor);
   return {
-    listings: page.items.map((item) => toBusinessListingView(item.listing, state.users)),
+    listings: page.items.map((item) =>
+      toBusinessListingView(item.listing, state.users, state.businessListingReviews),
+    ),
     nextCursor: page.nextCursor,
   };
 }
@@ -107,7 +111,7 @@ function getBusinessesByIdsMemory(
   const idSet = new Set(ids);
   return state.businessListings
     .filter((listing) => idSet.has(listing.id) && isVisible(listing, userId))
-    .map((listing) => toBusinessListingView(listing, state.users));
+    .map((listing) => toBusinessListingView(listing, state.users, state.businessListingReviews));
 }
 
 export async function getBusinessesView(

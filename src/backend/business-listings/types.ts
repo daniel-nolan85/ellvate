@@ -36,6 +36,8 @@ export interface BusinessListing {
   readonly verifiedAt: string | null;
   readonly createdAt: string;
   readonly editedAt: string | null;
+  readonly averageRating: number | null;
+  readonly reviewCount: number;
 }
 
 export interface BusinessesView {

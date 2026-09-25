@@ -11,6 +11,8 @@ export type {
   StoredBookmark,
   StoredBusinessListing,
   StoredBusinessListingReport,
+  StoredBusinessListingReview,
+  StoredBusinessListingReviewReport,
   StoredComment,
   StoredContactMessage,
   StoredCommentReport,

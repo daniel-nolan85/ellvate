@@ -10,7 +10,16 @@ import {
   PATCH as patchBusinessListingRoute,
 } from '../../app/api/business-listings/[id]/index+api';
 import { POST as reportBusinessListingRoute } from '../../app/api/business-listings/[id]/report+api';
+import {
+  GET as getBusinessListingReviews,
+  POST as postBusinessListingReview,
+} from '../../app/api/business-listings/[id]/reviews+api';
 import { GET as getMyBusinessListingsRoute } from '../../app/api/business-listings/mine+api';
+import {
+  DELETE as deleteBusinessListingReviewRoute,
+  PATCH as patchBusinessListingReviewRoute,
+} from '../../app/api/business-listing-reviews/[id]/index+api';
+import { POST as reportBusinessListingReviewRoute } from '../../app/api/business-listing-reviews/[id]/report+api';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
 import { toggleMute } from '../../src/backend/mutes';
 import {
@@ -23,6 +32,14 @@ import {
   reportBusinessListing,
   updateBusinessListing,
 } from '../../src/backend/business-listings';
+import {
+  createBusinessListingReview,
+  deleteBusinessListingReview,
+  listBusinessListingReviews,
+  listBusinessListingReviewsPage,
+  reportBusinessListingReview,
+  updateBusinessListingReview,
+} from '../../src/backend/business-listing-reviews';
 import { fetchWebsiteSummary } from '../../src/backend/business-listings/website-fetch';
 import type { ValidReportSubmission } from '@/src/backend/reports';
 import { DEMO_USER_ID, getState, resetStore } from '../../src/backend/store';
@@ -257,6 +274,31 @@ describe('memory-mode verified-or-own visibility filter', () => {
   });
 });
 
+describe('rating summary on business listings', () => {
+  test('getBusinessesView reports the seeded average rating and review count', async () => {
+    const { listings } = await getBusinessesView(ctx());
+    const grill = listings.find((listing) => listing.id === 'business-1');
+    expect(grill).toMatchObject({ averageRating: 5, reviewCount: 1 });
+    const golfCarts = listings.find((listing) => listing.id === 'business-2');
+    expect(golfCarts).toMatchObject({ averageRating: 4, reviewCount: 1 });
+  });
+
+  test('a listing with no reviews reports a null average and zero count', async () => {
+    // business-3 is seeded pending, owned by DEMO_USER_ID -- ctx() defaults
+    // to DEMO_USER_ID so it's visible here.
+    const { listings } = await getBusinessesView(ctx());
+    const pending = listings.find((listing) => listing.id === 'business-3');
+    expect(pending).toMatchObject({ averageRating: null, reviewCount: 0 });
+  });
+
+  test('a newly created listing has no reviews yet', async () => {
+    const result = await createBusinessListing(ctx(), domainMatchedInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.listing).toMatchObject({ averageRating: null, reviewCount: 0 });
+  });
+});
+
 describe('GET /api/business-listings/:id', () => {
   test('returns the listing when it exists and is visible', async () => {
     const response = await getBusinessListingRoute(
@@ -399,6 +441,22 @@ describe('deleteBusinessListing', () => {
       ),
     ).toBe(false);
   });
+
+  test('cascades: deleting a listing also removes its reviews', async () => {
+    const created = await createBusinessListing(ctx(), domainMatchedInput);
+    if (!created.ok) throw new Error('setup failed');
+    const review = await createBusinessListingReview(ctx('user-mia'), created.listing.id, {
+      body: 'Great job!',
+      rating: 5,
+    });
+    if (!review.ok) throw new Error('setup failed');
+
+    expect(await deleteBusinessListing(ctx(), created.listing.id)).toBe(true);
+    expect(await listBusinessListingReviews(ctx(), created.listing.id)).toEqual([]);
+    expect(
+      getState().businessListingReviews.some((r) => r.id === review.review.id),
+    ).toBe(false);
+  });
 });
 
 describe('reportBusinessListing', () => {
@@ -536,5 +594,449 @@ describe('business listing routes', () => {
       nextCursor: string | null;
     };
     expect(Array.isArray(body.listings)).toBe(true);
+  });
+});
+
+describe('listBusinessListingReviews', () => {
+  test('returns the seeded review for business-1, newest first', async () => {
+    await createBusinessListingReview(ctx('user-andre'), 'business-1', {
+      body: 'Second opinion',
+      rating: 4,
+    });
+
+    const reviews = await listBusinessListingReviews(ctx(), 'business-1');
+    expect(reviews.map((review) => review.body)).toEqual([
+      'Second opinion',
+      'Best patio on the lake — the happy hour app specials are unbeatable.',
+    ]);
+  });
+
+  test('hides reviews from an author the viewer has muted', async () => {
+    await createBusinessListingReview(ctx('user-andre'), 'business-1', {
+      body: 'Second opinion',
+      rating: 4,
+    });
+
+    await toggleMute(ctx(), 'user-andre');
+
+    const reviews = await listBusinessListingReviews(ctx(), 'business-1');
+    expect(reviews.some((review) => review.author.id === 'user-andre')).toBe(
+      false,
+    );
+  });
+
+  test('hides reviews on a pending listing from everyone but its owner', async () => {
+    const created = await createBusinessListing(ctx('user-riley'), unresolvedInput);
+    if (!created.ok) throw new Error('setup failed');
+    const review = await createBusinessListingReview(ctx('user-mia'), created.listing.id, {
+      body: 'nice',
+      rating: 5,
+    });
+    if (!review.ok) throw new Error('setup failed');
+
+    expect(await listBusinessListingReviews(ctx('user-mia'), created.listing.id)).toEqual([]);
+    expect(
+      (await listBusinessListingReviews(ctx('user-riley'), created.listing.id)).map(
+        (r) => r.id,
+      ),
+    ).toEqual([review.review.id]);
+  });
+});
+
+describe('listBusinessListingReviewsPage', () => {
+  test('paginates newest-first and preserves that order across pages', async () => {
+    await createBusinessListingReview(ctx('user-andre'), 'business-1', {
+      body: 'Second opinion',
+      rating: 4,
+    });
+
+    const first = await listBusinessListingReviewsPage(ctx(), 'business-1', { limit: 1 });
+    expect(first.reviews.map((review) => review.body)).toEqual([
+      'Second opinion',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listBusinessListingReviewsPage(ctx(), 'business-1', {
+      cursor: first.nextCursor,
+      limit: 1,
+    });
+    expect(second.reviews.map((review) => review.body)).toEqual([
+      'Best patio on the lake — the happy hour app specials are unbeatable.',
+    ]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('hides reviews from an author the viewer has muted', async () => {
+    await createBusinessListingReview(ctx('user-andre'), 'business-1', {
+      body: 'Second opinion',
+      rating: 4,
+    });
+
+    await toggleMute(ctx(), 'user-andre');
+
+    const page = await listBusinessListingReviewsPage(ctx(), 'business-1');
+    expect(
+      page.reviews.some((review) => review.author.id === 'user-andre'),
+    ).toBe(false);
+  });
+
+  test('returns an empty page for a listing with no reviews', async () => {
+    // business-3 is seeded pending, owned by DEMO_USER_ID -- ctx() defaults
+    // to DEMO_USER_ID so it's visible here.
+    const page = await listBusinessListingReviewsPage(ctx(), 'business-3');
+    expect(page.reviews).toEqual([]);
+    expect(page.nextCursor).toBeNull();
+  });
+});
+
+describe('createBusinessListingReview', () => {
+  test('allows a rating with no body — text is optional, unlike a comment', async () => {
+    const result = await createBusinessListingReview(ctx(), 'business-1', {
+      body: '  ',
+      rating: 5,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.review.body).toBeNull();
+      expect(result.review.rating).toBe(5);
+    }
+  });
+
+  test('rejects an oversized body', async () => {
+    expect(
+      await createBusinessListingReview(ctx(), 'business-1', {
+        body: 'x'.repeat(1001),
+        rating: 5,
+      }),
+    ).toMatchObject({ ok: false, code: 'invalid_review' });
+  });
+
+  test('rejects a rating outside 1-5', async () => {
+    expect(
+      await createBusinessListingReview(ctx(), 'business-1', { body: 'nice', rating: 6 }),
+    ).toMatchObject({ ok: false, code: 'invalid_review' });
+  });
+
+  test('rejects a review with no rating at all — text alone is not a complete review', async () => {
+    expect(
+      await createBusinessListingReview(ctx(), 'business-1', { body: 'nice' }),
+    ).toMatchObject({ ok: false, code: 'invalid_review' });
+  });
+
+  test('rejects a review on an unknown listing', async () => {
+    expect(
+      await createBusinessListingReview(ctx(), 'business-nope', { body: 'nice', rating: 5 }),
+    ).toMatchObject({ ok: false, code: 'business_listing_not_found' });
+  });
+
+  test('creates a review attributed to the acting user', async () => {
+    const result = await createBusinessListingReview(ctx(), 'business-1', {
+      body: ' Fast and friendly! ',
+      rating: 5,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review).toMatchObject({
+      listingId: 'business-1',
+      author: { id: DEMO_USER_ID, name: 'You' },
+      body: 'Fast and friendly!',
+      rating: 5,
+    });
+  });
+
+  test('rejects reviewing your own listing', async () => {
+    const created = await createBusinessListing(ctx(), domainMatchedInput);
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await createBusinessListingReview(ctx(), created.listing.id, {
+      body: 'nice',
+      rating: 5,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('rejects a second review from the same author on the same listing', async () => {
+    // business-2 already has a seeded review authored by DEMO_USER_ID.
+    const result = await createBusinessListingReview(ctx(), 'business-2', {
+      body: 'trying again',
+      rating: 1,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'already_reviewed' });
+  });
+});
+
+describe('updateBusinessListingReview', () => {
+  test('the author can edit their own review', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await updateBusinessListingReview(ctx(), created.review.id, {
+      body: 'updated',
+      rating: 5,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      review: { body: 'updated', rating: 5 },
+    });
+  });
+
+  test('stamps editedAt on update, unset until then', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+    expect(created.review.editedAt).toBeNull();
+
+    const result = await updateBusinessListingReview(ctx(), created.review.id, {
+      body: 'updated',
+      rating: 5,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.review.editedAt).not.toBeNull();
+    }
+  });
+
+  test('rejects edits from a user who does not own the review', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await updateBusinessListingReview(ctx('user-mia'), created.review.id, {
+      body: 'hijacked',
+      rating: 1,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'forbidden' });
+  });
+
+  test('rejects an invalid rating', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await updateBusinessListingReview(ctx(), created.review.id, {
+      body: 'still mine',
+      rating: 9,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_review' });
+  });
+
+  test('returns not_found for an unknown review', async () => {
+    const result = await updateBusinessListingReview(ctx(), 'business-review-nope', {
+      body: 'x',
+      rating: 3,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'business_listing_review_not_found' });
+  });
+
+  test('can clear the body down to a rating-only review', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await updateBusinessListingReview(ctx(), created.review.id, {
+      body: '   ',
+      rating: 4,
+    });
+
+    expect(result).toMatchObject({ ok: true, review: { body: null, rating: 4 } });
+  });
+});
+
+describe('deleteBusinessListingReview', () => {
+  test('deletes only the author’s own review', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    expect(await deleteBusinessListingReview(ctx('user-mia'), created.review.id)).toBe(false);
+    expect(await deleteBusinessListingReview(ctx(), created.review.id)).toBe(true);
+    const remaining = await listBusinessListingReviews(ctx(), 'business-1');
+    expect(remaining.some((review) => review.id === created.review.id)).toBe(false);
+  });
+
+  test('returns false for an unknown review', async () => {
+    expect(await deleteBusinessListingReview(ctx(), 'business-review-nope')).toBe(false);
+  });
+});
+
+describe('reportBusinessListingReview', () => {
+  test('reports an existing review', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    const result = await reportBusinessListingReview(
+      ctx('user-andre'),
+      created.review.id,
+      TEST_REPORT_SUBMISSION,
+    );
+
+    expect(result).toEqual({ ok: true, reported: true });
+    expect(
+      getState().businessListingReviewReports.some(
+        (report) =>
+          report.businessListingReviewId === created.review.id &&
+          report.reporterId === 'user-andre',
+      ),
+    ).toBe(true);
+  });
+
+  test('is idempotent — reporting the same review twice records one report', async () => {
+    const created = await createBusinessListingReview(ctx(), 'business-1', {
+      body: 'mine',
+      rating: 3,
+    });
+    if (!created.ok) throw new Error('setup failed');
+
+    await reportBusinessListingReview(ctx('user-andre'), created.review.id, TEST_REPORT_SUBMISSION);
+    await reportBusinessListingReview(ctx('user-andre'), created.review.id, TEST_REPORT_SUBMISSION);
+
+    expect(
+      getState().businessListingReviewReports.filter(
+        (report) =>
+          report.businessListingReviewId === created.review.id &&
+          report.reporterId === 'user-andre',
+      ),
+    ).toHaveLength(1);
+  });
+
+  test('rejects reporting an unknown review', async () => {
+    const result = await reportBusinessListingReview(
+      ctx(),
+      'business-review-nope',
+      TEST_REPORT_SUBMISSION,
+    );
+
+    expect(result).toMatchObject({ ok: false, code: 'business_listing_review_not_found' });
+  });
+});
+
+describe('business listing review routes', () => {
+  test('GET returns { reviews }; POST creates 201; DELETE removes; report is 200', async () => {
+    const created = await postBusinessListingReview(
+      new Request('http://localhost/api/business-listings/business-1/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Looking sharp', rating: 5 }),
+      }),
+      { id: 'business-1' },
+    );
+    expect(created.status).toBe(201);
+    const { review } = (await created.json()) as { review: { id: string } };
+
+    const listed = await getBusinessListingReviews(
+      new Request('http://localhost/api/business-listings/business-1/reviews'),
+      { id: 'business-1' },
+    );
+    const { reviews } = (await listed.json()) as {
+      reviews: readonly { id: string }[];
+    };
+    expect(reviews[0]?.id).toBe(review.id);
+
+    const reported = await reportBusinessListingReviewRoute(
+      new Request(`http://localhost/api/business-listing-reviews/${review.id}/report`, {
+        body: JSON.stringify({ reason: 'other' }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      }),
+      { id: review.id },
+    );
+    expect(reported.status).toBe(200);
+
+    const patched = await patchBusinessListingReviewRoute(
+      new Request(`http://localhost/api/business-listing-reviews/${review.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Even sharper', rating: 4 }),
+      }),
+      { id: review.id },
+    );
+    expect(patched.status).toBe(200);
+    const { review: patchedReview } = (await patched.json()) as {
+      review: { body: string; rating: number };
+    };
+    expect(patchedReview).toMatchObject({ body: 'Even sharper', rating: 4 });
+
+    const removed = await deleteBusinessListingReviewRoute(
+      new Request(`http://localhost/api/business-listing-reviews/${review.id}`, {
+        method: 'DELETE',
+      }),
+      { id: review.id },
+    );
+    expect(removed.status).toBe(200);
+  });
+
+  test('GET honors ?limit and ?cursor for pagination', async () => {
+    await postBusinessListingReview(
+      new Request('http://localhost/api/business-listings/business-1/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Second opinion', rating: 4 }),
+      }),
+      { id: 'business-1' },
+    );
+
+    const firstResponse = await getBusinessListingReviews(
+      new Request('http://localhost/api/business-listings/business-1/reviews?limit=1'),
+      { id: 'business-1' },
+    );
+    const first = (await firstResponse.json()) as {
+      reviews: readonly { body: string | null }[];
+      nextCursor: string | null;
+    };
+    expect(first.reviews.map((review) => review.body)).toEqual([
+      'Second opinion',
+    ]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const secondResponse = await getBusinessListingReviews(
+      new Request(
+        `http://localhost/api/business-listings/business-1/reviews?limit=1&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+      ),
+      { id: 'business-1' },
+    );
+    const second = (await secondResponse.json()) as {
+      reviews: readonly { body: string | null }[];
+      nextCursor: string | null;
+    };
+    expect(second.reviews.map((review) => review.body)).toEqual([
+      'Best patio on the lake — the happy hour app specials are unbeatable.',
+    ]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  test('POST review returns 404 for an unknown listing', async () => {
+    const response = await postBusinessListingReview(
+      new Request('http://localhost/api/business-listings/business-nope/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'hi', rating: 5 }),
+      }),
+      { id: 'business-nope' },
+    );
+    expect(response.status).toBe(404);
   });
 });

@@ -10,15 +10,28 @@ function deleteBusinessListingMemory(userId: string, listingId: string): boolean
   if (!existing) {
     return false;
   }
-  setState((current) => ({
-    ...current,
-    businessListings: current.businessListings.filter(
-      (listing) => listing.id !== listingId,
-    ),
-    businessListingReports: current.businessListingReports.filter(
-      (report) => report.businessListingId !== listingId,
-    ),
-  }));
+  setState((current) => {
+    const removedReviewIds = new Set(
+      current.businessListingReviews
+        .filter((review) => review.listingId === listingId)
+        .map((review) => review.id),
+    );
+    return {
+      ...current,
+      businessListings: current.businessListings.filter(
+        (listing) => listing.id !== listingId,
+      ),
+      businessListingReports: current.businessListingReports.filter(
+        (report) => report.businessListingId !== listingId,
+      ),
+      businessListingReviewReports: current.businessListingReviewReports.filter(
+        (report) => !removedReviewIds.has(report.businessListingReviewId),
+      ),
+      businessListingReviews: current.businessListingReviews.filter(
+        (review) => review.listingId !== listingId,
+      ),
+    };
+  });
   return true;
 }
 

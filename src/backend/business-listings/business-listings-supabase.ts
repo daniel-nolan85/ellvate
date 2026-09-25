@@ -61,15 +61,37 @@ interface PersonLookup {
   readonly isAdmin: boolean;
 }
 
+interface ReviewSummaryRow {
+  readonly listing_id: string;
+  readonly rating: number;
+}
+
 type UploadBusinessMediaResult =
   | { readonly ok: true; readonly media: readonly BusinessMedia[] }
   | { readonly ok: false; readonly uploaded: readonly BusinessMedia[] };
 
+const ratingSummaryFrom = (
+  rows: readonly ReviewSummaryRow[],
+  listingId: string,
+): { readonly averageRating: number | null; readonly reviewCount: number } => {
+  const forListing = rows.filter((row) => row.listing_id === listingId);
+  if (forListing.length === 0) {
+    return { averageRating: null, reviewCount: 0 };
+  }
+  const total = forListing.reduce((sum, row) => sum + row.rating, 0);
+  return {
+    averageRating: Math.round((total / forListing.length) * 10) / 10,
+    reviewCount: forListing.length,
+  };
+};
+
 const toBusinessListingView = (
   row: BusinessRow,
   nameById: ReadonlyMap<string, PersonLookup>,
+  reviewRows: readonly ReviewSummaryRow[],
 ): BusinessListing => {
   const author = nameById.get(row.created_by);
+  const { averageRating, reviewCount } = ratingSummaryFrom(reviewRows, row.id);
   return {
     id: row.id,
     author: {
@@ -95,6 +117,8 @@ const toBusinessListingView = (
     verificationStatus: row.verification_status as VerificationStatus,
     verificationMethod: (row.verification_method as VerificationMethod | null) ?? null,
     verifiedAt: row.verified_at,
+    averageRating,
+    reviewCount,
   };
 };
 
@@ -120,6 +144,21 @@ const nameMapFor = async (
       },
     ]),
   );
+};
+
+const reviewRowsFor = async (
+  supabase: SupabaseClient,
+  listingIds: readonly string[],
+): Promise<readonly ReviewSummaryRow[]> => {
+  if (listingIds.length === 0) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from('business_listing_reviews')
+    .select('listing_id,rating')
+    .in('listing_id', listingIds);
+  throwIfSupabaseError(error, 'load business listing reviews');
+  return (data ?? []) as unknown as ReviewSummaryRow[];
 };
 
 const MEDIA_UPLOAD_FAILED_MESSAGE =
@@ -204,8 +243,14 @@ export async function getBusinessesViewSupabase(
   const { data, error } = await (category ? query.eq('category', category) : query);
   throwIfSupabaseError(error, 'load business listings');
   const rows = (data ?? []) as unknown as BusinessRow[];
-  const nameById = await nameMapFor(supabase, [...new Set(rows.map((row) => row.created_by))]);
-  return { listings: rows.map((row) => toBusinessListingView(row, nameById)) };
+  const [nameById, reviewRows] = await Promise.all([
+    nameMapFor(supabase, [...new Set(rows.map((row) => row.created_by))]),
+    reviewRowsFor(
+      supabase,
+      rows.map((row) => row.id),
+    ),
+  ]);
+  return { listings: rows.map((row) => toBusinessListingView(row, nameById, reviewRows)) };
 }
 
 export async function listBusinessesPageSupabase(
@@ -230,12 +275,15 @@ export async function listBusinessesPageSupabase(
   );
   const wrapped = rows.map((row) => ({ id: row.id, row, sortKey: row.created_at }));
   const page = paginateInMemory(wrapped, limit, cursor);
-  const nameById = await nameMapFor(
-    supabase,
-    [...new Set(page.items.map((item) => item.row.created_by))],
-  );
+  const [nameById, reviewRows] = await Promise.all([
+    nameMapFor(supabase, [...new Set(page.items.map((item) => item.row.created_by))]),
+    reviewRowsFor(
+      supabase,
+      page.items.map((item) => item.row.id),
+    ),
+  ]);
   return {
-    listings: page.items.map((item) => toBusinessListingView(item.row, nameById)),
+    listings: page.items.map((item) => toBusinessListingView(item.row, nameById, reviewRows)),
     nextCursor: page.nextCursor,
   };
 }
@@ -250,8 +298,14 @@ export async function getBusinessesByIdsSupabase(
     .in('id', ids);
   throwIfSupabaseError(error, 'load business listings by id');
   const rows = (data ?? []) as unknown as BusinessRow[];
-  const nameById = await nameMapFor(supabase, [...new Set(rows.map((row) => row.created_by))]);
-  return rows.map((row) => toBusinessListingView(row, nameById));
+  const [nameById, reviewRows] = await Promise.all([
+    nameMapFor(supabase, [...new Set(rows.map((row) => row.created_by))]),
+    reviewRowsFor(
+      supabase,
+      rows.map((row) => row.id),
+    ),
+  ]);
+  return rows.map((row) => toBusinessListingView(row, nameById, reviewRows));
 }
 
 export async function getMyBusinessListingsViewSupabase(
@@ -269,9 +323,15 @@ export async function getMyBusinessListingsViewSupabase(
   const rows = (data ?? []) as unknown as BusinessRow[];
   const wrapped = rows.map((row) => ({ id: row.id, row, sortKey: row.created_at }));
   const page = paginateInMemory(wrapped, limit, cursor);
-  const nameById = await nameMapFor(supabase, [userId]);
+  const [nameById, reviewRows] = await Promise.all([
+    nameMapFor(supabase, [userId]),
+    reviewRowsFor(
+      supabase,
+      page.items.map((item) => item.row.id),
+    ),
+  ]);
   return {
-    listings: page.items.map((item) => toBusinessListingView(item.row, nameById)),
+    listings: page.items.map((item) => toBusinessListingView(item.row, nameById, reviewRows)),
     nextCursor: page.nextCursor,
   };
 }
@@ -367,7 +427,7 @@ export async function createBusinessListingSupabase(
     insertedRow = (verified as unknown as BusinessRow) ?? insertedRow;
   }
 
-  return { listing: toBusinessListingView(insertedRow, nameById), ok: true };
+  return { listing: toBusinessListingView(insertedRow, nameById, []), ok: true };
 }
 
 export async function updateBusinessListingSupabase(
@@ -483,7 +543,8 @@ export async function updateBusinessListingSupabase(
 
   const row = data as unknown as BusinessRow;
   const nameById = await nameMapFor(supabase, [userId]);
-  return { listing: toBusinessListingView(row, nameById), ok: true };
+  const reviewRows = await reviewRowsFor(supabase, [listingId]);
+  return { listing: toBusinessListingView(row, nameById, reviewRows), ok: true };
 }
 
 export async function reportBusinessListingSupabase(
