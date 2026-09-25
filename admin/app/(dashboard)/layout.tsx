@@ -3,6 +3,7 @@ import { getCurrentAdminEmail } from '@/lib/auth';
 import {
   countUnseenBusinessListings,
   countUnseenContactMessages,
+  countUnseenFeaturedSuggestions,
   countUnseenLandingContactMessages,
   countUnseenReports,
   countUnseenWaitlistSignups,
@@ -30,12 +31,14 @@ export default async function DashboardLayout({
     landingContactUnseenCount,
     waitlistUnseenCount,
     businessListingsUnseenCount,
+    eventsFeaturedSuggestionsUnseenCount,
   ] = await Promise.all([
     countUnseenReports(seenState.reportsLastSeenAt),
     countUnseenContactMessages(seenState.contactMessagesLastSeenAt),
     countUnseenLandingContactMessages(seenState.landingContactLastSeenAt),
     countUnseenWaitlistSignups(seenState.waitlistLastSeenAt),
     countUnseenBusinessListings(seenState.businessListingsLastSeenAt),
+    countUnseenFeaturedSuggestions(seenState.eventsFeaturedSuggestionsLastSeenAt),
   ]);
   // One nav badge covers both contact sources (in-app + landing site) --
   // they read as the same kind of thing to an admin ("messages waiting on
@@ -62,6 +65,7 @@ export default async function DashboardLayout({
             businessListingsUnseenCount={businessListingsUnseenCount}
             contactHref={contactHref}
             contactUnseenCount={contactUnseenCount}
+            eventsFeaturedSuggestionsUnseenCount={eventsFeaturedSuggestionsUnseenCount}
             reportsUnseenCount={reportsUnseenCount}
             waitlistUnseenCount={waitlistUnseenCount}
           />

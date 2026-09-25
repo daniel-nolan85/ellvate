@@ -1,3 +1,4 @@
+import { getFeaturedSuggestions } from './featured-suggestions';
 import { createSupabaseAdminClient } from './supabase/admin';
 
 // All 11 report tables -- this list was missing event_reports/
@@ -93,12 +94,25 @@ export async function countUnseenBusinessListings(sinceIso: string | null): Prom
   return count ?? 0;
 }
 
+// Counts suggestions (see featured-suggestions.ts) whose underlying event
+// was created after the admin last visited /events -- an imperfect proxy
+// (an older event can start qualifying later, e.g. once it takes the lead
+// on RSVPs, without this badge noticing), but the same simplification
+// every other unseen-count here already makes, and cheap since it reuses
+// the same query the page itself renders from.
+export async function countUnseenFeaturedSuggestions(sinceIso: string | null): Promise<number> {
+  const since = sinceIso ?? EPOCH;
+  const suggestions = await getFeaturedSuggestions();
+  return suggestions.filter((suggestion) => suggestion.createdAt > since).length;
+}
+
 export interface AdminSeenState {
   readonly reportsLastSeenAt: string | null;
   readonly contactMessagesLastSeenAt: string | null;
   readonly landingContactLastSeenAt: string | null;
   readonly waitlistLastSeenAt: string | null;
   readonly businessListingsLastSeenAt: string | null;
+  readonly eventsFeaturedSuggestionsLastSeenAt: string | null;
 }
 
 export async function getAdminSeenState(email: string | null): Promise<AdminSeenState> {
@@ -106,6 +120,7 @@ export async function getAdminSeenState(email: string | null): Promise<AdminSeen
     return {
       businessListingsLastSeenAt: null,
       contactMessagesLastSeenAt: null,
+      eventsFeaturedSuggestionsLastSeenAt: null,
       landingContactLastSeenAt: null,
       reportsLastSeenAt: null,
       waitlistLastSeenAt: null,
@@ -114,7 +129,7 @@ export async function getAdminSeenState(email: string | null): Promise<AdminSeen
   const { data, error } = await createSupabaseAdminClient()
     .from('dashboard_admins')
     .select(
-      'reports_last_seen_at, contact_messages_last_seen_at, landing_contact_last_seen_at, waitlist_last_seen_at, business_listings_last_seen_at',
+      'reports_last_seen_at, contact_messages_last_seen_at, landing_contact_last_seen_at, waitlist_last_seen_at, business_listings_last_seen_at, events_featured_suggestions_last_seen_at',
     )
     .eq('email', email)
     .maybeSingle();
@@ -124,6 +139,7 @@ export async function getAdminSeenState(email: string | null): Promise<AdminSeen
   return {
     businessListingsLastSeenAt: data?.business_listings_last_seen_at ?? null,
     contactMessagesLastSeenAt: data?.contact_messages_last_seen_at ?? null,
+    eventsFeaturedSuggestionsLastSeenAt: data?.events_featured_suggestions_last_seen_at ?? null,
     landingContactLastSeenAt: data?.landing_contact_last_seen_at ?? null,
     reportsLastSeenAt: data?.reports_last_seen_at ?? null,
     waitlistLastSeenAt: data?.waitlist_last_seen_at ?? null,

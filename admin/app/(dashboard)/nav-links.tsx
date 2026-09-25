@@ -25,6 +25,7 @@ interface NavLinksProps {
   readonly contactHref?: string;
   readonly waitlistUnseenCount?: number;
   readonly businessListingsUnseenCount?: number;
+  readonly eventsFeaturedSuggestionsUnseenCount?: number;
 }
 
 export function NavLinks({
@@ -33,6 +34,7 @@ export function NavLinks({
   contactHref = '/contact',
   waitlistUnseenCount = 0,
   businessListingsUnseenCount = 0,
+  eventsFeaturedSuggestionsUnseenCount = 0,
 }: NavLinksProps) {
   const pathname = usePathname();
 
@@ -50,7 +52,9 @@ export function NavLinks({
                 ? waitlistUnseenCount
                 : link.href === '/business-listings'
                   ? businessListingsUnseenCount
-                  : 0;
+                  : link.href === '/events'
+                    ? eventsFeaturedSuggestionsUnseenCount
+                    : 0;
         const href = link.href === '/contact' ? contactHref : link.href;
 
         return (

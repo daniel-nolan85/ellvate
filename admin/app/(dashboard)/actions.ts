@@ -15,6 +15,14 @@ export async function signOutAction() {
   redirect('/login');
 }
 
+// Only one event is ever featured at a time -- the mobile Events screen
+// (events-screen.tsx) already only gives the special hero treatment to
+// events[0], so a second featured=true row today would sit at the top of
+// the plain list looking like any other event, no different than if it
+// weren't featured at all. Enforcing single-select here, not just relying
+// on that incidental UI behavior, means the data always matches what's
+// actually visible -- no stale featured=true rows left behind to surprise
+// a future UI change that shows more than one.
 export async function toggleEventFeaturedAction(
   eventId: string,
   nextFeatured: boolean,
@@ -22,6 +30,18 @@ export async function toggleEventFeaturedAction(
   await requireAdminEmail();
 
   const admin = createSupabaseAdminClient();
+
+  if (nextFeatured) {
+    const { error: unfeatureError } = await admin
+      .from('events')
+      .update({ featured: false })
+      .eq('featured', true)
+      .neq('id', eventId);
+    if (unfeatureError) {
+      throw unfeatureError;
+    }
+  }
+
   const { error } = await admin
     .from('events')
     .update({ featured: nextFeatured })

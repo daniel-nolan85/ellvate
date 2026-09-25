@@ -38,6 +38,11 @@ export interface FeaturedSuggestion {
   readonly startsAt: string;
   readonly going: number;
   readonly flags: readonly FeaturedSuggestionFlag[];
+  // When the underlying event was created -- not when it started qualifying
+  // as a suggestion (flags are computed live, not stored), but a reasonable
+  // proxy for "is this a new candidate" that the nav badge (unseen-counts.ts)
+  // filters on, same as every other unseen-count in this app already does.
+  readonly createdAt: string;
 }
 
 function localWeekdayAndHour(iso: string): { readonly weekday: string; readonly hour: number } {
@@ -64,7 +69,7 @@ export async function getFeaturedSuggestions(): Promise<readonly FeaturedSuggest
 
   const { data: eventRows, error: eventsError } = await admin
     .from('events')
-    .select('id, title, place, starts_at, going_base')
+    .select('id, title, place, starts_at, going_base, created_at')
     .eq('featured', false)
     .gte('starts_at', now.toISOString())
     .lte('starts_at', lookaheadEnd.toISOString())
@@ -78,6 +83,7 @@ export async function getFeaturedSuggestions(): Promise<readonly FeaturedSuggest
     place: string;
     starts_at: string;
     going_base: number;
+    created_at: string;
   }[];
   if (events.length === 0) {
     return [];
@@ -120,6 +126,7 @@ export async function getFeaturedSuggestions(): Promise<readonly FeaturedSuggest
     }
     if (flags.length > 0) {
       suggestions.push({
+        createdAt: event.created_at,
         flags,
         going: event.going,
         id: event.id,

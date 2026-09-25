@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { getCurrentAdminEmail } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format-date';
 import {
   getFeaturedSuggestions,
@@ -68,6 +69,18 @@ export default async function EventsPage({
   const suggestions = await getFeaturedSuggestions();
 
   const admin = createSupabaseAdminClient();
+  const adminEmail = await getCurrentAdminEmail();
+
+  // Marking "seen" rides along with the page's own query, same as Reports
+  // and Business listings -- see reports-data.ts's identical comment for
+  // why this doesn't block the render on a separate round trip.
+  const markSeen = adminEmail
+    ? admin
+        .from('dashboard_admins')
+        .update({ events_featured_suggestions_last_seen_at: new Date().toISOString() })
+        .eq('email', adminEmail)
+    : Promise.resolve();
+
   let request = admin.from('events').select('id, title, starts_at, place, featured, media');
 
   if (query) {
@@ -76,11 +89,14 @@ export default async function EventsPage({
   }
   request = applyEventsCursor(request, params.cursor);
 
-  const { data, error } = await request
-    .order('featured', { ascending: false })
-    .order('starts_at', { ascending: true })
-    .order('id', { ascending: true })
-    .limit(LIST_PAGE_SIZE + 1);
+  const [{ data, error }] = await Promise.all([
+    request
+      .order('featured', { ascending: false })
+      .order('starts_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(LIST_PAGE_SIZE + 1),
+    markSeen,
+  ]);
   if (error) {
     throw error;
   }
