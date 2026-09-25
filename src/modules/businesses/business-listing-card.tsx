@@ -22,6 +22,12 @@ const COLOR_MUTED = 'rgb(169,156,139)';
 const COLOR_SPECIAL = 'rgb(181,80,44)';
 const COLOR_STAR = 'rgb(217,123,41)';
 
+// Cards stay compact -- a listing with several specials shows only the
+// first couple inline and summarizes the rest, mirroring how the
+// description above is itself clamped to 2 lines rather than growing
+// unbounded.
+const MAX_VISIBLE_SPECIALS_ON_CARD = 2;
+
 interface BusinessListingCardProps {
   readonly listing: BusinessListing;
   readonly onOpen?: (listingId: string) => void;
@@ -104,17 +110,26 @@ export function BusinessListingCard({ listing, onOpen }: BusinessListingCardProp
           ) : null}
           <RatingSummary listing={listing} />
         </HStack>
-        {listing.currentSpecial ? (
-          <HStack className="items-center gap-1">
-            <Icon color={COLOR_SPECIAL} name="Sparkles" size={11} />
-            <Text
-              className="flex-1 font-inter-medium text-[rgb(181,80,44)]"
-              numberOfLines={1}
-              size="xs"
-            >
-              {listing.currentSpecial}
-            </Text>
-          </HStack>
+        {listing.currentSpecials.length > 0 ? (
+          <VStack className="gap-1">
+            {listing.currentSpecials.slice(0, MAX_VISIBLE_SPECIALS_ON_CARD).map((special, index) => (
+              <HStack className="items-center gap-1" key={index}>
+                <Icon color={COLOR_SPECIAL} name="Sparkles" size={11} />
+                <Text
+                  className="flex-1 font-inter-medium text-[rgb(181,80,44)]"
+                  numberOfLines={1}
+                  size="xs"
+                >
+                  {special}
+                </Text>
+              </HStack>
+            ))}
+            {listing.currentSpecials.length > MAX_VISIBLE_SPECIALS_ON_CARD ? (
+              <Text className="text-text-muted" size="xs">
+                +{listing.currentSpecials.length - MAX_VISIBLE_SPECIALS_ON_CARD} more
+              </Text>
+            ) : null}
+          </VStack>
         ) : null}
         {listing.address ? (
           <HStack className="items-center gap-1">

@@ -38,8 +38,8 @@ async function createBusinessListingMemory(
     contactWebsite: value.contactWebsite,
     address: value.address,
     hours: value.hours,
-    currentSpecial: value.currentSpecial,
-    specialUpdatedAt: value.currentSpecial ? now : null,
+    currentSpecials: value.currentSpecials,
+    specialsUpdatedAt: value.currentSpecials.length > 0 ? now : null,
     logo: logoUpload
       ? { filename: logoUpload.filename, url: logoUpload.dataUrl }
       : undefined,

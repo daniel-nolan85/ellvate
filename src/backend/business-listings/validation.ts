@@ -6,6 +6,9 @@ const MAX_BUSINESS_NAME = 80;
 const MAX_DESCRIPTION = 1000;
 const MAX_CONTACT = 120;
 const MAX_SPECIAL = 200;
+// A reasonable product bound -- more starts looking like spam/clutter in
+// the UI, not a genuine list of distinct specials.
+const MAX_SPECIALS = 5;
 const CATEGORIES: readonly BusinessCategory[] = [
   'restaurants-bars',
   'goods',
@@ -18,6 +21,18 @@ const asTrimmedString = (value: unknown): string =>
 
 const asNullableTrimmedString = (value: unknown): string | null =>
   asTrimmedString(value) || null;
+
+// Accepts only string entries (anything else is silently dropped, not
+// rejected -- mirrors how a stray non-string in `media` is handled
+// elsewhere), trims each, and drops empty/whitespace-only entries so an
+// accidentally-blank row never round-trips as a real special.
+const asTrimmedStringList = (value: unknown): readonly string[] =>
+  Array.isArray(value)
+    ? value
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0)
+    : [];
 
 // WHY: a bare domain like "sunsetgrill.com" has no scheme, so Linking.openURL
 // (and a plain <a href>) resolves it as a path relative to whatever screen
@@ -75,7 +90,7 @@ export function validateBusinessListingInput(
   const contactWebsite = normalizeWebsite(asNullableTrimmedString(raw.contactWebsite));
   const address = asNullableTrimmedString(raw.address);
   const hours = asNullableTrimmedString(raw.hours);
-  const currentSpecial = asNullableTrimmedString(raw.currentSpecial);
+  const currentSpecials = asTrimmedStringList(raw.currentSpecials);
 
   if (!businessName || !description) {
     return invalid('A business name and description are required.');
@@ -98,8 +113,11 @@ export function validateBusinessListingInput(
   ) {
     return invalid('A contact field exceeds its maximum length.');
   }
-  if (currentSpecial !== null && currentSpecial.length > MAX_SPECIAL) {
-    return invalid('The current special exceeds its maximum length.');
+  if (currentSpecials.length > MAX_SPECIALS) {
+    return invalid(`You can list up to ${MAX_SPECIALS} specials.`);
+  }
+  if (currentSpecials.some((special) => special.length > MAX_SPECIAL)) {
+    return invalid('A special exceeds its maximum length.');
   }
   if (!contactPhone && !contactEmail && !contactWebsite) {
     return invalid('Add at least one way for neighbors to reach you.');
@@ -114,7 +132,7 @@ export function validateBusinessListingInput(
       contactEmail,
       contactPhone,
       contactWebsite,
-      currentSpecial,
+      currentSpecials,
       description,
       hours,
     },

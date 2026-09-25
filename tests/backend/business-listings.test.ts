@@ -170,15 +170,62 @@ describe('createBusinessListing verification pipeline', () => {
     }
   });
 
-  test('stores and clears the current special, stamping specialUpdatedAt', async () => {
+  test('stores and clears current specials, stamping specialsUpdatedAt', async () => {
     const created = await createBusinessListing(ctx(), {
       ...domainMatchedInput,
-      currentSpecial: 'Half-off pastries before 9am.',
+      currentSpecials: ['Half-off pastries before 9am.'],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
-    expect(created.listing.currentSpecial).toBe('Half-off pastries before 9am.');
-    expect(created.listing.specialUpdatedAt).not.toBeNull();
+    expect(created.listing.currentSpecials).toEqual(['Half-off pastries before 9am.']);
+    expect(created.listing.specialsUpdatedAt).not.toBeNull();
+  });
+
+  test('an empty specials list is valid — the field stays fully optional', async () => {
+    const created = await createBusinessListing(ctx(), domainMatchedInput);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.listing.currentSpecials).toEqual([]);
+    expect(created.listing.specialsUpdatedAt).toBeNull();
+  });
+
+  test('multiple specials round-trip through create', async () => {
+    const created = await createBusinessListing(ctx(), {
+      ...domainMatchedInput,
+      currentSpecials: ['Half-off pastries before 9am.', 'Free coffee refills all day.'],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.listing.currentSpecials).toEqual([
+      'Half-off pastries before 9am.',
+      'Free coffee refills all day.',
+    ]);
+  });
+
+  test('rejects more than 5 specials', async () => {
+    const result = await createBusinessListing(ctx(), {
+      ...domainMatchedInput,
+      currentSpecials: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'],
+    });
+    expect(result).toMatchObject({ ok: false, code: 'invalid_business_listing' });
+  });
+
+  test('rejects a special over 200 characters, even when it is not the first entry', async () => {
+    const result = await createBusinessListing(ctx(), {
+      ...domainMatchedInput,
+      currentSpecials: ['Short one.', 'x'.repeat(201)],
+    });
+    expect(result).toMatchObject({ ok: false, code: 'invalid_business_listing' });
+  });
+
+  test('drops empty/whitespace-only entries and trims the rest', async () => {
+    const created = await createBusinessListing(ctx(), {
+      ...domainMatchedInput,
+      currentSpecials: ['  Half-off pastries before 9am.  ', '   ', ''],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.listing.currentSpecials).toEqual(['Half-off pastries before 9am.']);
   });
 });
 
@@ -371,12 +418,71 @@ describe('updateBusinessListing', () => {
       contactWebsite: 'https://marinasunsetgrill.example',
       address: '10 Marina Way, Lake Las Vegas Village',
       hours: 'Mon–Sun 11am–10pm',
-      currentSpecial: 'New weekend special.',
+      currentSpecials: ['New weekend special.'],
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.listing.verificationStatus).toBe('verified');
-      expect(result.listing.currentSpecial).toBe('New weekend special.');
+      expect(result.listing.currentSpecials).toEqual(['New weekend special.']);
+    }
+  });
+
+  test('multiple specials round-trip through update, and the 5-item cap is enforced', async () => {
+    const created = await createBusinessListing(ctx(), domainMatchedInput);
+    if (!created.ok) throw new Error('setup failed');
+
+    const updated = await updateBusinessListing(ctx(), created.listing.id, {
+      ...domainMatchedInput,
+      currentSpecials: ['Special one', 'Special two', 'Special three'],
+    });
+    expect(updated.ok).toBe(true);
+    if (updated.ok) {
+      expect(updated.listing.currentSpecials).toEqual([
+        'Special one',
+        'Special two',
+        'Special three',
+      ]);
+    }
+
+    const overCap = await updateBusinessListing(ctx(), created.listing.id, {
+      ...domainMatchedInput,
+      currentSpecials: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'],
+    });
+    expect(overCap).toMatchObject({ ok: false, code: 'invalid_business_listing' });
+  });
+
+  test('specialsUpdatedAt only changes when the specials list actually changed', async () => {
+    const created = await createBusinessListing(ctx(), {
+      ...domainMatchedInput,
+      currentSpecials: ['Half-off pastries before 9am.'],
+    });
+    if (!created.ok) throw new Error('setup failed');
+    const firstStamp = created.listing.specialsUpdatedAt;
+    expect(firstStamp).not.toBeNull();
+
+    // Unrelated edit (business name only) -- the specials list is unchanged,
+    // so the stamp must not move.
+    const unrelatedEdit = await updateBusinessListing(ctx(), created.listing.id, {
+      ...domainMatchedInput,
+      businessName: 'Renamed Coffee Co',
+      currentSpecials: ['Half-off pastries before 9am.'],
+    });
+    expect(unrelatedEdit.ok).toBe(true);
+    if (unrelatedEdit.ok) {
+      expect(unrelatedEdit.listing.specialsUpdatedAt).toBe(firstStamp);
+    }
+
+    // Actually changing the specials list does move the stamp -- a short
+    // delay guarantees the new ISO timestamp differs from firstStamp even
+    // at millisecond resolution.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const specialsEdit = await updateBusinessListing(ctx(), created.listing.id, {
+      ...domainMatchedInput,
+      currentSpecials: ['A different special.'],
+    });
+    expect(specialsEdit.ok).toBe(true);
+    if (specialsEdit.ok) {
+      expect(specialsEdit.listing.specialsUpdatedAt).not.toBe(firstStamp);
     }
   });
 

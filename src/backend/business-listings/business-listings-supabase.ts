@@ -31,7 +31,7 @@ import { validateBusinessListingInput } from './validation';
 import { resolveVerification } from './verification';
 
 const BUSINESS_SELECT =
-  'id,created_by,business_name,category,description,contact_phone,contact_email,contact_website,address,hours,current_special,special_updated_at,logo,media,verification_status,verification_method,verified_at,created_at,edited_at';
+  'id,created_by,business_name,category,description,contact_phone,contact_email,contact_website,address,hours,current_specials,specials_updated_at,logo,media,verification_status,verification_method,verified_at,created_at,edited_at';
 
 interface BusinessRow {
   readonly id: string;
@@ -44,8 +44,8 @@ interface BusinessRow {
   readonly contact_website: string | null;
   readonly address: string | null;
   readonly hours: string | null;
-  readonly current_special: string | null;
-  readonly special_updated_at: string | null;
+  readonly current_specials: readonly string[];
+  readonly specials_updated_at: string | null;
   readonly logo: BusinessMedia | null;
   readonly media: readonly BusinessMedia[] | null;
   readonly verification_status: string;
@@ -110,8 +110,8 @@ const toBusinessListingView = (
     description: row.description,
     hours: row.hours,
     address: row.address,
-    currentSpecial: row.current_special,
-    specialUpdatedAt: row.special_updated_at,
+    currentSpecials: row.current_specials,
+    specialsUpdatedAt: row.specials_updated_at,
     logo: row.logo ?? undefined,
     media: row.media ?? undefined,
     verificationStatus: row.verification_status as VerificationStatus,
@@ -361,8 +361,8 @@ export async function createBusinessListingSupabase(
       description: value.description,
       hours: value.hours,
       address: value.address,
-      current_special: value.currentSpecial,
-      special_updated_at: value.currentSpecial ? new Date().toISOString() : null,
+      current_specials: value.currentSpecials,
+      specials_updated_at: value.currentSpecials.length > 0 ? new Date().toISOString() : null,
       id: listingId,
     })
     .select(BUSINESS_SELECT)
@@ -438,7 +438,7 @@ export async function updateBusinessListingSupabase(
 ): Promise<UpdateBusinessListingResult> {
   const { data: existing, error: existingError } = await supabase
     .from('business_listings')
-    .select('id,created_by,logo,media,business_name,contact_email,contact_website,verification_status,current_special')
+    .select('id,created_by,logo,media,business_name,contact_email,contact_website,verification_status,current_specials')
     .eq('id', listingId)
     .maybeSingle();
   throwIfSupabaseError(existingError, 'load business listing');
@@ -494,7 +494,10 @@ export async function updateBusinessListingSupabase(
     ? await resolveVerification(userId, value, photoUrl)
     : null;
   const now = new Date().toISOString();
-  const specialChanged = existing.current_special !== value.currentSpecial;
+  const existingSpecials = (existing.current_specials as readonly string[] | null) ?? [];
+  const specialsChanged =
+    existingSpecials.length !== value.currentSpecials.length ||
+    existingSpecials.some((special, index) => special !== value.currentSpecials[index]);
 
   const { data, error } = await supabase
     .from('business_listings')
@@ -507,8 +510,8 @@ export async function updateBusinessListingSupabase(
       description: value.description,
       hours: value.hours,
       address: value.address,
-      current_special: value.currentSpecial,
-      special_updated_at: specialChanged ? now : undefined,
+      current_specials: value.currentSpecials,
+      specials_updated_at: specialsChanged ? now : undefined,
       logo,
       media: media.length ? media : null,
       edited_at: now,

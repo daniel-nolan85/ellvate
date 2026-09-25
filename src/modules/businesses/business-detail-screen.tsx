@@ -414,7 +414,7 @@ export function BusinessDetailScreen({
                     {listing.description}
                   </Text>
 
-                  {listing.currentSpecial ? (
+                  {listing.currentSpecials.length > 0 ? (
                     <VStack
                       className="gap-1 rounded-[14px] bg-[rgb(250,235,225)] p-3.5"
                       space="xs"
@@ -422,12 +422,16 @@ export function BusinessDetailScreen({
                       <HStack className="items-center gap-1.5">
                         <Icon color="rgb(181,80,44)" name="Sparkles" size={14} />
                         <Text className="font-inter-semibold text-[12px] uppercase tracking-[0.5px] text-[rgb(181,80,44)]">
-                          Current special
+                          {listing.currentSpecials.length > 1 ? 'Current specials' : 'Current special'}
                         </Text>
                       </HStack>
-                      <Text className="text-[14px] leading-5 text-content">
-                        {listing.currentSpecial}
-                      </Text>
+                      <VStack space="xs">
+                        {listing.currentSpecials.map((special, index) => (
+                          <Text className="text-[14px] leading-5 text-content" key={index}>
+                            {special}
+                          </Text>
+                        ))}
+                      </VStack>
                     </VStack>
                   ) : null}
 
@@ -592,7 +596,7 @@ export function BusinessDetailScreen({
               initialContactEmail={listing.contactEmail ?? ''}
               initialContactPhone={listing.contactPhone ?? ''}
               initialContactWebsite={listing.contactWebsite ?? ''}
-              initialCurrentSpecial={listing.currentSpecial ?? ''}
+              initialCurrentSpecials={listing.currentSpecials}
               initialDescription={listing.description}
               initialHours={listing.hours ?? ''}
               initialLogo={listing.logo ?? null}

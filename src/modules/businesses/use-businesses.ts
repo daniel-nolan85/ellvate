@@ -42,8 +42,8 @@ export interface BusinessListing {
   readonly contactWebsite: string | null;
   readonly address: string | null;
   readonly hours: string | null;
-  readonly currentSpecial: string | null;
-  readonly specialUpdatedAt: string | null;
+  readonly currentSpecials: readonly string[];
+  readonly specialsUpdatedAt: string | null;
   readonly logo?: BusinessMedia;
   readonly media?: readonly BusinessMedia[];
   readonly verificationStatus: VerificationStatus;
@@ -88,7 +88,7 @@ export interface CreateBusinessListingInput {
   readonly contactWebsite: string;
   readonly address: string;
   readonly hours: string;
-  readonly currentSpecial: string;
+  readonly currentSpecials: readonly string[];
   readonly newLogo?: NewBusinessMediaInput;
   readonly newMedia?: readonly NewBusinessMediaInput[];
 }
@@ -103,7 +103,7 @@ export interface UpdateBusinessListingInput {
   readonly contactWebsite: string;
   readonly address: string;
   readonly hours: string;
-  readonly currentSpecial: string;
+  readonly currentSpecials: readonly string[];
   readonly existingLogo?: ExistingBusinessMediaInput;
   readonly newLogo?: NewBusinessMediaInput;
   readonly existingMedia?: readonly ExistingBusinessMediaInput[];

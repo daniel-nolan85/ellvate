@@ -18,6 +18,8 @@ import {
 } from './business-category';
 import type { BusinessCategory } from './use-businesses';
 
+const MAX_SPECIALS = 5;
+
 export interface BusinessComposerDraft {
   readonly businessName: string;
   readonly category: BusinessCategory;
@@ -27,7 +29,7 @@ export interface BusinessComposerDraft {
   readonly contactWebsite: string;
   readonly address: string;
   readonly hours: string;
-  readonly currentSpecial: string;
+  readonly currentSpecials: readonly string[];
   readonly existingLogo?: { readonly filename: string; readonly url: string };
   readonly newLogo?: { readonly filename: string; readonly dataUrl: string };
   readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
@@ -99,7 +101,7 @@ interface BusinessComposerProps {
   readonly initialContactWebsite?: string;
   readonly initialAddress?: string;
   readonly initialHours?: string;
-  readonly initialCurrentSpecial?: string;
+  readonly initialCurrentSpecials?: readonly string[];
   readonly initialLogo?: { readonly filename: string; readonly url: string } | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
@@ -116,7 +118,7 @@ export function BusinessComposer({
   initialContactEmail = '',
   initialContactPhone = '',
   initialContactWebsite = '',
-  initialCurrentSpecial = '',
+  initialCurrentSpecials = [],
   initialDescription = '',
   initialHours = '',
   initialLogo = null,
@@ -135,7 +137,7 @@ export function BusinessComposer({
   const [contactWebsite, setContactWebsite] = useState(initialContactWebsite);
   const [address, setAddress] = useState(initialAddress);
   const [hours, setHours] = useState(initialHours);
-  const [currentSpecial, setCurrentSpecial] = useState(initialCurrentSpecial);
+  const [specials, setSpecials] = useState<string[]>([...initialCurrentSpecials]);
   const [logo, setLogo] = useState<BusinessLogoItem | null>(
     () =>
       initialLogo && { filename: initialLogo.filename, kind: 'existing' as const, url: initialLogo.url },
@@ -185,6 +187,21 @@ export function BusinessComposer({
 
   const removeMedia = (index: number) => {
     setMedia(media.filter((_, i) => i !== index));
+  };
+
+  const addSpecial = () => {
+    if (specials.length >= MAX_SPECIALS) {
+      return;
+    }
+    setSpecials([...specials, '']);
+  };
+
+  const updateSpecial = (index: number, text: string) => {
+    setSpecials(specials.map((special, i) => (i === index ? text : special)));
+  };
+
+  const removeSpecial = (index: number) => {
+    setSpecials(specials.filter((_, i) => i !== index));
   };
 
   const pickLogo = async () => {
@@ -354,16 +371,48 @@ export function BusinessComposer({
           </Input>
         </Field>
 
-        <Field label="Current special">
-          <Input size="lg">
-            <InputField
-              maxLength={200}
-              onChangeText={setCurrentSpecial}
-              placeholder="e.g. Half-off appetizers, 4–6pm daily"
-              testID="business-current-special"
-              value={currentSpecial}
-            />
-          </Input>
+        <Field label="Current specials">
+          <VStack space="xs">
+            {specials.length > 0 ? (
+              <VStack space="xs">
+                {specials.map((special, index) => (
+                  <HStack className="items-center gap-2" key={index}>
+                    <Input className="flex-1" size="lg">
+                      <InputField
+                        maxLength={200}
+                        onChangeText={(text) => updateSpecial(index, text)}
+                        placeholder="e.g. Half-off appetizers, 4–6pm daily"
+                        testID={`business-special-${index}`}
+                        value={special}
+                      />
+                    </Input>
+                    <Pressable
+                      accessibilityLabel={`Remove special ${index + 1}`}
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      onPress={() => removeSpecial(index)}
+                      testID={`business-special-remove-${index}`}
+                    >
+                      <Icon color="rgb(169,156,139)" name="Close" size={16} />
+                    </Pressable>
+                  </HStack>
+                ))}
+              </VStack>
+            ) : null}
+            {specials.length < MAX_SPECIALS ? (
+              <Pressable
+                accessibilityRole="button"
+                className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3"
+                onPress={addSpecial}
+                testID="business-special-add"
+              >
+                <Icon color="rgb(169,156,139)" name="Add" size={16} />
+                <Text className="font-inter-medium text-[13px] text-text-muted">
+                  Add another special
+                </Text>
+              </Pressable>
+            ) : null}
+          </VStack>
         </Field>
 
         <Field label="Photos">
@@ -438,7 +487,7 @@ export function BusinessComposer({
                 contactEmail: contactEmail.trim(),
                 contactPhone: contactPhone.trim(),
                 contactWebsite: contactWebsite.trim(),
-                currentSpecial: currentSpecial.trim(),
+                currentSpecials: specials.map((special) => special.trim()).filter(Boolean),
                 description: description.trim(),
                 existingLogo:
                   logo?.kind === 'existing'

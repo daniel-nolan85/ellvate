@@ -303,10 +303,10 @@ export interface StoredBusinessListing {
   // service area.
   readonly address: string | null;
   readonly hours: string | null;
-  // One active special, replaced on every edit -- not a running feed of
-  // promotional posts.
-  readonly currentSpecial: string | null;
-  readonly specialUpdatedAt: string | null;
+  // Zero to a handful of active specials, replaced wholesale on every edit
+  // -- not a running feed of promotional posts.
+  readonly currentSpecials: readonly string[];
+  readonly specialsUpdatedAt: string | null;
   readonly logo?: StoredMedia;
   readonly media?: readonly StoredMedia[];
   // 'pending': visible only to authorId. 'verified': public. No 'rejected'

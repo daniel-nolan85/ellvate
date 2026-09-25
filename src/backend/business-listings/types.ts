@@ -27,8 +27,8 @@ export interface BusinessListing {
   readonly contactWebsite: string | null;
   readonly address: string | null;
   readonly hours: string | null;
-  readonly currentSpecial: string | null;
-  readonly specialUpdatedAt: string | null;
+  readonly currentSpecials: readonly string[];
+  readonly specialsUpdatedAt: string | null;
   readonly logo?: BusinessMedia;
   readonly media?: readonly BusinessMedia[];
   readonly verificationStatus: VerificationStatus;
@@ -74,7 +74,7 @@ export interface ValidatedBusinessListing {
   readonly contactWebsite: string | null;
   readonly address: string | null;
   readonly hours: string | null;
-  readonly currentSpecial: string | null;
+  readonly currentSpecials: readonly string[];
 }
 
 export type BusinessListingValidation =

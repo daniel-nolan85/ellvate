@@ -16,6 +16,12 @@ import { resolveVerification } from './verification';
 // Editing the fields verification was actually based on re-runs the
 // pipeline; editing anything else (hours, special, address, photos)
 // leaves an already-verified listing's status untouched.
+const specialsChanged = (
+  existing: readonly string[],
+  next: readonly string[],
+): boolean =>
+  existing.length !== next.length || existing.some((special, index) => special !== next[index]);
+
 const identityChanged = (
   existing: { businessName: string; contactEmail: string | null; contactWebsite: string | null },
   value: { businessName: string; contactEmail: string | null; contactWebsite: string | null },
@@ -89,9 +95,10 @@ async function updateBusinessListingMemory(
             description: value.description,
             hours: value.hours,
             address: value.address,
-            currentSpecial: value.currentSpecial,
-            specialUpdatedAt:
-              value.currentSpecial !== listing.currentSpecial ? now : listing.specialUpdatedAt,
+            currentSpecials: value.currentSpecials,
+            specialsUpdatedAt: specialsChanged(listing.currentSpecials, value.currentSpecials)
+              ? now
+              : listing.specialsUpdatedAt,
             logo,
             media: media.length ? media : undefined,
             ...(verification
