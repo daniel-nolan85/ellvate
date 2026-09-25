@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { FlatList, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -42,10 +43,21 @@ interface BusinessesScreenProps {
   readonly headerExtra?: ReactNode;
 }
 
+interface BusinessToast {
+  readonly message: string;
+  // 'pending' gets a visually distinct treatment (a different icon, longer
+  // on screen) -- a listing that needs review is a meaningfully different
+  // outcome from one that's already live, and the owner should actually
+  // register that, not just see the same generic confirmation.
+  readonly variant: 'live' | 'pending';
+}
+
 export function BusinessesScreen({ headerExtra, onOpenListing }: BusinessesScreenProps = {}) {
+  const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] =
     useState<BusinessCategoryFilter>('all');
   const [isComposing, setIsComposing] = useState(false);
+  const [toast, setToast] = useState<BusinessToast | null>(null);
   const businesses = useBusinessesView(
     activeCategory === 'all' ? undefined : activeCategory,
   );
@@ -53,14 +65,30 @@ export function BusinessesScreen({ headerExtra, onOpenListing }: BusinessesScree
 
   const listings = businesses.data?.pages.flatMap((page) => page.listings) ?? [];
 
+  const showToast = (next: BusinessToast) => {
+    setToast(next);
+    setTimeout(() => setToast(null), next.variant === 'pending' ? 3500 : 2200);
+  };
+
   const handleCreate = (draft: BusinessComposerDraft) => {
     createListing.mutate(draft, {
-      onSuccess: () => setIsComposing(false),
+      onSuccess: (result) => {
+        setIsComposing(false);
+        showToast(
+          result.listing.verificationStatus === 'verified'
+            ? { message: 'Listed! Your business is live.', variant: 'live' }
+            : {
+                message:
+                  'Listed! Pending review — visible only to you until approved.',
+                variant: 'pending',
+              },
+        );
+      },
     });
   };
 
   return (
-    <>
+    <View className="flex-1">
       {/* FlatList, not a ScrollView + `.map()` -- see ServicesScreen's
           identical comment for why. */}
       <FlatList
@@ -164,6 +192,30 @@ export function BusinessesScreen({ headerExtra, onOpenListing }: BusinessesScree
           </>
         )}
       </Sheet>
-    </>
+
+      {toast ? (
+        <View
+          className={`absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] px-4 py-3 ${
+            toast.variant === 'pending' ? 'bg-accent' : 'bg-primary'
+          }`}
+          style={{ bottom: insets.bottom + 96 }}
+        >
+          <Icon
+            color="rgb(250,250,250)"
+            name={toast.variant === 'pending' ? 'Clock' : 'CheckCircle'}
+            size={16}
+          />
+          <Text
+            className={`flex-1 text-[14px] ${
+              toast.variant === 'pending'
+                ? 'text-accent-foreground'
+                : 'text-primary-foreground'
+            }`}
+          >
+            {toast.message}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }

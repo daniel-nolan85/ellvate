@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, type Href } from 'expo-router';
 
@@ -65,12 +66,14 @@ function CreateButton({ onPress }: { readonly onPress: () => void }) {
 }
 
 export function PetitionsScreen() {
+  const insets = useSafeAreaInsets();
   const gate = usePetitionsGate();
   const [status, setStatus] = useState<PetitionStatus>('open');
   const petitions = usePetitionsPage(status);
   const createPetition = useCreatePetition();
   const [composing, setComposing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const items = petitions.data?.pages.flatMap((page) => page.petitions) ?? [];
 
@@ -86,8 +89,13 @@ export function PetitionsScreen() {
     return <PetitionsGateWall usersNeeded={gate.data.usersNeeded} />;
   }
 
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2200);
+  };
+
   return (
-    <>
+    <View className="flex-1">
       {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
           ActivitySectionList for why: this screen pairs a status-tab row
           with a growing list, the exact shape that caused My Activity's
@@ -226,13 +234,28 @@ export function PetitionsScreen() {
                       ? error.message
                       : 'Couldn’t start your petition. Try again.',
                   ),
-                onSuccess: () => setComposing(false),
+                onSuccess: () => {
+                  setComposing(false);
+                  showToast('Petition started!');
+                },
               });
             }}
             totalUsers={gate.data?.totalUsers ?? 0}
           />
         )}
       </Sheet>
-    </>
+
+      {toast ? (
+        <View
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
+          style={{ bottom: insets.bottom + 96 }}
+        >
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
+            {toast}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }

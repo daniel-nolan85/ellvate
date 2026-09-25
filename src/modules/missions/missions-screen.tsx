@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -124,17 +125,24 @@ export function MissionsScreen({
   onOpenLeaderboard,
   onOpenMission,
 }: MissionsScreenProps) {
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<MissionFilter>('available');
   const missionsView = useMissionsView(filter);
   const progress = useMissionsProgress();
   const createMission = useCreateMission();
   const [composing, setComposing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const missions =
     missionsView.data?.pages.flatMap((page) => page.missions) ?? [];
 
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2200);
+  };
+
   return (
-    <>
+    <View className="flex-1">
       {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
           ActivitySectionList for why: this screen pairs a filter-chip row
           (MissionFilterChips) with a growing list, the exact shape that
@@ -269,12 +277,29 @@ export function MissionsScreen({
                   title: draft.title,
                   xp: draft.xp,
                 },
-                { onSuccess: () => setComposing(false) },
+                {
+                  onSuccess: () => {
+                    setComposing(false);
+                    showToast('Mission created!');
+                  },
+                },
               )
             }
           />
         )}
       </Sheet>
-    </>
+
+      {toast ? (
+        <View
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
+          style={{ bottom: insets.bottom + 96 }}
+        >
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
+            {toast}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }

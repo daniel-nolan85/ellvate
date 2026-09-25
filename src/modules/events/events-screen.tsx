@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FlatList, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -60,12 +61,14 @@ interface EventsScreenProps {
 }
 
 export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const dates = useEventDates();
   const eventsView = useEventsView(selectedDate);
   const toggleJoin = useToggleJoin();
   const createEvent = useCreateEvent();
   const [composing, setComposing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const events = eventsView.data?.pages.flatMap((page) => page.events) ?? [];
   // Sorted featured-first server-side, so the very first item (if featured)
@@ -79,8 +82,13 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
     toggleJoin.mutate(eventId);
   };
 
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2200);
+  };
+
   return (
-    <>
+    <View className="flex-1">
       {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
           ActivitySectionList for why: this screen pairs a calendar widget
           (EventsCalendar) with a growing list, the same shape that caused
@@ -202,11 +210,28 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
                 time: draft.time,
                 title: draft.title,
               },
-              { onSuccess: () => setComposing(false) },
+              {
+                onSuccess: () => {
+                  setComposing(false);
+                  showToast('Event created!');
+                },
+              },
             )
           }
         />
       </Sheet>
-    </>
+
+      {toast ? (
+        <View
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
+          style={{ bottom: insets.bottom + 96 }}
+        >
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
+            {toast}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }

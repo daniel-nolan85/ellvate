@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { FlatList, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -43,9 +44,11 @@ interface ServicesScreenProps {
 }
 
 export function ServicesScreen({ headerExtra, onOpenListing }: ServicesScreenProps = {}) {
+  const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] =
     useState<ServiceCategoryFilter>('all');
   const [isComposing, setIsComposing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const services = useServicesView(
     activeCategory === 'all' ? undefined : activeCategory,
   );
@@ -53,14 +56,22 @@ export function ServicesScreen({ headerExtra, onOpenListing }: ServicesScreenPro
 
   const listings = services.data?.pages.flatMap((page) => page.listings) ?? [];
 
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2200);
+  };
+
   const handleCreate = (draft: ServiceComposerDraft) => {
     createListing.mutate(draft, {
-      onSuccess: () => setIsComposing(false),
+      onSuccess: () => {
+        setIsComposing(false);
+        showToast('Listed!');
+      },
     });
   };
 
   return (
-    <>
+    <View className="flex-1">
       {/* FlatList, not a ScrollView + `.map()` -- see activity-parts.tsx's
           ActivitySectionList for why: this screen pairs a filter-chip row
           (ServiceCategoryChips) with a growing list, the exact shape that
@@ -168,6 +179,18 @@ export function ServicesScreen({ headerExtra, onOpenListing }: ServicesScreenPro
           </>
         )}
       </Sheet>
-    </>
+
+      {toast ? (
+        <View
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
+          style={{ bottom: insets.bottom + 96 }}
+        >
+          <Icon color="rgb(250,250,250)" name="CheckCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
+            {toast}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }

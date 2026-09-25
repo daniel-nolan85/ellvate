@@ -5,6 +5,7 @@ import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD } from '@/src/backend/xp';
 
 import { createBusinessListingSupabase } from './business-listings-supabase';
 import { toBusinessListingView } from './business-listing-view';
+import { sendBusinessListingPendingReviewEmail } from './pending-review-email';
 import type { CreatedBusinessListingResult, CreateBusinessListingResult } from './types';
 import { validateBusinessListingInput } from './validation';
 import { resolveVerification } from './verification';
@@ -77,6 +78,13 @@ export async function createBusinessListing(
 
   if (!result.ok) {
     return result;
+  }
+
+  // Same non-blocking, never-fails-the-request treatment as the XP grant
+  // below -- an admin email that fails to send must never make an
+  // otherwise-successful listing creation look like it failed to the client.
+  if (result.listing.verificationStatus === 'pending') {
+    void sendBusinessListingPendingReviewEmail(result.listing).catch(() => false);
   }
 
   // The listing is already fully saved by this point -- a failure in this
