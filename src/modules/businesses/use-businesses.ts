@@ -14,7 +14,8 @@ export type BusinessCategory =
   | 'restaurants-bars'
   | 'goods'
   | 'hospitality'
-  | 'professional-trade';
+  | 'professional-trade'
+  | 'other';
 
 export type VerificationStatus = 'pending' | 'verified';
 export type VerificationMethod = 'domain_match' | 'ai_auto' | 'admin_manual';

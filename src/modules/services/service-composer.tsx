@@ -389,6 +389,13 @@ export function ServiceComposer({
           )}
         </Field>
 
+        <Text className="text-[12px] leading-4 text-text-muted">
+          Once live, neighbors can rate and review your listing, and report
+          it if something seems off. Listings that misrepresent who you are,
+          or accounts that abuse the listing or review system, may be
+          removed and reported.
+        </Text>
+
         <HStack className="items-center justify-end" space="sm">
           <Button
             action="secondary"

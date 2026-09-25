@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { FlatList, View } from 'react-native';
 
 import { router } from 'expo-router';
@@ -36,9 +36,13 @@ function LoadMoreFooter({ isLoading }: { readonly isLoading: boolean }) {
 
 interface ServicesScreenProps {
   readonly onOpenListing?: (listingId: string) => void;
+  // Rendered right after ScreenTitle, before the category chips -- lets
+  // DirectoryScreen slot its section switcher in below the avatar/search/
+  // bell row without this screen needing to know anything about it.
+  readonly headerExtra?: ReactNode;
 }
 
-export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
+export function ServicesScreen({ headerExtra, onOpenListing }: ServicesScreenProps = {}) {
   const [activeCategory, setActiveCategory] =
     useState<ServiceCategoryFilter>('all');
   const [isComposing, setIsComposing] = useState(false);
@@ -108,7 +112,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
         ListHeaderComponent={
           <VStack className="pb-3" space="md">
             <ScreenTitle
-              eyebrow="Local businesses"
+              eyebrow="Local services"
               onSearch={() => router.push('/search')}
               right={
                 <Button
@@ -125,6 +129,7 @@ export function ServicesScreen({ onOpenListing }: ServicesScreenProps = {}) {
               }
               title="Services"
             />
+            {headerExtra}
             <ServiceCategoryChips
               active={activeCategory}
               onSelect={setActiveCategory}

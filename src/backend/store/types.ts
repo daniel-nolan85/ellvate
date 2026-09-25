@@ -288,7 +288,8 @@ export type BusinessCategory =
   | 'restaurants-bars'
   | 'goods'
   | 'hospitality'
-  | 'professional-trade';
+  | 'professional-trade'
+  | 'other';
 
 export interface StoredBusinessListing {
   readonly id: string;

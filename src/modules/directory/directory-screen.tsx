@@ -14,10 +14,11 @@ const SECTIONS: readonly { readonly key: DirectorySection; readonly label: strin
 ];
 
 // Mirrors points-history-screen.tsx's TabSwitcher: an equal-width pill row,
-// active pill filled with the accent color. Sits above whichever section's
-// screen is active -- each section keeps rendering its own ScreenTitle and
-// category-filter chips completely unchanged, so this switcher is purely an
-// additional top-level layer, not a replacement for either section's header.
+// active pill filled with the accent color, rendered right after
+// ScreenTitle -- same ordering points-history-screen.tsx itself uses (title
+// row, then the switcher). Passed into whichever section is active as
+// `headerExtra` so it renders below that section's own avatar/search/bell
+// icon row instead of above the whole screen.
 function SectionSwitcher({
   active,
   onSelect,
@@ -69,13 +70,14 @@ export function DirectoryScreen({
   // simply mounts/unmounts its screen component.
   const [section, setSection] = useState<DirectorySection>('services');
 
+  const switcher = <SectionSwitcher active={section} onSelect={setSection} />;
+
   return (
     <View className="flex-1 bg-canvas">
-      <SectionSwitcher active={section} onSelect={setSection} />
       {section === 'services' ? (
-        <ServicesScreen onOpenListing={onOpenService} />
+        <ServicesScreen headerExtra={switcher} onOpenListing={onOpenService} />
       ) : (
-        <BusinessesScreen onOpenListing={onOpenBusiness} />
+        <BusinessesScreen headerExtra={switcher} onOpenListing={onOpenBusiness} />
       )}
     </View>
   );

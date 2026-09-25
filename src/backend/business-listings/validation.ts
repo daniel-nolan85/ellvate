@@ -14,6 +14,7 @@ const CATEGORIES: readonly BusinessCategory[] = [
   'goods',
   'hospitality',
   'professional-trade',
+  'other',
 ];
 
 const asTrimmedString = (value: unknown): string =>
