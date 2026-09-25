@@ -97,6 +97,80 @@ export async function approveBusinessListingAction(listingId: string) {
   revalidatePath(`/business-listings/${listingId}`);
 }
 
+// The gentler alternative to deleteContentAction for a reported business
+// listing: unpublish it back to 'pending' (same as a brand-new, unverified
+// listing -- hidden from everyone but its owner, sitting in the
+// verification queue) instead of deleting it outright. A report against a
+// long-established local business is often a dispute or a misunderstanding
+// rather than proof the listing is fake, so this gives moderation a
+// proportionate first step before the irreversible one. Resolves the
+// specific report that prompted it (mirrors deleteContentAction's own
+// "resolving a report clears its row" behavior) without touching the
+// listing's other data -- the owner can be re-verified and go live again
+// once whatever prompted the report is sorted out.
+export async function unpublishBusinessListingAction(
+  listingId: string,
+  reportId: string,
+) {
+  await requireAdminEmail();
+
+  const admin = createSupabaseAdminClient();
+  const { data: existing, error: existingError } = await admin
+    .from('business_listings')
+    .select('id, business_name, created_by')
+    .eq('id', listingId)
+    .maybeSingle();
+  if (existingError) {
+    throw existingError;
+  }
+  if (!existing) {
+    throw new Error('business_listing_not_found');
+  }
+
+  const { error } = await admin
+    .from('business_listings')
+    .update({
+      verification_status: 'pending',
+      verification_method: null,
+      verification_notes: 'Unpublished after a report -- awaiting re-review.',
+      verified_at: null,
+      claimed_by: null,
+    })
+    .eq('id', listingId);
+  if (error) {
+    throw error;
+  }
+
+  const { error: reportError } = await admin
+    .from('business_listing_reports')
+    .delete()
+    .eq('id', reportId);
+  if (reportError) {
+    throw reportError;
+  }
+
+  // Reuses the same notification system as approveBusinessListingAction --
+  // resolveNotificationRoute routes on a bare businessId regardless of
+  // `kind`, so no route-table change is needed for this new kind.
+  const { error: notifyError } = await admin.from('notifications').insert({
+    user_id: existing.created_by,
+    kind: 'business_listing_unpublished',
+    title: 'Your listing was unpublished for review',
+    body: `${existing.business_name} was reported and has been temporarily unpublished while we take a look. It hasn't been deleted, and you'll hear from us.`,
+    data: { businessId: existing.id },
+  });
+  if (notifyError) {
+    // Best-effort, same reasoning as approveBusinessListingAction: the
+    // unpublish already happened, a failed notification shouldn't roll it
+    // back or read as an action failure to the admin.
+    console.error(`[admin] failed to notify ${existing.created_by} of listing unpublish`, notifyError);
+  }
+
+  revalidatePath('/business-listings');
+  revalidatePath(`/business-listings/${listingId}`);
+  revalidatePath('/reports');
+}
+
 // Distinct from dashboard_admins above -- this flags an app_users row (a
 // community member) whose content gets an "admin" mark in the mobile app,
 // not who may sign in to this moderation tool.

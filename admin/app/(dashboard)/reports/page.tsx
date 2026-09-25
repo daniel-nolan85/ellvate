@@ -6,6 +6,7 @@ import { reportReasonLabel } from '@/lib/report-reasons';
 import { loadReports } from '@/lib/reports-data';
 
 import { DeleteButton } from '../delete-button';
+import { UnpublishButton } from '../unpublish-button';
 
 export default async function ReportsPage({
   searchParams,
@@ -28,7 +29,10 @@ export default async function ReportsPage({
           comments, reviews, business listings, mission check-in photos, and
           member profiles directly, newest first. Deleting the reported
           content (or, for a &quot;Member&quot; row, the reported account
-          itself) clears its report too.
+          itself) clears its report too. For a business listing, &quot;Send
+          back to pending&quot; is a gentler alternative to Delete &mdash; it
+          unpublishes the listing for re-review and notifies its owner,
+          without removing anything.
         </p>
       </div>
 
@@ -118,11 +122,16 @@ export default async function ReportsPage({
                   {formatDate(row.created_at)}
                 </td>
                 <td className="py-2 text-right">
-                  <DeleteButton
-                    confirmLabel={`Delete this ${row.type.toLowerCase()}? This resolves the report too.`}
-                    id={row.deleteId}
-                    table={row.deleteTable}
-                  />
+                  <span className="flex flex-col items-end gap-1">
+                    {row.type === 'Business listing' ? (
+                      <UnpublishButton listingId={row.deleteId} reportId={row.id} />
+                    ) : null}
+                    <DeleteButton
+                      confirmLabel={`Delete this ${row.type.toLowerCase()}? This resolves the report too.`}
+                      id={row.deleteId}
+                      table={row.deleteTable}
+                    />
+                  </span>
                 </td>
               </tr>
             ))
