@@ -45,11 +45,20 @@ function Chip({ label, onPress, selected, testID }: ChipProps) {
   );
 }
 
-function Field({ children, label }: { readonly children: ReactNode; readonly label: string }) {
+function Field({
+  children,
+  label,
+  required,
+}: {
+  readonly children: ReactNode;
+  readonly label: string;
+  readonly required?: boolean;
+}) {
   return (
     <VStack space="xs">
       <Text className="font-inter-semibold text-[12px] uppercase tracking-[0.5px] text-text-muted">
         {label}
+        {required ? <Text className="text-accent"> *</Text> : null}
       </Text>
       {children}
     </VStack>
@@ -138,7 +147,7 @@ export function PetitionComposer({
           petition.
         </Text>
 
-        <Field label="What's the issue?">
+        <Field label="What's the issue?" required>
           <Input size="lg">
             <InputField
               maxLength={MAX_TITLE}
@@ -150,7 +159,7 @@ export function PetitionComposer({
           </Input>
         </Field>
 
-        <Field label="Details">
+        <Field label="Details" required>
           <GrowingTextInput
             className="rounded-2xl border border-line bg-canvas px-4 py-3 text-[15px] text-content"
             maxHeight={280}
@@ -163,7 +172,7 @@ export function PetitionComposer({
           />
         </Field>
 
-        <Field label="Category">
+        <Field label="Category" required>
           <HStack className="flex-wrap gap-2">
             {PETITION_CATEGORIES.map((option) => (
               <Chip
@@ -177,7 +186,7 @@ export function PetitionComposer({
           </HStack>
         </Field>
 
-        <Field label="How long should it run?">
+        <Field label="How long should it run?" required>
           <HStack className="flex-wrap gap-2">
             {PETITION_DEADLINE_OPTIONS.map((option) => (
               <Chip

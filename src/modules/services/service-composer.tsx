@@ -75,11 +75,20 @@ function Chip({ label, onPress, selected, testID }: ChipProps) {
   );
 }
 
-function Field({ children, label }: { readonly children: ReactNode; readonly label: string }) {
+function Field({
+  children,
+  label,
+  required,
+}: {
+  readonly children: ReactNode;
+  readonly label: string;
+  readonly required?: boolean;
+}) {
   return (
     <VStack space="xs">
       <Text className="font-inter-semibold text-[12px] uppercase tracking-[0.5px] text-text-muted">
         {label}
+        {required ? <Text className="text-accent"> *</Text> : null}
       </Text>
       {children}
     </VStack>
@@ -203,7 +212,7 @@ export function ServiceComposer({
           {submitLabel === 'List business' ? 'List your business' : 'Edit listing'}
         </Text>
 
-        <Field label="Business name">
+        <Field label="Business name" required>
           <Input size="lg">
             <InputField
               maxLength={80}
@@ -215,7 +224,7 @@ export function ServiceComposer({
           </Input>
         </Field>
 
-        <Field label="What you do">
+        <Field label="What you do" required>
           <GrowingTextInput
             className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
             maxHeight={280}
@@ -227,7 +236,7 @@ export function ServiceComposer({
           />
         </Field>
 
-        <Field label="Category">
+        <Field label="Category" required>
           <HStack className="flex-wrap gap-2">
             {SERVICE_CATEGORIES.map((option) => (
               <Chip
@@ -278,6 +287,11 @@ export function ServiceComposer({
             </VStack>
           </HStack>
         </Field>
+
+        <Text className="font-inter-semibold text-[12px] uppercase tracking-[0.5px] text-text-muted">
+          Contact
+          <Text className="text-accent"> * (at least one)</Text>
+        </Text>
 
         <Field label="Phone">
           <Input size="lg">

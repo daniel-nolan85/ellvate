@@ -75,11 +75,20 @@ function Chip({ label, onPress, selected, testID }: ChipProps) {
   );
 }
 
-function Field({ children, label }: { readonly children: ReactNode; readonly label: string }) {
+function Field({
+  children,
+  label,
+  required,
+}: {
+  readonly children: ReactNode;
+  readonly label: string;
+  readonly required?: boolean;
+}) {
   return (
     <VStack space="xs">
       <Text className="font-inter-semibold text-[12px] uppercase tracking-[0.5px] text-text-muted">
         {label}
+        {required ? <Text className="text-accent"> *</Text> : null}
       </Text>
       {children}
     </VStack>
@@ -194,7 +203,7 @@ export function EventComposer({
           {submitLabel === 'Add event' ? 'New event at the lake' : 'Edit event'}
         </Text>
 
-        <Field label="What is it?">
+        <Field label="What is it?" required>
           <Input size="lg">
             <InputField
               maxLength={100}
@@ -206,7 +215,7 @@ export function EventComposer({
           </Input>
         </Field>
 
-        <Field label="Where?">
+        <Field label="Where?" required>
           <Input size="lg">
             <InputField
               maxLength={100}
@@ -218,7 +227,7 @@ export function EventComposer({
           </Input>
         </Field>
 
-        <Field label="Type">
+        <Field label="Type" required>
           <HStack className="flex-wrap gap-2">
             {TAGS.map((option) => (
               <Chip

@@ -70,11 +70,20 @@ function Chip({ label, onPress, selected, testID }: ChipProps) {
   );
 }
 
-function Field({ children, label }: { readonly children: ReactNode; readonly label: string }) {
+function Field({
+  children,
+  label,
+  required,
+}: {
+  readonly children: ReactNode;
+  readonly label: string;
+  readonly required?: boolean;
+}) {
   return (
     <VStack space="xs">
       <Text className="font-inter-semibold text-[12px] uppercase tracking-[0.5px] text-text-muted">
         {label}
+        {required ? <Text className="text-accent"> *</Text> : null}
       </Text>
       {children}
     </VStack>
@@ -212,7 +221,7 @@ export function MissionComposer({
           {submitLabel === 'Add mission' ? 'New mission around the lake' : 'Edit mission'}
         </Text>
 
-        <Field label="Name it">
+        <Field label="Name it" required>
           <Input size="lg">
             <InputField
               maxLength={100}
@@ -224,7 +233,7 @@ export function MissionComposer({
           </Input>
         </Field>
 
-        <Field label="What to do">
+        <Field label="What to do (at least one stop)" required>
           <VStack space="sm">
             <GrowingTextInput
               className="w-full rounded-2xl border border-line bg-canvas px-4 py-3 text-base text-content"
@@ -292,7 +301,7 @@ export function MissionComposer({
           </VStack>
         </Field>
 
-        <Field label="Scheduled for (optional)">
+        <Field label="Scheduled for">
           {showDatePicker ? (
             <VStack space="xs">
               <DateCalendar
@@ -340,7 +349,7 @@ export function MissionComposer({
           )}
         </Field>
 
-        <Field label="Reward (XP)">
+        <Field label="Reward (XP)" required>
           <HStack className="flex-wrap gap-2">
             {XP_OPTIONS.map((option) => (
               <Chip
@@ -354,7 +363,7 @@ export function MissionComposer({
           </HStack>
         </Field>
 
-        <Field label="Theme (optional)">
+        <Field label="Theme">
           <HStack className="flex-wrap gap-2">
             {MISSION_THEMES.map((option) => {
               const active = theme === option;
