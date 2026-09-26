@@ -48,6 +48,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#08060F",
+          "image": "./assets/images/cactus-icon.png",
+          "imageWidth": 120,
           "dark": {
             "backgroundColor": "#08060F"
           }
