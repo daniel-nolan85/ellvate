@@ -73,23 +73,33 @@ export function Sheet({
 
   const unmount = useCallback(() => setMounted(false), []);
 
-  // iOS's KeyboardAvoidingView (behavior 'padding' below) pushes this whole
-  // bottom-anchored panel further up by the keyboard's height on top of
-  // whatever height it already has -- a panel already sized close to
-  // `maxHeight` (e.g. Edit Profile's long form, with an autoFocus field that
-  // opens the keyboard immediately) then gets shoved up past the safe area
-  // entirely, hiding the drag handle and making the sheet impossible to
-  // dismiss. Tracking the keyboard's own height and subtracting it from
-  // maxHeight below keeps the panel's top edge pinned at the same safe
-  // distance from the top regardless of whether the keyboard is open.
+  // KeyboardAvoidingView (behavior below) pushes this whole bottom-anchored
+  // panel further up by the keyboard's height on top of whatever height it
+  // already has -- a panel already sized close to `maxHeight` (e.g. Edit
+  // Profile's long form, with an autoFocus field that opens the keyboard
+  // immediately) then gets shoved up past the safe area entirely, hiding the
+  // drag handle and making the sheet impossible to dismiss. Tracking the
+  // keyboard's own height and subtracting it from maxHeight below keeps the
+  // panel's top edge pinned at the same safe distance from the top
+  // regardless of whether the keyboard is open.
+  //
+  // iOS and Android fire different event names here: iOS has a Will-variant
+  // that fires just before the keyboard animates in/out (letting this stay
+  // in sync with the keyboard's own animation), while Android has no
+  // Will-variant at all -- only Did, which fires once the keyboard has
+  // already finished showing. Subscribing to 'keyboardWillShow' on Android
+  // silently never fires, which used to leave this Sheet with no keyboard
+  // awareness there at all -- exactly the class of "content squished behind
+  // the keyboard inside a modal" bug that plagues RN's <Modal> on Android,
+  // since (unlike a plain pushed screen) a Modal's own window doesn't get
+  // Android's automatic adjustResize handling for free.
   useEffect(() => {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
-    const showSub = Keyboard.addListener('keyboardWillShow', (event) => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (event) => {
       setKeyboardHeight(event.endCoordinates.height);
     });
-    const hideSub = Keyboard.addListener('keyboardWillHide', () => {
+    const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
     });
     return () => {
@@ -206,8 +216,14 @@ export function Sheet({
       transparent
       visible
     >
+      {/* 'height' rather than Android's usual `undefined` (which relies on
+          the OS's automatic adjustResize) -- this whole tree lives inside
+          the <Modal> above, a separate native Dialog window that Android's
+          Activity-level adjustResize does not reach, so without an explicit
+          behavior here the keyboard would simply overlap this panel's
+          fields on Android with no avoidance at all. */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1 justify-end"
       >
         <Pressable
