@@ -340,7 +340,16 @@ export function EventDetailScreen({
       <HStack
         className={`items-center gap-2 px-[18px] pb-3 ${modal ? '' : 'border-b border-line'}`}
         collapsable={false}
-        style={{ paddingTop: modal ? 32 : insets.top + 8 }}
+        // formSheet (what `modal` means here) gets a native inset from iOS's
+        // own sheet chrome for free, so a flat 32 clears the status bar
+        // fine there -- but react-navigation's native-stack has no formSheet
+        // equivalent on Android and falls back to a plain, truly edge-to-edge
+        // modal with none of that built-in chrome, so the same flat 32
+        // would sit the header under the real status bar. Always use the
+        // live inset there instead.
+        style={{
+          paddingTop: modal && Platform.OS === 'ios' ? 32 : insets.top + 8,
+        }}
       >
         {modal ? null : (
           <Pressable accessibilityLabel="Back" onPress={onBack}>

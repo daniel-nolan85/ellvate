@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -284,12 +284,21 @@ export function DigestScreen({ weekStart }: DigestScreenProps) {
           which then lets the content below render on top of it instead of
           below it -- forcing this view to actually exist natively is the
           documented fix. */}
-      {/* pt-9, not the pt-6 every other row on this screen uses -- the
-          native grabber and the sheet's own rounded top corner already take
-          up real space above this content, so the same fixed gap that reads
-          fine on a plain pushed screen's header reads as cramped for a
-          formSheet's first row specifically. */}
-      <HStack className="items-center justify-between px-5 pb-1 pt-9" collapsable={false}>
+      {/* A fixed 36px top gap (iOS only, below) rather than pt-6 like every
+          other row on this screen -- the native grabber and the sheet's own
+          rounded top corner already take up real space above this content
+          on iOS, so the same fixed gap that reads fine on a plain pushed
+          screen's header reads as cramped for a formSheet's first row
+          specifically. react-navigation's native-stack has no formSheet
+          equivalent on Android, though, and falls back to a plain, truly
+          edge-to-edge modal with none of that built-in chrome -- the fixed
+          36px there wouldn't reliably clear the real status bar across
+          devices, so Android uses the live inset instead. */}
+      <HStack
+        className="items-center justify-between px-5 pb-1"
+        collapsable={false}
+        style={{ paddingTop: Platform.OS === 'ios' ? 36 : insets.top + 8 }}
+      >
         <Heading className="font-inter-bold" size="xl">
           Weekly Recap
         </Heading>

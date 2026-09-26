@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -181,12 +181,19 @@ export function MemberProfileScreen({
           any RN-visible trace of doing so. Rather than try a fifth variant
           in the same zone, Block/Report now live as plain rows near the
           bottom of the ScrollView below instead, see there. */}
-      {/* pt-9, not this app's usual pt-6 -- see digest-screen.tsx's identical
-          WHY: the native grabber and the sheet's own rounded top corner
-          already take up real space above a formSheet's first row, so the
-          same fixed gap that reads fine on a plain pushed screen's header
-          reads as cramped here specifically. */}
-      <HStack className='items-center justify-between px-5 pb-3 pt-9' collapsable={false}>
+      {/* A fixed 36px top gap (iOS only, below), not this app's usual pt-6 --
+          see digest-screen.tsx's identical WHY: the native grabber and the
+          sheet's own rounded top corner already take up real space above a
+          formSheet's first row on iOS, so the same fixed gap that reads
+          fine on a plain pushed screen's header reads as cramped here
+          specifically. Android has no formSheet equivalent and falls back
+          to a plain, edge-to-edge modal with none of that chrome, so it
+          uses the live inset instead -- same reasoning as digest-screen. */}
+      <HStack
+        className='items-center justify-between px-5 pb-3'
+        collapsable={false}
+        style={{ paddingTop: Platform.OS === 'ios' ? 36 : insets.top + 8 }}
+      >
         <Heading className='font-inter-bold' size='xl'>
           Neighbour
         </Heading>

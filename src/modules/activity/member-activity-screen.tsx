@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -334,23 +334,26 @@ export function MemberActivityScreen({
           react-native-screens#3569, a formSheet-presented-over-another-
           formSheet content-height bug this screen used to trigger every
           time a stat card was tapped), whose own swipe-to-dismiss and
-          tap-outside already cover closing it. Like formSheet, this still
-          presents as an inset page sheet rather than flush with the
-          physical top edge, so a small fixed gap is enough here too, not
-          insets.top -- unlike Sheet's statusBarTranslucent custom Modal,
-          which spans behind the notch. collapsable={false} works around a
+          tap-outside already cover closing it. On iOS this still presents
+          as an inset page sheet rather than flush with the physical top
+          edge, like formSheet, so a small fixed gap is enough there too,
+          not insets.top -- unlike Sheet's statusBarTranslucent custom
+          Modal, which spans behind the notch. react-native-screens has no
+          such inset-page-sheet fallback for `presentation: 'modal'` on
+          Android, though -- it's a plain, truly edge-to-edge screen there,
+          so the fixed gap gets swapped for the live inset on that platform
+          (see the paddingTop below). collapsable={false} works around a
           real react-native-screens bug (software-mansion/react-native-
           screens#3092): a screen whose root View has a background color
           can have RN's view-flattening optimization collapse this header's
           native view into its parent, which then lets the ScrollView below
           render on top of it instead of below it -- forcing this view to
           actually exist natively is the documented fix. */}
-      {/* pt-9, not this app's usual pt-6 -- see digest-screen.tsx's identical
-          WHY: the native grabber/rounded top corner of this modal
-          presentation already take up real space above the first row, so
-          the same fixed gap that reads fine on a plain pushed screen's
-          header reads as cramped here specifically. */}
-      <HStack className="items-center justify-between px-5 pb-3 pt-9" collapsable={false}>
+      <HStack
+        className="items-center justify-between px-5 pb-3"
+        collapsable={false}
+        style={{ paddingTop: Platform.OS === 'ios' ? 36 : insets.top + 8 }}
+      >
         <VStack>
           <Text className="text-text-muted" size="xs">
             Activity

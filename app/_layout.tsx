@@ -3,6 +3,7 @@ import 'react-native-reanimated';
 
 import { Component, useState, type ReactNode } from 'react';
 import { router, Stack, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,18 @@ import { AnimatedSplash } from '@/src/platform/splash';
 import { initCrashReporting, reportError } from '@/src/services/crash-reporting';
 
 initCrashReporting();
+
+// Held until AppProviders is done waiting on fonts and about to render
+// AnimatedSplash -- which shares this same dark BOOT_BACKGROUND and the
+// custom fonts it needs to draw its own wordmark, so without this the
+// native splash can (and on Android reliably does, per its stricter
+// SplashScreen-autohide timing) auto-hide the moment this RN tree first
+// mounts, which happens before fonts resolve. That exposes this
+// GestureHandlerRootView's own sandy background underneath for a beat --
+// a color-mismatched flash between the dark native splash and the dark
+// AnimatedSplash that's about to replace it. See AppProviders' hideAsync
+// call for the other half of this.
+void SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   initialRouteName: 'index',
