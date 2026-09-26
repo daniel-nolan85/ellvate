@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import * as WebBrowser from 'expo-web-browser';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { Heading } from '@/src/components/ui/heading';
@@ -227,7 +229,15 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
             {/* A separate Pressable from the text below -- nesting the Terms/
                 Privacy links' own onPress inside a Pressable wrapping the
                 whole row swallowed their taps entirely, so every tap just
-                toggled the checkbox regardless of where in the row it landed. */}
+                toggled the checkbox regardless of where in the row it landed.
+                Terms/Privacy links below use expo-web-browser's in-app
+                browser rather than Linking.openURL: this whole screen is
+                rendered inside a Sheet (a native <Modal>), and
+                Linking.openURL's handoff to the system browser silently
+                fails while an RN Modal is presented on iOS -- confirmed in
+                production via Sentry ("Unable to open URL"). An in-app
+                browser presents its own modal on top instead of leaving the
+                app, which doesn't hit that failure. */}
             <Pressable
               accessibilityRole="checkbox"
               accessibilityState={{ checked: consentChecked }}
@@ -250,7 +260,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
                 className="font-inter-semibold text-accent"
                 onPress={() =>
                   MARKETING_URL
-                    ? void Linking.openURL(`${MARKETING_URL}/terms`)
+                    ? void WebBrowser.openBrowserAsync(`${MARKETING_URL}/terms`)
                     : undefined
                 }
                 size="sm"
@@ -262,7 +272,7 @@ export function SignInScreen({ onAuthenticated, onExit }: SignInScreenProps) {
                 className="font-inter-semibold text-accent"
                 onPress={() =>
                   MARKETING_URL
-                    ? void Linking.openURL(`${MARKETING_URL}/privacy`)
+                    ? void WebBrowser.openBrowserAsync(`${MARKETING_URL}/privacy`)
                     : undefined
                 }
                 size="sm"
