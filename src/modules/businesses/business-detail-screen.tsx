@@ -90,8 +90,8 @@ function ListingMenuRow({
     >
       <Icon color={color} name={icon} size={20} />
       <Text
-        className="text-[15px]"
-        style={{ color, fontWeight: destructive ? '500' : '400' }}
+        className={`text-[15px] ${destructive ? 'font-inter-medium' : ''}`}
+        style={{ color }}
       >
         {label}
       </Text>

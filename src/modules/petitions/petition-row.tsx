@@ -179,7 +179,7 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
               onPress={openReportPetitionAuthor}
             >
               <Icon color={COLOR_DESTRUCTIVE} name="Flag" size={20} />
-              <Text className="text-[15px]" style={{ color: COLOR_DESTRUCTIVE, fontWeight: '500' }}>
+              <Text className="font-inter-medium text-[15px]" style={{ color: COLOR_DESTRUCTIVE }}>
                 Report this user
               </Text>
             </Pressable>
@@ -190,7 +190,7 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
               onPress={openReportPetition}
             >
               <Icon color={COLOR_DESTRUCTIVE} name="AlertCircle" size={20} />
-              <Text className="text-[15px]" style={{ color: COLOR_DESTRUCTIVE, fontWeight: '500' }}>
+              <Text className="font-inter-medium text-[15px]" style={{ color: COLOR_DESTRUCTIVE }}>
                 Report petition
               </Text>
             </Pressable>
