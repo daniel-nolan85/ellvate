@@ -34,7 +34,7 @@ export function Hero() {
             community — all in one app.
           </p>
         </FadeIn>
-        <FadeIn delay={0.24} className="w-full max-w-md">
+        <FadeIn delay={0.24} className="mt-8 w-full max-w-md">
           <Button asChild size="lg" className="w-full">
             <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">
               Download on the App Store
