@@ -1,8 +1,11 @@
+import { ArrowUpRight } from 'lucide-react';
+
 import { CactusMark } from '@/components/brand/cactus-mark';
 import { NolancodeLogo } from '@/components/brand/nolancode-logo';
 import { Wordmark } from '@/components/brand/wordmark';
 import { CopyrightYear } from '@/components/copyright-year';
 import { Reveal } from '@/components/motion/reveal';
+import { Button } from '@/components/ui/button';
 import { BRAND } from '@/lib/content';
 import { WaitlistForm } from '@/modules/waitlist';
 
@@ -13,9 +16,16 @@ export function Footer() {
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Be first to know</h2>
           <p className="mt-4 text-muted-foreground">
-            <Wordmark className="text-foreground text-lg" /> is launching soon on iOS and Android.
+            <Wordmark className="text-foreground text-lg" /> is live on iOS now — Android is on the way.
           </p>
-          <WaitlistForm className="mx-auto mt-8 max-w-md" />
+          <Button asChild size="lg" className="mt-6">
+            <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">
+              Download on the App Store
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </Button>
+          <p className="mt-8 text-sm text-muted-foreground">On Android? Join the waitlist below.</p>
+          <WaitlistForm className="mx-auto mt-4 max-w-md" />
         </Reveal>
       </div>
       <div className="border-t border-white/10 bg-[#080c10]">

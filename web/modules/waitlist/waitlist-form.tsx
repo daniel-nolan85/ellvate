@@ -56,7 +56,8 @@ export function WaitlistForm({
           "You're already on the list — we'll be in touch."
         ) : (
           <>
-            You&apos;re on the list. We&apos;ll email you when <Wordmark className="text-base" /> launches.
+            You&apos;re on the list. We&apos;ll email you the moment <Wordmark className="text-base" /> launches on
+            Android.
           </>
         )
       );
@@ -102,7 +103,7 @@ export function WaitlistForm({
               Joining
             </>
           ) : (
-            'Join the waitlist'
+            'Join the Android waitlist'
           )}
         </Button>
       </div>

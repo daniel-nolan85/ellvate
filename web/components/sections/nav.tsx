@@ -6,6 +6,7 @@ import { Menu, X } from 'lucide-react';
 import { CactusMark } from '@/components/brand/cactus-mark';
 import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
+import { BRAND } from '@/lib/content';
 
 // Directory isn't its own nav link -- it's one of the features, reachable
 // from the Features overview strip (#features) like any other, so listing
@@ -97,25 +98,6 @@ export function Nav() {
     }, 1200);
   };
 
-  // "Join the waitlist" should land the visitor in the input ready to type,
-  // not just scroll the section into view. focus() has to happen
-  // synchronously, in the same tick as the tap -- mobile browsers only pop
-  // the on-screen keyboard when focus is a direct result of a user gesture,
-  // and calling it inside a setTimeout (even a short one) loses that, moving
-  // the cursor with no keyboard. scrollIntoView comes after so the input
-  // ends up nicely centered on top of whatever native scroll-into-view the
-  // keyboard's own appearance triggers.
-  const handleWaitlistCtaClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    setMobileOpen(false);
-    const input = document.getElementById('hero-waitlist-email');
-    if (!(input instanceof HTMLElement)) {
-      return;
-    }
-    input.focus();
-    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
   return (
     <header
       className={`sticky top-0 z-50 border-b bg-canvas/85 backdrop-blur transition-shadow duration-300 ${
@@ -152,8 +134,8 @@ export function Nav() {
           })}
         </nav>
         <Button asChild size="sm" className="hidden lg:inline-flex">
-          <a href="#waitlist" onClick={handleWaitlistCtaClick}>
-            Join the waitlist
+          <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">
+            Download on iOS
           </a>
         </Button>
         <button
@@ -188,8 +170,8 @@ export function Nav() {
             })}
           </div>
           <Button asChild size="sm" className="mt-3 w-full">
-            <a href="#waitlist" onClick={handleWaitlistCtaClick}>
-              Join the waitlist
+            <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}>
+              Download on iOS
             </a>
           </Button>
         </nav>

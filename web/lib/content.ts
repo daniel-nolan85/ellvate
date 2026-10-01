@@ -15,6 +15,9 @@ export const BRAND = {
   // text.
   companyLegalName: 'Nolancode LLC',
   companyUrl: 'https://www.nolancode.com',
+  // Live on iOS as of launch -- Android is still pre-launch, hence the
+  // waitlist form staying up for that platform only (see Hero/Footer).
+  appStoreUrl: 'https://apps.apple.com/us/app/ellvate/id6805611205',
 } as const;
 
 export type FeatureAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'plum';

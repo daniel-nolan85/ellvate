@@ -1,7 +1,10 @@
+import { ArrowUpRight } from 'lucide-react';
+
 import { DesertGlow } from '@/components/sections/desert-glow';
 import { Wordmark } from '@/components/brand/wordmark';
 import { FadeIn } from '@/components/motion/fade-in';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BRAND } from '@/lib/content';
 import { WaitlistForm } from '@/modules/waitlist';
 
@@ -11,7 +14,7 @@ export function Hero() {
       <DesertGlow />
       <div className="relative mx-auto flex max-w-3xl flex-col items-center px-6 pb-14 pt-20 text-center sm:pt-28">
         <FadeIn>
-          <Badge>Coming soon to iOS &amp; Android</Badge>
+          <Badge>Live now on iOS &middot; Android coming soon</Badge>
         </FadeIn>
         <FadeIn delay={0.08}>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
@@ -32,9 +35,20 @@ export function Hero() {
           </p>
         </FadeIn>
         <FadeIn delay={0.24} className="w-full max-w-md">
-          <WaitlistForm className="mt-10 w-full" inputId="hero-waitlist-email" />
+          <Button asChild size="lg" className="w-full">
+            <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">
+              Download on the App Store
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </Button>
+          <div className="mt-8 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" aria-hidden />
+            On Android? Get notified at launch
+            <span className="h-px flex-1 bg-border" aria-hidden />
+          </div>
+          <WaitlistForm className="mt-4 w-full" inputId="hero-waitlist-email" />
           <p className="mt-4 text-xs text-muted-foreground">
-            No spam. We&apos;ll only email you when the app is ready.
+            No spam. We&apos;ll only email you the moment Android launches.
           </p>
         </FadeIn>
       </div>

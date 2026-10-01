@@ -31,6 +31,7 @@ function StructuredData() {
         operatingSystem: 'iOS, Android',
         description: `${BRAND.appName} brings ${BRAND.community} together in one app: forum discussions, an events calendar, neighborhood missions, a directory of local services and verified businesses, and an AI assistant that knows the community.`,
         url: SITE_URL,
+        installUrl: BRAND.appStoreUrl,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
         publisher: { '@type': 'Organization', name: BRAND.companyLegalName, url: BRAND.companyUrl },
       },
