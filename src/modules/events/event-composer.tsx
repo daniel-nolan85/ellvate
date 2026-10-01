@@ -99,6 +99,7 @@ interface EventComposerProps {
   readonly isSubmitting: boolean;
   readonly onDismiss: () => void;
   readonly onSubmit: (draft: EventComposerDraft) => void;
+  readonly errorMessage?: string | null;
   readonly initialTitle?: string;
   readonly initialPlace?: string;
   readonly initialTag?: string;
@@ -130,6 +131,7 @@ const nextQuarterHour = (): Date => {
 };
 
 export function EventComposer({
+  errorMessage,
   initialMedia,
   initialPlace = '',
   initialStartsAt,
@@ -305,6 +307,12 @@ export function EventComposer({
             </Pressable>
           )}
         </Field>
+
+        {errorMessage ? (
+          <Text className="text-destructive" size="sm" testID="event-submit-error">
+            {errorMessage}
+          </Text>
+        ) : null}
 
         <HStack className="items-center justify-end" space="sm">
           <Button

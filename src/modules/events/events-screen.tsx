@@ -14,6 +14,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { ScreenTitle } from '@/src/modules/community-shell';
+import { ApiError } from '@/src/services/api';
 
 import { EventComposer } from './event-composer';
 import { EventRow } from './event-row';
@@ -69,6 +70,7 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   const createEvent = useCreateEvent();
   const [composing, setComposing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const events = eventsView.data?.pages.flatMap((page) => page.events) ?? [];
   // Sorted featured-first server-side, so the very first item (if featured)
@@ -196,11 +198,19 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
         showsVerticalScrollIndicator={false}
       />
 
-      <Sheet onClose={() => setComposing(false)} visible={composing}>
+      <Sheet
+        onClose={() => {
+          setComposing(false);
+          setSubmitError(null);
+        }}
+        visible={composing}
+      >
         <EventComposer
+          errorMessage={submitError}
           isSubmitting={createEvent.isPending}
           onDismiss={() => setComposing(false)}
-          onSubmit={(draft) =>
+          onSubmit={(draft) => {
+            setSubmitError(null);
             createEvent.mutate(
               {
                 date: draft.date,
@@ -211,13 +221,19 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
                 title: draft.title,
               },
               {
+                onError: (error) =>
+                  setSubmitError(
+                    error instanceof ApiError
+                      ? error.message
+                      : 'Couldn’t create your event. Try again.',
+                  ),
                 onSuccess: () => {
                   setComposing(false);
                   showToast('Event created!');
                 },
               },
-            )
-          }
+            );
+          }}
         />
       </Sheet>
 
