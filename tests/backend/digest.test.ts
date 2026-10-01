@@ -44,9 +44,12 @@ function makeEvent(overrides: Partial<StoredEvent> & { readonly id: string }): S
   return {
     attendeeIds: [],
     authorId: 'user-hoa',
+    cost: null,
     dateLabel: 'Jan 7',
     dayLabel: 'WED',
     editedAt: null,
+    endsAt: null,
+    endTimeLabel: null,
     featured: false,
     going: 0,
     joinedBy: [],

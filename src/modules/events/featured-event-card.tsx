@@ -66,6 +66,15 @@ export function FeaturedEventCard({
           >
             {event.tag}
           </Badge>
+          {event.cost ? (
+            <Badge
+              className="border-[rgba(250,250,250,0.25)]"
+              textClassName="text-[rgba(250,250,250,0.85)]"
+              variant="outline"
+            >
+              {event.cost}
+            </Badge>
+          ) : null}
         </HStack>
         <VStack space="xs">
           <Text className="font-inter-bold text-[26px] leading-[30px] tracking-[-0.78px] text-primary-foreground">
@@ -76,6 +85,7 @@ export function FeaturedEventCard({
               <Icon color="rgba(250,250,250,0.6)" name="Clock" size={14} />
               <Text className="text-[rgba(250,250,250,0.75)]" size="xs">
                 {formatDayLabel(event.dayLabel)} {event.dateLabel} · {event.timeLabel}
+                {event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}
               </Text>
               <EditedMark color="rgba(250,250,250,0.75)" editedAt={event.editedAt} />
             </HStack>

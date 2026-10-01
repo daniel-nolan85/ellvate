@@ -214,6 +214,8 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
             createEvent.mutate(
               {
                 date: draft.date,
+                endTime: draft.endTime,
+                cost: draft.cost,
                 newMedia: draft.newMedia,
                 place: draft.place,
                 tag: draft.tag,

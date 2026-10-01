@@ -15,11 +15,14 @@ export interface CommunityEvent {
   readonly author: PersonRef;
   readonly startsAt: string;
   readonly timeLabel: string;
+  readonly endsAt: string | null;
+  readonly endTimeLabel: string | null;
   readonly dayLabel: string;
   readonly dateLabel: string;
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly cost: string | null;
   readonly media?: readonly EventMedia[];
   readonly featured: boolean;
   readonly going: number;
@@ -67,6 +70,8 @@ export interface CreateEventInput {
   readonly tag: string;
   readonly date: string;
   readonly time: string;
+  readonly endTime?: string;
+  readonly cost?: string;
   readonly newMedia?: readonly NewEventMediaInput[];
 }
 
@@ -82,6 +87,8 @@ export interface UpdateEventInput {
   readonly tag: string;
   readonly date: string;
   readonly time: string;
+  readonly endTime?: string;
+  readonly cost?: string;
   readonly existingMedia?: readonly ExistingEventMediaInput[];
   readonly newMedia?: readonly NewEventMediaInput[];
 }

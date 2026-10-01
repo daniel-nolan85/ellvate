@@ -368,7 +368,7 @@ export function EventDetailScreen({
               return;
             }
             void Share.share({
-              message: `${event.title}\n\n${formatDayLabel(event.dayLabel)} ${event.dateLabel} · ${event.timeLabel}\n${event.place}`,
+              message: `${event.title}\n\n${formatDayLabel(event.dayLabel)} ${event.dateLabel} · ${event.timeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}\n${event.place}${event.cost ? `\n${event.cost}` : ''}`,
             });
           }}
         >
@@ -453,6 +453,7 @@ export function EventDetailScreen({
                     {event.featured ? (
                       <Badge variant="amber">Featured</Badge>
                     ) : null}
+                    {event.cost ? <Badge variant="outline">{event.cost}</Badge> : null}
                   </HStack>
 
                   <Heading className="font-inter-bold text-[22px]" size="lg">
@@ -464,6 +465,7 @@ export function EventDetailScreen({
                     <Text className="text-[14px] text-text-muted">
                       {formatDayLabel(event.dayLabel)} {event.dateLabel} ·{' '}
                       {event.timeLabel}
+                      {event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}
                     </Text>
                     <EditedMark editedAt={event.editedAt} />
                   </HStack>
@@ -610,6 +612,8 @@ export function EventDetailScreen({
       <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
         {(maxContentHeight) => sheetMode === 'edit' && event ? (
           <EventComposer
+            initialCost={event.cost}
+            initialEndsAt={event.endsAt}
             initialMedia={event.media}
             initialPlace={event.place}
             initialStartsAt={event.startsAt}

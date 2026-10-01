@@ -37,12 +37,13 @@ export function EventRow({ event, onOpen, onToggleJoin }: EventRowProps) {
           </Text>
           <HStack className="items-center" space="xs">
             <Text className="text-muted-foreground" size="xs">
-              {event.timeLabel} · {event.place}
+              {event.timeLabel}
+              {event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''} · {event.place}
             </Text>
             <EditedMark editedAt={event.editedAt} />
           </HStack>
           <Text className="text-text-subtle" size="xs">
-            {event.going} going
+            {event.going} going{event.cost ? ` · ${event.cost}` : ''}
           </Text>
         </VStack>
         <BookmarkButton targetId={event.id} targetType='event' />

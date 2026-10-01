@@ -19,6 +19,8 @@ export interface EventComposerDraft {
   readonly tag: string;
   readonly date: string;
   readonly time: string;
+  readonly endTime?: string;
+  readonly cost?: string;
   readonly existingMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly newMedia?: readonly { readonly filename: string; readonly dataUrl: string }[];
 }
@@ -104,6 +106,8 @@ interface EventComposerProps {
   readonly initialPlace?: string;
   readonly initialTag?: string;
   readonly initialStartsAt?: string;
+  readonly initialEndsAt?: string | null;
+  readonly initialCost?: string | null;
   readonly initialMedia?: readonly { readonly filename: string; readonly url: string }[];
   readonly submitLabel?: string;
 }
@@ -130,8 +134,16 @@ const nextQuarterHour = (): Date => {
   return value;
 };
 
+const oneHourAfter = (date: Date): Date => {
+  const value = new Date(date);
+  value.setHours(value.getHours() + 1);
+  return value;
+};
+
 export function EventComposer({
   errorMessage,
+  initialCost,
+  initialEndsAt,
   initialMedia,
   initialPlace = '',
   initialStartsAt,
@@ -153,6 +165,10 @@ export function EventComposer({
   const [time, setTime] = useState(() =>
     initialStartsAt ? new Date(initialStartsAt) : nextQuarterHour(),
   );
+  const [endTime, setEndTime] = useState<Date | null>(() =>
+    initialEndsAt ? new Date(initialEndsAt) : null,
+  );
+  const [cost, setCost] = useState(initialCost ?? '');
   const [media, setMedia] = useState<readonly EventMediaItem[]>(
     () =>
       initialMedia?.map((item) => ({
@@ -263,6 +279,51 @@ export function EventComposer({
           />
         </Field>
 
+        <Field label="End time">
+          {endTime ? (
+            <HStack className="items-center" space="sm">
+              <NativeTimePicker
+                accessibilityLabel="Event end time"
+                minuteInterval={15}
+                onChange={setEndTime}
+                testID="event-end-time-picker"
+                value={endTime}
+              />
+              <Pressable
+                onPress={() => setEndTime(null)}
+                testID="event-end-time-remove"
+              >
+                <Text className="font-inter-medium text-[13px] text-text-muted">
+                  Remove
+                </Text>
+              </Pressable>
+            </HStack>
+          ) : (
+            <Pressable
+              className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3"
+              onPress={() => setEndTime(oneHourAfter(time))}
+              testID="event-end-time-add"
+            >
+              <Icon color="rgb(169,156,139)" name="Add" size={16} />
+              <Text className="font-inter-medium text-[13px] text-text-muted">
+                Add an end time
+              </Text>
+            </Pressable>
+          )}
+        </Field>
+
+        <Field label="Cost">
+          <Input size="lg">
+            <InputField
+              maxLength={60}
+              onChangeText={setCost}
+              placeholder="Free, $15, $10 at the door…"
+              testID="event-cost"
+              value={cost}
+            />
+          </Input>
+        </Field>
+
         <Field label="Photos">
           {media.length > 0 ? (
             <VStack space="xs">
@@ -333,6 +394,8 @@ export function EventComposer({
             onPress={() =>
               onSubmit({
                 date: dateOnlyFromDate(date),
+                endTime: endTime ? timeOnlyFromDate(endTime) : undefined,
+                cost: cost.trim() || undefined,
                 existingMedia: media
                   .filter((item): item is ExistingEventMediaItem => item.kind === 'existing')
                   .map((item) => ({ filename: item.filename, url: item.url })),

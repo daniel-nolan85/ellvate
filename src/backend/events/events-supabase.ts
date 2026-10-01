@@ -26,7 +26,7 @@ import { validateEventInput } from './validation';
 
 const WEEK_SELECT = 'date,day_label,date_label,is_today';
 const EVENT_SELECT =
-  'id,created_by,starts_at,time_label,day_label,date_label,title,place,tag,media,featured,going_base,seed_attendee_ids,edited_at';
+  'id,created_by,starts_at,time_label,ends_at,end_time_label,day_label,date_label,title,place,tag,cost,media,featured,going_base,seed_attendee_ids,edited_at';
 
 // Cap the avatar stack to a few faces (seed attendees plus joined users).
 const ATTENDEE_LIMIT = 6;
@@ -43,11 +43,14 @@ interface EventRow {
   readonly created_by: string;
   readonly starts_at: string;
   readonly time_label: string;
+  readonly ends_at: string | null;
+  readonly end_time_label: string | null;
   readonly day_label: string;
   readonly date_label: string;
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly cost: string | null;
   readonly media: readonly EventMedia[] | null;
   readonly featured: boolean;
   readonly going_base: number;
@@ -121,11 +124,14 @@ const toCommunityEvent = (
     },
     startsAt: row.starts_at,
     timeLabel: row.time_label,
+    endsAt: row.ends_at,
+    endTimeLabel: row.end_time_label,
     dayLabel: row.day_label,
     dateLabel: row.date_label,
     title: row.title,
     place: row.place,
     tag: row.tag,
+    cost: row.cost,
     media: row.media ?? undefined,
     featured: row.featured,
     going: row.going_base + joinedIds.length,
@@ -614,11 +620,14 @@ export async function createEventSupabase(
       created_by: userId,
       starts_at: value.startsAt,
       time_label: value.timeLabel,
+      ends_at: value.endsAt,
+      end_time_label: value.endTimeLabel,
       day_label: value.dayLabel,
       date_label: value.dateLabel,
       title: value.title,
       place: value.place,
       tag: value.tag,
+      cost: value.cost,
       featured: false,
       going_base: 0,
       seed_attendee_ids: [],
@@ -717,11 +726,14 @@ export async function updateEventSupabase(
     .update({
       starts_at: value.startsAt,
       time_label: value.timeLabel,
+      ends_at: value.endsAt,
+      end_time_label: value.endTimeLabel,
       day_label: value.dayLabel,
       date_label: value.dateLabel,
       title: value.title,
       place: value.place,
       tag: value.tag,
+      cost: value.cost,
       media: media.length ? media : null,
       edited_at: new Date().toISOString(),
     })

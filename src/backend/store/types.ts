@@ -164,11 +164,14 @@ export interface StoredEvent {
   readonly authorId: string;
   readonly startsAt: string;
   readonly timeLabel: string;
+  readonly endsAt: string | null;
+  readonly endTimeLabel: string | null;
   readonly dayLabel: string;
   readonly dateLabel: string;
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly cost: string | null;
   readonly media?: readonly StoredMedia[];
   readonly featured: boolean;
   readonly going: number;

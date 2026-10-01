@@ -263,6 +263,57 @@ describe('createEvent', () => {
     expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
   });
 
+  test('accepts an optional end time and cost', async () => {
+    const result = await createEvent(ctx(), {
+      ...validInput,
+      endTime: '20:00',
+      cost: '$15',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event).toMatchObject({
+        endTimeLabel: '8:00 PM',
+        cost: '$15',
+      });
+      expect(result.event.endsAt).toContain(`${eventDate}T20:00`);
+    }
+  });
+
+  test('an event with no end time or cost has them both null', async () => {
+    const result = await createEvent(ctx(), validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event.endsAt).toBeNull();
+      expect(result.event.endTimeLabel).toBeNull();
+      expect(result.event.cost).toBeNull();
+    }
+  });
+
+  test('rejects a malformed end time', async () => {
+    const result = await createEvent(ctx(), { ...validInput, endTime: 'nope' });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
+
+  test('rejects an end time at or before the start time', async () => {
+    const same = await createEvent(ctx(), { ...validInput, endTime: '18:00' });
+    const earlier = await createEvent(ctx(), { ...validInput, endTime: '17:00' });
+
+    expect(same).toMatchObject({ ok: false, code: 'invalid_event' });
+    expect(earlier).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
+
+  test('rejects a cost that exceeds its maximum length', async () => {
+    const result = await createEvent(ctx(), {
+      ...validInput,
+      cost: 'x'.repeat(61),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'invalid_event' });
+  });
+
   test('stores uploaded images as event media', async () => {
     const result = await createEvent(ctx(), {
       ...validInput,
@@ -481,6 +532,36 @@ describe('updateEvent', () => {
       tag: 'Community',
       timeLabel: '7:00 PM',
     });
+  });
+
+  test('can set a new end time and cost on an event that had none', async () => {
+    const result = await updateEvent(ctx('user-mia'), 'event-2', {
+      ...editInput,
+      endTime: '21:00',
+      cost: '$10',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event).toMatchObject({
+        endTimeLabel: '9:00 PM',
+        cost: '$10',
+      });
+    }
+  });
+
+  test('omitting end time and cost on update clears them', async () => {
+    // event-1's seed data has both an end time and a cost -- editInput
+    // (no endTime/cost) is what a saved edit sends when the organizer
+    // removed them, same as any other field on this form.
+    const result = await updateEvent(ctx('user-hoa'), 'event-1', editInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.event.endsAt).toBeNull();
+      expect(result.event.endTimeLabel).toBeNull();
+      expect(result.event.cost).toBeNull();
+    }
   });
 
   test('stamps editedAt on update, unset until then', async () => {

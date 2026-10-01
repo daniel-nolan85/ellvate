@@ -6,6 +6,7 @@ import type { ComposedEvent, EventValidation } from './types';
 const MAX_TITLE = 100;
 const MAX_PLACE = 100;
 const MAX_TAG = 40;
+const MAX_COST = 60;
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 
 const asTrimmedString = (value: unknown): string =>
@@ -34,16 +35,21 @@ const composeEvent = (fields: {
   readonly tag: string;
   readonly date: string;
   readonly time: string;
+  readonly endTime: string | null;
+  readonly cost: string | null;
 }): ComposedEvent => {
-  const { date, time } = fields;
+  const { date, time, endTime, cost } = fields;
   return {
     title: fields.title,
     place: fields.place,
     tag: fields.tag,
     startsAt: `${date}T${time}:00.000Z`,
     timeLabel: to12Hour(time),
+    endsAt: endTime ? `${date}T${endTime}:00.000Z` : null,
+    endTimeLabel: endTime ? to12Hour(endTime) : null,
     dayLabel: WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()],
     dateLabel: String(Number(date.slice(8, 10))),
+    cost,
   };
 };
 
@@ -57,6 +63,10 @@ export function validateEventInput(input: unknown): EventValidation {
   const tag = asTrimmedString(raw.tag);
   const date = asTrimmedString(raw.date);
   const time = asTrimmedString(raw.time);
+  // Both optional -- an empty string (nothing picked/typed) means "not set",
+  // not a validation failure.
+  const endTimeRaw = asTrimmedString(raw.endTime);
+  const costRaw = asTrimmedString(raw.cost);
 
   if (!title || !place || !tag) {
     return invalid('A title, place, and category are required.');
@@ -70,6 +80,29 @@ export function validateEventInput(input: unknown): EventValidation {
   if (!isTimeOnly(time)) {
     return invalid('Pick a valid time.');
   }
+  if (endTimeRaw && !isTimeOnly(endTimeRaw)) {
+    return invalid('Pick a valid end time.');
+  }
+  // "HH:MM" strings compare correctly as plain strings since both sides are
+  // always zero-padded to the same length. Same-calendar-day events only --
+  // this doesn't support an event that runs past midnight.
+  if (endTimeRaw && endTimeRaw <= time) {
+    return invalid('End time must be after the start time.');
+  }
+  if (costRaw.length > MAX_COST) {
+    return invalid('Cost exceeds its maximum length.');
+  }
 
-  return { ok: true, value: composeEvent({ date, place, tag, time, title }) };
+  return {
+    ok: true,
+    value: composeEvent({
+      cost: costRaw || null,
+      date,
+      endTime: endTimeRaw || null,
+      place,
+      tag,
+      time,
+      title,
+    }),
+  };
 }

@@ -17,11 +17,14 @@ export interface CommunityEvent {
   readonly author: PersonRef;
   readonly startsAt: string;
   readonly timeLabel: string;
+  readonly endsAt: string | null;
+  readonly endTimeLabel: string | null;
   readonly dayLabel: string;
   readonly dateLabel: string;
   readonly title: string;
   readonly place: string;
   readonly tag: string;
+  readonly cost: string | null;
   readonly media?: readonly EventMedia[];
   readonly featured: boolean;
   readonly going: number;
@@ -82,8 +85,11 @@ export interface ComposedEvent {
   readonly tag: string;
   readonly startsAt: string;
   readonly timeLabel: string;
+  readonly endsAt: string | null;
+  readonly endTimeLabel: string | null;
   readonly dayLabel: string;
   readonly dateLabel: string;
+  readonly cost: string | null;
 }
 
 export type EventValidation =

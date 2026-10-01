@@ -43,9 +43,12 @@ function seedMatchingContent(authorId: string = DEMO_USER_ID): void {
   const event: StoredEvent = {
     attendeeIds: [],
     authorId,
+    cost: null,
     dateLabel: 'Jan 1',
     dayLabel: 'Thursday',
     editedAt: null,
+    endsAt: null,
+    endTimeLabel: null,
     featured: false,
     going: 0,
     id: 'fixture-event-search',
