@@ -248,6 +248,13 @@ export function useDeleteBusinessListing() {
       }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['businesses'] });
+      // Deleting a listing now also reverses the XP its creation granted
+      // (see supabase/migrations/0074_revoke_xp_on_delete.sql) -- the
+      // profile's XP/level stat and the points-history list and growth
+      // chart all need to pick that up too.
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
   });
 }

@@ -298,8 +298,13 @@ export function useDeleteMission() {
       void queryClient.invalidateQueries({ queryKey: ['missions'] });
       // Deleting a created mission also changes the creator's "missions
       // created" count -- see useCreateMission for why this needs its own
-      // invalidation.
+      // invalidation. It also now reverses the XP the mission's creation
+      // (and every member's completion of it) granted -- see
+      // supabase/migrations/0074_revoke_xp_on_delete.sql -- so the
+      // points-history list and growth chart need to pick that up too.
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
   });
 }

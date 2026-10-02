@@ -223,6 +223,14 @@ export function useDeleteEvent() {
       }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['events'] });
+      // Deleting an event now also reverses the XP its creation granted
+      // (see supabase/migrations/0074_revoke_xp_on_delete.sql) -- the
+      // profile's XP/level stat and the points-history list and growth
+      // chart all need to pick that up too, same as useCreateEvent's own
+      // invalidation on the way up.
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
+      void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
     },
   });
 }
