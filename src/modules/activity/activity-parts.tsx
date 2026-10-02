@@ -7,7 +7,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { StatChipCard } from '@/src/components/shared/stat-chip-card';
 import { Badge } from '@/src/components/ui/badge';
@@ -241,17 +240,20 @@ export function StatCard({
 // one continuous dark shelf behind the whole row. 1-2 cards spaced normally
 // don't have that problem.
 //
-// Crossfades between filters (key={filter} forces React to unmount the old
-// set and mount the new one, which is what lets Reanimated's entering/
-// exiting props animate the swap) rather than an auto-scrolling ticker --
-// the ticker idea was tempting but numbers are the one thing on this card
-// that must stay legible; content sliding past on a loop is the opposite of
-// that, however "alive" it might look. Each card's own slow breathing pulse
-// (see StatChipCard) is where the continuous motion actually lives instead,
-// without ever touching the number itself. No spring/bounce on the
-// transition, unlike the previous version -- matches CommitStep's own
-// plain duration-based ZoomIn rather than introducing a bouncier feel this
-// app doesn't use anywhere else.
+// Deliberately an instant swap, not a crossfade -- an earlier version used
+// key={filter} + Reanimated's entering/exiting (FadeIn/FadeOut) to animate
+// between the 1-2 relevant cards on each filter switch. That meant Events/
+// Missions -- the two filters showing 2 cards instead of 1 -- doubled the
+// number of native views entering in the very same commit, right above the
+// still-mounted, still-interactive filter-pill row below. That's exactly
+// the "content volume in this area mounting in the same pass" precondition
+// FILTERS' own WHY diagnoses as the real trigger for corrupted pill text
+// (previously fixed for the "All" filter by removing it entirely; this is
+// the same fix applied here -- remove the precondition, don't keep patching
+// around it). Each card's own slow breathing pulse (see StatChipCard) is
+// still where the continuous motion lives -- that alone was never the
+// issue, since it runs entirely on the UI thread and mounts/unmounts no
+// views of its own.
 export function ActivityStatPanel({
   eventsAttendingCount,
   eventsCreatedCount,
@@ -296,17 +298,9 @@ export function ActivityStatPanel({
     );
 
   return (
-    <Animated.View
-      // key remounts this subtree per filter, which is what makes
-      // entering/exiting actually fire on every switch rather than once.
-      entering={FadeIn.duration(220)}
-      exiting={FadeOut.duration(120)}
-      key={filter}
-    >
-      <HStack className="justify-center px-5 pb-3" space="sm">
-        {cards}
-      </HStack>
-    </Animated.View>
+    <HStack className="justify-center px-5 pb-3" space="sm">
+      {cards}
+    </HStack>
   );
 }
 
