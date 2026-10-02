@@ -56,8 +56,18 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
         <Text className="font-inter-bold text-[11px] tracking-[2px] text-accent">
           LAKE LAS VEGAS
         </Text>
+        {/* No manual \n here -- a hardcoded break after "neighbourhood,"
+            assumes "Your lakeside neighbourhood," always fits one line at
+            44px bold with -0.035em tracking inside the 26px side padding.
+            That held on every iPhone tested, but a narrower-width Android
+            phone (common among budget/compact devices, and just as possible
+            on a smaller iPhone or with a larger system text-size setting on
+            either platform) pushed it over, forcing a second, mid-word wrap
+            ("Your lakeside n" / "eighbourhood,"). Letting the text flow
+            naturally removes the fixed-width assumption entirely instead of
+            re-tuning the break point for one specific screen size. */}
         <Text className="mt-2.5 font-inter-bold text-[44px] leading-[46px] tracking-[-0.035em] text-primary-foreground">
-          {'Your lakeside neighbourhood,\nin your pocket.'}
+          Your lakeside neighbourhood, in your pocket.
         </Text>
         <Text className="mt-3.5 leading-6 text-[rgba(250,250,250,0.65)]" size="md">
           Forum, events, real-world missions, and local services — everything happening around
