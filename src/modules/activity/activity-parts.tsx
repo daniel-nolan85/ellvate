@@ -177,8 +177,9 @@ export const FilterChips = memo(function FilterChips({
           // what the other pills actually need).
           alignItems: 'stretch',
           gap: 8,
+          paddingBottom: 14,
           paddingHorizontal: 20,
-          paddingVertical: 2,
+          paddingTop: 2,
         }}
         horizontal
         showsHorizontalScrollIndicator={false}
