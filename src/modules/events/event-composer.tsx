@@ -10,6 +10,7 @@ import { Text } from '@/src/components/ui/text';
 import { NativeTimePicker } from '@/src/components/ui/time-picker';
 import { VStack } from '@/src/components/ui/vstack';
 import { dateOnlyFromDate } from '@/src/lib/date-only';
+import { parseEventTimestamp } from '@/src/lib/event-timestamp';
 import { timeOnlyFromDate } from '@/src/lib/time-only';
 import { pickGalleryImages } from '@/src/platform/media-picker';
 
@@ -160,13 +161,13 @@ export function EventComposer({
   const [today] = useState(startOfToday);
   const [maxDate] = useState(() => oneYearAfter(today));
   const [date, setDate] = useState(() =>
-    initialStartsAt ? new Date(initialStartsAt) : today,
+    initialStartsAt ? parseEventTimestamp(initialStartsAt) : today,
   );
   const [time, setTime] = useState(() =>
-    initialStartsAt ? new Date(initialStartsAt) : nextQuarterHour(),
+    initialStartsAt ? parseEventTimestamp(initialStartsAt) : nextQuarterHour(),
   );
   const [endTime, setEndTime] = useState<Date | null>(() =>
-    initialEndsAt ? new Date(initialEndsAt) : null,
+    initialEndsAt ? parseEventTimestamp(initialEndsAt) : null,
   );
   const [cost, setCost] = useState(initialCost ?? '');
   const [media, setMedia] = useState<readonly EventMediaItem[]>(
@@ -300,11 +301,11 @@ export function EventComposer({
             </HStack>
           ) : (
             <Pressable
-              className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-secondary px-3 py-3"
+              className="flex-row items-center self-start gap-1.5 rounded-full bg-secondary px-3.5 py-2"
               onPress={() => setEndTime(oneHourAfter(time))}
               testID="event-end-time-add"
             >
-              <Icon color="rgb(169,156,139)" name="Add" size={16} />
+              <Icon color="rgb(169,156,139)" name="Add" size={14} />
               <Text className="font-inter-medium text-[13px] text-text-muted">
                 Add an end time
               </Text>
