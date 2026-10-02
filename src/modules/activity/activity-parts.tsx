@@ -298,13 +298,27 @@ export function ActivityStatPanel({
   readonly servicesCount: number;
   readonly petitionsCount: number;
 }) {
+  // Every card below gets a `key` unique to what it actually represents
+  // (not just its position). Without one, switching from a 1-card filter to
+  // a 2-card filter (or between any two filters at all) let React treat the
+  // card at position 0 as the SAME element across the switch -- a plain
+  // props update, not a mount -- so StatChipCard's own useCountUp animated
+  // from the OLD filter's number to the NEW filter's number instead of
+  // snapping straight to it, visibly counting through meaningless
+  // intermediate values between two unrelated stats (e.g. Posts' count
+  // animating toward Events created's count). A stable per-stat key forces
+  // a real unmount/mount on every filter switch instead, which resets
+  // useCountUp's internal state via its own first-render skip -- this is a
+  // separate, smaller remount than the Animated.View crossfade removed
+  // above (no FadeIn/FadeOut, no entering/exiting), so it doesn't
+  // reintroduce the pill-corruption precondition that removal fixed.
   const cards: ReactNode =
     filter === 'post' ? (
-      <StatCard kind="post" label="Posts" value={postsCount} />
+      <StatCard key="posts" kind="post" label="Posts" value={postsCount} />
     ) : filter === 'event' ? (
       <>
-        <StatCard kind="event" label="Events created" value={eventsCreatedCount} />
-        <StatCard kind="event" label="Events attending" value={eventsAttendingCount} />
+        <StatCard key="events-created" kind="event" label="Events created" value={eventsCreatedCount} />
+        <StatCard key="events-attending" kind="event" label="Events attending" value={eventsAttendingCount} />
       </>
     ) : filter === 'mission' ? (
       // Both cards share the same mission icon/tone -- consistent with the
@@ -313,13 +327,13 @@ export function ActivityStatPanel({
       // treatment (a progress ring used to single out "completed" here,
       // which read as inconsistent with its sibling card).
       <>
-        <StatCard kind="mission" label="Missions created" value={missionsCreatedCount} />
-        <StatCard kind="mission" label="Missions completed" value={missionsCompletedCount} />
+        <StatCard key="missions-created" kind="mission" label="Missions created" value={missionsCreatedCount} />
+        <StatCard key="missions-completed" kind="mission" label="Missions completed" value={missionsCompletedCount} />
       </>
     ) : filter === 'service' ? (
-      <StatCard kind="service" label="Services" value={servicesCount} />
+      <StatCard key="services" kind="service" label="Services" value={servicesCount} />
     ) : (
-      <StatCard kind="petition" label="Petitions" value={petitionsCount} />
+      <StatCard key="petitions" kind="petition" label="Petitions" value={petitionsCount} />
     );
 
   return (
