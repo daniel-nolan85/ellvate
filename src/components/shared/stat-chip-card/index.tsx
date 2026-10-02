@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Animated, {
   Easing,
-  runOnJS,
-  useAnimatedReaction,
+  useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
@@ -68,22 +67,23 @@ function useCountUp(target: number): number {
   return value;
 }
 
-// A slow, subtle breathing pulse on the icon chip (scale + glow opacity) --
-// the "always something gently alive" touch a static card lacks, without
-// resorting to a scrolling ticker: nothing here moves the *number* itself,
-// which stays perfectly legible the whole time. -1 repeat count means loop
-// forever; the `true` reverses direction each cycle (yoyo) rather than
-// snapping back to 0, so the motion has no visible seam.
-function useBreathingPulse(): number {
+// A slow, subtle breathing pulse on the icon chip (scale) -- the "always
+// something gently alive" touch a static card lacks, without resorting to a
+// scrolling ticker: nothing here moves the *number* itself, which stays
+// perfectly legible the whole time. -1 repeat count means loop forever; the
+// `true` reverses direction each cycle (yoyo) rather than snapping back to
+// 0, so the motion has no visible seam.
+//
+// Deliberately UI-thread-only (useAnimatedStyle), not useAnimatedReaction +
+// runOnJS(setState) as this used to be -- that bounced the shared value into
+// JS state on every single animation frame, forever, for as long as a card
+// stayed mounted. That continuous JS/UI bridge traffic, doubled on screens
+// showing two of these cards at once (My Activity's Events/Missions tabs),
+// was the prime suspect for a long-standing native text-corruption bug in
+// the filter pills mounted in the same pass (see activity-parts.tsx's own
+// WHY above FILTERS). This version never touches React state at all.
+function useBreathingPulseStyle() {
   const shared = useSharedValue(0);
-  const [display, setDisplay] = useState(0);
-
-  useAnimatedReaction(
-    () => shared.value,
-    (value) => {
-      runOnJS(setDisplay)(value);
-    },
-  );
 
   useEffect(() => {
     shared.value = withRepeat(
@@ -93,7 +93,9 @@ function useBreathingPulse(): number {
     );
   }, [shared]);
 
-  return display;
+  return useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + shared.value * 0.05 }],
+  }));
 }
 
 export type StatChipCardSize = 'sm' | 'lg';
@@ -127,12 +129,12 @@ function StatChipIcon({
   readonly size: StatChipCardSize;
   readonly tone: CategoryAccent;
 }) {
-  const pulse = useBreathingPulse();
+  const pulseStyle = useBreathingPulseStyle();
   const config = SIZE_CONFIG[size];
   return (
     <Animated.View
       className={`items-center justify-center rounded-full ${config.chip} ${CATEGORY_CHIP_ACTIVE_TREATMENT[tone].bg}`}
-      style={{ transform: [{ scale: 1 + pulse * 0.05 }] }}
+      style={pulseStyle}
     >
       <Icon color={CATEGORY_ACCENT_ICON_COLOR[tone]} name={icon} size={config.iconSize} />
     </Animated.View>
