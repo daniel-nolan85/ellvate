@@ -136,13 +136,22 @@ export const isActivityFilter = (
 // fetchNextPage() (see ActivitySectionList's own onEndReached below) and
 // re-renders ActivityScreen a second time within about a second of mount --
 // a kind of "content volume" this row's own squished-text bug (see FILTERS'
-// WHY) had never been tied to before, since the first two fix attempts both
-// targeted view/animation count, not re-render frequency. Without memo,
-// that parent re-render would reconcile this whole row again too, even
-// though neither of its own props (`active`/`onSelect`, the latter a stable
-// useState setter) actually changed -- memo makes React bail out of that
-// reconciliation entirely, so a sibling's data refetch can no longer touch
-// this row's already-mounted native views at all.
+// WHY) had never been tied to before, since memo alone did not fully
+// resolve the bug either (confirmed on-device after shipping), it wasn't
+// the only mechanism at play.
+//
+// collapsable={false}: this row had never actually received the
+// react-native-screens#3092 view-flattening workaround this codebase
+// already applies on several other screens for the exact same symptom
+// (text rendering blank/invisible, not just mis-measured) -- e.g.
+// notifications-screen.tsx, member-profile-screen.tsx, event-detail-
+// screen.tsx. member-activity-screen.tsx renders this same FilterChips
+// component without ever wrapping it this way either, so this had simply
+// never been tried on this specific row before. #3092 can flatten a native
+// view into its parent during ANY nearby commit, not just this row's own
+// re-renders, which memo alone can't prevent -- forcing this row to exist
+// as a real native view (not an optimization candidate for flattening) is
+// the documented fix for that class of bug everywhere else it's used.
 export const FilterChips = memo(function FilterChips({
   active,
   onSelect,
@@ -151,62 +160,65 @@ export const FilterChips = memo(function FilterChips({
   readonly onSelect: (filter: ActivityFilter) => void;
 }) {
   return (
-    <ScrollView
-      contentContainerStyle={{
-        // stretch, not center: each pill's height was previously left to its
-        // own natural content measurement, with nothing forcing them equal.
-        // Different labels (different glyph mixes) can measure a pixel or
-        // two apart, and on "All" -- the one filter where every pill's
-        // native view mounts/re-measures in the same pass as a much heavier
-        // sibling commit below -- that per-pill variance is what surfaced as
-        // visibly uneven/"squished" pills. stretch makes every pill match
-        // the row's own cross-axis size instead of guessing a fixed number
-        // (two earlier attempts hardcoded a height/minHeight on individual
-        // pills and consistently left "All" shorter than its neighbors,
-        // because a guessed constant doesn't necessarily match what the
-        // other pills actually need).
-        alignItems: 'stretch',
-        gap: 8,
-        paddingHorizontal: 20,
-        paddingVertical: 2,
-      }}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ flexGrow: 0 }}
-    >
-      {FILTERS.map((filter) => {
-        const isActive = filter.key === active;
-        return (
-          <Pressable
-            // Deliberately identical to Bookmarks' own FilterChips (same
-            // filter count, same label set) -- padding-only sizing, no
-            // minWidth/height override.
-            className={`shrink-0 rounded-full px-3.5 py-[7px] ${
-              isActive ? 'bg-accent' : 'bg-secondary'
-            }`}
-            key={filter.key}
-            onPress={() => onSelect(filter.key)}
-          >
-            {/* allowFontScaling={false}: a fixed leading-[18px] clipped the
-                top of these glyphs on a device with a larger OS text-size
-                setting -- the actual rendered font grows with that setting
-                by default, but the hard-coded 18px line box doesn't grow
-                with it, so taller scaled glyphs no longer fit inside it.
-                These are short, fixed-purpose labels on a compact pill
-                control (not body copy), so opting out of scaling here is
-                the same tradeoff a segmented control/tab bar would make. */}
-            <Text
-              allowFontScaling={false}
-              className={`font-inter-medium text-[13px] ${
-                isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
+    <View collapsable={false}>
+      <ScrollView
+        contentContainerStyle={{
+          // stretch, not center: each pill's height was previously left to
+          // its own natural content measurement, with nothing forcing them
+          // equal. Different labels (different glyph mixes) can measure a
+          // pixel or two apart, and on "All" -- the one filter where every
+          // pill's native view mounts/re-measures in the same pass as a much
+          // heavier sibling commit below -- that per-pill variance is what
+          // surfaced as visibly uneven/"squished" pills. stretch makes every
+          // pill match the row's own cross-axis size instead of guessing a
+          // fixed number (two earlier attempts hardcoded a height/minHeight
+          // on individual pills and consistently left "All" shorter than its
+          // neighbors, because a guessed constant doesn't necessarily match
+          // what the other pills actually need).
+          alignItems: 'stretch',
+          gap: 8,
+          paddingHorizontal: 20,
+          paddingVertical: 2,
+        }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+      >
+        {FILTERS.map((filter) => {
+          const isActive = filter.key === active;
+          return (
+            <Pressable
+              // Deliberately identical to Bookmarks' own FilterChips (same
+              // filter count, same label set) -- padding-only sizing, no
+              // minWidth/height override.
+              className={`shrink-0 rounded-full px-3.5 py-[7px] ${
+                isActive ? 'bg-accent' : 'bg-secondary'
               }`}
+              key={filter.key}
+              onPress={() => onSelect(filter.key)}
             >
-              {filter.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+              {/* allowFontScaling={false}: a fixed leading-[18px] clipped
+                  the top of these glyphs on a device with a larger OS
+                  text-size setting -- the actual rendered font grows with
+                  that setting by default, but the hard-coded 18px line box
+                  doesn't grow with it, so taller scaled glyphs no longer fit
+                  inside it. These are short, fixed-purpose labels on a
+                  compact pill control (not body copy), so opting out of
+                  scaling here is the same tradeoff a segmented control/tab
+                  bar would make. */}
+              <Text
+                allowFontScaling={false}
+                className={`font-inter-medium text-[13px] ${
+                  isActive ? 'text-accent-foreground' : 'text-secondary-foreground'
+                }`}
+              >
+                {filter.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 });
 
