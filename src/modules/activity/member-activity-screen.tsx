@@ -378,21 +378,24 @@ export function MemberActivityScreen({
         </VStack>
       ) : (
         <>
-          {/* collapsable={false}: same fix, same reasoning as
-              activity-screen.tsx's identical stat-box row (see its own
-              comment). */}
-          <HStack className="px-5 pb-3" collapsable={false} space="sm">
-            <StatBox label="Posts" value={postItems.length} />
-            <StatBox label="Events" value={eventItems.length} />
-            <StatBox label="Missions" value={missionItems.length} />
-            <StatBox label="Services" value={serviceItems.length} />
-            <StatBox label="Petitions" value={petitionItems.length} />
-          </HStack>
-
           <FilterChips active={filter} onSelect={setFilter} />
 
           <ActivitySectionList
             contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+            listHeader={
+              // collapsable={false}: same fix, same reasoning as
+              // activity-screen.tsx's identical stat-box row (see its own
+              // comment). Passed as the list's own scrolling header (not a
+              // sibling above it) so it scrolls away with the rows below it
+              // instead of staying pinned and eating most of the screen.
+              <HStack className="px-5 pb-3" collapsable={false} space="sm">
+                <StatBox label="Posts" value={postItems.length} />
+                <StatBox label="Events" value={eventItems.length} />
+                <StatBox label="Missions" value={missionItems.length} />
+                <StatBox label="Services" value={serviceItems.length} />
+                <StatBox label="Petitions" value={petitionItems.length} />
+              </HStack>
+            }
             onRefresh={() => {
               void activity.refetch();
               void member.refetch();

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -471,6 +471,7 @@ export function ActivityRow({
 // rather than a plain ScrollView + `.map()`.
 export function ActivitySectionList({
   contentContainerStyle,
+  listHeader,
   loadMore,
   onRefresh,
   refreshing,
@@ -478,6 +479,12 @@ export function ActivitySectionList({
 }: {
   readonly sections: readonly ActivitySection[];
   readonly contentContainerStyle?: StyleProp<ViewStyle>;
+  // Rendered as the list's own scrolling header (SectionList's
+  // ListHeaderComponent), not a sibling above it -- the stat cards used to
+  // sit outside this list entirely, which pinned them in place and ate
+  // nearly half the screen while scrolling, rather than scrolling away with
+  // the rows underneath them the way a stat summary normally would.
+  readonly listHeader?: ReactElement;
   // Omit entirely for a preview (e.g. "All") that caps its own row count
   // and never needs more; pass the active single filter's own paginated
   // query to fetch further pages as the user scrolls.
@@ -493,6 +500,7 @@ export function ActivitySectionList({
     <SectionList<ActivityListItem, ActivitySection>
       contentContainerStyle={contentContainerStyle}
       keyExtractor={(item) => item.key}
+      ListHeaderComponent={listHeader}
       ListFooterComponent={
         loadMore ? <LoadMoreFooter isLoading={loadMore.isFetchingNextPage} /> : null
       }

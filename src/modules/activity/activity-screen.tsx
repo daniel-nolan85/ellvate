@@ -554,28 +554,32 @@ export function ActivityScreen() {
         </VStack>
       ) : (
         <>
-          {/* collapsable={false}: the same real react-native-screens#3092
-              view-flattening workaround used on four other screens in this
-              app (see e.g. notifications-screen.tsx). Shows only the 1-2
-              cards relevant to the active filter tab below, not every kind
-              at once -- see ActivityStatPanel's own WHY. */}
-          <View collapsable={false}>
-            <ActivityStatPanel
-              eventsAttendingCount={eventsAttendingCount}
-              eventsCreatedCount={eventsCreatedCount}
-              filter={filter}
-              missionsCompletedCount={missionsCompletedCount}
-              missionsCreatedCount={missionsCreatedCount}
-              petitionsCount={petitionsCount}
-              postsCount={postsCount}
-              servicesCount={servicesCount}
-            />
-          </View>
-
           <FilterChips active={filter} onSelect={setFilter} />
 
           <ActivitySectionList
             contentContainerStyle={{ paddingBottom: 130 }}
+            listHeader={
+              // collapsable={false}: the same real react-native-screens#3092
+              // view-flattening workaround used on four other screens in
+              // this app (see e.g. notifications-screen.tsx). Shows only
+              // the 1-2 cards relevant to the active filter tab, not every
+              // kind at once -- see ActivityStatPanel's own WHY. Passed as
+              // the list's own scrolling header (not a sibling above it)
+              // so it scrolls away with the rows below it instead of
+              // staying pinned and eating most of the screen.
+              <View collapsable={false}>
+                <ActivityStatPanel
+                  eventsAttendingCount={eventsAttendingCount}
+                  eventsCreatedCount={eventsCreatedCount}
+                  filter={filter}
+                  missionsCompletedCount={missionsCompletedCount}
+                  missionsCreatedCount={missionsCreatedCount}
+                  petitionsCount={petitionsCount}
+                  postsCount={postsCount}
+                  servicesCount={servicesCount}
+                />
+              </View>
+            }
             loadMore={loadMore}
             onRefresh={refreshAll}
             refreshing={isRefreshing}
