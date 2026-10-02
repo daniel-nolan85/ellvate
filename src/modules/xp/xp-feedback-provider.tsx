@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { computeLeveledUpTo, computeRankedUpTo } from './level-up';
 import { LevelUpCelebrationModal } from './level-up-celebration-modal';
@@ -15,6 +22,19 @@ interface Celebration {
 type NotifyXpAwarded = (outcome: XpAwardOutcome) => void;
 
 const XpFeedbackContext = createContext<NotifyXpAwarded | null>(null);
+
+// The action that earns a celebration-worthy grant (e.g. creating an event)
+// typically also closes a Sheet -- itself a native Modal (see
+// src/components/ui/sheet) -- in the very same tick. Sheet's own close
+// animation keeps its underlying Modal mounted for CLOSE_DURATION (220ms)
+// plus a 150ms backstop before it actually unmounts. Presenting a *second*
+// native Modal (this celebration) while that one is still mid-dismiss is a
+// known way to hang iOS outright -- not just look wrong -- since UIKit
+// doesn't tolerate overlapping present/dismiss transitions. This delay is
+// comfortably longer than Sheet's own worst case, so a celebration's Modal
+// never opens until any Sheet the triggering action closed has genuinely
+// finished closing.
+const CELEBRATION_SHOW_DELAY_MS = 450;
 
 // Every XP-earning mutation across the app (creating a post/event/mission/
 // service, completing a mission) calls this instead of managing its own
@@ -45,7 +65,11 @@ export function XpFeedbackProvider({ children }: { readonly children: ReactNode 
   // they'd genuinely earned was ever shown. Queuing guarantees every
   // level-up/rank-up is eventually shown exactly once, in the order earned.
   const [celebrationQueue, setCelebrationQueue] = useState<readonly Celebration[]>([]);
-  const celebration = celebrationQueue[0] ?? null;
+  // What's actually shown -- deliberately a separate piece of state from
+  // the queue itself, not just celebrationQueue[0], so a freshly queued
+  // celebration can sit pending for CELEBRATION_SHOW_DELAY_MS before its
+  // Modal is allowed to open (see that constant's own WHY).
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
 
   const notify = useCallback<NotifyXpAwarded>((outcome) => {
     if (outcome.awardedXp <= 0) {
@@ -67,7 +91,22 @@ export function XpFeedbackProvider({ children }: { readonly children: ReactNode 
     }
   }, []);
 
+  // Advances the queue to its own Modal-visible state, but only after
+  // CELEBRATION_SHOW_DELAY_MS has passed with nothing currently showing --
+  // see that constant's own WHY for why this can't just show
+  // celebrationQueue[0] directly.
+  useEffect(() => {
+    if (celebration !== null || celebrationQueue.length === 0) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCelebration(celebrationQueue[0]);
+    }, CELEBRATION_SHOW_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [celebration, celebrationQueue]);
+
   const dismissCelebration = useCallback(() => {
+    setCelebration(null);
     setCelebrationQueue((queue) => queue.slice(1));
   }, []);
 
