@@ -1046,12 +1046,20 @@ describe('deleteMission', () => {
 
   test('revokes completion XP from everyone who completed the mission, deleted by its author', async () => {
     const before = getState().users.find((user) => user.id === 'user-mia')?.xp ?? 0;
+    const missionsBefore =
+      getState().users.find((user) => user.id === 'user-mia')?.missionsCompleted ?? 0;
     await checkIn(ctx('user-mia'), 'mission-1');
     const afterCompletion = getState().users.find((user) => user.id === 'user-mia')?.xp ?? 0;
     expect(afterCompletion).toBeGreaterThan(before);
+    expect(getState().users.find((user) => user.id === 'user-mia')?.missionsCompleted).toBe(
+      missionsBefore + 1,
+    );
 
     expect(await deleteMission(ctx('user-hoa'), 'mission-1')).toBe(true);
     expect(getState().users.find((user) => user.id === 'user-mia')?.xp).toBe(before);
+    expect(getState().users.find((user) => user.id === 'user-mia')?.missionsCompleted).toBe(
+      missionsBefore,
+    );
     expect(
       getState().xpLedger.some(
         (entry) => entry.reason === 'mission_completed' && entry.refId === 'mission-1',

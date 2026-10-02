@@ -12,6 +12,11 @@ export interface RevokeXpInput {
 // each with their own 'mission_completed' row sharing that mission's id as
 // refId. Revoking has to walk all of them and credit each affected user's
 // own decrement, not assume a single match the way a one-off lookup would.
+//
+// A 'mission_completed' match also means that user's missions_completed
+// counter (the one the Leaderboard reads) needs decrementing alongside
+// their xp -- mirrors supabase/migrations/0075's equivalent fix to
+// revoke_content_xp() for Supabase mode.
 function revokeXpMemory(reason: XpReason, refId: string): void {
   setState((state) => {
     const matches = state.xpLedger.filter(
@@ -21,15 +26,29 @@ function revokeXpMemory(reason: XpReason, refId: string): void {
       return state;
     }
     const matchedIds = new Set(matches.map((entry) => entry.id));
-    const deltaByUser = new Map<string, number>();
+    const xpDeltaByUser = new Map<string, number>();
+    const missionsDeltaByUser = new Map<string, number>();
     for (const entry of matches) {
-      deltaByUser.set(entry.userId, (deltaByUser.get(entry.userId) ?? 0) + entry.amount);
+      xpDeltaByUser.set(entry.userId, (xpDeltaByUser.get(entry.userId) ?? 0) + entry.amount);
+      if (entry.reason === 'mission_completed') {
+        missionsDeltaByUser.set(entry.userId, (missionsDeltaByUser.get(entry.userId) ?? 0) + 1);
+      }
     }
     return {
       ...state,
       users: state.users.map((user) => {
-        const delta = deltaByUser.get(user.id);
-        return delta ? { ...user, xp: Math.max(0, user.xp - delta) } : user;
+        const xpDelta = xpDeltaByUser.get(user.id);
+        const missionsDelta = missionsDeltaByUser.get(user.id);
+        if (!xpDelta && !missionsDelta) {
+          return user;
+        }
+        return {
+          ...user,
+          missionsCompleted: missionsDelta
+            ? Math.max(0, user.missionsCompleted - missionsDelta)
+            : user.missionsCompleted,
+          xp: xpDelta ? Math.max(0, user.xp - xpDelta) : user.xp,
+        };
       }),
       xpLedger: state.xpLedger.filter((entry) => !matchedIds.has(entry.id)),
     };
