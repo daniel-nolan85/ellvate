@@ -12,7 +12,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { ScreenTitle } from '@/src/modules/community-shell';
+import { ScreenTitle, useFloatingContentClearance } from '@/src/modules/community-shell';
 
 import {
   BusinessCategoryChips,
@@ -54,6 +54,7 @@ interface BusinessToast {
 
 export function BusinessesScreen({ headerExtra, onOpenListing }: BusinessesScreenProps = {}) {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const [activeCategory, setActiveCategory] =
     useState<BusinessCategoryFilter>('all');
   const [isComposing, setIsComposing] = useState(false);
@@ -93,7 +94,7 @@ export function BusinessesScreen({ headerExtra, onOpenListing }: BusinessesScree
           identical comment for why. */}
       <FlatList
         className="flex-1 bg-canvas"
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         data={listings}
         keyExtractor={(listing) => listing.id}
         ListEmptyComponent={

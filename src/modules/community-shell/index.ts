@@ -1,4 +1,8 @@
-export { FloatingTabBar } from './floating-tab-bar';
+export {
+  FloatingTabBar,
+  FLOATING_TAB_BAR_HEIGHT,
+  useFloatingContentClearance,
+} from './floating-tab-bar';
 export type { CommunityTabId } from './floating-tab-bar';
 export { CommunityNavBar } from './community-nav-bar';
 export { AssistantButton } from './assistant-button';

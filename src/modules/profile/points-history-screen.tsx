@@ -9,7 +9,11 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import {
+  CommunityNavBar,
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 
 import { RankList } from './rank-list';
 import { useProfileStats } from './use-profile';
@@ -288,6 +292,7 @@ function HistoryRow({ entry }: { readonly entry: PointsHistoryEntry }) {
 
 export function PointsHistoryScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const [tab, setTab] = useState<PointsHistoryTab>('history');
   const [filter, setFilter] = useState<PointsHistoryFilter>('all');
   const [month, setMonth] = useState<PointsHistoryMonth>('all');
@@ -312,7 +317,7 @@ export function PointsHistoryScreen() {
 
       {tab === 'ranks' ? (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 130, paddingTop: 4 }}
+          contentContainerStyle={{ paddingBottom: tabBarClearance, paddingTop: 4 }}
           refreshControl={
             <RefreshControl onRefresh={() => void stats.refetch()} refreshing={stats.isRefetching} />
           }
@@ -327,7 +332,7 @@ export function PointsHistoryScreen() {
         </ScrollView>
       ) : tab === 'history' ? (
         <FlatList
-          contentContainerStyle={{ paddingBottom: 130 }}
+          contentContainerStyle={{ paddingBottom: tabBarClearance }}
           data={entries}
           keyExtractor={(entry) => entry.id}
           ListEmptyComponent={
@@ -390,7 +395,7 @@ export function PointsHistoryScreen() {
         />
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 130 }}
+          contentContainerStyle={{ paddingBottom: tabBarClearance }}
           refreshControl={
             <RefreshControl onRefresh={() => void growth.refetch()} refreshing={growth.isRefetching} />
           }

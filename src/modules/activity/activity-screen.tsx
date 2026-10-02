@@ -12,7 +12,11 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import {
+  CommunityNavBar,
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 import {
   PostCard,
   useMyComments,
@@ -102,6 +106,7 @@ interface SearchableActivityItem {
 
 export function ActivityScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const session = useSession();
   const userId = session.userId ?? 'demo-user';
   const { filter: filterParam } = useLocalSearchParams<{ filter?: string }>();
@@ -561,7 +566,7 @@ export function ActivityScreen() {
           <FilterChips active={filter} onSelect={setFilter} />
 
           <ActivitySectionList
-            contentContainerStyle={{ paddingBottom: 130 }}
+            contentContainerStyle={{ paddingBottom: tabBarClearance }}
             listHeader={
               // collapsable={false}: the same real react-native-screens#3092
               // view-flattening workaround used on four other screens in

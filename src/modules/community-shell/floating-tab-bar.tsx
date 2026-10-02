@@ -28,6 +28,28 @@ const TABS: readonly TabDefinition[] = [
 const ACTIVE_COLOR = '#ffffff';
 const INACTIVE_COLOR = 'rgba(250,250,250,0.45)';
 
+// This bar's own height -- kept as a named export so anything positioning
+// itself relative to the bar (AssistantButton in app/_layout.tsx, every
+// scrollable screen's own bottom clearance) has one source of truth instead
+// of a second copy of this number.
+export const FLOATING_TAB_BAR_HEIGHT = 68;
+
+// Mirrors this bar's own `bottom` position (Math.max(20, insets.bottom + 8)
+// -- see the style prop below) plus its height plus `extraGap` of breathing
+// room above it. Every scrollable screen under the floating tab bar/
+// AssistantButton (both float above "every protected screen, tabs and
+// non-tab alike" -- see app/_layout.tsx) used to pad its content with a
+// flat `paddingBottom: 130`, tuned for iOS's typical ~34px bottom inset.
+// Android's own inset varies by nav mode (gesture vs. 3-button) and is
+// often smaller, so a flat constant either under- or over-clears the bar
+// depending on the device -- this computes the real clearance for whatever
+// device it's actually running on, the same way AssistantButton's own
+// position already does.
+export function useFloatingContentClearance(extraGap = 16): number {
+  const insets = useSafeAreaInsets();
+  return Math.max(20, insets.bottom + 8) + FLOATING_TAB_BAR_HEIGHT + extraGap;
+}
+
 const barShadow: ViewStyle = {
   shadowColor: '#000000',
   shadowOffset: { width: 0, height: 12 },

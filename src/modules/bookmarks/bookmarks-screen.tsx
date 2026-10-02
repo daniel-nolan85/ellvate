@@ -14,7 +14,11 @@ import { VStack } from '@/src/components/ui/vstack';
 import { formatDateOnly } from '@/src/lib/date-only';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BusinessListingCard } from '@/src/modules/businesses';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import {
+  CommunityNavBar,
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 import { EventSummaryCard } from '@/src/modules/events';
 import { PostCard, useToggleLike } from '@/src/modules/forum';
 import { MissionCard } from '@/src/modules/missions';
@@ -189,6 +193,7 @@ function BookmarkRow({
 
 export function BookmarksScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const [filter, setFilter] = useState<BookmarksFilter>('all');
   const bookmarks = useBookmarks(filterToTargetType(filter));
   const toggleLike = useToggleLike();
@@ -248,7 +253,7 @@ export function BookmarksScreen() {
         // simultaneous content, and this list has the same unbounded-growth
         // shape as that one did.
         <FlatList
-          contentContainerStyle={{ paddingBottom: 130, paddingTop: 8 }}
+          contentContainerStyle={{ paddingBottom: tabBarClearance, paddingTop: 8 }}
           data={items}
           keyExtractor={(item) => item.bookmarkId}
           ListFooterComponent={<LoadMoreFooter isLoading={bookmarks.isFetchingNextPage} />}

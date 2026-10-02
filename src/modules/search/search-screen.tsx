@@ -10,7 +10,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { CommunityNavBar } from '@/src/modules/community-shell';
+import { CommunityNavBar, useFloatingContentClearance } from '@/src/modules/community-shell';
 import { ProfileAvatarButton } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -78,6 +78,7 @@ function useDebouncedValue(value: string, delayMs: number): string {
 
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const session = useSession();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query.trim(), DEBOUNCE_MS);
@@ -140,7 +141,7 @@ export function SearchScreen() {
 
       <ScrollView
         contentContainerClassName="px-[18px] pt-4"
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         keyboardShouldPersistTaps="handled"
       >
         <VStack space="md">

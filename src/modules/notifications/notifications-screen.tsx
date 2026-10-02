@@ -12,7 +12,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 import { formatRelativeTime } from '@/src/lib/relative-time';
-import { CommunityNavBar } from '@/src/modules/community-shell';
+import { CommunityNavBar, useFloatingContentClearance } from '@/src/modules/community-shell';
 import { ProfileAvatarButton } from '@/src/modules/profile';
 
 import {
@@ -84,6 +84,7 @@ const NAV_SETTLE_MS = 500;
 
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const notifications = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
@@ -223,7 +224,7 @@ export function NotificationsScreen() {
         // mount as real native views here, no matter how many notifications
         // accumulate for a user over time.
         <FlatList
-          contentContainerStyle={{ paddingBottom: 130 }}
+          contentContainerStyle={{ paddingBottom: tabBarClearance }}
           data={items}
           ItemSeparatorComponent={Divider}
           keyExtractor={(notification) => notification.id}

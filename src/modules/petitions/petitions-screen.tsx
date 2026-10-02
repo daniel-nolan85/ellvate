@@ -14,7 +14,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { ScreenTitle } from '@/src/modules/community-shell';
+import { ScreenTitle, useFloatingContentClearance } from '@/src/modules/community-shell';
 import { ApiError } from '@/src/services/api';
 
 import { PetitionComposer } from './petition-composer';
@@ -67,6 +67,7 @@ function CreateButton({ onPress }: { readonly onPress: () => void }) {
 
 export function PetitionsScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const gate = usePetitionsGate();
   const [status, setStatus] = useState<PetitionStatus>('open');
   const petitions = usePetitionsPage(status);
@@ -104,7 +105,7 @@ export function PetitionsScreen() {
           no matter how many petitions load. */}
       <FlatList<Petition>
         className="flex-1 bg-canvas"
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         data={petitions.isPending || petitions.isError ? [] : items}
         keyExtractor={(petition) => petition.id}
         ListEmptyComponent={

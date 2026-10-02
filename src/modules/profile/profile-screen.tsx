@@ -16,7 +16,11 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import {
+  CommunityNavBar,
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 import {
   INTERESTS,
   MAX_PICKS,
@@ -160,6 +164,7 @@ function Row({
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const session = useSession();
   const profile = useProfile();
   const stats = useProfileStats();
@@ -330,7 +335,7 @@ export function ProfileScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         refreshControl={
           <RefreshControl
             onRefresh={() => {

@@ -10,7 +10,11 @@ import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import {
+  CommunityNavBar,
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 
 import { useOpenProfile } from './use-open-profile';
 import { useBlockUser, useBlockedUsers, type BlockedMember } from './use-block-user';
@@ -59,6 +63,7 @@ function BlockedRow({
 
 export function BlockedUsersScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const blockedUsers = useBlockedUsers();
   const blockUser = useBlockUser();
   const openProfile = useOpenProfile();
@@ -90,7 +95,7 @@ export function BlockedUsersScreen() {
         </VStack>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 130 }}
+          contentContainerStyle={{ paddingBottom: tabBarClearance }}
           refreshControl={
             <RefreshControl
               onRefresh={() => void blockedUsers.refetch()}

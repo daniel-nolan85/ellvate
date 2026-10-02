@@ -13,7 +13,7 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { ScreenTitle } from '@/src/modules/community-shell';
+import { ScreenTitle, useFloatingContentClearance } from '@/src/modules/community-shell';
 import { ApiError } from '@/src/services/api';
 
 import { EventComposer } from './event-composer';
@@ -63,6 +63,7 @@ interface EventsScreenProps {
 
 export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const dates = useEventDates();
   const eventsView = useEventsView(selectedDate);
@@ -99,7 +100,7 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
           real native views here, no matter how many events load. */}
       <FlatList
         className="flex-1 bg-canvas"
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         data={restToRender}
         keyExtractor={(event) => event.id}
         ListEmptyComponent={

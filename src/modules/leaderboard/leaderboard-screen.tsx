@@ -11,7 +11,11 @@ import { HStack } from '@/src/components/ui/hstack';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { CommunityNavBar, ScreenTitle } from '@/src/modules/community-shell';
+import {
+  CommunityNavBar,
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 import { useOpenProfile } from '@/src/modules/profile';
 
 import { LeaderRow } from './leader-row';
@@ -68,6 +72,7 @@ function RangeTabs({
 
 export function LeaderboardScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const [range, setRange] = useState<LeaderboardRange>('all');
   const leaderboard = useLeaderboard(range);
   const leaders = leaderboard.data?.pages.flatMap((page) => page.leaders) ?? [];
@@ -133,7 +138,7 @@ export function LeaderboardScreen() {
           content grew large enough. */}
       <FlatList<LeaderboardEntry>
         className="flex-1 bg-canvas"
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         data={hasLeaders ? leaders : []}
         keyExtractor={(entry) => String(entry.rank)}
         ListEmptyComponent={

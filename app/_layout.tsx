@@ -6,7 +6,6 @@ import { router, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ButtonText } from '@/src/components/ui/button';
 import { ConfirmModal } from '@/src/components/ui/confirm-modal';
@@ -16,7 +15,12 @@ import {
   canAccessCommunityRoutes,
   ClerkAuthGate,
 } from '@/src/modules/authentication';
-import { AssistantButton, MODAL_SCREEN_OPTIONS, SHEET_SCREEN_OPTIONS } from '@/src/modules/community-shell';
+import {
+  AssistantButton,
+  MODAL_SCREEN_OPTIONS,
+  SHEET_SCREEN_OPTIONS,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 import { XpFeedbackProvider } from '@/src/modules/xp';
 import { useWelcomeBackNotice } from '@/src/platform/notices';
 import { AppProviders } from '@/src/platform/providers';
@@ -61,7 +65,7 @@ const COMPOSER_DOCKED_ROUTES = new Set(['mission', 'post', 'event', 'petition', 
 function AppNavigator() {
   const session = useSession();
   const welcomeBack = useWelcomeBackNotice();
-  const insets = useSafeAreaInsets();
+  const floatingContentClearance = useFloatingContentClearance();
   const segments = useSegments();
   const canAccessCommunity = canAccessCommunityRoutes(session.status);
   const onProtectedRoute = segments.length > 0 && !UNPROTECTED_ROUTES.has(segments[0]);
@@ -156,15 +160,15 @@ function AppNavigator() {
           </Stack.Protected>
         </Stack>
         {canAccessCommunity && onProtectedRoute && !hasDockedComposer ? (
-          // Floats persistently above the tab bar (which sits at
-          // max(20, insets.bottom + 8), 68px tall -- see FloatingTabBar) on
-          // every protected screen, tabs and non-tab alike, so it no longer
-          // needs to be threaded through CommunityNavBar per-screen. Excluded
-          // on COMPOSER_DOCKED_ROUTES -- see that const's own WHY.
+          // Floats persistently above the tab bar (see
+          // useFloatingContentClearance's own WHY) on every protected
+          // screen, tabs and non-tab alike, so it no longer needs to be
+          // threaded through CommunityNavBar per-screen. Excluded on
+          // COMPOSER_DOCKED_ROUTES -- see that const's own WHY.
           <AssistantButton
             onPress={() => router.push('/assistant')}
             style={{
-              bottom: Math.max(20, insets.bottom + 8) + 68 + 16,
+              bottom: floatingContentClearance,
               position: 'absolute',
               right: 16,
               zIndex: 10,

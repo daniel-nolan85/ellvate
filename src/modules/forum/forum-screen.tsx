@@ -13,7 +13,7 @@ import { Sheet } from '@/src/components/ui/sheet';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { ScreenTitle } from '@/src/modules/community-shell';
+import { ScreenTitle, useFloatingContentClearance } from '@/src/modules/community-shell';
 import { useProfile } from '@/src/modules/profile';
 
 import { subforumsForInterests } from './interest-subforum-map';
@@ -51,6 +51,7 @@ interface ForumScreenProps {
 
 export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
   const insets = useSafeAreaInsets();
+  const tabBarClearance = useFloatingContentClearance();
   const [activeForum, setActiveForum] = useState('All');
   const [isComposing, setIsComposing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -137,7 +138,7 @@ export function ForumScreen({ onOpenPost }: ForumScreenProps = {}) {
           real native views here, no matter how many posts load. */}
       <FlatList
         className="flex-1 bg-canvas"
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: tabBarClearance }}
         data={displayedPosts}
         keyExtractor={(post) => post.id}
         ListEmptyComponent={
