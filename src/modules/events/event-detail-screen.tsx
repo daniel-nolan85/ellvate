@@ -368,7 +368,7 @@ export function EventDetailScreen({
               return;
             }
             void Share.share({
-              message: `${event.title}\n\n${formatDayLabel(event.dayLabel)} ${event.dateLabel} · ${event.timeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}\n${event.place}${event.cost ? `\n${event.cost}` : ''}`,
+              message: `${event.title}\n\n${formatDayLabel(event.dayLabel)} ${event.dateLabel} · ${event.timeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}\n${event.place}\n${event.cost ?? 'Free'}`,
             });
           }}
         >
@@ -453,7 +453,7 @@ export function EventDetailScreen({
                     {event.featured ? (
                       <Badge variant="amber">Featured</Badge>
                     ) : null}
-                    {event.cost ? <Badge variant="outline">{event.cost}</Badge> : null}
+                    <Badge variant="outline">{event.cost ?? 'Free'}</Badge>
                   </HStack>
 
                   <Heading className="font-inter-bold text-[22px]" size="lg">

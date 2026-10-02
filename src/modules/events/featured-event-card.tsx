@@ -66,15 +66,13 @@ export function FeaturedEventCard({
           >
             {event.tag}
           </Badge>
-          {event.cost ? (
-            <Badge
-              className="border-[rgba(250,250,250,0.25)]"
-              textClassName="text-[rgba(250,250,250,0.85)]"
-              variant="outline"
-            >
-              {event.cost}
-            </Badge>
-          ) : null}
+          <Badge
+            className="border-[rgba(250,250,250,0.25)]"
+            textClassName="text-[rgba(250,250,250,0.85)]"
+            variant="outline"
+          >
+            {event.cost ?? 'Free'}
+          </Badge>
         </HStack>
         <VStack space="xs">
           <Text className="font-inter-bold text-[26px] leading-[30px] tracking-[-0.78px] text-primary-foreground">
