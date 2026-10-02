@@ -46,6 +46,7 @@ import {
   type ActivityLoadMoreTarget,
   type ActivitySection,
 } from './activity-parts';
+import { useMyActivityCounts } from './use-activity-counts';
 
 const KIND_LABEL = {
   event: 'You created an event',
@@ -115,6 +116,10 @@ export function ActivityScreen() {
   const services = useMyServiceListingsView();
   const petitions = useMyPetitionsView();
   const toggleLike = useToggleLike();
+  // The stat tiles below need the member's TRUE total for each kind, not
+  // just whatever page of the above paginated queries has loaded so far
+  // (see use-activity-counts.ts's own WHY) -- a separate, unpaginated query.
+  const activityCounts = useMyActivityCounts();
 
   // Lets a link (e.g. a tappable stat on the profile screen) land directly
   // on one section — /activity?filter=event — instead of always opening on
@@ -341,7 +346,8 @@ export function ActivityScreen() {
     events.isRefetching ||
     missions.isRefetching ||
     services.isRefetching ||
-    petitions.isRefetching;
+    petitions.isRefetching ||
+    activityCounts.isRefetching;
   const refreshAll = () => {
     void posts.refetch();
     void comments.refetch();
@@ -349,6 +355,7 @@ export function ActivityScreen() {
     void missions.refetch();
     void services.refetch();
     void petitions.refetch();
+    void activityCounts.refetch();
   };
   const hasAnything =
     myPostItems.length > 0 ||
@@ -365,16 +372,34 @@ export function ActivityScreen() {
   // (a mission you made and later completed yourself counts toward both),
   // matching how the rest of the app already tracks these independently
   // (see PublicMemberStats).
-  const eventsCreatedCount = myEventItems.filter(
+  //
+  // Each of these client-derived values only covers whatever page of its
+  // own paginated query has loaded so far -- fine as the section list's own
+  // row count, but wrong as a stat tile (a member with 23 events created
+  // would see "20" until scrolling far enough to fetch the rest). They're
+  // kept here only as a same-render fallback for activityCounts' own true
+  // totals below, so the tiles show a reasonable number immediately rather
+  // than a blank/zero flash while that separate query is still loading.
+  const eventsCreatedCountFallback = myEventItems.filter(
     (item) => item.event.author.id === userId,
   ).length;
-  const eventsAttendingCount = myEventItems.filter((item) => item.going).length;
-  const missionsCreatedCount = myMissionItems.filter(
+  const eventsAttendingCountFallback = myEventItems.filter((item) => item.going).length;
+  const missionsCreatedCountFallback = myMissionItems.filter(
     (item) => item.mission.author.id === userId,
   ).length;
-  const missionsCompletedCount = myMissionItems.filter(
+  const missionsCompletedCountFallback = myMissionItems.filter(
     (item) => item.completed,
   ).length;
+  const eventsCreatedCount = activityCounts.data?.eventsCreatedCount ?? eventsCreatedCountFallback;
+  const eventsAttendingCount =
+    activityCounts.data?.eventsAttendingCount ?? eventsAttendingCountFallback;
+  const missionsCreatedCount =
+    activityCounts.data?.missionsCreatedCount ?? missionsCreatedCountFallback;
+  const missionsCompletedCount =
+    activityCounts.data?.missionsCompletedCount ?? missionsCompletedCountFallback;
+  const postsCount = activityCounts.data?.postsCount ?? myPostItems.length;
+  const servicesCount = activityCounts.data?.servicesCount ?? myServiceItems.length;
+  const petitionsCount = activityCounts.data?.petitionsCount ?? myPetitionItems.length;
 
   // ActivitySectionList (see activity-parts.tsx) always renders exactly one
   // section here -- there's no "All" filter combining several at once (see
@@ -512,9 +537,9 @@ export function ActivityScreen() {
               filter={filter}
               missionsCompletedCount={missionsCompletedCount}
               missionsCreatedCount={missionsCreatedCount}
-              petitionsCount={myPetitionItems.length}
-              postsCount={myPostItems.length}
-              servicesCount={myServiceItems.length}
+              petitionsCount={petitionsCount}
+              postsCount={postsCount}
+              servicesCount={servicesCount}
             />
           </View>
 
