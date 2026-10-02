@@ -42,7 +42,7 @@ const toEntry = (
 
 function getAllTimeLeaderboardMemory(userId: string): LeaderboardResult {
   const ranked = getState()
-    .users.filter((user) => user.missionsCompleted > 0)
+    .users.filter((user) => user.missionsCompleted > 0 && user.onLeaderboard)
     .sort(byMissionsThenXp);
 
   return {
@@ -59,11 +59,15 @@ function tallyCompletions(
   missions: readonly StoredMission[],
   windowStartMs: number,
   windowEndMs: number,
+  excludedUserIds: ReadonlySet<string>,
 ): Map<string, WindowedTally> {
   const tally = new Map<string, WindowedTally>();
   for (const mission of missions) {
     for (const [userId, progress] of Object.entries(mission.progressByUser)) {
       if (progress.status !== 'done' || progress.completedAt === null) {
+        continue;
+      }
+      if (excludedUserIds.has(userId)) {
         continue;
       }
       const completedMs = Date.parse(progress.completedAt);
@@ -82,14 +86,20 @@ function getWindowedLeaderboardMemory(
 ): LeaderboardResult {
   const { missions, users } = getState();
   const usersById = new Map(users.map((user) => [user.id, user]));
+  // Same exclusion the all-time leaderboard applies via onLeaderboard --
+  // without it, an excluded account's windowed completions would still tally
+  // and rank here even though they never appear in the all-time view.
+  const excludedUserIds = new Set(
+    users.filter((user) => !user.onLeaderboard).map((user) => user.id),
+  );
 
   const days = RANGE_DAYS[range];
   const now = Date.now();
   const currentStart = now - days * DAY_MS;
   const previousStart = now - 2 * days * DAY_MS;
 
-  const currentTally = tallyCompletions(missions, currentStart, now);
-  const previousTally = tallyCompletions(missions, previousStart, currentStart);
+  const currentTally = tallyCompletions(missions, currentStart, now, excludedUserIds);
+  const previousTally = tallyCompletions(missions, previousStart, currentStart, excludedUserIds);
   const previousRanks = new Map(
     rankTally(previousTally).map(({ rank, userId: id }) => [id, rank]),
   );

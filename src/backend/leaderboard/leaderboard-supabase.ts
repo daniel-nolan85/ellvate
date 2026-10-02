@@ -90,7 +90,23 @@ async function getWindowedLeaderboardSupabase(
     .eq('status', 'done')
     .gte('completed_at', previousStartIso);
   throwIfSupabaseError(progressError, 'load windowed mission completions');
-  const progressRows = (progressData ?? []) as unknown as ProgressRow[];
+
+  // Same exclusion the all-time leaderboard already applies via its own
+  // .eq('on_leaderboard', true) above -- without this, an excluded account
+  // (e.g. the app's own admin) would still tally and rank in the week/month
+  // views even though they never appear in the all-time one.
+  const { data: excludedData, error: excludedError } = await supabase
+    .from('app_users')
+    .select('id')
+    .eq('on_leaderboard', false);
+  throwIfSupabaseError(excludedError, 'load leaderboard-excluded members');
+  const excludedIds = new Set(
+    ((excludedData ?? []) as unknown as { readonly id: string }[]).map((row) => row.id),
+  );
+
+  const progressRows = ((progressData ?? []) as unknown as ProgressRow[]).filter(
+    (row) => !excludedIds.has(row.user_id),
+  );
   if (progressRows.length === 0) {
     return { leaders: [] };
   }

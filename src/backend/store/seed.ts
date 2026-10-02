@@ -90,6 +90,7 @@ const seedUser = ({
   name,
   xp,
   missionsCompleted,
+  onLeaderboard: true,
   previousRank,
   title: 'LAKE EXPLORER',
   profile: emptyProfile(),

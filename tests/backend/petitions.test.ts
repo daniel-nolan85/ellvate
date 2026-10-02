@@ -49,6 +49,7 @@ function unlockPetitions(): void {
       missionsCompleted: 0,
       name: `Fixture User ${index}`,
       mutedUserIds: [],
+      onLeaderboard: true,
       pinnedPostId: null,
       previousRank: null,
       profile: {

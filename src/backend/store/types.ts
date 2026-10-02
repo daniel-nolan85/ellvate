@@ -41,6 +41,10 @@ export interface StoredUser {
   readonly isAdmin: boolean;
   readonly xp: number;
   readonly missionsCompleted: number;
+  // Mirrors app_users.on_leaderboard (Supabase) -- lets an account (e.g. the
+  // app's own admin) earn XP/complete missions normally while never
+  // appearing on the Leaderboard. Defaults true for every real member.
+  readonly onLeaderboard: boolean;
   readonly previousRank: number | null;
   readonly title: string;
   readonly profile: StoredProfile;

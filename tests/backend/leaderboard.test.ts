@@ -61,6 +61,20 @@ describe('getLeaderboard', () => {
     expect(ids).not.toContain('user-riley');
   });
 
+  test('excludes a user with onLeaderboard: false even with the highest totals', async () => {
+    setState((state) => ({
+      ...state,
+      users: state.users.map((user) =>
+        user.id === 'user-mia' ? { ...user, onLeaderboard: false } : user,
+      ),
+    }));
+
+    const { leaders } = await getLeaderboard(ctx());
+
+    expect(leaders.some((entry) => entry.user.id === 'user-mia')).toBe(false);
+    expect(leaders[0]?.user.id).toBe('user-andre');
+  });
+
   test('marks only the requesting user with isMe', async () => {
     const { leaders } = await getLeaderboard(ctx());
 
@@ -251,6 +265,19 @@ describe('getLeaderboard (windowed ranges)', () => {
     const { leaders } = await getLeaderboard(ctx(), 'week');
 
     expect(leaders.map((entry) => entry.user.id)).toEqual([DEMO_USER_ID]);
+  });
+
+  test('excludes a user with onLeaderboard: false from windowed ranges too', async () => {
+    setState((state) => ({
+      ...state,
+      users: state.users.map((user) =>
+        user.id === DEMO_USER_ID ? { ...user, onLeaderboard: false } : user,
+      ),
+    }));
+
+    const { leaders } = await getLeaderboard(ctx(), 'week');
+
+    expect(leaders).toHaveLength(0);
   });
 
   test('computes rankDelta against the immediately preceding window of equal length', async () => {

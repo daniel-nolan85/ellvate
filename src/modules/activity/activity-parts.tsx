@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -130,7 +130,20 @@ export const isActivityFilter = (
   value === 'service' ||
   value === 'petition';
 
-export function FilterChips({
+// Memoized: a member with just over one page's worth of some kind (e.g. 23
+// events against useMyEventsView's 20-per-page) crosses a pagination
+// boundary shortly after this screen mounts, which fires a real
+// fetchNextPage() (see ActivitySectionList's own onEndReached below) and
+// re-renders ActivityScreen a second time within about a second of mount --
+// a kind of "content volume" this row's own squished-text bug (see FILTERS'
+// WHY) had never been tied to before, since the first two fix attempts both
+// targeted view/animation count, not re-render frequency. Without memo,
+// that parent re-render would reconcile this whole row again too, even
+// though neither of its own props (`active`/`onSelect`, the latter a stable
+// useState setter) actually changed -- memo makes React bail out of that
+// reconciliation entirely, so a sibling's data refetch can no longer touch
+// this row's already-mounted native views at all.
+export const FilterChips = memo(function FilterChips({
   active,
   onSelect,
 }: {
@@ -195,7 +208,7 @@ export function FilterChips({
       })}
     </ScrollView>
   );
-}
+});
 
 export function StatBox({ label, value }: { readonly label: string; readonly value: number }) {
   const displayValue = useCountUp(value);
