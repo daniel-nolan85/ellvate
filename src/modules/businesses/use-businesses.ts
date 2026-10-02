@@ -251,7 +251,14 @@ export function useDeleteBusinessListing() {
       // Deleting a listing now also reverses the XP its creation granted
       // (see supabase/migrations/0074_revoke_xp_on_delete.sql) -- the
       // profile's XP/level stat and the points-history list and growth
-      // chart all need to pick that up too.
+      // chart all need to pick that up too. useProfileStats (the actual
+      // source of the XP/level numbers shown on the Profile screen) reads
+      // from /api/missions/progress, keyed under ['missions', ...] -- not
+      // ['profile'] -- so without this it stayed stale until some other
+      // unrelated action happened to invalidate ['missions']. useCreate
+      // BusinessListing already invalidates ['missions'] for exactly this
+      // reason; this was the missing mirror image on delete.
+      void queryClient.invalidateQueries({ queryKey: ['missions'] });
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
