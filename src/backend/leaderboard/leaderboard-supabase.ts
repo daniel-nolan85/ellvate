@@ -46,8 +46,8 @@ async function getAllTimeLeaderboardSupabase(
     .from('app_users')
     .select(LEADERBOARD_SELECT)
     .eq('on_leaderboard', true)
-    .order('missions_completed', { ascending: false })
-    .order('xp', { ascending: false });
+    .order('xp', { ascending: false })
+    .order('missions_completed', { ascending: false });
   throwIfSupabaseError(error, 'load leaderboard');
   const rows = (data ?? []) as unknown as LeaderRow[];
   return {

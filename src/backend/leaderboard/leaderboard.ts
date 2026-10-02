@@ -24,8 +24,12 @@ export const MAX_LEADERBOARD_PAGE_SIZE = 50;
 // In-memory backend (tests / no-DB dev)
 // ---------------------------------------------------------------------------
 
-const byMissionsThenXp = (a: StoredUser, b: StoredUser): number =>
-  b.missionsCompleted - a.missionsCompleted || b.xp - a.xp;
+// Ranked by XP first -- the headline number -- with missionsCompleted only
+// breaking ties between equal XP totals, not driving rank on its own (a
+// member with more XP always outranks one with fewer, regardless of either
+// one's mission count).
+const byXpThenMissions = (a: StoredUser, b: StoredUser): number =>
+  b.xp - a.xp || b.missionsCompleted - a.missionsCompleted;
 
 const toEntry = (
   user: StoredUser,
@@ -43,7 +47,7 @@ const toEntry = (
 function getAllTimeLeaderboardMemory(userId: string): LeaderboardResult {
   const ranked = getState()
     .users.filter((user) => user.missionsCompleted > 0 && user.onLeaderboard)
-    .sort(byMissionsThenXp);
+    .sort(byXpThenMissions);
 
   return {
     leaders: ranked.map((user, index) => toEntry(user, index + 1, userId)),

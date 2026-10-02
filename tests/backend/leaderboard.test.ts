@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe('getLeaderboard', () => {
-  test('ranks seed users by missionsCompleted desc then xp desc', async () => {
+  test('ranks seed users by xp desc then missionsCompleted desc', async () => {
     const { leaders } = await getLeaderboard(ctx());
 
     expect(leaders.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5, 6]);
@@ -36,11 +36,13 @@ describe('getLeaderboard', () => {
     ]);
   });
 
-  test('breaks missionsCompleted ties by xp desc', async () => {
+  test('breaks xp ties by missionsCompleted desc', async () => {
     setState((state) => ({
       ...state,
       users: state.users.map((user) =>
-        user.id === 'user-andre' ? { ...user, missionsCompleted: 41 } : user,
+        // Tie Andre's xp with Mia's -- Mia still has more missionsCompleted
+        // (41 vs 38), which must be what breaks the tie in her favor.
+        user.id === 'user-andre' ? { ...user, xp: 3820 } : user,
       ),
     }));
 
@@ -49,6 +51,31 @@ describe('getLeaderboard', () => {
     expect(leaders.slice(0, 2).map((entry) => entry.user.id)).toEqual([
       'user-mia',
       'user-andre',
+    ]);
+  });
+
+  test('ranks a higher-xp member above a member with more completed missions', async () => {
+    setState((state) => ({
+      ...state,
+      users: state.users.map((user) => {
+        if (user.id === 'user-andre') {
+          return { ...user, xp: 200, missionsCompleted: 3 };
+        }
+        if (user.id === 'user-jordan') {
+          return { ...user, xp: 150, missionsCompleted: 5 };
+        }
+        return user;
+      }),
+    }));
+
+    const { leaders } = await getLeaderboard(ctx());
+    const ranked = leaders.filter((entry) =>
+      ['user-andre', 'user-jordan'].includes(entry.user.id),
+    );
+
+    expect(ranked.map((entry) => entry.user.id)).toEqual([
+      'user-andre',
+      'user-jordan',
     ]);
   });
 

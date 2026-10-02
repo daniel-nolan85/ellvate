@@ -1,7 +1,7 @@
 // Shared by both the memory and Supabase leaderboard backends: turns a raw
 // per-user tally of missions completed within some time window into ranked
-// entries, sorted the same way as the all-time leaderboard (most missions
-// completed, then most XP).
+// entries, sorted the same way as the all-time leaderboard (most XP, then
+// most missions completed as the tiebreaker).
 export type LeaderboardRange = 'week' | 'month' | 'all';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -36,7 +36,7 @@ export function rankTally(
   return [...tally.entries()]
     .sort(
       ([, a], [, b]) =>
-        b.missionsCompleted - a.missionsCompleted || b.xp - a.xp,
+        b.xp - a.xp || b.missionsCompleted - a.missionsCompleted,
     )
     .map(([userId], index) => ({ rank: index + 1, userId }));
 }
