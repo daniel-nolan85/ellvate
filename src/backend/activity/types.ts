@@ -4,7 +4,15 @@
 export interface MyActivityCounts {
   readonly postsCount: number;
   readonly eventsCreatedCount: number;
+  // Includes a member's own event if they explicitly marked themselves
+  // going to it, by request -- creating an event doesn't count toward this
+  // on its own, only an explicit Join tap does.
   readonly eventsAttendingCount: number;
+  // The deduped union of events created OR attended -- NOT eventsCreatedCount
+  // + eventsAttendingCount, since a member can both create an event and
+  // mark themselves going to it, which is still only ever one row in the
+  // Events section's list. This is the true count of that list.
+  readonly eventsCount: number;
   readonly missionsCreatedCount: number;
   readonly missionsCompletedCount: number;
   // The deduped union of missions created OR completed -- NOT

@@ -156,11 +156,15 @@ export function MemberActivityScreen({
       (activity.data?.events ?? []).map(
         (event): EventActivityItem => ({
           event,
-          going: event.author.id !== userId && event.joined,
+          // No authorship exclusion -- matches activity-screen.tsx's own
+          // myEventItems: a member who creates an event and then
+          // explicitly marks themselves going should show as attending
+          // here too, not just on their own device.
+          going: event.joined,
           key: event.id,
         }),
       ),
-    [activity.data, userId],
+    [activity.data],
   );
 
   const missionItems = useMemo(

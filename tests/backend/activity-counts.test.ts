@@ -50,8 +50,8 @@ describe('getMyActivityCounts (memory)', () => {
     });
     if (!ownEventTwo.ok) throw new Error('setup failed: event two');
 
-    // Joining your own event must never count toward "attending" -- only
-    // someone else's event, joined, should.
+    // Explicitly joining your own event DOES count toward "attending" (by
+    // request) -- as does someone else's event, joined.
     await toggleJoin(ctx(TEST_USER), ownEventOne.event.id);
     await toggleJoin(ctx(TEST_USER), 'event-2');
 
@@ -106,7 +106,11 @@ describe('getMyActivityCounts (memory)', () => {
 
     expect(counts.postsCount).toBe(1);
     expect(counts.eventsCreatedCount).toBe(2);
-    expect(counts.eventsAttendingCount).toBe(1);
+    // Own event one (explicitly joined) plus someone else's event-2.
+    expect(counts.eventsAttendingCount).toBe(2);
+    // ownEventOne overlaps (created AND attending), ownEventTwo doesn't,
+    // event-2 doesn't -- 3 distinct events, not 2 + 2.
+    expect(counts.eventsCount).toBe(3);
     expect(counts.missionsCreatedCount).toBe(1);
     expect(counts.missionsCompletedCount).toBe(1);
     // The own mission (not completed) plus someone else's completed
@@ -114,6 +118,26 @@ describe('getMyActivityCounts (memory)', () => {
     expect(counts.missionsCount).toBe(2);
     expect(counts.servicesCount).toBe(1);
     expect(counts.petitionsCount).toBe(2);
+  });
+
+  test('eventsCount dedupes an event the user both created and explicitly joined', async () => {
+    const ownEvent = await createEvent(ctx(TEST_USER), {
+      date: futureDate(5),
+      place: 'Village Marina',
+      tag: 'Outdoors',
+      time: '18:00',
+      title: 'Self-joined event',
+    });
+    if (!ownEvent.ok) throw new Error('setup failed: event');
+    await toggleJoin(ctx(TEST_USER), ownEvent.event.id);
+
+    const counts = await getMyActivityCounts(ctx(TEST_USER));
+
+    expect(counts.eventsCreatedCount).toBe(1);
+    expect(counts.eventsAttendingCount).toBe(1);
+    // Still 1, not 2 -- this is the same event counted toward both of the
+    // above, and the Events section only ever shows it as one row.
+    expect(counts.eventsCount).toBe(1);
   });
 
   test('missionsCount dedupes a mission the user both created and completed themselves', async () => {

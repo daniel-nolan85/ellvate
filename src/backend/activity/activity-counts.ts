@@ -13,10 +13,10 @@ import type { MyActivityCounts } from './types';
 //
 // eventsAttendingCount/missionsCompletedCount/petitionsCount each need the
 // exact same semantics as activity-screen.tsx's own client-side filtering
-// (self-authored events excluded from "attending", missions_completed read
-// from the same counter the Leaderboard uses, petitions counted whether
-// created or merely signed) -- see 0077_my_activity_counts_rpc.sql's own WHY
-// for the Supabase side of this same reasoning.
+// (missions_completed read from the same counter the Leaderboard uses;
+// petitions counted whether created or merely signed) -- see
+// 0077_my_activity_counts_rpc.sql's own WHY for the Supabase side of this
+// same reasoning.
 function getMyActivityCountsMemory(userId: string): MyActivityCounts {
   const { events, missions, petitionSignatures, petitions, posts, serviceListings, users } =
     getState();
@@ -39,10 +39,18 @@ function getMyActivityCountsMemory(userId: string): MyActivityCounts {
       .filter((mission) => mission.progressByUser[userId]?.status === 'done')
       .map((mission) => mission.id),
   ]);
+  // "Attending" includes a member's own event if they explicitly marked
+  // themselves going to it -- no authorship exclusion, by request (creating
+  // an event doesn't count toward this on its own, only an explicit Join
+  // does). Events created/attending can therefore overlap, so eventsCount
+  // below is their deduped union, same reasoning as myMissionIds above.
+  const myEventIds = new Set([
+    ...events.filter((event) => event.authorId === userId).map((event) => event.id),
+    ...events.filter((event) => event.joinedBy.includes(userId)).map((event) => event.id),
+  ]);
   return {
-    eventsAttendingCount: events.filter(
-      (event) => event.authorId !== userId && event.joinedBy.includes(userId),
-    ).length,
+    eventsAttendingCount: events.filter((event) => event.joinedBy.includes(userId)).length,
+    eventsCount: myEventIds.size,
     eventsCreatedCount: events.filter((event) => event.authorId === userId).length,
     missionsCompletedCount: users.find((user) => user.id === userId)?.missionsCompleted ?? 0,
     missionsCount: myMissionIds.size,

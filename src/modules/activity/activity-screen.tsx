@@ -214,11 +214,15 @@ export function ActivityScreen() {
       myEvents.map(
         (event): EventActivityItem => ({
           event,
-          going: event.author.id !== userId && event.joined,
+          // No authorship exclusion -- a member who creates an event and
+          // then explicitly marks themselves going should see it counted
+          // as attending too, by request. Creating an event alone (never
+          // tapping Join) still doesn't count toward this on its own.
+          going: event.joined,
           key: event.id,
         }),
       ),
-    [myEvents, userId],
+    [myEvents],
   );
   const myMissionItems = useMemo(
     (): readonly MissionActivityItem[] =>
@@ -366,12 +370,13 @@ export function ActivityScreen() {
 
   // Splits the two stats that used to be a single ambiguous combined count
   // (an "Events" or "Missions" number that could mean created, attended, or
-  // both) into their own figures. Events created/attending are mutually
-  // exclusive by construction (see the `going` flag above, which already
-  // excludes the item's own author) -- Missions created/completed are not
-  // (a mission you made and later completed yourself counts toward both),
-  // matching how the rest of the app already tracks these independently
-  // (see PublicMemberStats).
+  // both) into their own figures. Neither pair is mutually exclusive: an
+  // event a member created and then explicitly marked themselves going to
+  // counts toward both eventsCreatedCount and eventsAttendingCount, same as
+  // a mission a member created and later completed themselves counting
+  // toward both missionsCreatedCount and missionsCompletedCount -- see
+  // eventsCount/missionsCount below for the deduped row-count each of these
+  // needs instead of a naive sum.
   //
   // Each of these client-derived values only covers whatever page of its
   // own paginated query has loaded so far -- fine as the section list's own
@@ -404,6 +409,8 @@ export function ActivityScreen() {
   // myMissionListItems' own row count exactly (see MyActivityCounts'
   // own WHY for why this isn't missionsCreatedCount + missionsCompletedCount).
   const missionsCount = activityCounts.data?.missionsCount ?? myMissionListItems.length;
+  // Same reasoning, for events created OR attended.
+  const eventsCount = activityCounts.data?.eventsCount ?? myEventListItems.length;
 
   // ActivitySectionList (see activity-parts.tsx) always renders exactly one
   // section here -- there's no "All" filter combining several at once (see
@@ -426,9 +433,7 @@ export function ActivityScreen() {
         ? { count: postsCount, emptyLabel: "You haven't posted or commented in the forum yet.", items: myPostListItems, title: 'Posts' }
         : filter === 'event'
           ? {
-              // Mutually exclusive by construction (see eventsCreatedCount's
-              // own WHY), so this sum is exactly the row count.
-              count: eventsCreatedCount + eventsAttendingCount,
+              count: eventsCount,
               emptyLabel: "You haven't created or gone to an event yet.",
               items: myEventListItems,
               title: 'Events',
@@ -465,8 +470,7 @@ export function ActivityScreen() {
     myServiceListItems,
     myPetitionListItems,
     postsCount,
-    eventsCreatedCount,
-    eventsAttendingCount,
+    eventsCount,
     missionsCount,
     servicesCount,
     petitionsCount,

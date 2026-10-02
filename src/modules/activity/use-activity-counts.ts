@@ -7,7 +7,13 @@ import { requestJson } from '@/src/services/api';
 export interface MyActivityCounts {
   readonly postsCount: number;
   readonly eventsCreatedCount: number;
+  // Includes a member's own event if they explicitly marked themselves
+  // going to it -- creating an event doesn't count toward this on its own.
   readonly eventsAttendingCount: number;
+  // The deduped union of events created OR attended -- see
+  // src/backend/activity/types.ts's own WHY for why this isn't just
+  // eventsCreatedCount + eventsAttendingCount.
+  readonly eventsCount: number;
   readonly missionsCreatedCount: number;
   readonly missionsCompletedCount: number;
   // The deduped union of missions created OR completed -- see
