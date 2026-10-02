@@ -2,7 +2,7 @@ import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
-import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD } from '@/src/backend/xp';
+import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD, revokeXp } from '@/src/backend/xp';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import type { ValidReportSubmission } from '../reports/report-submission';
@@ -611,7 +611,15 @@ export async function deleteEvent(
   ctx: RequestContext,
   eventId: string,
 ): Promise<boolean> {
-  return ctx.supabase
-    ? deleteEventSupabase(ctx.supabase, ctx.userId, eventId)
+  const deleted = ctx.supabase
+    ? await deleteEventSupabase(ctx.supabase, ctx.userId, eventId)
     : deleteEventMemory(ctx.userId, eventId);
+  // Supabase mode: a matching AFTER DELETE trigger on the events table
+  // does this atomically with the delete itself -- see
+  // supabase/migrations/0074_revoke_xp_on_delete.sql -- so revokeXp no-ops
+  // there; this only does real work in memory mode.
+  if (deleted) {
+    revokeXp(ctx, { reason: 'event_created', refId: eventId });
+  }
+  return deleted;
 }

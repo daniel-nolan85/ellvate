@@ -38,7 +38,14 @@ export function useNotifyXpAwarded(): NotifyXpAwarded {
 // so the outcome is never lost to navigation timing again.
 export function XpFeedbackProvider({ children }: { readonly children: ReactNode }) {
   const [toastAmount, setToastAmount] = useState<number | null>(null);
-  const [celebration, setCelebration] = useState<Celebration | null>(null);
+  // A queue, not a single nullable slot -- a single slot meant a second
+  // level-up (e.g. two XP grants resolving close together while rapidly
+  // creating content) silently overwrote the first before the user had a
+  // chance to see it, with no error and nothing to indicate a celebration
+  // they'd genuinely earned was ever shown. Queuing guarantees every
+  // level-up/rank-up is eventually shown exactly once, in the order earned.
+  const [celebrationQueue, setCelebrationQueue] = useState<readonly Celebration[]>([]);
+  const celebration = celebrationQueue[0] ?? null;
 
   const notify = useCallback<NotifyXpAwarded>((outcome) => {
     if (outcome.awardedXp <= 0) {
@@ -51,10 +58,17 @@ export function XpFeedbackProvider({ children }: { readonly children: ReactNode 
       // the routine toast -- see LevelUpCelebrationModal/
       // RankUpCelebrationModal's own WHY -- so it preempts the toast
       // entirely rather than showing both.
-      setCelebration({ leveledUpTo, rankedUpTo, title: outcome.title });
+      setCelebrationQueue((queue) => [
+        ...queue,
+        { leveledUpTo, rankedUpTo, title: outcome.title },
+      ]);
     } else {
       setToastAmount(outcome.awardedXp);
     }
+  }, []);
+
+  const dismissCelebration = useCallback(() => {
+    setCelebrationQueue((queue) => queue.slice(1));
   }, []);
 
   return (
@@ -63,12 +77,12 @@ export function XpFeedbackProvider({ children }: { readonly children: ReactNode 
       <XpToast amount={toastAmount} onHide={() => setToastAmount(null)} />
       <LevelUpCelebrationModal
         newLevel={celebration?.rankedUpTo ? null : (celebration?.leveledUpTo ?? null)}
-        onClose={() => setCelebration(null)}
+        onClose={dismissCelebration}
         title={celebration?.title ?? ''}
       />
       <RankUpCelebrationModal
         newTitle={celebration?.rankedUpTo ?? null}
-        onClose={() => setCelebration(null)}
+        onClose={dismissCelebration}
       />
     </XpFeedbackContext.Provider>
   );

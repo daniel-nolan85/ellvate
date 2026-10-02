@@ -309,6 +309,30 @@ describe('deletePost', () => {
       getState().comments.some((comment) => comment.postId === 'post-1'),
     ).toBe(false);
   });
+
+  test('revokes the XP the post granted on creation', async () => {
+    const before = getState().users.find((user) => user.id === DEMO_USER_ID)?.xp ?? 0;
+    const created = await createPost(ctx(), {
+      forum: 'Dining',
+      title: 'Revoke me',
+      excerpt: 'Temporary',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(
+      before + CREATE_CONTENT_XP,
+    );
+
+    expect(await deletePost(ctx(), created.post.id)).toBe(true);
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(before);
+    expect(
+      getState().xpLedger.some(
+        (entry) => entry.reason === 'post_created' && entry.refId === created.post.id,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('updatePost', () => {

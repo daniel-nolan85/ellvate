@@ -534,6 +534,28 @@ describe('deleteBusinessListing', () => {
     expect(await deleteBusinessListing(ctx('user-mia'), 'business-1')).toBe(false);
   });
 
+  test('revokes the XP the listing granted on creation', async () => {
+    const before = getState().users.find((user) => user.id === DEMO_USER_ID)?.xp ?? 0;
+    const created = await createBusinessListing(ctx(), domainMatchedInput);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(
+      before + CREATE_CONTENT_XP,
+    );
+
+    expect(await deleteBusinessListing(ctx(), created.listing.id)).toBe(true);
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(before);
+    expect(
+      getState().xpLedger.some(
+        (entry) =>
+          entry.reason === 'business_listing_created' &&
+          entry.refId === created.listing.id,
+      ),
+    ).toBe(false);
+  });
+
   test('cleans up reports for the deleted listing', async () => {
     const created = await createBusinessListing(ctx(), domainMatchedInput);
     if (!created.ok) throw new Error('setup failed');

@@ -687,6 +687,32 @@ describe('deleteEvent', () => {
       getState().eventComments.some((comment) => comment.eventId === 'event-1'),
     ).toBe(false);
   });
+
+  test('revokes the XP the event granted on creation', async () => {
+    const before = getState().users.find((user) => user.id === 'user-andre')?.xp ?? 0;
+    const created = await createEvent(ctx('user-andre'), {
+      date: futureDate(10),
+      place: 'Village Marina',
+      tag: 'Outdoors',
+      time: '18:00',
+      title: 'Evening Paddle',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(
+      getState().users.find((user) => user.id === 'user-andre')?.xp,
+    ).toBe(before + CREATE_CONTENT_XP);
+
+    expect(await deleteEvent(ctx('user-andre'), created.event.id)).toBe(true);
+    expect(getState().users.find((user) => user.id === 'user-andre')?.xp).toBe(before);
+    expect(
+      getState().xpLedger.some(
+        (entry) => entry.reason === 'event_created' && entry.refId === created.event.id,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('PATCH /api/events/:id', () => {

@@ -1015,6 +1015,49 @@ describe('deleteMission', () => {
   test('returns false for an unknown mission', async () => {
     expect(await deleteMission(ctx('user-hoa'), 'mission-999')).toBe(false);
   });
+
+  test('revokes the XP the mission granted its creator on creation', async () => {
+    const before = getState().users.find((user) => user.id === DEMO_USER_ID)?.xp ?? 0;
+    const created = await createMission(ctx(), {
+      description: 'Rent a kayak and get on the water.',
+      theme: 'day',
+      scheduledFor: '2026-07-18',
+      stops: ['Stop 1'],
+      title: 'Revoke me',
+      xp: 75,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(
+      before + CREATE_CONTENT_XP,
+    );
+
+    expect(await deleteMission(ctx(), created.mission.id)).toBe(true);
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(before);
+    expect(
+      getState().xpLedger.some(
+        (entry) =>
+          entry.reason === 'mission_created' && entry.refId === created.mission.id,
+      ),
+    ).toBe(false);
+  });
+
+  test('revokes completion XP from everyone who completed the mission, deleted by its author', async () => {
+    const before = getState().users.find((user) => user.id === 'user-mia')?.xp ?? 0;
+    await checkIn(ctx('user-mia'), 'mission-1');
+    const afterCompletion = getState().users.find((user) => user.id === 'user-mia')?.xp ?? 0;
+    expect(afterCompletion).toBeGreaterThan(before);
+
+    expect(await deleteMission(ctx('user-hoa'), 'mission-1')).toBe(true);
+    expect(getState().users.find((user) => user.id === 'user-mia')?.xp).toBe(before);
+    expect(
+      getState().xpLedger.some(
+        (entry) => entry.reason === 'mission_completed' && entry.refId === 'mission-1',
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('PATCH /api/missions/:id', () => {

@@ -2,6 +2,7 @@ export { getXpGrowth } from './get-growth';
 export { getXpLedger, type GetXpLedgerOptions } from './get-ledger';
 export { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD } from './grant';
 export { recordXpLedgerEntry } from './record';
+export { revokeXp, type RevokeXpInput } from './revoke';
 export type {
   GrantXpInput,
   XpGrantOutcome,

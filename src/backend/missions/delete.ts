@@ -1,5 +1,6 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, setState } from '@/src/backend/store';
+import { revokeXp } from '@/src/backend/xp';
 
 import { deleteMissionSupabase } from './missions-supabase';
 
@@ -48,7 +49,18 @@ export async function deleteMission(
   ctx: RequestContext,
   missionId: string,
 ): Promise<boolean> {
-  return ctx.supabase
-    ? deleteMissionSupabase(ctx.supabase, ctx.userId, missionId)
+  const deleted = ctx.supabase
+    ? await deleteMissionSupabase(ctx.supabase, ctx.userId, missionId)
     : deleteMissionMemory(ctx.userId, missionId);
+  // Supabase mode: a matching AFTER DELETE trigger on the missions table
+  // does this atomically with the delete itself (both reasons at once) --
+  // see supabase/migrations/0074_revoke_xp_on_delete.sql -- so revokeXp
+  // no-ops there; this only does real work in memory mode. Both the
+  // mission's own creation grant and every member's completion grant are
+  // keyed by the mission's own id as refId.
+  if (deleted) {
+    revokeXp(ctx, { reason: 'mission_created', refId: missionId });
+    revokeXp(ctx, { reason: 'mission_completed', refId: missionId });
+  }
+  return deleted;
 }

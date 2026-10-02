@@ -540,6 +540,27 @@ describe('deleteServiceListing', () => {
   test('returns false for a user who does not own the listing', async () => {
     expect(await deleteServiceListing(ctx('user-mia'), 'service-1')).toBe(false);
   });
+
+  test('revokes the XP the listing granted on creation', async () => {
+    const before = getState().users.find((user) => user.id === DEMO_USER_ID)?.xp ?? 0;
+    const created = await createServiceListing(ctx(), validListingInput);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(
+      before + CREATE_CONTENT_XP,
+    );
+
+    expect(await deleteServiceListing(ctx(), created.listing.id)).toBe(true);
+    expect(getState().users.find((user) => user.id === DEMO_USER_ID)?.xp).toBe(before);
+    expect(
+      getState().xpLedger.some(
+        (entry) =>
+          entry.reason === 'service_created' && entry.refId === created.listing.id,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('listServiceReviews', () => {
