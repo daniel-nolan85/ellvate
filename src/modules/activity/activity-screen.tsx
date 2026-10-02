@@ -400,6 +400,10 @@ export function ActivityScreen() {
   const postsCount = activityCounts.data?.postsCount ?? myPostItems.length;
   const servicesCount = activityCounts.data?.servicesCount ?? myServiceItems.length;
   const petitionsCount = activityCounts.data?.petitionsCount ?? myPetitionItems.length;
+  // The deduped union of missions created OR completed -- matches
+  // myMissionListItems' own row count exactly (see MyActivityCounts'
+  // own WHY for why this isn't missionsCreatedCount + missionsCompletedCount).
+  const missionsCount = activityCounts.data?.missionsCount ?? myMissionListItems.length;
 
   // ActivitySectionList (see activity-parts.tsx) always renders exactly one
   // section here -- there's no "All" filter combining several at once (see
@@ -407,27 +411,46 @@ export function ActivityScreen() {
   // so only the rows on screen exist as real native views no matter how
   // large this one list grows.
   const sections = useMemo((): readonly ActivitySection[] => {
-    const activeSection: { readonly title: string; readonly items: readonly ActivityListItem[]; readonly emptyLabel: string } =
+    // count is the section's TRUE total (see activityCounts' own WHY above),
+    // not activeSection.items.length -- that's only whatever page of this
+    // filter's own paginated query has loaded so far, which is exactly the
+    // "badge says 20, member actually has 23" bug activityCounts fixed for
+    // the stat tiles above this list; this badge had the same bug.
+    const activeSection: {
+      readonly title: string;
+      readonly items: readonly ActivityListItem[];
+      readonly emptyLabel: string;
+      readonly count: number;
+    } =
       filter === 'post'
-        ? { emptyLabel: "You haven't posted or commented in the forum yet.", items: myPostListItems, title: 'Posts' }
+        ? { count: postsCount, emptyLabel: "You haven't posted or commented in the forum yet.", items: myPostListItems, title: 'Posts' }
         : filter === 'event'
-          ? { emptyLabel: "You haven't created or gone to an event yet.", items: myEventListItems, title: 'Events' }
+          ? {
+              // Mutually exclusive by construction (see eventsCreatedCount's
+              // own WHY), so this sum is exactly the row count.
+              count: eventsCreatedCount + eventsAttendingCount,
+              emptyLabel: "You haven't created or gone to an event yet.",
+              items: myEventListItems,
+              title: 'Events',
+            }
           : filter === 'mission'
             ? {
+                count: missionsCount,
                 emptyLabel: "You haven't created or completed a mission yet.",
                 items: myMissionListItems,
                 title: 'Missions',
               }
             : filter === 'service'
-              ? { emptyLabel: "You haven't listed a service yet.", items: myServiceListItems, title: 'Services' }
+              ? { count: servicesCount, emptyLabel: "You haven't listed a service yet.", items: myServiceListItems, title: 'Services' }
               : {
+                  count: petitionsCount,
                   emptyLabel: "You haven't started or signed a petition yet.",
                   items: myPetitionListItems,
                   title: 'Petitions',
                 };
     return [
       {
-        count: activeSection.items.length,
+        count: activeSection.count,
         data: activeSection.items,
         emptyLabel: activeSection.emptyLabel,
         key: filter,
@@ -441,6 +464,12 @@ export function ActivityScreen() {
     myMissionListItems,
     myServiceListItems,
     myPetitionListItems,
+    postsCount,
+    eventsCreatedCount,
+    eventsAttendingCount,
+    missionsCount,
+    servicesCount,
+    petitionsCount,
   ]);
 
   const loadMore: ActivityLoadMoreTarget =

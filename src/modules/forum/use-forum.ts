@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { activityCountsKey } from '@/src/lib/activity-counts-key';
 import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -299,6 +300,7 @@ export function useCreatePost() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
     onSuccess: (result) => notifyXpAwarded(result.xpAward),
   });
@@ -355,6 +357,7 @@ export function useDeletePost() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }

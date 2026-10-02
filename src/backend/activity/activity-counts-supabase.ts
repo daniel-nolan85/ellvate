@@ -10,15 +10,16 @@ interface MyActivityCountsRow {
   readonly events_attending: number;
   readonly missions_created: number;
   readonly missions_completed: number;
+  readonly missions_count: number;
   readonly services_listed: number;
   readonly petitions_count: number;
 }
 
-// One round trip via the my_activity_counts() RPC (0077) -- see that
-// migration's own WHY for why each of these needs different logic than a
-// plain per-table count(*), and for why it's scoped to the caller rather
-// than taking a member id the way the public-profile equivalent
-// (member_activity_counts) does.
+// One round trip via the my_activity_counts() RPC (0077, extended by 0079
+// for missions_count) -- see those migrations' own WHY for why each of
+// these needs different logic than a plain per-table count(*), and for why
+// it's scoped to the caller rather than taking a member id the way the
+// public-profile equivalent (member_activity_counts) does.
 export async function getMyActivityCountsSupabase(
   supabase: SupabaseClient,
 ): Promise<MyActivityCounts> {
@@ -29,6 +30,7 @@ export async function getMyActivityCountsSupabase(
     eventsAttendingCount: row.events_attending,
     eventsCreatedCount: row.events_created,
     missionsCompletedCount: row.missions_completed,
+    missionsCount: row.missions_count,
     missionsCreatedCount: row.missions_created,
     petitionsCount: row.petitions_count,
     postsCount: row.posts_count,

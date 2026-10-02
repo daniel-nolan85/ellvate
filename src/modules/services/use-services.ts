@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
+import { activityCountsKey } from '@/src/lib/activity-counts-key';
 import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -204,6 +205,7 @@ export function useCreateServiceListing() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
       notifyXpAwarded(result.xpAward);
     },
   });
@@ -247,6 +249,7 @@ export function useDeleteServiceListing() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }

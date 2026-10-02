@@ -8,6 +8,7 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { activityCountsKey } from '@/src/lib/activity-counts-key';
 import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
@@ -187,6 +188,7 @@ export function useCreateEvent() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
       notifyXpAwarded(result.xpAward);
     },
   });
@@ -231,6 +233,7 @@ export function useDeleteEvent() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }
@@ -303,6 +306,10 @@ export function useToggleJoin() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: listPrefix });
       void queryClient.invalidateQueries({ queryKey: myEventsViewKey(session.userId) });
+      // Joining/leaving an event changes "Events attending" -- My Activity's
+      // stat tile for that reads from a separate, unpaginated totals query
+      // (see use-activity-counts.ts) that nothing here was invalidating.
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }

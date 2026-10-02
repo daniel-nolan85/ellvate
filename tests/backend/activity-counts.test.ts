@@ -109,7 +109,32 @@ describe('getMyActivityCounts (memory)', () => {
     expect(counts.eventsAttendingCount).toBe(1);
     expect(counts.missionsCreatedCount).toBe(1);
     expect(counts.missionsCompletedCount).toBe(1);
+    // The own mission (not completed) plus someone else's completed
+    // mission-1 -- no overlap here, so this is just 1 + 1.
+    expect(counts.missionsCount).toBe(2);
     expect(counts.servicesCount).toBe(1);
     expect(counts.petitionsCount).toBe(2);
+  });
+
+  test('missionsCount dedupes a mission the user both created and completed themselves', async () => {
+    const ownMission = await createMission(ctx(TEST_USER), {
+      description: 'A single-stop mission.',
+      scheduledFor: null,
+      stops: ['Only stop'],
+      theme: 'day',
+      title: 'Self-completed mission',
+      xp: 25,
+    });
+    if (!ownMission.ok) throw new Error('setup failed: mission');
+    const completed = await checkIn(ctx(TEST_USER), ownMission.mission.id);
+    if (!completed.ok) throw new Error('setup failed: check-in');
+
+    const counts = await getMyActivityCounts(ctx(TEST_USER));
+
+    expect(counts.missionsCreatedCount).toBe(1);
+    expect(counts.missionsCompletedCount).toBe(1);
+    // Still 1, not 2 -- this is the same mission counted toward both of the
+    // above, and the Missions section only ever shows it as one row.
+    expect(counts.missionsCount).toBe(1);
   });
 });

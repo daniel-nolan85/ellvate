@@ -7,6 +7,7 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { activityCountsKey } from '@/src/lib/activity-counts-key';
 import { useNotifyXpAwarded, type XpAwardOutcome } from '@/src/modules/xp';
 import { maybeRequestReviewAfterFirstMissionComplete } from '@/src/platform/review-prompt';
 import { useSession } from '@/src/platform/session';
@@ -260,6 +261,7 @@ export function useCreateMission() {
       // points-history list and growth chart need to pick up too.
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
       notifyXpAwarded(result.xpAward);
     },
   });
@@ -305,6 +307,7 @@ export function useDeleteMission() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }
@@ -422,6 +425,7 @@ export function useCheckIn() {
       void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
       void queryClient.invalidateQueries({
         queryKey: ['missions', 'check-in-photos', missionId],
       });

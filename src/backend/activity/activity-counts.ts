@@ -29,12 +29,23 @@ function getMyActivityCountsMemory(userId: string): MyActivityCounts {
     ...petitions.filter((petition) => petition.createdBy === userId).map((petition) => petition.id),
     ...signedPetitionIds,
   ]);
+  // The deduped union of missions created OR completed -- matches
+  // getMyMissionsViewMemory's own "mine" row set exactly, so this equals
+  // the Missions section's true row count the same way myPetitionIds.size
+  // already does for Petitions above.
+  const myMissionIds = new Set([
+    ...missions.filter((mission) => mission.authorId === userId).map((mission) => mission.id),
+    ...missions
+      .filter((mission) => mission.progressByUser[userId]?.status === 'done')
+      .map((mission) => mission.id),
+  ]);
   return {
     eventsAttendingCount: events.filter(
       (event) => event.authorId !== userId && event.joinedBy.includes(userId),
     ).length,
     eventsCreatedCount: events.filter((event) => event.authorId === userId).length,
     missionsCompletedCount: users.find((user) => user.id === userId)?.missionsCompleted ?? 0,
+    missionsCount: myMissionIds.size,
     missionsCreatedCount: missions.filter((mission) => mission.authorId === userId).length,
     petitionsCount: myPetitionIds.size,
     postsCount: posts.filter((post) => post.authorId === userId).length,

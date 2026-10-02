@@ -8,6 +8,7 @@ import {
 import * as Haptics from 'expo-haptics';
 
 import type { ReportSubmission } from '@/src/components/shared/report-sheet';
+import { activityCountsKey } from '@/src/lib/activity-counts-key';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -132,6 +133,7 @@ export function useCreatePetition() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: petitionsListKeyPrefix(session.userId) });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }
@@ -241,6 +243,7 @@ export function useToggleSignature() {
       void queryClient.invalidateQueries({
         queryKey: petitionDetailKey(session.userId, petitionId),
       });
+      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
     },
   });
 }

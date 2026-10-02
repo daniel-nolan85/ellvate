@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { activityCountsKey } from '@/src/lib/activity-counts-key';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -9,6 +10,10 @@ export interface MyActivityCounts {
   readonly eventsAttendingCount: number;
   readonly missionsCreatedCount: number;
   readonly missionsCompletedCount: number;
+  // The deduped union of missions created OR completed -- see
+  // src/backend/activity/types.ts's own WHY for why this isn't just
+  // missionsCreatedCount + missionsCompletedCount.
+  readonly missionsCount: number;
   readonly servicesCount: number;
   readonly petitionsCount: number;
 }
@@ -23,7 +28,6 @@ export interface MyActivityCounts {
 // real total comes from.
 export function useMyActivityCounts() {
   const session = useSession();
-  const userId = session.userId ?? 'demo-user';
 
   return useQuery({
     meta: { persist: true, sensitive: false },
@@ -33,6 +37,6 @@ export function useMyActivityCounts() {
         path: '/api/activity/counts',
         signal,
       }),
-    queryKey: ['activity', 'counts', userId],
+    queryKey: activityCountsKey(session.userId),
   });
 }
