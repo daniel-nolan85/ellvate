@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092406877430",
+    "project_id": "ellvate",
+    "storage_bucket": "ellvate.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092406877430:android:f0013efa8838441894e0d7",
+        "android_client_info": {
+          "package_name": "com.ellvate.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdLIdK5BkyK9zRyZsAEg3evCYw_ffCL4s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
