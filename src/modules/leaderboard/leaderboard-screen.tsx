@@ -163,9 +163,9 @@ export function LeaderboardScreen() {
             </VStack>
           ) : (
             <EmptyState
-              heading="No missions completed yet"
+              heading="No points earned yet"
               icon="Trophy"
-              subtext={`Be the first to check in ${range === 'week' ? 'this week' : 'this month'}.`}
+              subtext={`Be the first to earn points ${range === 'week' ? 'this week' : 'this month'}.`}
             />
           )
         }
