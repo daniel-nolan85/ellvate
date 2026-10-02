@@ -1,6 +1,6 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState } from '@/src/backend/store';
-import type { StoredMission, StoredUser } from '@/src/backend/store';
+import type { StoredUser, StoredXpLedgerEntry } from '@/src/backend/store';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import {
@@ -54,32 +54,29 @@ function getAllTimeLeaderboardMemory(userId: string): LeaderboardResult {
   };
 }
 
-// Tallies every mission completion whose completedAt falls within
-// [windowStartMs, windowEndMs) — the same completedAt timestamp the weekly
-// digest already relies on (see MissionUserProgress) — so week/month
-// leaderboards need no new tracking beyond what mission check-in already
-// records.
-function tallyCompletions(
-  missions: readonly StoredMission[],
+// Tallies every XP-earning ledger entry (posting, creating an event/
+// mission/service/business listing, completing a mission, the onboarding
+// bonus -- every reason grantXp/recordXpLedgerEntry ever logs) whose
+// createdAt falls within [windowStartMs, windowEndMs). xp_ledger is already
+// the authoritative, timestamped record of every point ever awarded (see
+// grant.ts), so week/month leaderboards need no separate tracking of their
+// own -- they're just this same ledger, windowed.
+function tallyLedgerEntries(
+  xpLedger: readonly StoredXpLedgerEntry[],
   windowStartMs: number,
   windowEndMs: number,
   excludedUserIds: ReadonlySet<string>,
 ): Map<string, WindowedTally> {
   const tally = new Map<string, WindowedTally>();
-  for (const mission of missions) {
-    for (const [userId, progress] of Object.entries(mission.progressByUser)) {
-      if (progress.status !== 'done' || progress.completedAt === null) {
-        continue;
-      }
-      if (excludedUserIds.has(userId)) {
-        continue;
-      }
-      const completedMs = Date.parse(progress.completedAt);
-      if (completedMs < windowStartMs || completedMs >= windowEndMs) {
-        continue;
-      }
-      addToTally(tally, userId, mission.xp);
+  for (const entry of xpLedger) {
+    if (excludedUserIds.has(entry.userId)) {
+      continue;
     }
+    const createdMs = Date.parse(entry.createdAt);
+    if (createdMs < windowStartMs || createdMs >= windowEndMs) {
+      continue;
+    }
+    addToTally(tally, entry.userId, entry.amount, entry.reason === 'mission_completed');
   }
   return tally;
 }
@@ -88,7 +85,7 @@ function getWindowedLeaderboardMemory(
   userId: string,
   range: Exclude<LeaderboardRange, 'all'>,
 ): LeaderboardResult {
-  const { missions, users } = getState();
+  const { users, xpLedger } = getState();
   const usersById = new Map(users.map((user) => [user.id, user]));
   // Same exclusion the all-time leaderboard applies via onLeaderboard --
   // without it, an excluded account's windowed completions would still tally
@@ -102,8 +99,8 @@ function getWindowedLeaderboardMemory(
   const currentStart = now - days * DAY_MS;
   const previousStart = now - 2 * days * DAY_MS;
 
-  const currentTally = tallyCompletions(missions, currentStart, now, excludedUserIds);
-  const previousTally = tallyCompletions(missions, previousStart, currentStart, excludedUserIds);
+  const currentTally = tallyLedgerEntries(xpLedger, currentStart, now, excludedUserIds);
+  const previousTally = tallyLedgerEntries(xpLedger, previousStart, currentStart, excludedUserIds);
   const previousRanks = new Map(
     rankTally(previousTally).map(({ rank, userId: id }) => [id, rank]),
   );

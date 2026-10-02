@@ -5,7 +5,6 @@ import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type { LeaderboardEntry, LeaderboardPage, LeaderboardResult } from './types';
 import {
-  addToTally,
   DAY_MS,
   RANGE_DAYS,
   rankTally,
@@ -55,15 +54,12 @@ async function getAllTimeLeaderboardSupabase(
   };
 }
 
-interface ProgressRow {
+interface WindowedTallyRow {
   readonly user_id: string;
-  readonly mission_id: string;
-  readonly completed_at: string | null;
-}
-
-interface MissionXpRow {
-  readonly id: string;
-  readonly xp: number;
+  readonly current_xp: number;
+  readonly current_missions_completed: number;
+  readonly previous_xp: number;
+  readonly previous_missions_completed: number;
 }
 
 interface MemberRow {
@@ -72,8 +68,17 @@ interface MemberRow {
   readonly avatar_url: string | null;
 }
 
-// Mirrors the memory backend's tallyCompletions: no new tracking beyond the
-// completed_at column mission check-in already writes (see 0014_mission_completed_at.sql).
+// Tallies every XP-earning ledger entry (posting, creating an event/
+// mission/service/business listing, completing a mission, the onboarding
+// bonus -- every reason grant_xp_and_log ever logs) within the window, via
+// the windowed_xp_tally() RPC (0081) -- xp_ledger's own RLS only allows a
+// user to read their own rows, so a direct cross-user query here would
+// silently return almost nothing; see that migration's own WHY. Previously
+// only tallied mission_progress completions, which meant a member who
+// earned plenty of XP from creating content but hadn't completed a mission
+// that week showed up nowhere, even though the all-time leaderboard
+// (reading app_users.xp, which already includes every reason) ranks them
+// normally.
 async function getWindowedLeaderboardSupabase(
   supabase: SupabaseClient,
   userId: string,
@@ -84,12 +89,11 @@ async function getWindowedLeaderboardSupabase(
   const currentStartIso = new Date(now - days * DAY_MS).toISOString();
   const previousStartIso = new Date(now - 2 * days * DAY_MS).toISOString();
 
-  const { data: progressData, error: progressError } = await supabase
-    .from('mission_progress')
-    .select('user_id,mission_id,completed_at')
-    .eq('status', 'done')
-    .gte('completed_at', previousStartIso);
-  throwIfSupabaseError(progressError, 'load windowed mission completions');
+  const { data: tallyData, error: tallyError } = await supabase.rpc('windowed_xp_tally', {
+    p_current_start: currentStartIso,
+    p_previous_start: previousStartIso,
+  });
+  throwIfSupabaseError(tallyError, 'load windowed xp tally');
 
   // Same exclusion the all-time leaderboard already applies via its own
   // .eq('on_leaderboard', true) above -- without this, an excluded account
@@ -104,37 +108,29 @@ async function getWindowedLeaderboardSupabase(
     ((excludedData ?? []) as unknown as { readonly id: string }[]).map((row) => row.id),
   );
 
-  const progressRows = ((progressData ?? []) as unknown as ProgressRow[]).filter(
+  const tallyRows = ((tallyData ?? []) as unknown as WindowedTallyRow[]).filter(
     (row) => !excludedIds.has(row.user_id),
   );
-  if (progressRows.length === 0) {
+  if (tallyRows.length === 0) {
     return { leaders: [] };
   }
 
-  const missionIds = [...new Set(progressRows.map((row) => row.mission_id))];
-  const { data: missionData, error: missionError } = await supabase
-    .from('missions')
-    .select('id,xp')
-    .in('id', missionIds);
-  throwIfSupabaseError(missionError, 'load mission xp values');
-  const xpByMissionId = new Map(
-    ((missionData ?? []) as unknown as MissionXpRow[]).map((mission) => [
-      mission.id,
-      mission.xp,
-    ]),
+  const currentTally = new Map<string, WindowedTally>(
+    tallyRows
+      .filter((row) => row.current_xp > 0 || row.current_missions_completed > 0)
+      .map((row) => [
+        row.user_id,
+        { missionsCompleted: row.current_missions_completed, xp: row.current_xp },
+      ]),
   );
-
-  const currentTally = new Map<string, WindowedTally>();
-  const previousTally = new Map<string, WindowedTally>();
-  for (const row of progressRows) {
-    if (!row.completed_at) {
-      continue;
-    }
-    const xp = xpByMissionId.get(row.mission_id) ?? 0;
-    const bucket =
-      row.completed_at >= currentStartIso ? currentTally : previousTally;
-    addToTally(bucket, row.user_id, xp);
-  }
+  const previousTally = new Map<string, WindowedTally>(
+    tallyRows
+      .filter((row) => row.previous_xp > 0 || row.previous_missions_completed > 0)
+      .map((row) => [
+        row.user_id,
+        { missionsCompleted: row.previous_missions_completed, xp: row.previous_xp },
+      ]),
+  );
 
   const memberIds = [...currentTally.keys()];
   const { data: memberData, error: memberError } = await supabase

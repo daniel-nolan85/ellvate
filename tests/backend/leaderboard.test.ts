@@ -168,8 +168,24 @@ describe('getLeaderboardPage', () => {
   });
 
   test('a single-leader range (week) is fully exhausted on the first page', async () => {
-    // Seed: mission-3 was completed 48h ago by DEMO_USER_ID -- the only
-    // completion anywhere in the seed data, so week has exactly one leader.
+    // xp_ledger (the windowed ranges' own source of truth -- see
+    // leaderboard.ts's own WHY) starts empty in seed data, so seed one
+    // completion directly: the only activity in this window, so week has
+    // exactly one leader.
+    setState((state) => ({
+      ...state,
+      xpLedger: [
+        ...state.xpLedger,
+        {
+          amount: 90,
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          id: 'xp-test-page',
+          reason: 'mission_completed',
+          refId: 'mission-3',
+          userId: DEMO_USER_ID,
+        },
+      ],
+    }));
     const page = await getLeaderboardPage(ctx(), 'week', { limit: 20 });
     expect(page.leaders).toHaveLength(1);
     expect(page.nextCursor).toBeNull();
@@ -241,9 +257,44 @@ describe('getLeaderboard (windowed ranges)', () => {
   const daysAgoIso = (days: number) =>
     new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+  // Windowed ranges now tally xp_ledger entries directly (see leaderboard.ts
+  // and leaderboard-supabase.ts's own WHY) rather than reconstructing
+  // activity from mission.progressByUser, so these tests seed the ledger
+  // directly -- the seed data's own xpLedger starts empty (see seed.ts), so
+  // nothing here is implicit the way the old mission-completion seed was.
+  let nextEntryId = 0;
+  const seedLedgerEntry = (entry: {
+    readonly userId: string;
+    readonly amount: number;
+    readonly reason: 'mission_completed' | 'post_created';
+    readonly createdAt: string;
+    readonly refId?: string;
+  }) => {
+    setState((state) => ({
+      ...state,
+      xpLedger: [
+        ...state.xpLedger,
+        {
+          amount: entry.amount,
+          createdAt: entry.createdAt,
+          id: `xp-test-${nextEntryId++}`,
+          reason: entry.reason,
+          refId: entry.refId ?? null,
+          userId: entry.userId,
+        },
+      ],
+    }));
+  };
+
   test('week range only counts completions within the last 7 days', async () => {
-    // Seed: mission-3 was completed 48h ago by DEMO_USER_ID — the only
-    // completion anywhere in the seed data, so it's the only weekly leader.
+    seedLedgerEntry({
+      amount: 90,
+      createdAt: daysAgoIso(2),
+      reason: 'mission_completed',
+      refId: 'mission-3',
+      userId: DEMO_USER_ID,
+    });
+
     const { leaders } = await getLeaderboard(ctx(), 'week');
 
     expect(leaders).toHaveLength(1);
@@ -256,24 +307,13 @@ describe('getLeaderboard (windowed ranges)', () => {
   });
 
   test('a completion outside the window is excluded from that range but not a longer one', async () => {
-    setState((state) => ({
-      ...state,
-      missions: state.missions.map((mission) =>
-        mission.id === 'mission-1'
-          ? {
-              ...mission,
-              progressByUser: {
-                ...mission.progressByUser,
-                'user-mia': {
-                  completedAt: daysAgoIso(10),
-                  status: 'done' as const,
-                  stopsDone: 1,
-                },
-              },
-            }
-          : mission,
-      ),
-    }));
+    seedLedgerEntry({
+      amount: 50,
+      createdAt: daysAgoIso(10),
+      reason: 'mission_completed',
+      refId: 'mission-1',
+      userId: 'user-mia',
+    });
 
     const week = await getLeaderboard(ctx(), 'week');
     const month = await getLeaderboard(ctx(), 'month');
@@ -286,15 +326,54 @@ describe('getLeaderboard (windowed ranges)', () => {
     );
   });
 
+  test('counts non-mission XP (e.g. creating a post), not just mission completions', async () => {
+    // This is the actual bug being fixed: previously the windowed views only
+    // ever tallied mission_progress completions, so a member who earned
+    // points from posting/creating content but hadn't completed a mission
+    // that week showed up nowhere in "This week"/"This month".
+    seedLedgerEntry({
+      amount: 10,
+      createdAt: daysAgoIso(1),
+      reason: 'post_created',
+      refId: 'post-test',
+      userId: 'user-mia',
+    });
+
+    const { leaders } = await getLeaderboard(ctx(), 'week');
+
+    expect(leaders).toHaveLength(1);
+    expect(leaders[0]).toMatchObject({
+      missionsCompleted: 0,
+      rank: 1,
+      user: { id: 'user-mia' },
+      xp: 10,
+    });
+  });
+
   test('lets a new user with no lifetime history outrank veterans in the weekly view', async () => {
+    seedLedgerEntry({
+      amount: 90,
+      createdAt: daysAgoIso(2),
+      reason: 'mission_completed',
+      refId: 'mission-3',
+      userId: DEMO_USER_ID,
+    });
     // user-mia has the highest lifetime totals (41 missions, 3820 xp) but no
-    // recorded completions at all — demo-user's single recent check-in wins.
+    // recorded activity in this window at all — demo-user's single recent
+    // check-in wins.
     const { leaders } = await getLeaderboard(ctx(), 'week');
 
     expect(leaders.map((entry) => entry.user.id)).toEqual([DEMO_USER_ID]);
   });
 
   test('excludes a user with onLeaderboard: false from windowed ranges too', async () => {
+    seedLedgerEntry({
+      amount: 90,
+      createdAt: daysAgoIso(2),
+      reason: 'mission_completed',
+      refId: 'mission-3',
+      userId: DEMO_USER_ID,
+    });
     setState((state) => ({
       ...state,
       users: state.users.map((user) =>
@@ -308,42 +387,31 @@ describe('getLeaderboard (windowed ranges)', () => {
   });
 
   test('computes rankDelta against the immediately preceding window of equal length', async () => {
-    setState((state) => ({
-      ...state,
-      missions: state.missions.map((mission) => {
-        if (mission.id === 'mission-1') {
-          // Only demo-user completed something in the previous week (8-14
-          // days ago), so they ranked 1st there.
-          return {
-            ...mission,
-            progressByUser: {
-              ...mission.progressByUser,
-              [DEMO_USER_ID]: {
-                completedAt: daysAgoIso(10),
-                status: 'done' as const,
-                stopsDone: 1,
-              },
-            },
-          };
-        }
-        if (mission.id === 'mission-2') {
-          // user-mia overtakes demo-user in the current week (higher xp),
-          // so demo-user drops from 1st to 2nd.
-          return {
-            ...mission,
-            progressByUser: {
-              ...mission.progressByUser,
-              'user-mia': {
-                completedAt: daysAgoIso(1),
-                status: 'done' as const,
-                stopsDone: 3,
-              },
-            },
-          };
-        }
-        return mission;
-      }),
-    }));
+    // Only demo-user had activity in the previous week (8-14 days ago), so
+    // they ranked 1st there.
+    seedLedgerEntry({
+      amount: 90,
+      createdAt: daysAgoIso(10),
+      reason: 'mission_completed',
+      refId: 'mission-1',
+      userId: DEMO_USER_ID,
+    });
+    // demo-user also has some activity in the current week, but user-mia
+    // overtakes them with more xp, so demo-user drops from 1st to 2nd.
+    seedLedgerEntry({
+      amount: 50,
+      createdAt: daysAgoIso(1),
+      reason: 'mission_completed',
+      refId: 'mission-1',
+      userId: DEMO_USER_ID,
+    });
+    seedLedgerEntry({
+      amount: 150,
+      createdAt: daysAgoIso(1),
+      reason: 'mission_completed',
+      refId: 'mission-2',
+      userId: 'user-mia',
+    });
 
     const { leaders } = await getLeaderboard(ctx(), 'week');
 
