@@ -1,4 +1,5 @@
-export type SearchResultKind = 'post' | 'event' | 'mission' | 'service' | 'petition' | 'business';
+export type SearchResultKind =
+  'post' | 'event' | 'mission' | 'service' | 'petition' | 'business' | 'member';
 
 export interface SearchResultItem {
   readonly id: string;
@@ -8,6 +9,7 @@ export interface SearchResultItem {
 }
 
 export interface GlobalSearchResults {
+  readonly members: readonly SearchResultItem[];
   readonly posts: readonly SearchResultItem[];
   readonly events: readonly SearchResultItem[];
   readonly missions: readonly SearchResultItem[];

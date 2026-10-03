@@ -2,7 +2,11 @@ import type { RequestContext } from '@/src/backend/http';
 import { getState } from '@/src/backend/store';
 
 import { searchAllSupabase } from './search-supabase';
-import { SEARCH_RESULTS_PER_GROUP, type GlobalSearchResults, type SearchResultItem } from './types';
+import {
+  SEARCH_RESULTS_PER_GROUP,
+  type GlobalSearchResults,
+  type SearchResultItem,
+} from './types';
 
 interface AuthoredResult {
   readonly authorId: string;
@@ -28,6 +32,15 @@ function searchAllMemory(userId: string, query: string): GlobalSearchResults {
   const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
 
   return {
+    members: toGroup(
+      state.users
+        .filter((user) => matches(user.name, needle))
+        .map((user) => ({
+          authorId: user.id,
+          item: { id: user.id, kind: 'member', subtitle: '', title: user.name },
+        })),
+      mutedUserIds,
+    ),
     businesses: toGroup(
       state.businessListings
         // The verified-or-own filter Postgres RLS applies automatically on
@@ -36,7 +49,8 @@ function searchAllMemory(userId: string, query: string): GlobalSearchResults {
         // hand before the search even runs.
         .filter(
           (listing) =>
-            listing.verificationStatus === 'verified' || listing.authorId === userId,
+            listing.verificationStatus === 'verified' ||
+            listing.authorId === userId,
         )
         .filter((listing) => matches(listing.businessName, needle))
         .map((listing) => ({
@@ -55,7 +69,12 @@ function searchAllMemory(userId: string, query: string): GlobalSearchResults {
         .filter((event) => matches(event.title, needle))
         .map((event) => ({
           authorId: event.authorId,
-          item: { id: event.id, kind: 'event', subtitle: event.place, title: event.title },
+          item: {
+            id: event.id,
+            kind: 'event',
+            subtitle: event.place,
+            title: event.title,
+          },
         })),
       mutedUserIds,
     ),
@@ -92,7 +111,12 @@ function searchAllMemory(userId: string, query: string): GlobalSearchResults {
         .filter((post) => matches(post.title, needle))
         .map((post) => ({
           authorId: post.authorId,
-          item: { id: post.id, kind: 'post', subtitle: post.excerpt, title: post.title },
+          item: {
+            id: post.id,
+            kind: 'post',
+            subtitle: post.excerpt,
+            title: post.title,
+          },
         })),
       mutedUserIds,
     ),

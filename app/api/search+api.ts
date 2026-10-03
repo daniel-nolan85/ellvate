@@ -1,9 +1,14 @@
 import { jsonOk, withRequestContext } from '@/src/backend/http';
-import { MIN_SEARCH_QUERY_LENGTH, searchAll, type GlobalSearchResults } from '@/src/backend/search';
+import {
+  MIN_SEARCH_QUERY_LENGTH,
+  searchAll,
+  type GlobalSearchResults,
+} from '@/src/backend/search';
 
 const EMPTY_RESULTS: GlobalSearchResults = {
   businesses: [],
   events: [],
+  members: [],
   missions: [],
   petitions: [],
   posts: [],

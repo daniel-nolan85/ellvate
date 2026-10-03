@@ -3,7 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getMutedUserIdsSupabase } from '@/src/backend/mutes/mutes-supabase';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import { SEARCH_RESULTS_PER_GROUP, type GlobalSearchResults, type SearchResultItem } from './types';
+import {
+  SEARCH_RESULTS_PER_GROUP,
+  type GlobalSearchResults,
+  type SearchResultItem,
+} from './types';
 
 // Muted authors can outnumber a small per-group fetch, so each query
 // over-fetches before the muted filter trims it back down to
@@ -68,6 +72,11 @@ interface BusinessSearchRow {
   readonly description: string;
 }
 
+interface MemberSearchRow {
+  readonly id: string;
+  readonly name: string;
+}
+
 const searchTable = async <Row>(
   supabase: SupabaseClient,
   table: string,
@@ -90,6 +99,7 @@ export async function searchAllSupabase(
   query: string,
 ): Promise<GlobalSearchResults> {
   const [
+    memberRows,
     postRows,
     eventRows,
     missionRows,
@@ -98,8 +108,27 @@ export async function searchAllSupabase(
     businessRows,
     mutedUserIds,
   ] = await Promise.all([
-    searchTable<PostSearchRow>(supabase, 'posts', 'id,author_id,title,excerpt', 'title', query),
-    searchTable<EventSearchRow>(supabase, 'events', 'id,created_by,title,place', 'title', query),
+    searchTable<MemberSearchRow>(
+      supabase,
+      'app_users',
+      'id,name',
+      'name',
+      query,
+    ),
+    searchTable<PostSearchRow>(
+      supabase,
+      'posts',
+      'id,author_id,title,excerpt',
+      'title',
+      query,
+    ),
+    searchTable<EventSearchRow>(
+      supabase,
+      'events',
+      'id,created_by,title,place',
+      'title',
+      query,
+    ),
     searchTable<MissionSearchRow>(
       supabase,
       'missions',
@@ -138,6 +167,13 @@ export async function searchAllSupabase(
   const mutedSet = new Set(mutedUserIds);
 
   return {
+    members: toGroup(
+      memberRows.map((row) => ({
+        authorId: row.id,
+        item: { id: row.id, kind: 'member', subtitle: '', title: row.name },
+      })),
+      mutedSet,
+    ),
     businesses: toGroup(
       businessRows.map((row) => ({
         authorId: row.created_by,
@@ -153,35 +189,60 @@ export async function searchAllSupabase(
     events: toGroup(
       eventRows.map((row) => ({
         authorId: row.created_by,
-        item: { id: row.id, kind: 'event', subtitle: row.place, title: row.title },
+        item: {
+          id: row.id,
+          kind: 'event',
+          subtitle: row.place,
+          title: row.title,
+        },
       })),
       mutedSet,
     ),
     missions: toGroup(
       missionRows.map((row) => ({
         authorId: row.created_by,
-        item: { id: row.id, kind: 'mission', subtitle: row.description, title: row.title },
+        item: {
+          id: row.id,
+          kind: 'mission',
+          subtitle: row.description,
+          title: row.title,
+        },
       })),
       mutedSet,
     ),
     petitions: toGroup(
       petitionRows.map((row) => ({
         authorId: row.created_by ?? '',
-        item: { id: row.id, kind: 'petition', subtitle: row.description, title: row.title },
+        item: {
+          id: row.id,
+          kind: 'petition',
+          subtitle: row.description,
+          title: row.title,
+        },
       })),
       mutedSet,
     ),
     posts: toGroup(
       postRows.map((row) => ({
         authorId: row.author_id,
-        item: { id: row.id, kind: 'post', subtitle: row.excerpt, title: row.title },
+        item: {
+          id: row.id,
+          kind: 'post',
+          subtitle: row.excerpt,
+          title: row.title,
+        },
       })),
       mutedSet,
     ),
     services: toGroup(
       serviceRows.map((row) => ({
         authorId: row.created_by,
-        item: { id: row.id, kind: 'service', subtitle: row.description, title: row.business_name },
+        item: {
+          id: row.id,
+          kind: 'service',
+          subtitle: row.description,
+          title: row.business_name,
+        },
       })),
       mutedSet,
     ),

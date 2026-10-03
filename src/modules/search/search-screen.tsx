@@ -10,8 +10,11 @@ import { Icon } from '@/src/components/ui/icon';
 import { Spinner } from '@/src/components/ui/spinner';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { CommunityNavBar, useFloatingContentClearance } from '@/src/modules/community-shell';
-import { ProfileAvatarButton } from '@/src/modules/profile';
+import {
+  CommunityNavBar,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
+import { ProfileAvatarButton, useOpenProfile } from '@/src/modules/profile';
 import { useSession } from '@/src/platform/session';
 import { requestJson } from '@/src/services/api';
 
@@ -27,6 +30,7 @@ interface SearchResultItem {
 }
 
 interface GlobalSearchResults {
+  readonly members: readonly SearchResultItem[];
   readonly posts: readonly SearchResultItem[];
   readonly events: readonly SearchResultItem[];
   readonly missions: readonly SearchResultItem[];
@@ -46,6 +50,7 @@ const DEBOUNCE_MS = 300;
 const EMPTY_RESULTS: GlobalSearchResults = {
   businesses: [],
   events: [],
+  members: [],
   missions: [],
   petitions: [],
   posts: [],
@@ -55,14 +60,35 @@ const EMPTY_RESULTS: GlobalSearchResults = {
 const GROUPS: readonly {
   readonly key: keyof GlobalSearchResults;
   readonly label: string;
-  readonly href: (id: string) => Href;
+  // Omitted for 'members' -- selecting a member routes through
+  // useOpenProfile (needs the name alongside the id, and sends you to your
+  // own Profile screen rather than the read-only member one when the result
+  // is yourself), not a plain id-to-path mapping like every other group.
+  readonly href?: (id: string) => Href;
 }[] = [
+  { key: 'members', label: 'Neighbours' },
   { href: (id) => `/post/${id}` as Href, key: 'posts', label: 'Posts' },
   { href: (id) => `/event/${id}` as Href, key: 'events', label: 'Events' },
-  { href: (id) => `/mission/${id}` as Href, key: 'missions', label: 'Missions' },
-  { href: (id) => `/service/${id}` as Href, key: 'services', label: 'Services' },
-  { href: (id) => `/business/${id}` as Href, key: 'businesses', label: 'Businesses' },
-  { href: (id) => `/petition/${id}` as Href, key: 'petitions', label: 'Petitions' },
+  {
+    href: (id) => `/mission/${id}` as Href,
+    key: 'missions',
+    label: 'Missions',
+  },
+  {
+    href: (id) => `/service/${id}` as Href,
+    key: 'services',
+    label: 'Services',
+  },
+  {
+    href: (id) => `/business/${id}` as Href,
+    key: 'businesses',
+    label: 'Businesses',
+  },
+  {
+    href: (id) => `/petition/${id}` as Href,
+    key: 'petitions',
+    label: 'Petitions',
+  },
 ];
 
 function useDebouncedValue(value: string, delayMs: number): string {
@@ -92,16 +118,31 @@ export function SearchScreen() {
         path: `/api/search?q=${encodeURIComponent(debouncedQuery)}`,
         signal,
       }),
-    queryKey: ['search', 'global', session.userId ?? 'demo-user', debouncedQuery],
+    queryKey: [
+      'search',
+      'global',
+      session.userId ?? 'demo-user',
+      debouncedQuery,
+    ],
   });
+
+  const openProfile = useOpenProfile();
 
   const handleSelect = (groupIndex: number, item: SearchResultItem) => {
     router.back();
-    router.push(GROUPS[groupIndex].href(item.id));
+    const group = GROUPS[groupIndex];
+    if (!group.href) {
+      openProfile(item.id, item.title);
+      return;
+    }
+    router.push(group.href(item.id));
   };
 
   const data = results.data ?? EMPTY_RESULTS;
-  const totalResults = GROUPS.reduce((sum, group) => sum + data[group.key].length, 0);
+  const totalResults = GROUPS.reduce(
+    (sum, group) => sum + data[group.key].length,
+    0,
+  );
 
   return (
     <View className="flex-1 bg-canvas">
@@ -125,7 +166,10 @@ export function SearchScreen() {
             value={query}
           />
           {query.length > 0 ? (
-            <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')}>
+            <Pressable
+              accessibilityLabel="Clear search"
+              onPress={() => setQuery('')}
+            >
               <Icon color="rgb(120,108,94)" name="Close" size={16} />
             </Pressable>
           ) : null}
@@ -147,7 +191,8 @@ export function SearchScreen() {
         <VStack space="md">
           {!isQueryLongEnough ? (
             <Text className="px-1 py-6 text-center text-text-muted" size="sm">
-              Keep typing to search posts, events, missions, services, businesses, and petitions.
+              Keep typing to search neighbours, posts, events, missions,
+              services, businesses, and petitions.
             </Text>
           ) : results.isPending ? (
             <View className="items-center py-6">
@@ -174,11 +219,19 @@ export function SearchScreen() {
                       key={item.id}
                       onPress={() => handleSelect(groupIndex, item)}
                     >
-                      <Text className="font-inter-semibold text-content" numberOfLines={1} size="sm">
+                      <Text
+                        className="font-inter-semibold text-content"
+                        numberOfLines={1}
+                        size="sm"
+                      >
                         {item.title}
                       </Text>
                       {item.subtitle ? (
-                        <Text className="text-text-muted" numberOfLines={1} size="xs">
+                        <Text
+                          className="text-text-muted"
+                          numberOfLines={1}
+                          size="xs"
+                        >
                           {item.subtitle}
                         </Text>
                       ) : null}

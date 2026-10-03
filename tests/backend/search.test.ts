@@ -146,6 +146,7 @@ describe('searchAll (memory)', () => {
     const body = (await response.json()) as {
       readonly posts: readonly unknown[];
       readonly events: readonly unknown[];
+      readonly members: readonly unknown[];
       readonly missions: readonly unknown[];
       readonly services: readonly unknown[];
       readonly petitions: readonly unknown[];
@@ -154,6 +155,7 @@ describe('searchAll (memory)', () => {
     expect(body).toEqual({
       businesses: [],
       events: [],
+      members: [],
       missions: [],
       petitions: [],
       posts: [],
@@ -188,6 +190,25 @@ describe('searchAll (memory)', () => {
     ]);
   });
 
+  test('finds a matching member by name', async () => {
+    setState((current) => ({
+      ...current,
+      users: current.users.map((user) =>
+        user.id === 'user-riley'
+          ? { ...user, name: `${NEEDLE} Neighbour` }
+          : user,
+      ),
+    }));
+
+    const results = await searchAll(ctx(), NEEDLE);
+
+    expect(results.members.map((item) => item.id)).toEqual(['user-riley']);
+    expect(results.members[0]).toMatchObject({
+      kind: 'member',
+      title: `${NEEDLE} Neighbour`,
+    });
+  });
+
   test('excludes a pending business listing owned by someone else', async () => {
     seedMatchingContent('user-riley');
     setState((current) => ({
@@ -216,6 +237,12 @@ describe('searchAll (memory)', () => {
 
   test('excludes content from a muted author, same as every other list endpoint', async () => {
     seedMatchingContent('user-mia');
+    setState((current) => ({
+      ...current,
+      users: current.users.map((user) =>
+        user.id === 'user-mia' ? { ...user, name: `${NEEDLE} Lake` } : user,
+      ),
+    }));
     await toggleMute(ctx(DEMO_USER_ID), 'user-mia');
 
     const results = await searchAll(ctx(DEMO_USER_ID), NEEDLE);
@@ -226,6 +253,7 @@ describe('searchAll (memory)', () => {
     expect(results.services).toHaveLength(0);
     expect(results.petitions).toHaveLength(0);
     expect(results.businesses).toHaveLength(0);
+    expect(results.members).toHaveLength(0);
   });
 
   test('the GET /api/search route returns the same shape', async () => {
