@@ -38,6 +38,17 @@ const eventDatesKey = (userId: string | null) =>
 const myEventsViewKey = (userId: string | null) =>
   ['events', 'mine', userId ?? 'demo-user'] as const;
 
+// eventDetailKey also starts with listPrefix, so a plain `{ queryKey:
+// listPrefix }` filter (prefix match) catches the detail query too -- whose
+// cached value is `{ event }`, not `{ pages: [...] }`. Scoping to keys one
+// segment longer than the prefix keeps the list-page patch below from
+// matching it and crashing on `current.pages.map` of a non-list cache entry.
+const listQueriesFilter = (listPrefix: readonly string[]) => ({
+  predicate: (query: { readonly queryKey: readonly unknown[] }) =>
+    query.queryKey.length === listPrefix.length + 1,
+  queryKey: listPrefix,
+});
+
 const eventsPagePath = (
   date: string | null,
   cursor: string | null,
@@ -343,16 +354,14 @@ export function useToggleJoin() {
       // across date variants, plus the detail query if cached) for rollback.
       const previousLists = queryClient.getQueriesData<
         InfiniteData<EventsPage>
-      >({
-        queryKey: listPrefix,
-      });
+      >(listQueriesFilter(listPrefix));
       const detailKey = eventDetailKey(session.userId, eventId);
       const previousDetail = queryClient.getQueryData<{
         readonly event: CommunityEvent;
       }>(detailKey);
 
       queryClient.setQueriesData<InfiniteData<EventsPage>>(
-        { queryKey: listPrefix },
+        listQueriesFilter(listPrefix),
         (current) =>
           current === undefined
             ? current
@@ -424,16 +433,14 @@ export function useToggleInterested() {
       await queryClient.cancelQueries({ queryKey: listPrefix });
       const previousLists = queryClient.getQueriesData<
         InfiniteData<EventsPage>
-      >({
-        queryKey: listPrefix,
-      });
+      >(listQueriesFilter(listPrefix));
       const detailKey = eventDetailKey(session.userId, eventId);
       const previousDetail = queryClient.getQueryData<{
         readonly event: CommunityEvent;
       }>(detailKey);
 
       queryClient.setQueriesData<InfiniteData<EventsPage>>(
-        { queryKey: listPrefix },
+        listQueriesFilter(listPrefix),
         (current) =>
           current === undefined
             ? current
