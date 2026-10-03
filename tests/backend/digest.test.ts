@@ -25,7 +25,9 @@ const IN_WEEK = '2026-01-07T12:00:00.000Z';
 const BEFORE_WEEK = '2026-01-04T23:59:59.000Z';
 const AFTER_WEEK = '2026-01-12T08:00:00.000Z';
 
-function makePost(overrides: Partial<StoredPost> & { readonly id: string }): StoredPost {
+function makePost(
+  overrides: Partial<StoredPost> & { readonly id: string },
+): StoredPost {
   return {
     authorId: 'user-jordan',
     createdAt: IN_WEEK,
@@ -40,7 +42,9 @@ function makePost(overrides: Partial<StoredPost> & { readonly id: string }): Sto
   };
 }
 
-function makeEvent(overrides: Partial<StoredEvent> & { readonly id: string }): StoredEvent {
+function makeEvent(
+  overrides: Partial<StoredEvent> & { readonly id: string },
+): StoredEvent {
   return {
     attendeeIds: [],
     authorId: 'user-hoa',
@@ -52,6 +56,7 @@ function makeEvent(overrides: Partial<StoredEvent> & { readonly id: string }): S
     endTimeLabel: null,
     featured: false,
     going: 0,
+    interestedBy: [],
     joinedBy: [],
     place: 'Marina',
     startsAt: IN_WEEK,
@@ -146,14 +151,22 @@ describe('getWeeklyDigest', () => {
           id: 'mission-a',
           progressByUser: {
             'user-mia': { completedAt: IN_WEEK, status: 'done', stopsDone: 1 },
-            'user-riley': { completedAt: IN_WEEK, status: 'done', stopsDone: 1 },
+            'user-riley': {
+              completedAt: IN_WEEK,
+              status: 'done',
+              stopsDone: 1,
+            },
             'user-sam': { completedAt: null, status: 'active', stopsDone: 0 },
           },
         }),
         makeMission({
           id: 'mission-b',
           progressByUser: {
-            [DEMO_USER_ID]: { completedAt: BEFORE_WEEK, status: 'done', stopsDone: 1 },
+            [DEMO_USER_ID]: {
+              completedAt: BEFORE_WEEK,
+              status: 'done',
+              stopsDone: 1,
+            },
           },
         }),
       ],
@@ -162,7 +175,12 @@ describe('getWeeklyDigest', () => {
     const digest = await getWeeklyDigest(ctx(), { weekStart: WEEK_START });
     expect(digest.stats.missionsCompleted).toBe(2);
     expect(digest.completedMissions).toEqual([
-      { completedByCount: 2, id: 'mission-a', title: 'Untitled mission', xp: 10 },
+      {
+        completedByCount: 2,
+        id: 'mission-a',
+        title: 'Untitled mission',
+        xp: 10,
+      },
     ]);
   });
 
@@ -195,14 +213,25 @@ describe('getWeeklyDigest', () => {
   });
 
   test('returns an entirely empty digest for a week with no activity', async () => {
-    setState((current) => ({ ...current, comments: [], events: [], missions: [], posts: [] }));
+    setState((current) => ({
+      ...current,
+      comments: [],
+      events: [],
+      missions: [],
+      posts: [],
+    }));
 
     const digest = await getWeeklyDigest(ctx(), { weekStart: WEEK_START });
     expect(digest).toMatchObject({
       completedMissions: [],
       popularEvents: [],
       popularPosts: [],
-      stats: { activeMembers: 0, eventsHeld: 0, missionsCompleted: 0, newPosts: 0 },
+      stats: {
+        activeMembers: 0,
+        eventsHeld: 0,
+        missionsCompleted: 0,
+        newPosts: 0,
+      },
     });
   });
 
@@ -218,17 +247,23 @@ describe('getWeeklyDigest', () => {
       ...current,
       posts: [makePost({ authorId: 'user-jordan', id: 'post-in', likes: 50 })],
       users: current.users.map((user) =>
-        user.id === DEMO_USER_ID ? { ...user, mutedUserIds: ['user-jordan'] } : user,
+        user.id === DEMO_USER_ID
+          ? { ...user, mutedUserIds: ['user-jordan'] }
+          : user,
       ),
     }));
 
-    const digest = await getWeeklyDigest(ctx(DEMO_USER_ID), { weekStart: WEEK_START });
+    const digest = await getWeeklyDigest(ctx(DEMO_USER_ID), {
+      weekStart: WEEK_START,
+    });
     expect(digest.popularPosts).toEqual([]);
   });
 
   test('comingUp lists events/missions in the next 7 real days regardless of the recapped week', async () => {
     const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
-    const farOut = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    const farOut = new Date(
+      Date.now() + 10 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const soonDate = soon.slice(0, 10);
     const farOutDate = farOut.slice(0, 10);
 
@@ -239,15 +274,27 @@ describe('getWeeklyDigest', () => {
         makeEvent({ id: 'event-far', startsAt: farOut, title: 'Far event' }),
       ],
       missions: [
-        makeMission({ id: 'mission-soon', scheduledFor: soonDate, title: 'Soon mission' }),
-        makeMission({ id: 'mission-far', scheduledFor: farOutDate, title: 'Far mission' }),
+        makeMission({
+          id: 'mission-soon',
+          scheduledFor: soonDate,
+          title: 'Soon mission',
+        }),
+        makeMission({
+          id: 'mission-far',
+          scheduledFor: farOutDate,
+          title: 'Far mission',
+        }),
       ],
     }));
 
     // Deliberately using a stale/old weekStart to prove "coming up" ignores it.
     const digest = await getWeeklyDigest(ctx(), { weekStart: WEEK_START });
-    expect(digest.comingUpEvents.map((event) => event.id)).toEqual(['event-soon']);
-    expect(digest.comingUpMissions.map((mission) => mission.id)).toEqual(['mission-soon']);
+    expect(digest.comingUpEvents.map((event) => event.id)).toEqual([
+      'event-soon',
+    ]);
+    expect(digest.comingUpMissions.map((mission) => mission.id)).toEqual([
+      'mission-soon',
+    ]);
   });
 
   test('defaults to the most recently completed week when no weekStart is given', async () => {
@@ -267,15 +314,23 @@ describe('digest route', () => {
       new Request(`http://localhost/api/digest?weekStart=${WEEK_START}`),
     );
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { weekStart: string; stats: { newPosts: number } };
+    const body = (await response.json()) as {
+      weekStart: string;
+      stats: { newPosts: number };
+    };
     expect(body.weekStart).toBe(WEEK_START);
     expect(body.stats.newPosts).toBe(1);
   });
 
   test('GET defaults to the most recent week without a weekStart param', async () => {
-    const response = await getDigest(new Request('http://localhost/api/digest'));
+    const response = await getDigest(
+      new Request('http://localhost/api/digest'),
+    );
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { weekStart: string; weekEnd: string };
+    const body = (await response.json()) as {
+      weekStart: string;
+      weekEnd: string;
+    };
     expect(typeof body.weekStart).toBe('string');
     expect(typeof body.weekEnd).toBe('string');
   });

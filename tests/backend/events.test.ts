@@ -8,18 +8,26 @@ import {
   PATCH as patchEventRoute,
 } from '../../app/api/events/[id]/index+api';
 import { GET as getAttendeesRoute } from '../../app/api/events/[id]/attendees+api';
+import { POST as postInterested } from '../../app/api/events/[id]/interested+api';
+import { GET as getInterestedListRoute } from '../../app/api/events/[id]/interested-list+api';
 import { POST as postJoin } from '../../app/api/events/[id]/join+api';
 import { POST as postReport } from '../../app/api/events/[id]/report+api';
-import { createEventComment, listEventComments } from '../../src/backend/event-comments';
+import {
+  createEventComment,
+  listEventComments,
+} from '../../src/backend/event-comments';
 import {
   createEvent,
   deleteEvent,
   getEventAttendees,
   getEventAttendeesPage,
   getEventDates,
+  getEventInterested,
+  getEventInterestedPage,
   getEventsView,
   listEventsPage,
   reportEvent,
+  toggleInterested,
   toggleJoin,
   updateEvent,
 } from '../../src/backend/events';
@@ -87,7 +95,12 @@ describe('getEventsView', () => {
     expect(featured?.attendees).toEqual([
       { avatarUrl: null, id: 'user-riley', isAdmin: false, name: 'Riley Kim' },
       { avatarUrl: null, id: 'user-mia', isAdmin: false, name: 'Mia Lake' },
-      { avatarUrl: null, id: 'user-jordan', isAdmin: false, name: 'Jordan Diaz' },
+      {
+        avatarUrl: null,
+        id: 'user-jordan',
+        isAdmin: false,
+        name: 'Jordan Diaz',
+      },
       { avatarUrl: null, id: 'user-andre', isAdmin: false, name: 'Andre King' },
     ]);
   });
@@ -139,13 +152,77 @@ describe('toggleJoin', () => {
   });
 });
 
+describe('toggleInterested', () => {
+  test('marking interested increments interestedCount and marks interested', async () => {
+    const result = await toggleInterested(ctx(), 'event-1');
+
+    expect(result).toEqual({
+      id: 'event-1',
+      interestedCount: 1,
+      interested: true,
+    });
+  });
+
+  test('toggling again decrements interestedCount back and clears interested', async () => {
+    await toggleInterested(ctx(), 'event-1');
+    const result = await toggleInterested(ctx(), 'event-1');
+
+    expect(result).toEqual({
+      id: 'event-1',
+      interestedCount: 0,
+      interested: false,
+    });
+  });
+
+  test('returns null for an unknown event', async () => {
+    expect(await toggleInterested(ctx(), 'event-999')).toBeNull();
+  });
+
+  // The whole point of this being a separate feature from Join (see
+  // events-types.ts's own WHY) -- marking interested must never touch
+  // going/joined/attendees, and joining must never touch interestedCount.
+  test('is fully independent of going/joined -- neither affects the other', async () => {
+    await toggleInterested(ctx(), 'event-1');
+    const afterInterested = (await getEventsView(ctx())).events.find(
+      (event) => event.id === 'event-1',
+    );
+    expect(afterInterested?.going).toBe(48);
+    expect(afterInterested?.joined).toBe(false);
+    expect(afterInterested?.interested).toBe(true);
+    expect(afterInterested?.interestedCount).toBe(1);
+
+    await toggleJoin(ctx(), 'event-1');
+    const afterJoin = (await getEventsView(ctx())).events.find(
+      (event) => event.id === 'event-1',
+    );
+    expect(afterJoin?.going).toBe(49);
+    expect(afterJoin?.joined).toBe(true);
+    // Still interested -- joining doesn't clear it (independent, by request).
+    expect(afterJoin?.interested).toBe(true);
+    expect(afterJoin?.interestedCount).toBe(1);
+  });
+
+  test('a member can both join and mark interested on their own event, independently', async () => {
+    const interestedResult = await toggleInterested(ctx(), 'event-1');
+    const joinResult = await toggleJoin(ctx(), 'event-1');
+
+    expect(interestedResult?.interested).toBe(true);
+    expect(joinResult?.joined).toBe(true);
+  });
+});
+
 describe('getEventAttendees', () => {
   test('returns the full uncapped roster, including newly joined users', async () => {
     const before = await getEventAttendees(ctx(), 'event-1');
     expect(before).toEqual([
       { avatarUrl: null, id: 'user-riley', isAdmin: false, name: 'Riley Kim' },
       { avatarUrl: null, id: 'user-mia', isAdmin: false, name: 'Mia Lake' },
-      { avatarUrl: null, id: 'user-jordan', isAdmin: false, name: 'Jordan Diaz' },
+      {
+        avatarUrl: null,
+        id: 'user-jordan',
+        isAdmin: false,
+        name: 'Jordan Diaz',
+      },
       { avatarUrl: null, id: 'user-andre', isAdmin: false, name: 'Andre King' },
     ]);
 
@@ -207,6 +284,52 @@ describe('getEventAttendeesPage', () => {
   });
 });
 
+describe('getEventInterested', () => {
+  test('starts empty -- unlike attendees, interest has no seeded baseline', async () => {
+    expect(await getEventInterested(ctx(), 'event-1')).toEqual([]);
+  });
+
+  test('returns everyone who has marked interested, not attendees', async () => {
+    await toggleInterested(ctx('user-mia'), 'event-1');
+    await toggleInterested(ctx('user-andre'), 'event-1');
+    // user-riley is a seeded attendee but never marked interested -- must
+    // not appear here, proving this reads event_interests, not attendeeIds.
+    const interested = await getEventInterested(ctx(), 'event-1');
+
+    expect(interested?.map((person) => person.id).sort()).toEqual([
+      'user-andre',
+      'user-mia',
+    ]);
+  });
+
+  test('returns null for an unknown event', async () => {
+    expect(await getEventInterested(ctx(), 'event-999')).toBeNull();
+  });
+});
+
+describe('getEventInterestedPage', () => {
+  test('paginates the interested roster', async () => {
+    await toggleInterested(ctx('user-mia'), 'event-1');
+    await toggleInterested(ctx('user-andre'), 'event-1');
+    await toggleInterested(ctx('user-jordan'), 'event-1');
+
+    const first = await getEventInterestedPage(ctx(), 'event-1', { limit: 2 });
+    expect(first?.interested).toHaveLength(2);
+    expect(first?.nextCursor).not.toBeNull();
+
+    const second = await getEventInterestedPage(ctx(), 'event-1', {
+      cursor: first?.nextCursor ?? null,
+      limit: 2,
+    });
+    expect(second?.interested).toHaveLength(1);
+    expect(second?.nextCursor).toBeNull();
+  });
+
+  test('returns null for an unknown event', async () => {
+    expect(await getEventInterestedPage(ctx(), 'event-999')).toBeNull();
+  });
+});
+
 describe('createEvent', () => {
   const eventDate = futureDate(30);
   const validInput = {
@@ -233,6 +356,8 @@ describe('createEvent', () => {
       dateLabel: String(Number(eventDate.slice(8, 10))),
       going: 0,
       joined: false,
+      interestedCount: 0,
+      interested: false,
       featured: false,
     });
 
@@ -299,7 +424,10 @@ describe('createEvent', () => {
 
   test('rejects an end time at or before the start time', async () => {
     const same = await createEvent(ctx(), { ...validInput, endTime: '18:00' });
-    const earlier = await createEvent(ctx(), { ...validInput, endTime: '17:00' });
+    const earlier = await createEvent(ctx(), {
+      ...validInput,
+      endTime: '17:00',
+    });
 
     expect(same).toMatchObject({ ok: false, code: 'invalid_event' });
     expect(earlier).toMatchObject({ ok: false, code: 'invalid_event' });
@@ -386,7 +514,9 @@ describe('POST /api/events', () => {
 
 describe('GET /api/events', () => {
   test('returns a paginated page of upcoming events, featured first', async () => {
-    const response = await getEvents(new Request('http://localhost/api/events'));
+    const response = await getEvents(
+      new Request('http://localhost/api/events'),
+    );
     const body = (await response.json()) as {
       events: readonly { id: string; featured: boolean; joined: boolean }[];
       nextCursor: string | null;
@@ -458,7 +588,10 @@ describe('listEventsPage', () => {
     expect(first.events[0]?.id).toBe('event-1');
     expect(first.nextCursor).not.toBeNull();
 
-    const second = await listEventsPage(ctx(), { cursor: first.nextCursor, limit: 1 });
+    const second = await listEventsPage(ctx(), {
+      cursor: first.nextCursor,
+      limit: 1,
+    });
     expect(second.events).toHaveLength(1);
     expect(second.events[0]?.id).not.toBe('event-1');
   });
@@ -660,14 +793,18 @@ describe('deleteEvent', () => {
   test('the author can cancel their own event', async () => {
     expect(await deleteEvent(ctx('user-hoa'), 'event-1')).toBe(true);
     expect(
-      (await getEventsView(ctx())).events.some((event) => event.id === 'event-1'),
+      (await getEventsView(ctx())).events.some(
+        (event) => event.id === 'event-1',
+      ),
     ).toBe(false);
   });
 
   test('returns false for a user who does not own the event', async () => {
     expect(await deleteEvent(ctx(DEMO_USER_ID), 'event-1')).toBe(false);
     expect(
-      (await getEventsView(ctx())).events.some((event) => event.id === 'event-1'),
+      (await getEventsView(ctx())).events.some(
+        (event) => event.id === 'event-1',
+      ),
     ).toBe(true);
   });
 
@@ -675,7 +812,7 @@ describe('deleteEvent', () => {
     expect(await deleteEvent(ctx('user-hoa'), 'event-999')).toBe(false);
   });
 
-  test('removes the event\'s comments so they are no longer listable', async () => {
+  test("removes the event's comments so they are no longer listable", async () => {
     const created = await createEventComment(ctx('user-riley'), 'event-1', {
       body: 'Cannot wait!',
     });
@@ -689,7 +826,8 @@ describe('deleteEvent', () => {
   });
 
   test('revokes the XP the event granted on creation', async () => {
-    const before = getState().users.find((user) => user.id === 'user-andre')?.xp ?? 0;
+    const before =
+      getState().users.find((user) => user.id === 'user-andre')?.xp ?? 0;
     const created = await createEvent(ctx('user-andre'), {
       date: futureDate(10),
       place: 'Village Marina',
@@ -701,15 +839,18 @@ describe('deleteEvent', () => {
     if (!created.ok) {
       return;
     }
-    expect(
-      getState().users.find((user) => user.id === 'user-andre')?.xp,
-    ).toBe(before + CREATE_CONTENT_XP);
+    expect(getState().users.find((user) => user.id === 'user-andre')?.xp).toBe(
+      before + CREATE_CONTENT_XP,
+    );
 
     expect(await deleteEvent(ctx('user-andre'), created.event.id)).toBe(true);
-    expect(getState().users.find((user) => user.id === 'user-andre')?.xp).toBe(before);
+    expect(getState().users.find((user) => user.id === 'user-andre')?.xp).toBe(
+      before,
+    );
     expect(
       getState().xpLedger.some(
-        (entry) => entry.reason === 'event_created' && entry.refId === created.event.id,
+        (entry) =>
+          entry.reason === 'event_created' && entry.refId === created.event.id,
       ),
     ).toBe(false);
   });
@@ -920,6 +1061,73 @@ describe('GET /api/events/:id/attendees', () => {
   });
 });
 
+describe('POST /api/events/:id/interested', () => {
+  test('toggles interested for the demo user, independent of going', async () => {
+    const response = await postInterested(
+      new Request('http://localhost/api/events/event-3/interested', {
+        method: 'POST',
+      }),
+      { id: 'event-3' },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      id: 'event-3',
+      interestedCount: 1,
+      interested: true,
+    });
+  });
+
+  test('returns 404 with the ApiError envelope for an unknown event', async () => {
+    const response = await postInterested(
+      new Request('http://localhost/api/events/nope/interested', {
+        method: 'POST',
+      }),
+      { id: 'nope' },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      code: 'event_not_found',
+      message: 'Event not found.',
+    });
+  });
+});
+
+describe('GET /api/events/:id/interested-list', () => {
+  test('returns everyone who marked interested', async () => {
+    await toggleInterested(ctx('user-mia'), 'event-1');
+    await toggleInterested(ctx('user-andre'), 'event-1');
+
+    const response = await getInterestedListRoute(
+      new Request('http://localhost/api/events/event-1/interested-list'),
+      { id: 'event-1' },
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      interested: { id: string }[];
+    };
+    expect(body.interested.map((person) => person.id).sort()).toEqual([
+      'user-andre',
+      'user-mia',
+    ]);
+  });
+
+  test('returns 404 for an unknown event', async () => {
+    const response = await getInterestedListRoute(
+      new Request('http://localhost/api/events/nope/interested-list'),
+      { id: 'nope' },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      code: 'event_not_found',
+      message: 'Event not found.',
+    });
+  });
+});
+
 describe('reportEvent', () => {
   test('is idempotent -- reporting twice records one report', async () => {
     await reportEvent(ctx(), 'event-1', TEST_REPORT_SUBMISSION);
@@ -931,7 +1139,11 @@ describe('reportEvent', () => {
   });
 
   test('returns event_not_found for an unknown event', async () => {
-    const result = await reportEvent(ctx(), 'does-not-exist', TEST_REPORT_SUBMISSION);
+    const result = await reportEvent(
+      ctx(),
+      'does-not-exist',
+      TEST_REPORT_SUBMISSION,
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('event_not_found');

@@ -2,7 +2,12 @@ import { extractExistingMedia, extractMediaUploads } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import type { StoredEvent, StoredUser } from '@/src/backend/store';
 import { getState, setState } from '@/src/backend/store';
-import { CREATE_CONTENT_XP, grantXp, NO_XP_AWARD, revokeXp } from '@/src/backend/xp';
+import {
+  CREATE_CONTENT_XP,
+  grantXp,
+  NO_XP_AWARD,
+  revokeXp,
+} from '@/src/backend/xp';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 
 import type { ValidReportSubmission } from '../reports/report-submission';
@@ -12,11 +17,14 @@ import {
   getEventAttendeesPageSupabase,
   getEventAttendeesSupabase,
   getEventDatesSupabase,
+  getEventInterestedPageSupabase,
+  getEventInterestedSupabase,
   getEventsByIdsSupabase,
   getEventsViewSupabase,
   getMyEventsViewSupabase,
   listEventsPageSupabase,
   reportEventSupabase,
+  toggleInterestedSupabase,
   toggleJoinSupabase,
   updateEventSupabase,
 } from './events-supabase';
@@ -25,8 +33,10 @@ import type {
   CreatedEventResult,
   CreateEventResult,
   EventAttendeesPage,
+  EventInterestedPage,
   EventsPage,
   EventsView,
+  InterestedResult,
   JoinResult,
   ListEventsOptions,
   MyEventsOptions,
@@ -66,7 +76,14 @@ const toPersonRefs = (
   attendeeIds.flatMap((id) => {
     const user = users.find((candidate) => candidate.id === id);
     return user
-      ? [{ avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }]
+      ? [
+          {
+            avatarUrl: user.avatarUrl,
+            id: user.id,
+            isAdmin: user.isAdmin,
+            name: user.name,
+          },
+        ]
       : [];
   });
 
@@ -80,7 +97,12 @@ const toAuthorRef = (
 ): PersonRef => {
   const user = users.find((candidate) => candidate.id === authorId);
   return user
-    ? { avatarUrl: user.avatarUrl, id: user.id, isAdmin: user.isAdmin, name: user.name }
+    ? {
+        avatarUrl: user.avatarUrl,
+        id: user.id,
+        isAdmin: user.isAdmin,
+        name: user.name,
+      }
     : { avatarUrl: null, id: authorId, isAdmin: false, name: 'Former member' };
 };
 
@@ -118,6 +140,8 @@ const toCommunityEvent = (
     ),
     users,
   ),
+  interestedCount: event.interestedBy.length,
+  interested: event.interestedBy.includes(userId),
 });
 
 // Events from earlier calendar days are hidden from the main "Coming up"
@@ -187,16 +211,16 @@ function listEventsPageMemory(
   const page = paginateInMemory(filtered, limit, cursor);
 
   return {
-    events: page.items.map((item) => toCommunityEvent(item.event, userId, users)),
+    events: page.items.map((item) =>
+      toCommunityEvent(item.event, userId, users),
+    ),
     nextCursor: page.nextCursor,
   };
 }
 
 // Uncapped roster for the "N going" attendee-list modal — unlike the
 // preview stack baked into toCommunityEvent, this returns everyone.
-function getEventAttendeesMemory(
-  eventId: string,
-): readonly PersonRef[] | null {
+function getEventAttendeesMemory(eventId: string): readonly PersonRef[] | null {
   const { events, users } = getState();
   const event = events.find((candidate) => candidate.id === eventId);
   if (!event) {
@@ -241,6 +265,45 @@ function getEventAttendeesPageMemory(
   };
 }
 
+// Uncapped roster for the "N interested" list modal -- mirrors
+// getEventAttendeesMemory/getEventAttendeesPageMemory exactly, just reading
+// interestedBy instead of attendeeIds/joinedBy.
+function getEventInterestedMemory(
+  eventId: string,
+): readonly PersonRef[] | null {
+  const { events, users } = getState();
+  const event = events.find((candidate) => candidate.id === eventId);
+  if (!event) {
+    return null;
+  }
+  return toPersonRefs(uniqueIds(event.interestedBy), users);
+}
+
+function getEventInterestedPageMemory(
+  eventId: string,
+  limit: number,
+  cursor: string | null,
+): EventInterestedPage | null {
+  const { events, users } = getState();
+  const event = events.find((candidate) => candidate.id === eventId);
+  if (!event) {
+    return null;
+  }
+  const ids = uniqueIds(event.interestedBy);
+  const refs = toPersonRefs(ids, users);
+  const wrapped = refs.map((ref, index) => ({
+    id: ref.id,
+    ref,
+    sortKey: String(MAX_ATTENDEE_POSITION - index).padStart(6, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    interested: page.items.map((item) => item.ref),
+    nextCursor: page.nextCursor,
+  };
+}
+
 // Fetches specific events by id — used to hydrate bookmarks, which can point
 // at any event regardless of authorship or join status.
 function getEventsByIdsMemory(
@@ -271,7 +334,9 @@ function getMyEventsViewMemory(
   const page = paginateInMemory(mine, limit, cursor);
 
   return {
-    events: page.items.map((item) => toCommunityEvent(item.event, userId, users)),
+    events: page.items.map((item) =>
+      toCommunityEvent(item.event, userId, users),
+    ),
     nextCursor: page.nextCursor,
   };
 }
@@ -307,6 +372,7 @@ function createEventMemory(userId: string, input: unknown): CreatedEventResult {
     going: 0,
     joinedBy: [],
     attendeeIds: [],
+    interestedBy: [],
   };
   const next = setState((current) => ({
     ...current,
@@ -465,6 +531,44 @@ function toggleJoinMemory(userId: string, eventId: string): JoinResult | null {
   return updated ? { id: updated.id, going: updated.going, joined } : null;
 }
 
+// Mirrors toggleJoinMemory exactly, against interestedBy instead of
+// joinedBy -- deliberately does not touch going/joinedBy/attendeeIds.
+function toggleInterestedMemory(
+  userId: string,
+  eventId: string,
+): InterestedResult | null {
+  const existing = getState().events.find((event) => event.id === eventId);
+
+  if (!existing) {
+    return null;
+  }
+
+  const interested = !existing.interestedBy.includes(userId);
+  const next = setState((current) => ({
+    ...current,
+    events: current.events.map((event) =>
+      event.id === eventId
+        ? {
+            ...event,
+            interestedBy: interested
+              ? [...event.interestedBy, userId]
+              : event.interestedBy.filter((id) => id !== userId),
+          }
+        : event,
+    ),
+  }));
+
+  const updated = next.events.find((event) => event.id === eventId);
+
+  return updated
+    ? {
+        id: updated.id,
+        interestedCount: updated.interestedBy.length,
+        interested,
+      }
+    : null;
+}
+
 // ---------------------------------------------------------------------------
 // Backend dispatch
 // ---------------------------------------------------------------------------
@@ -475,7 +579,9 @@ export async function getEventsView(ctx: RequestContext): Promise<EventsView> {
     : getEventsViewMemory(ctx.userId);
 }
 
-export async function getEventDates(ctx: RequestContext): Promise<readonly string[]> {
+export async function getEventDates(
+  ctx: RequestContext,
+): Promise<readonly string[]> {
   return ctx.supabase
     ? getEventDatesSupabase(ctx.supabase)
     : getEventDatesMemory();
@@ -536,7 +642,12 @@ export async function getEventsByIds(
     return [];
   }
   return ctx.supabase
-    ? getEventsByIdsSupabase(ctx.supabase, ctx.userId, ids, includeAttendeeDetails)
+    ? getEventsByIdsSupabase(
+        ctx.supabase,
+        ctx.userId,
+        ids,
+        includeAttendeeDetails,
+      )
     : getEventsByIdsMemory(ctx.userId, ids);
 }
 
@@ -585,6 +696,40 @@ export async function toggleJoin(
   return ctx.supabase
     ? toggleJoinSupabase(ctx.supabase, ctx.userId, eventId)
     : toggleJoinMemory(ctx.userId, eventId);
+}
+
+export async function toggleInterested(
+  ctx: RequestContext,
+  eventId: string,
+): Promise<InterestedResult | null> {
+  return ctx.supabase
+    ? toggleInterestedSupabase(ctx.supabase, ctx.userId, eventId)
+    : toggleInterestedMemory(ctx.userId, eventId);
+}
+
+export async function getEventInterested(
+  ctx: RequestContext,
+  eventId: string,
+): Promise<readonly PersonRef[] | null> {
+  return ctx.supabase
+    ? getEventInterestedSupabase(ctx.supabase, eventId)
+    : getEventInterestedMemory(eventId);
+}
+
+// The paginated, public-facing counterpart to getEventInterested.
+export async function getEventInterestedPage(
+  ctx: RequestContext,
+  eventId: string,
+  options?: { readonly limit?: number; readonly cursor?: string | null },
+): Promise<EventInterestedPage | null> {
+  const limit = Math.min(
+    Math.max(1, options?.limit ?? DEFAULT_EVENT_ATTENDEES_PAGE_SIZE),
+    MAX_EVENT_ATTENDEES_PAGE_SIZE,
+  );
+  const cursor = options?.cursor ?? null;
+  return ctx.supabase
+    ? getEventInterestedPageSupabase(ctx.supabase, eventId, limit, cursor)
+    : getEventInterestedPageMemory(eventId, limit, cursor);
 }
 
 export async function updateEvent(

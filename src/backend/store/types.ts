@@ -188,6 +188,9 @@ export interface StoredEvent {
   readonly going: number;
   readonly joinedBy: readonly string[];
   readonly attendeeIds: readonly string[];
+  // "I'm interested" -- separate from joinedBy, deliberately uncounted
+  // toward going/attendeeIds. See 0082_event_interests.sql's own WHY.
+  readonly interestedBy: readonly string[];
   // Null until the author edits the event at least once.
   readonly editedAt: string | null;
 }

@@ -52,6 +52,7 @@ function seedMatchingContent(authorId: string = DEMO_USER_ID): void {
     featured: false,
     going: 0,
     id: 'fixture-event-search',
+    interestedBy: [],
     joinedBy: [],
     place: 'Marina',
     startsAt: '2026-01-01T18:00:00.000Z',
@@ -139,7 +140,9 @@ function seedMatchingContent(authorId: string = DEMO_USER_ID): void {
 describe('searchAll (memory)', () => {
   test('returns no results below the minimum query length guard from the route', async () => {
     seedMatchingContent();
-    const response = await getSearchRoute(new Request('http://test/api/search?q=z'));
+    const response = await getSearchRoute(
+      new Request('http://test/api/search?q=z'),
+    );
     const body = (await response.json()) as {
       readonly posts: readonly unknown[];
       readonly events: readonly unknown[];
@@ -162,15 +165,27 @@ describe('searchAll (memory)', () => {
     seedMatchingContent();
     const results = await searchAll(ctx(), NEEDLE);
 
-    expect(results.posts.map((item) => item.id)).toEqual(['fixture-post-search']);
-    expect(results.events.map((item) => item.id)).toEqual(['fixture-event-search']);
-    expect(results.missions.map((item) => item.id)).toEqual(['fixture-mission-search']);
-    expect(results.petitions.map((item) => item.id)).toEqual(['fixture-petition-search']);
+    expect(results.posts.map((item) => item.id)).toEqual([
+      'fixture-post-search',
+    ]);
+    expect(results.events.map((item) => item.id)).toEqual([
+      'fixture-event-search',
+    ]);
+    expect(results.missions.map((item) => item.id)).toEqual([
+      'fixture-mission-search',
+    ]);
+    expect(results.petitions.map((item) => item.id)).toEqual([
+      'fixture-petition-search',
+    ]);
     // Services and businesses search by business_name, not a "title" field
     // -- these are the entities whose title-equivalent column is named
     // differently.
-    expect(results.services.map((item) => item.id)).toEqual(['fixture-service-search']);
-    expect(results.businesses.map((item) => item.id)).toEqual(['fixture-business-search']);
+    expect(results.services.map((item) => item.id)).toEqual([
+      'fixture-service-search',
+    ]);
+    expect(results.businesses.map((item) => item.id)).toEqual([
+      'fixture-business-search',
+    ]);
   });
 
   test('excludes a pending business listing owned by someone else', async () => {
@@ -218,7 +233,9 @@ describe('searchAll (memory)', () => {
     const response = await getSearchRoute(
       new Request(`http://test/api/search?q=${encodeURIComponent(NEEDLE)}`),
     );
-    const body = (await response.json()) as { readonly posts: readonly { readonly id: string }[] };
+    const body = (await response.json()) as {
+      readonly posts: readonly { readonly id: string }[];
+    };
     expect(body.posts.map((item) => item.id)).toEqual(['fixture-post-search']);
   });
 });

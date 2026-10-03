@@ -19,6 +19,7 @@ import type {
   EventsPage,
   MyEventsPage,
   PersonRef,
+  ToggleInterestedResult,
   ToggleJoinResult,
   UpdateEventInput,
 } from './events-types';
@@ -37,7 +38,10 @@ const eventDatesKey = (userId: string | null) =>
 const myEventsViewKey = (userId: string | null) =>
   ['events', 'mine', userId ?? 'demo-user'] as const;
 
-const eventsPagePath = (date: string | null, cursor: string | null): `/${string}` =>
+const eventsPagePath = (
+  date: string | null,
+  cursor: string | null,
+): `/${string}` =>
   `/api/events?limit=${EVENTS_PAGE_SIZE}${date ? `&date=${date}` : ''}${
     cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
   }`;
@@ -46,6 +50,12 @@ const toggleEventJoin = (event: CommunityEvent): CommunityEvent => ({
   ...event,
   going: event.going + (event.joined ? -1 : 1),
   joined: !event.joined,
+});
+
+const toggleEventInterested = (event: CommunityEvent): CommunityEvent => ({
+  ...event,
+  interestedCount: event.interestedCount + (event.interested ? -1 : 1),
+  interested: !event.interested,
 });
 
 // Just the calendar day of every upcoming event -- cheap enough to fetch
@@ -80,7 +90,13 @@ export function useEventsView(date: string | null = null) {
     getNextPageParam: (lastPage: EventsPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     meta: { persist: true, sensitive: false },
-    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+    queryFn: ({
+      pageParam,
+      signal,
+    }: {
+      pageParam: string | null;
+      signal: AbortSignal;
+    }) =>
       requestJson<EventsPage>({
         getAccessToken: session.getToken,
         path: eventsPagePath(date, pageParam),
@@ -119,7 +135,13 @@ export function useMyEventsView() {
     getNextPageParam: (lastPage: MyEventsPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     meta: { persist: true, sensitive: false },
-    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+    queryFn: ({
+      pageParam,
+      signal,
+    }: {
+      pageParam: string | null;
+      signal: AbortSignal;
+    }) =>
       requestJson<MyEventsPage>({
         getAccessToken: session.getToken,
         path: `/api/events/mine?limit=${MY_EVENTS_PAGE_SIZE}${
@@ -153,16 +175,64 @@ export function useEventAttendees(eventId: string, enabled: boolean) {
 
   return useInfiniteQuery({
     enabled,
-    getNextPageParam: (lastPage: EventAttendeesPageResponse) => lastPage.nextCursor,
+    getNextPageParam: (lastPage: EventAttendeesPageResponse) =>
+      lastPage.nextCursor,
     initialPageParam: null as string | null,
     meta: { persist: false, sensitive: false },
-    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+    queryFn: ({
+      pageParam,
+      signal,
+    }: {
+      pageParam: string | null;
+      signal: AbortSignal;
+    }) =>
       requestJson<EventAttendeesPageResponse>({
         getAccessToken: session.getToken,
         path: eventAttendeesPagePath(eventId, pageParam),
         signal,
       }),
     queryKey: ['events', 'attendees', eventId],
+  });
+}
+
+interface EventInterestedPageResponse {
+  readonly interested: readonly PersonRef[];
+  readonly nextCursor: string | null;
+}
+
+const eventInterestedPagePath = (
+  eventId: string,
+  cursor: string | null,
+): `/${string}` =>
+  `/api/events/${eventId}/interested-list?limit=${EVENT_ATTENDEES_PAGE_SIZE}${
+    cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+  }`;
+
+// The uncapped, paginated "interested" roster for the "N interested" list --
+// mirrors useEventAttendees exactly. Only fetched when the modal showing it
+// is actually open.
+export function useEventInterested(eventId: string, enabled: boolean) {
+  const session = useSession();
+
+  return useInfiniteQuery({
+    enabled,
+    getNextPageParam: (lastPage: EventInterestedPageResponse) =>
+      lastPage.nextCursor,
+    initialPageParam: null as string | null,
+    meta: { persist: false, sensitive: false },
+    queryFn: ({
+      pageParam,
+      signal,
+    }: {
+      pageParam: string | null;
+      signal: AbortSignal;
+    }) =>
+      requestJson<EventInterestedPageResponse>({
+        getAccessToken: session.getToken,
+        path: eventInterestedPagePath(eventId, pageParam),
+        signal,
+      }),
+    queryKey: ['events', 'interested', eventId],
   });
 }
 
@@ -173,7 +243,10 @@ export function useCreateEvent() {
 
   return useMutation({
     mutationFn: (input: CreateEventInput) =>
-      requestJson<{ readonly event: CommunityEvent; readonly xpAward: XpAwardOutcome }>({
+      requestJson<{
+        readonly event: CommunityEvent;
+        readonly xpAward: XpAwardOutcome;
+      }>({
         body: input,
         getAccessToken: session.getToken,
         method: 'POST',
@@ -188,7 +261,9 @@ export function useCreateEvent() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
-      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
+      void queryClient.invalidateQueries({
+        queryKey: activityCountsKey(session.userId),
+      });
       notifyXpAwarded(result.xpAward);
     },
   });
@@ -238,7 +313,9 @@ export function useDeleteEvent() {
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'ledger'] });
       void queryClient.invalidateQueries({ queryKey: ['xp', 'growth'] });
-      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
+      void queryClient.invalidateQueries({
+        queryKey: activityCountsKey(session.userId),
+      });
     },
   });
 }
@@ -249,11 +326,12 @@ export function useToggleJoin() {
   const listPrefix = eventsViewKeyPrefix(session.userId);
 
   return useMutation({
-    mutationFn: (eventId: string) => requestJson<ToggleJoinResult>({
-      getAccessToken: session.getToken,
-      method: 'POST',
-      path: `/api/events/${eventId}/join`,
-    }),
+    mutationFn: (eventId: string) =>
+      requestJson<ToggleJoinResult>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/events/${eventId}/join`,
+      }),
     onMutate: async (eventId) => {
       void Haptics.selectionAsync().catch(() => undefined);
       await queryClient.cancelQueries({ queryKey: listPrefix });
@@ -263,13 +341,15 @@ export function useToggleJoin() {
       // every cached page (any date-filter variant) rather than falling
       // back to invalidation. Snapshot every matching query (list pages
       // across date variants, plus the detail query if cached) for rollback.
-      const previousLists = queryClient.getQueriesData<InfiniteData<EventsPage>>({
+      const previousLists = queryClient.getQueriesData<
+        InfiniteData<EventsPage>
+      >({
         queryKey: listPrefix,
       });
       const detailKey = eventDetailKey(session.userId, eventId);
-      const previousDetail = queryClient.getQueryData<{ readonly event: CommunityEvent }>(
-        detailKey,
-      );
+      const previousDetail = queryClient.getQueryData<{
+        readonly event: CommunityEvent;
+      }>(detailKey);
 
       queryClient.setQueriesData<InfiniteData<EventsPage>>(
         { queryKey: listPrefix },
@@ -310,11 +390,87 @@ export function useToggleJoin() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: listPrefix });
-      void queryClient.invalidateQueries({ queryKey: myEventsViewKey(session.userId) });
+      void queryClient.invalidateQueries({
+        queryKey: myEventsViewKey(session.userId),
+      });
       // Joining/leaving an event changes "Events attending" -- My Activity's
       // stat tile for that reads from a separate, unpaginated totals query
       // (see use-activity-counts.ts) that nothing here was invalidating.
-      void queryClient.invalidateQueries({ queryKey: activityCountsKey(session.userId) });
+      void queryClient.invalidateQueries({
+        queryKey: activityCountsKey(session.userId),
+      });
+    },
+  });
+}
+
+// Mirrors useToggleJoin exactly, patching interestedCount/interested instead
+// of going/joined -- and deliberately does NOT invalidate activityCountsKey
+// on settle, since marking interest is not scored anywhere (unlike joining,
+// which changes "Events attending").
+export function useToggleInterested() {
+  const session = useSession();
+  const queryClient = useQueryClient();
+  const listPrefix = eventsViewKeyPrefix(session.userId);
+
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      requestJson<ToggleInterestedResult>({
+        getAccessToken: session.getToken,
+        method: 'POST',
+        path: `/api/events/${eventId}/interested`,
+      }),
+    onMutate: async (eventId) => {
+      void Haptics.selectionAsync().catch(() => undefined);
+      await queryClient.cancelQueries({ queryKey: listPrefix });
+      const previousLists = queryClient.getQueriesData<
+        InfiniteData<EventsPage>
+      >({
+        queryKey: listPrefix,
+      });
+      const detailKey = eventDetailKey(session.userId, eventId);
+      const previousDetail = queryClient.getQueryData<{
+        readonly event: CommunityEvent;
+      }>(detailKey);
+
+      queryClient.setQueriesData<InfiniteData<EventsPage>>(
+        { queryKey: listPrefix },
+        (current) =>
+          current === undefined
+            ? current
+            : {
+                ...current,
+                pages: current.pages.map((page) => ({
+                  ...page,
+                  events: page.events.map((event) =>
+                    event.id === eventId ? toggleEventInterested(event) : event,
+                  ),
+                })),
+              },
+      );
+      if (previousDetail) {
+        queryClient.setQueryData(detailKey, {
+          event: toggleEventInterested(previousDetail.event),
+        });
+      }
+
+      return { eventId, previousDetail, previousLists };
+    },
+    onError: (_error, _eventId, context) => {
+      if (!context) {
+        return;
+      }
+      for (const [key, data] of context.previousLists) {
+        queryClient.setQueryData(key, data);
+      }
+      if (context.previousDetail) {
+        queryClient.setQueryData(
+          eventDetailKey(session.userId, context.eventId),
+          context.previousDetail,
+        );
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: listPrefix });
     },
   });
 }
@@ -323,7 +479,10 @@ export function useReportEvent() {
   const session = useSession();
 
   return useMutation({
-    mutationFn: ({ eventId, ...submission }: { eventId: string } & ReportSubmission) =>
+    mutationFn: ({
+      eventId,
+      ...submission
+    }: { eventId: string } & ReportSubmission) =>
       requestJson<{ readonly reported: boolean }>({
         body: submission,
         getAccessToken: session.getToken,

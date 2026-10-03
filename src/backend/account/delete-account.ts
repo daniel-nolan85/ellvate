@@ -1,7 +1,7 @@
 import { listBookmarkIds, toggleBookmark } from '@/src/backend/bookmarks';
 import { deleteComment } from '@/src/backend/comments';
 import { deleteEventComment } from '@/src/backend/event-comments';
-import { toggleJoin } from '@/src/backend/events';
+import { toggleInterested, toggleJoin } from '@/src/backend/events';
 import { deletePost, toggleLike } from '@/src/backend/forum';
 import type { RequestContext } from '@/src/backend/http';
 import { deleteMissionComment } from '@/src/backend/mission-comments';
@@ -79,13 +79,17 @@ async function deleteAccountMemory(ctx: RequestContext): Promise<void> {
     if (event.joinedBy.includes(userId)) {
       await toggleJoin(ctx, event.id);
     }
+    if (event.interestedBy.includes(userId)) {
+      await toggleInterested(ctx, event.id);
+    }
   }
   for (const signature of getState().petitionSignatures) {
     if (signature.userId === userId) {
       await toggleSignature(ctx, signature.petitionId);
     }
   }
-  const ownMutes = getState().users.find((user) => user.id === userId)?.mutedUserIds ?? [];
+  const ownMutes =
+    getState().users.find((user) => user.id === userId)?.mutedUserIds ?? [];
   for (const mutedId of ownMutes) {
     await toggleMute(ctx, mutedId);
   }

@@ -55,7 +55,9 @@ import {
   useDeleteEvent,
   useEvent,
   useEventAttendees,
+  useEventInterested,
   useReportEvent,
+  useToggleInterested,
   useToggleJoin,
   useUpdateEvent,
 } from './use-events';
@@ -115,6 +117,7 @@ export function EventDetailScreen({
   const isOwnEvent = !!event && event.author.id === userId;
 
   const toggleJoin = useToggleJoin();
+  const toggleInterested = useToggleInterested();
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
   const blockUser = useBlockUser();
@@ -143,6 +146,7 @@ export function EventDetailScreen({
     'event' | 'user' | null
   >(null);
   const [attendeesOpen, setAttendeesOpen] = useState(false);
+  const [interestedOpen, setInterestedOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<EventComment | null>(
@@ -167,6 +171,17 @@ export function EventDetailScreen({
       fetchNextPage: attendees.fetchNextPage,
       hasNextPage: attendees.hasNextPage,
       isFetchingNextPage: attendees.isFetchingNextPage,
+    },
+  ]);
+
+  const interestedPeople = useEventInterested(eventId, interestedOpen);
+  const interestedList =
+    interestedPeople.data?.pages.flatMap((page) => page.interested) ?? [];
+  const onInterestedScroll = useLoadMoreOnScroll([
+    {
+      fetchNextPage: interestedPeople.fetchNextPage,
+      hasNextPage: interestedPeople.hasNextPage,
+      isFetchingNextPage: interestedPeople.isFetchingNextPage,
     },
   ]);
 
@@ -520,6 +535,41 @@ export function EventDetailScreen({
                       </Text>
                     </Pressable>
                   </HStack>
+
+                  {/* "I'm interested" -- a separate, lighter-weight signal
+                      from Join above (see events-types.ts's own WHY): its own
+                      row rather than crowding into the going row, since
+                      unlike going it doesn't bump a shared count or the
+                      attendee avatar stack. */}
+                  <HStack className="items-center" space="sm">
+                    <Pressable
+                      accessibilityLabel={`See everyone interested — ${event.interestedCount} people`}
+                      accessibilityRole="button"
+                      className="flex-1"
+                      onPress={() => setInterestedOpen(true)}
+                    >
+                      <Text className="text-text-muted underline" size="sm">
+                        {event.interestedCount} interested
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      className={`rounded-full border px-5 py-2.5 ${
+                        event.interested
+                          ? 'border-accent bg-accent/10'
+                          : 'border-surface-hairline bg-paper'
+                      }`}
+                      onPress={() => toggleInterested.mutate(event.id)}
+                    >
+                      <Text
+                        className={`font-inter-semibold text-[13px] ${
+                          event.interested ? 'text-accent' : 'text-content'
+                        }`}
+                      >
+                        {event.interested ? 'Interested ✓' : "I'm interested"}
+                      </Text>
+                    </Pressable>
+                  </HStack>
                 </VStack>
               ) : eventQuery.isPending ? (
                 <View className="items-center py-10">
@@ -610,124 +660,128 @@ export function EventDetailScreen({
 
       {/* Event options menu / edit -- one Sheet, content switches by mode */}
       <Sheet onClose={() => setSheetMode(null)} visible={sheetMode !== null}>
-        {(maxContentHeight) => sheetMode === 'edit' && event ? (
-          <EventComposer
-            initialCost={event.cost}
-            initialEndsAt={event.endsAt}
-            initialMedia={event.media}
-            initialPlace={event.place}
-            initialStartsAt={event.startsAt}
-            initialTag={event.tag}
-            initialTitle={event.title}
-            isSubmitting={updateEvent.isPending}
-            onDismiss={() => setSheetMode(null)}
-            onSubmit={(eventDraft) =>
-              updateEvent.mutate(
-                { eventId: event.id, ...eventDraft },
-                {
-                  onSuccess: () => {
-                    setSheetMode(null);
-                    void Haptics.notificationAsync(
-                      Haptics.NotificationFeedbackType.Success,
-                    );
+        {(maxContentHeight) =>
+          sheetMode === 'edit' && event ? (
+            <EventComposer
+              initialCost={event.cost}
+              initialEndsAt={event.endsAt}
+              initialMedia={event.media}
+              initialPlace={event.place}
+              initialStartsAt={event.startsAt}
+              initialTag={event.tag}
+              initialTitle={event.title}
+              isSubmitting={updateEvent.isPending}
+              onDismiss={() => setSheetMode(null)}
+              onSubmit={(eventDraft) =>
+                updateEvent.mutate(
+                  { eventId: event.id, ...eventDraft },
+                  {
+                    onSuccess: () => {
+                      setSheetMode(null);
+                      void Haptics.notificationAsync(
+                        Haptics.NotificationFeedbackType.Success,
+                      );
+                    },
+                    onError: () =>
+                      showToast("Couldn't save your changes. Try again."),
                   },
-                  onError: () =>
-                    showToast("Couldn't save your changes. Try again."),
-                },
-              )
-            }
-            submitLabel="Save"
-          />
-        ) : sheetMode === 'report' ? (
-          <ReportSheetContent
-            isSubmitting={
-              eventReportTarget === 'user'
-                ? reportMember.isPending
-                : reportEvent.isPending
-            }
-            maxContentHeight={maxContentHeight}
-            onSubmit={handleEventReportSubmit}
-            title={
-              eventReportTarget === 'user' && event
-                ? `Report ${event.author.name}`
-                : 'Report event'
-            }
-          />
-        ) : sheetMode === 'confirm-cancel' ? (
-          <View className="gap-1 px-[18px] pb-4 pt-1">
-            <Text className="font-inter-bold text-[17px] text-content">
-              Cancel this event?
-            </Text>
-            <Text className="pb-3 text-text-muted" size="sm">
-              This can’t be undone. Everyone who joined will lose their spot.
-            </Text>
-            <HStack className="justify-end gap-3">
-              <Pressable onPress={() => setSheetMode(null)}>
-                <Text className="font-inter-semibold text-[15px] text-content">
-                  Keep event
-                </Text>
-              </Pressable>
-              <Pressable onPress={handleCancelEvent}>
-                <Text
-                  className="font-inter-semibold text-[15px]"
-                  style={{ color: 'rgb(231,0,11)' }}
-                >
-                  Cancel event
-                </Text>
-              </Pressable>
-            </HStack>
-          </View>
-        ) : (
-          <View className="gap-1 px-[18px] pb-2">
-            {isOwnEvent ? (
-              <>
-                <EventMenuRow
-                  icon="Edit"
-                  label="Edit event"
-                  onPress={() => setSheetMode('edit')}
-                />
-                <Divider />
-                <EventMenuRow
-                  destructive
-                  icon="AlertCircle"
-                  label="Cancel event"
-                  onPress={() => setSheetMode('confirm-cancel')}
-                />
-              </>
-            ) : (
-              <>
-                <EventMenuRow
-                  icon="EyeOff"
-                  label="Block this neighbour"
-                  onPress={() => {
-                    setSheetMode(null);
-                    if (!event) return;
-                    blockUser.mutate(event.author.id, {
-                      onError: () =>
-                        showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () =>
-                        showToast(`Blocked ${event.author.name}`),
-                    });
-                  }}
-                />
-                <Divider />
-                <EventMenuRow
-                  destructive
-                  icon="Flag"
-                  label="Report this user"
-                  onPress={openReportEventAuthor}
-                />
-                <Divider />
-                <EventMenuRow
-                  destructive
-                  icon="AlertCircle"
-                  label="Report event"
-                  onPress={openReportEvent}
-                />
-              </>
-            )}
-          </View>
-        )}
+                )
+              }
+              submitLabel="Save"
+            />
+          ) : sheetMode === 'report' ? (
+            <ReportSheetContent
+              isSubmitting={
+                eventReportTarget === 'user'
+                  ? reportMember.isPending
+                  : reportEvent.isPending
+              }
+              maxContentHeight={maxContentHeight}
+              onSubmit={handleEventReportSubmit}
+              title={
+                eventReportTarget === 'user' && event
+                  ? `Report ${event.author.name}`
+                  : 'Report event'
+              }
+            />
+          ) : sheetMode === 'confirm-cancel' ? (
+            <View className="gap-1 px-[18px] pb-4 pt-1">
+              <Text className="font-inter-bold text-[17px] text-content">
+                Cancel this event?
+              </Text>
+              <Text className="pb-3 text-text-muted" size="sm">
+                This can’t be undone. Everyone who joined will lose their spot.
+              </Text>
+              <HStack className="justify-end gap-3">
+                <Pressable onPress={() => setSheetMode(null)}>
+                  <Text className="font-inter-semibold text-[15px] text-content">
+                    Keep event
+                  </Text>
+                </Pressable>
+                <Pressable onPress={handleCancelEvent}>
+                  <Text
+                    className="font-inter-semibold text-[15px]"
+                    style={{ color: 'rgb(231,0,11)' }}
+                  >
+                    Cancel event
+                  </Text>
+                </Pressable>
+              </HStack>
+            </View>
+          ) : (
+            <View className="gap-1 px-[18px] pb-2">
+              {isOwnEvent ? (
+                <>
+                  <EventMenuRow
+                    icon="Edit"
+                    label="Edit event"
+                    onPress={() => setSheetMode('edit')}
+                  />
+                  <Divider />
+                  <EventMenuRow
+                    destructive
+                    icon="AlertCircle"
+                    label="Cancel event"
+                    onPress={() => setSheetMode('confirm-cancel')}
+                  />
+                </>
+              ) : (
+                <>
+                  <EventMenuRow
+                    icon="EyeOff"
+                    label="Block this neighbour"
+                    onPress={() => {
+                      setSheetMode(null);
+                      if (!event) return;
+                      blockUser.mutate(event.author.id, {
+                        onError: () =>
+                          showToast(
+                            'Couldn’t block this neighbour. Try again.',
+                          ),
+                        onSuccess: () =>
+                          showToast(`Blocked ${event.author.name}`),
+                      });
+                    }}
+                  />
+                  <Divider />
+                  <EventMenuRow
+                    destructive
+                    icon="Flag"
+                    label="Report this user"
+                    onPress={openReportEventAuthor}
+                  />
+                  <Divider />
+                  <EventMenuRow
+                    destructive
+                    icon="AlertCircle"
+                    label="Report event"
+                    onPress={openReportEvent}
+                  />
+                </>
+              )}
+            </View>
+          )
+        }
       </Sheet>
 
       {/* Attendee list */}
@@ -785,101 +839,160 @@ export function EventDetailScreen({
         </VStack>
       </Sheet>
 
+      {/* Interested list -- mirrors the Attendee list Sheet above exactly */}
+      <Sheet onClose={() => setInterestedOpen(false)} visible={interestedOpen}>
+        <VStack className="gap-1 px-[18px] pb-4" space="xs">
+          <Text className="pb-2 font-inter-bold text-[17px] text-content">
+            {event?.interestedCount ?? 0} interested
+          </Text>
+          {interestedPeople.isPending ? (
+            <View className="items-center py-8">
+              <Spinner />
+            </View>
+          ) : interestedList.length > 0 ? (
+            <ScrollView
+              contentContainerClassName="gap-1"
+              onScroll={onInterestedScroll}
+              scrollEventThrottle={100}
+              style={{ maxHeight: 420 }}
+            >
+              {interestedList.map((person) => (
+                <Pressable
+                  accessibilityLabel={`Open ${person.name}'s profile`}
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-3 py-2.5"
+                  key={person.id}
+                  onPress={() => {
+                    setInterestedOpen(false);
+                    openProfile(person.id, person.name);
+                  }}
+                >
+                  <Avatar
+                    name={person.name}
+                    size="sm"
+                    src={person.avatarUrl ?? undefined}
+                  />
+                  <Text className="font-inter-medium text-[14px] text-content">
+                    {person.name}
+                  </Text>
+                </Pressable>
+              ))}
+              {interestedPeople.isFetchingNextPage && (
+                <View
+                  className="items-center py-3"
+                  testID="interested-load-more"
+                >
+                  <Spinner size="small" />
+                </View>
+              )}
+            </ScrollView>
+          ) : (
+            <Text className="py-2 text-text-muted" size="sm">
+              No one has marked interest yet.
+            </Text>
+          )}
+        </VStack>
+      </Sheet>
+
       {/* Comment actions / delete confirmation -- one Sheet, content switches by mode */}
       <Sheet onClose={closeCommentActions} visible={commentSheetMode !== null}>
-        {(maxContentHeight) => commentSheetMode === 'report' ? (
-          <ReportSheetContent
-            isSubmitting={
-              commentReportTarget === 'user'
-                ? reportMember.isPending
-                : reportComment.isPending
-            }
-            maxContentHeight={maxContentHeight}
-            onSubmit={handleCommentReportSubmit}
-            title={
-              commentReportTarget === 'user' && actionsFor
-                ? `Report ${actionsFor.author.name}`
-                : 'Report comment'
-            }
-          />
-        ) : commentSheetMode === 'confirm-delete' ? (
-          <View className="gap-1 px-[18px] pb-4 pt-1">
-            <Text className="font-inter-bold text-[17px] text-content">
-              Delete comment?
-            </Text>
-            <Text className="pb-3 text-text-muted" size="sm">
-              This can’t be undone.
-            </Text>
-            <HStack className="justify-end gap-3">
-              <Pressable onPress={() => setCommentSheetMode(null)}>
-                <Text className="font-inter-semibold text-[15px] text-content">
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable onPress={confirmDeleteComment}>
-                <Text
-                  className="font-inter-semibold text-[15px]"
-                  style={{ color: 'rgb(231,0,11)' }}
-                >
-                  Delete
-                </Text>
-              </Pressable>
-            </HStack>
-          </View>
-        ) : (
-          <View className="gap-1 px-[18px] pb-2">
-            {actionsFor && actionsFor.author.id === userId ? (
-              <>
-                <EventMenuRow
-                  icon="Edit"
-                  label="Edit comment"
-                  onPress={() =>
-                    actionsFor && handleStartEditComment(actionsFor)
-                  }
-                />
-                <Divider />
-                <EventMenuRow
-                  destructive
-                  icon="AlertCircle"
-                  label="Delete comment"
-                  onPress={handleRequestDeleteComment}
-                />
-              </>
-            ) : (
-              <>
-                <EventMenuRow
-                  icon="EyeOff"
-                  label="Block this neighbour"
-                  onPress={() => {
-                    const target = actionsFor;
-                    closeCommentActions();
-                    if (!target) return;
-                    blockUser.mutate(target.author.id, {
-                      onError: () =>
-                        showToast('Couldn’t block this neighbour. Try again.'),
-                      onSuccess: () =>
-                        showToast(`Blocked ${target.author.name}`),
-                    });
-                  }}
-                />
-                <Divider />
-                <EventMenuRow
-                  destructive
-                  icon="Flag"
-                  label="Report this user"
-                  onPress={openReportCommentAuthor}
-                />
-                <Divider />
-                <EventMenuRow
-                  destructive
-                  icon="AlertCircle"
-                  label="Report comment"
-                  onPress={openReportComment}
-                />
-              </>
-            )}
-          </View>
-        )}
+        {(maxContentHeight) =>
+          commentSheetMode === 'report' ? (
+            <ReportSheetContent
+              isSubmitting={
+                commentReportTarget === 'user'
+                  ? reportMember.isPending
+                  : reportComment.isPending
+              }
+              maxContentHeight={maxContentHeight}
+              onSubmit={handleCommentReportSubmit}
+              title={
+                commentReportTarget === 'user' && actionsFor
+                  ? `Report ${actionsFor.author.name}`
+                  : 'Report comment'
+              }
+            />
+          ) : commentSheetMode === 'confirm-delete' ? (
+            <View className="gap-1 px-[18px] pb-4 pt-1">
+              <Text className="font-inter-bold text-[17px] text-content">
+                Delete comment?
+              </Text>
+              <Text className="pb-3 text-text-muted" size="sm">
+                This can’t be undone.
+              </Text>
+              <HStack className="justify-end gap-3">
+                <Pressable onPress={() => setCommentSheetMode(null)}>
+                  <Text className="font-inter-semibold text-[15px] text-content">
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable onPress={confirmDeleteComment}>
+                  <Text
+                    className="font-inter-semibold text-[15px]"
+                    style={{ color: 'rgb(231,0,11)' }}
+                  >
+                    Delete
+                  </Text>
+                </Pressable>
+              </HStack>
+            </View>
+          ) : (
+            <View className="gap-1 px-[18px] pb-2">
+              {actionsFor && actionsFor.author.id === userId ? (
+                <>
+                  <EventMenuRow
+                    icon="Edit"
+                    label="Edit comment"
+                    onPress={() =>
+                      actionsFor && handleStartEditComment(actionsFor)
+                    }
+                  />
+                  <Divider />
+                  <EventMenuRow
+                    destructive
+                    icon="AlertCircle"
+                    label="Delete comment"
+                    onPress={handleRequestDeleteComment}
+                  />
+                </>
+              ) : (
+                <>
+                  <EventMenuRow
+                    icon="EyeOff"
+                    label="Block this neighbour"
+                    onPress={() => {
+                      const target = actionsFor;
+                      closeCommentActions();
+                      if (!target) return;
+                      blockUser.mutate(target.author.id, {
+                        onError: () =>
+                          showToast(
+                            'Couldn’t block this neighbour. Try again.',
+                          ),
+                        onSuccess: () =>
+                          showToast(`Blocked ${target.author.name}`),
+                      });
+                    }}
+                  />
+                  <Divider />
+                  <EventMenuRow
+                    destructive
+                    icon="Flag"
+                    label="Report this user"
+                    onPress={openReportCommentAuthor}
+                  />
+                  <Divider />
+                  <EventMenuRow
+                    destructive
+                    icon="AlertCircle"
+                    label="Report comment"
+                    onPress={openReportComment}
+                  />
+                </>
+              )}
+            </View>
+          )
+        }
       </Sheet>
 
       {toast ? (

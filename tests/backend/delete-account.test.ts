@@ -4,18 +4,47 @@ import { DELETE as deleteAccountRoute } from '../../app/api/me/account+api';
 import { deleteAccount } from '../../src/backend/account';
 import { listBookmarks, toggleBookmark } from '../../src/backend/bookmarks';
 import { createComment, listComments } from '../../src/backend/comments';
-import { createEventComment, listEventComments } from '../../src/backend/event-comments';
-import { createEvent, getEventsView, toggleJoin } from '../../src/backend/events';
+import {
+  createEventComment,
+  listEventComments,
+} from '../../src/backend/event-comments';
+import {
+  createEvent,
+  getEventsView,
+  toggleInterested,
+  toggleJoin,
+} from '../../src/backend/events';
 import { createPost, togglePin, toggleLike } from '../../src/backend/forum';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
-import { createMissionComment, listMissionComments } from '../../src/backend/mission-comments';
-import { checkIn, createMission, getMissionsView } from '../../src/backend/missions';
+import {
+  createMissionComment,
+  listMissionComments,
+} from '../../src/backend/mission-comments';
+import {
+  checkIn,
+  createMission,
+  getMissionsView,
+} from '../../src/backend/missions';
 import { getMutedUserIds, toggleMute } from '../../src/backend/mutes';
-import { createPetitionComment, listPetitionComments } from '../../src/backend/petition-comments';
-import { listPetitionsPage, toggleSignature } from '../../src/backend/petitions';
-import { createServiceReview, listServiceReviews } from '../../src/backend/service-reviews';
+import {
+  createPetitionComment,
+  listPetitionComments,
+} from '../../src/backend/petition-comments';
+import {
+  listPetitionsPage,
+  toggleSignature,
+} from '../../src/backend/petitions';
+import {
+  createServiceReview,
+  listServiceReviews,
+} from '../../src/backend/service-reviews';
 import { createServiceListing } from '../../src/backend/services';
-import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
+import {
+  DEMO_USER_ID,
+  getState,
+  resetStore,
+  setState,
+} from '../../src/backend/store';
 import type { StoredPetition } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -107,7 +136,10 @@ describe('deleteAccount (memory)', () => {
       succeededAt: null,
       title: 'Delete-me test petition',
     };
-    setState((current) => ({ ...current, petitions: [...current.petitions, ownPetition] }));
+    setState((current) => ({
+      ...current,
+      petitions: [...current.petitions, ownPetition],
+    }));
 
     // Activity on OTHER people's content.
     const commentOnOthersPost = await createComment(ctx(TEST_USER), 'post-1', {
@@ -115,34 +147,46 @@ describe('deleteAccount (memory)', () => {
     });
     if (!commentOnOthersPost.ok) throw new Error('setup failed: comment');
     await toggleLike(ctx(TEST_USER), 'post-1');
-    const commentOnOthersEvent = await createEventComment(ctx(TEST_USER), 'event-1', {
-      body: 'See you there!',
-    });
-    if (!commentOnOthersEvent.ok) throw new Error('setup failed: event comment');
+    const commentOnOthersEvent = await createEventComment(
+      ctx(TEST_USER),
+      'event-1',
+      {
+        body: 'See you there!',
+      },
+    );
+    if (!commentOnOthersEvent.ok)
+      throw new Error('setup failed: event comment');
     await toggleJoin(ctx(TEST_USER), 'event-2');
+    await toggleInterested(ctx(TEST_USER), 'event-2');
     const commentOnOthersMission = await createMissionComment(
       ctx(TEST_USER),
       'mission-1',
       { body: 'Good luck everyone' },
     );
-    if (!commentOnOthersMission.ok) throw new Error('setup failed: mission comment');
+    if (!commentOnOthersMission.ok)
+      throw new Error('setup failed: mission comment');
     await checkIn(ctx(TEST_USER), 'mission-1');
     const ownReviewOnOthersListing = await createServiceReview(
       ctx(TEST_USER),
       'service-1',
       { body: 'Would recommend.', rating: 4 },
     );
-    if (!ownReviewOnOthersListing.ok) throw new Error('setup failed: own review');
+    if (!ownReviewOnOthersListing.ok)
+      throw new Error('setup failed: own review');
     const commentOnOthersPetition = await createPetitionComment(
       ctx(TEST_USER),
       'petition-marina-lighting',
       { body: 'Signed and commenting!' },
     );
-    if (!commentOnOthersPetition.ok) throw new Error('setup failed: petition comment');
+    if (!commentOnOthersPetition.ok)
+      throw new Error('setup failed: petition comment');
     await toggleSignature(ctx(TEST_USER), 'petition-marina-lighting');
     await toggleMute(ctx(TEST_USER), 'user-mia');
     await toggleMute(ctx('user-mia'), TEST_USER);
-    await toggleBookmark(ctx(TEST_USER), { targetId: 'post-1', targetType: 'post' });
+    await toggleBookmark(ctx(TEST_USER), {
+      targetId: 'post-1',
+      targetType: 'post',
+    });
     await togglePin(ctx('user-mia'), ownPost.post.id);
 
     // Sanity: everything set up before deletion actually landed.
@@ -159,9 +203,13 @@ describe('deleteAccount (memory)', () => {
     expect(getState().users.some((user) => user.id === TEST_USER)).toBe(false);
 
     // Own content the user authored outright is deleted.
-    expect(getState().posts.some((post) => post.id === ownPost.post.id)).toBe(false);
+    expect(getState().posts.some((post) => post.id === ownPost.post.id)).toBe(
+      false,
+    );
     expect(
-      getState().serviceListings.some((listing) => listing.id === ownListing.listing.id),
+      getState().serviceListings.some(
+        (listing) => listing.id === ownListing.listing.id,
+      ),
     ).toBe(false);
     // ...and its cascade (the review someone else left) went with it.
     expect(
@@ -188,6 +236,9 @@ describe('deleteAccount (memory)', () => {
     ).toBe(false);
     expect(
       getState().events.find((event) => event.id === 'event-2')?.joinedBy,
+    ).not.toContain(TEST_USER);
+    expect(
+      getState().events.find((event) => event.id === 'event-2')?.interestedBy,
     ).not.toContain(TEST_USER);
     expect(
       (await listMissionComments(ctx(), 'mission-1')).some(
@@ -225,7 +276,9 @@ describe('deleteAccount (memory)', () => {
     // (events/missions others may have joined/progressed) is orphaned, not
     // deleted — it stays visible with a "Former member" author.
     const eventsAfter = await getEventsView(ctx());
-    const orphanedEvent = eventsAfter.events.find((event) => event.id === ownEvent.event.id);
+    const orphanedEvent = eventsAfter.events.find(
+      (event) => event.id === ownEvent.event.id,
+    );
     expect(orphanedEvent).toBeDefined();
     expect(orphanedEvent?.author).toEqual({
       avatarUrl: null,
@@ -246,7 +299,10 @@ describe('deleteAccount (memory)', () => {
       name: 'Former member',
     });
 
-    const petitionsAfter = await listPetitionsPage(ctx(), { limit: 50, status: 'open' });
+    const petitionsAfter = await listPetitionsPage(ctx(), {
+      limit: 50,
+      status: 'open',
+    });
     const orphanedPetition = petitionsAfter.petitions.find(
       (petition) => petition.id === ownPetition.id,
     );
@@ -274,16 +330,20 @@ describe('deleteAccount (memory)', () => {
   });
 
   test('is a no-op-safe call for a brand-new user with nothing to clean up', async () => {
-    await expect(deleteAccount(ctx('user-nothing-owned'))).resolves.toBeUndefined();
-    expect(getState().users.some((user) => user.id === 'user-nothing-owned')).toBe(
-      false,
-    );
+    await expect(
+      deleteAccount(ctx('user-nothing-owned')),
+    ).resolves.toBeUndefined();
+    expect(
+      getState().users.some((user) => user.id === 'user-nothing-owned'),
+    ).toBe(false);
   });
 });
 
 describe('DELETE /api/me/account', () => {
   test('deletes the demo user and returns a confirmation', async () => {
-    expect(getState().users.some((user) => user.id === DEMO_USER_ID)).toBe(true);
+    expect(getState().users.some((user) => user.id === DEMO_USER_ID)).toBe(
+      true,
+    );
 
     const response = await deleteAccountRoute(
       new Request('http://localhost/api/me/account', { method: 'DELETE' }),
@@ -291,6 +351,8 @@ describe('DELETE /api/me/account', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ deleted: true });
-    expect(getState().users.some((user) => user.id === DEMO_USER_ID)).toBe(false);
+    expect(getState().users.some((user) => user.id === DEMO_USER_ID)).toBe(
+      false,
+    );
   });
 });

@@ -28,6 +28,10 @@ export interface CommunityEvent {
   readonly going: number;
   readonly joined: boolean;
   readonly attendees: readonly PersonRef[];
+  // "I'm interested" -- separate from going/joined/attendees, see
+  // src/backend/events/types.ts's own WHY.
+  readonly interestedCount: number;
+  readonly interested: boolean;
   readonly editedAt: string | null;
 }
 
@@ -57,6 +61,12 @@ export interface ToggleJoinResult {
   readonly id: string;
   readonly going: number;
   readonly joined: boolean;
+}
+
+export interface ToggleInterestedResult {
+  readonly id: string;
+  readonly interestedCount: number;
+  readonly interested: boolean;
 }
 
 export interface NewEventMediaInput {

@@ -7,14 +7,19 @@ import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
-import { uploadReportEvidence, type ValidReportSubmission } from '../reports/report-submission';
+import {
+  uploadReportEvidence,
+  type ValidReportSubmission,
+} from '../reports/report-submission';
 import type {
   CommunityEvent,
   CreatedEventResult,
   EventAttendeesPage,
+  EventInterestedPage,
   EventMedia,
   EventsPage,
   EventsView,
+  InterestedResult,
   JoinResult,
   MyEventsPage,
   PersonRef,
@@ -63,6 +68,11 @@ interface JoinRow {
   readonly user_id: string;
 }
 
+interface InterestRow {
+  readonly event_id: string;
+  readonly user_id: string;
+}
+
 type UploadEventMediaResult =
   | { readonly ok: true; readonly media: readonly EventMedia[] }
   | { readonly ok: false; readonly uploaded: readonly EventMedia[] };
@@ -102,15 +112,23 @@ const toCommunityEvent = (
   joinedIds: readonly string[],
   userId: string,
   nameById: ReadonlyMap<string, PersonLookup>,
+  interestedIds: readonly string[] = [],
 ): CommunityEvent => {
-  const attendeeIds = uniqueIds([
-    ...row.seed_attendee_ids,
-    ...joinedIds,
-  ]).slice(0, ATTENDEE_LIMIT);
+  const attendeeIds = uniqueIds([...row.seed_attendee_ids, ...joinedIds]).slice(
+    0,
+    ATTENDEE_LIMIT,
+  );
   const attendees: readonly PersonRef[] = attendeeIds.flatMap((id) => {
     const person = nameById.get(id);
     return person
-      ? [{ avatarUrl: person.avatarUrl, id, isAdmin: person.isAdmin, name: person.name }]
+      ? [
+          {
+            avatarUrl: person.avatarUrl,
+            id,
+            isAdmin: person.isAdmin,
+            name: person.name,
+          },
+        ]
       : [];
   });
   const author = nameById.get(row.created_by);
@@ -137,6 +155,8 @@ const toCommunityEvent = (
     going: row.going_base + joinedIds.length,
     joined: joinedIds.includes(userId),
     attendees,
+    interestedCount: interestedIds.length,
+    interested: interestedIds.includes(userId),
     editedAt: row.edited_at,
   };
 };
@@ -221,7 +241,7 @@ export async function getEventsViewSupabase(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<EventsView> {
-  const [weekRes, eventsRes, joinsRes] = await Promise.all([
+  const [weekRes, eventsRes, joinsRes, interestsRes] = await Promise.all([
     supabase.from('week_days').select(WEEK_SELECT).order('date', {
       ascending: true,
     }),
@@ -231,18 +251,27 @@ export async function getEventsViewSupabase(
       .order('featured', { ascending: false })
       .order('starts_at', { ascending: true }),
     supabase.from('event_joins').select('event_id,user_id'),
+    supabase.from('event_interests').select('event_id,user_id'),
   ]);
   throwIfSupabaseError(weekRes.error, 'load event week');
   throwIfSupabaseError(eventsRes.error, 'load events');
   throwIfSupabaseError(joinsRes.error, 'load event joins');
+  throwIfSupabaseError(interestsRes.error, 'load event interests');
 
   const weekRows = (weekRes.data ?? []) as unknown as WeekDayRow[];
   const allEventRows = (eventsRes.data ?? []) as unknown as EventRow[];
   const eventRows = allEventRows.filter((row) => isUpcoming(row.starts_at));
   const joinRows = (joinsRes.data ?? []) as unknown as JoinRow[];
+  const interestRows = (interestsRes.data ?? []) as unknown as InterestRow[];
 
   const joinedByEvent = (eventId: string): readonly string[] =>
-    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+    joinRows
+      .filter((row) => row.event_id === eventId)
+      .map((row) => row.user_id);
+  const interestedByEvent = (eventId: string): readonly string[] =>
+    interestRows
+      .filter((row) => row.event_id === eventId)
+      .map((row) => row.user_id);
 
   const neededIds = uniqueIds([
     ...eventRows.map((row) => row.created_by),
@@ -268,7 +297,13 @@ export async function getEventsViewSupabase(
   return {
     week: weekRows.map(toWeekDay),
     events: eventRows.map((row) =>
-      toCommunityEvent(row, joinedByEvent(row.id), userId, nameById),
+      toCommunityEvent(
+        row,
+        joinedByEvent(row.id),
+        userId,
+        nameById,
+        interestedByEvent(row.id),
+      ),
     ),
   };
 }
@@ -287,8 +322,10 @@ export async function getEventDatesSupabase(
     .map((row) => row.starts_at.slice(0, 10));
 }
 
-const matchesEventDate = (event: CommunityEvent, date: string | null): boolean =>
-  !date || event.startsAt.slice(0, 10) === date;
+const matchesEventDate = (
+  event: CommunityEvent,
+  date: string | null,
+): boolean => !date || event.startsAt.slice(0, 10) === date;
 
 // The paginated, optionally date-filtered counterpart to
 // getEventsViewSupabase, mirroring getMyEventsViewSupabase's precedent
@@ -305,17 +342,19 @@ export async function listEventsPageSupabase(
   limit: number,
   cursor: string | null,
 ): Promise<EventsPage> {
-  const [eventsRes, joinsRes, mutedUserIds] = await Promise.all([
+  const [eventsRes, joinsRes, interestsRes, mutedUserIds] = await Promise.all([
     supabase
       .from('events')
       .select(EVENT_SELECT)
       .order('featured', { ascending: false })
       .order('starts_at', { ascending: true }),
     supabase.from('event_joins').select('event_id,user_id'),
+    supabase.from('event_interests').select('event_id,user_id'),
     getMutedUserIdsSupabase(supabase, userId),
   ]);
   throwIfSupabaseError(eventsRes.error, 'load events');
   throwIfSupabaseError(joinsRes.error, 'load event joins');
+  throwIfSupabaseError(interestsRes.error, 'load event interests');
 
   const mutedSet = new Set(mutedUserIds);
   const allEventRows = (eventsRes.data ?? []) as unknown as EventRow[];
@@ -323,9 +362,16 @@ export async function listEventsPageSupabase(
     .filter((row) => isUpcoming(row.starts_at))
     .filter((row) => !mutedSet.has(row.created_by));
   const joinRows = (joinsRes.data ?? []) as unknown as JoinRow[];
+  const interestRows = (interestsRes.data ?? []) as unknown as InterestRow[];
 
   const joinedByEvent = (eventId: string): readonly string[] =>
-    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+    joinRows
+      .filter((row) => row.event_id === eventId)
+      .map((row) => row.user_id);
+  const interestedByEvent = (eventId: string): readonly string[] =>
+    interestRows
+      .filter((row) => row.event_id === eventId)
+      .map((row) => row.user_id);
 
   const neededIds = uniqueIds([
     ...eventRows.map((row) => row.created_by),
@@ -349,7 +395,15 @@ export async function listEventsPageSupabase(
   );
 
   const filtered = eventRows
-    .map((row) => toCommunityEvent(row, joinedByEvent(row.id), userId, nameById))
+    .map((row) =>
+      toCommunityEvent(
+        row,
+        joinedByEvent(row.id),
+        userId,
+        nameById,
+        interestedByEvent(row.id),
+      ),
+    )
     .filter((event) => matchesEventDate(event, date))
     .map((event) => ({
       event,
@@ -386,9 +440,9 @@ export async function getMyEventsViewSupabase(
   throwIfSupabaseError(myJoinsRes.error, 'load my event joins');
 
   const createdRows = (createdRes.data ?? []) as unknown as EventRow[];
-  const joinedEventIds = ((myJoinsRes.data ?? []) as { event_id: string }[]).map(
-    (row) => row.event_id,
-  );
+  const joinedEventIds = (
+    (myJoinsRes.data ?? []) as { event_id: string }[]
+  ).map((row) => row.event_id);
   const createdIds = new Set(createdRows.map((row) => row.id));
   const idsToFetch = joinedEventIds.filter((id) => !createdIds.has(id));
 
@@ -405,13 +459,36 @@ export async function getMyEventsViewSupabase(
   const eventRows = [...createdRows, ...joinedRows];
   const eventIds = eventRows.map((row) => row.id);
 
-  const { data: joinsData, error: joinsError } = eventIds.length
-    ? await supabase.from('event_joins').select('event_id,user_id').in('event_id', eventIds)
-    : { data: [] as JoinRow[], error: null };
-  throwIfSupabaseError(joinsError, 'load event joins for my events');
-  const joinRows = (joinsData ?? []) as unknown as JoinRow[];
+  const [joinsRes, interestsRes] = eventIds.length
+    ? await Promise.all([
+        supabase
+          .from('event_joins')
+          .select('event_id,user_id')
+          .in('event_id', eventIds),
+        supabase
+          .from('event_interests')
+          .select('event_id,user_id')
+          .in('event_id', eventIds),
+      ])
+    : [
+        { data: [] as JoinRow[], error: null },
+        { data: [] as InterestRow[], error: null },
+      ];
+  throwIfSupabaseError(joinsRes.error, 'load event joins for my events');
+  throwIfSupabaseError(
+    interestsRes.error,
+    'load event interests for my events',
+  );
+  const joinRows = (joinsRes.data ?? []) as unknown as JoinRow[];
+  const interestRows = (interestsRes.data ?? []) as unknown as InterestRow[];
   const joinedByEvent = (eventId: string): readonly string[] =>
-    joinRows.filter((row) => row.event_id === eventId).map((row) => row.user_id);
+    joinRows
+      .filter((row) => row.event_id === eventId)
+      .map((row) => row.user_id);
+  const interestedByEvent = (eventId: string): readonly string[] =>
+    interestRows
+      .filter((row) => row.event_id === eventId)
+      .map((row) => row.user_id);
 
   const neededIds = uniqueIds([
     ...eventRows.map((row) => row.created_by),
@@ -419,7 +496,10 @@ export async function getMyEventsViewSupabase(
     ...joinRows.map((row) => row.user_id),
   ]);
   const { data: userData, error: userError } = neededIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', [...neededIds])
+    ? await supabase
+        .from('app_users')
+        .select('id,name,avatar_url,is_admin')
+        .in('id', [...neededIds])
     : { data: [], error: null };
   throwIfSupabaseError(userError, 'load my events attendees');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -442,7 +522,13 @@ export async function getMyEventsViewSupabase(
 
   return {
     events: page.items.map((item) =>
-      toCommunityEvent(item.row, joinedByEvent(item.row.id), userId, nameById),
+      toCommunityEvent(
+        item.row,
+        joinedByEvent(item.row.id),
+        userId,
+        nameById,
+        interestedByEvent(item.row.id),
+      ),
     ),
     nextCursor: page.nextCursor,
   };
@@ -455,10 +541,11 @@ export async function getMyEventsViewSupabase(
 // platform's per-request cap. Kept local rather than folded into the shared
 // EVENT_SELECT/EventRow (used by several other functions) to keep this fix
 // scoped to the one call site that was actually observed hitting that cap.
-const EVENTS_BY_IDS_SELECT = `${EVENT_SELECT},event_joins(user_id)`;
+const EVENTS_BY_IDS_SELECT = `${EVENT_SELECT},event_joins(user_id),event_interests(user_id)`;
 
 interface EventRowWithJoins extends EventRow {
   readonly event_joins: readonly { readonly user_id: string }[];
+  readonly event_interests: readonly { readonly user_id: string }[];
 }
 
 // Fetches specific events by id — used to hydrate bookmarks, which can point
@@ -488,16 +575,25 @@ export async function getEventsByIdsSupabase(
     (eventRows.find((row) => row.id === eventId)?.event_joins ?? []).map(
       (row) => row.user_id,
     );
+  const interestedByEvent = (eventId: string): readonly string[] =>
+    (eventRows.find((row) => row.id === eventId)?.event_interests ?? []).map(
+      (row) => row.user_id,
+    );
 
   const neededIds = includeAttendeeDetails
     ? uniqueIds([
         ...eventRows.map((row) => row.created_by),
         ...eventRows.flatMap((row) => [...row.seed_attendee_ids]),
-        ...eventRows.flatMap((row) => row.event_joins.map((join) => join.user_id)),
+        ...eventRows.flatMap((row) =>
+          row.event_joins.map((join) => join.user_id),
+        ),
       ])
     : [];
   const { data: userData, error: userError } = neededIds.length
-    ? await supabase.from('app_users').select('id,name,avatar_url,is_admin').in('id', [...neededIds])
+    ? await supabase
+        .from('app_users')
+        .select('id,name,avatar_url,is_admin')
+        .in('id', [...neededIds])
     : { data: [], error: null };
   throwIfSupabaseError(userError, 'load bookmarked events attendees');
   const nameById: ReadonlyMap<string, PersonLookup> = new Map(
@@ -512,7 +608,13 @@ export async function getEventsByIdsSupabase(
   );
 
   return eventRows.map((row) =>
-    toCommunityEvent(row, joinedByEvent(row.id), userId, nameById),
+    toCommunityEvent(
+      row,
+      joinedByEvent(row.id),
+      userId,
+      nameById,
+      interestedByEvent(row.id),
+    ),
   );
 }
 
@@ -555,9 +657,7 @@ export async function getEventAttendeesSupabase(
     .select('id,name,avatar_url,is_admin')
     .in('id', [...attendeeIds]);
   throwIfSupabaseError(userError, 'load event attendee users');
-  const byId = new Map(
-    (userData ?? []).map((row) => [row.id as string, row]),
-  );
+  const byId = new Map((userData ?? []).map((row) => [row.id as string, row]));
   return attendeeIds.flatMap((id) => {
     const row = byId.get(id);
     return row
@@ -599,6 +699,82 @@ export async function getEventAttendeesPageSupabase(
 
   return {
     attendees: page.items.map((item) => item.ref),
+    nextCursor: page.nextCursor,
+  };
+}
+
+// Uncapped roster for the "N interested" list modal -- mirrors
+// getEventAttendeesSupabase exactly, reading event_interests instead of
+// event_joins and with no seed/baseline ids (interest has no seeded data,
+// unlike attendees' seed_attendee_ids).
+export async function getEventInterestedSupabase(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<readonly PersonRef[] | null> {
+  const { data: eventRow, error: eventError } = await supabase
+    .from('events')
+    .select('id')
+    .eq('id', eventId)
+    .maybeSingle();
+  throwIfSupabaseError(eventError, 'load event');
+  if (!eventRow) {
+    return null;
+  }
+
+  const { data: interestsData, error: interestsError } = await supabase
+    .from('event_interests')
+    .select('user_id')
+    .eq('event_id', eventId);
+  throwIfSupabaseError(interestsError, 'load event interests');
+  const interestedIds = uniqueIds(
+    ((interestsData ?? []) as { user_id: string }[]).map((row) => row.user_id),
+  );
+  if (interestedIds.length === 0) {
+    return [];
+  }
+
+  const { data: userData, error: userError } = await supabase
+    .from('app_users')
+    .select('id,name,avatar_url,is_admin')
+    .in('id', [...interestedIds]);
+  throwIfSupabaseError(userError, 'load event interested users');
+  const byId = new Map((userData ?? []).map((row) => [row.id as string, row]));
+  return interestedIds.flatMap((id) => {
+    const row = byId.get(id);
+    return row
+      ? [
+          {
+            avatarUrl: (row.avatar_url as string | null) ?? null,
+            id,
+            isAdmin: Boolean(row.is_admin),
+            name: row.name as string,
+          },
+        ]
+      : [];
+  });
+}
+
+// The paginated counterpart to getEventInterestedSupabase, mirroring
+// getEventAttendeesPageSupabase's own precedent exactly.
+export async function getEventInterestedPageSupabase(
+  supabase: SupabaseClient,
+  eventId: string,
+  limit: number,
+  cursor: string | null,
+): Promise<EventInterestedPage | null> {
+  const full = await getEventInterestedSupabase(supabase, eventId);
+  if (full === null) {
+    return null;
+  }
+  const wrapped = full.map((ref, index) => ({
+    id: ref.id,
+    ref,
+    sortKey: String(MAX_ATTENDEE_POSITION - index).padStart(6, '0'),
+  }));
+  const page = paginateInMemory(wrapped, limit, cursor);
+
+  return {
+    interested: page.items.map((item) => item.ref),
     nextCursor: page.nextCursor,
   };
 }
@@ -754,16 +930,29 @@ export async function updateEventSupabase(
   );
 
   const row = data as unknown as EventRow;
-  const { data: joinRows, error: joinError } = await supabase
-    .from('event_joins')
-    .select('event_id,user_id')
-    .eq('event_id', eventId);
-  throwIfSupabaseError(joinError, 'load event joins');
-  const joinedIds = ((joinRows ?? []) as unknown as JoinRow[]).map(
+  const [joinsRes, interestsRes] = await Promise.all([
+    supabase
+      .from('event_joins')
+      .select('event_id,user_id')
+      .eq('event_id', eventId),
+    supabase
+      .from('event_interests')
+      .select('event_id,user_id')
+      .eq('event_id', eventId),
+  ]);
+  throwIfSupabaseError(joinsRes.error, 'load event joins');
+  throwIfSupabaseError(interestsRes.error, 'load event interests');
+  const joinedIds = ((joinsRes.data ?? []) as unknown as JoinRow[]).map(
     (join) => join.user_id,
   );
+  const interestedIds = (
+    (interestsRes.data ?? []) as unknown as InterestRow[]
+  ).map((row) => row.user_id);
   const nameById = await nameMapFor(supabase, userId);
-  return { ok: true, event: toCommunityEvent(row, joinedIds, userId, nameById) };
+  return {
+    ok: true,
+    event: toCommunityEvent(row, joinedIds, userId, nameById, interestedIds),
+  };
 }
 
 export async function deleteEventSupabase(
@@ -853,6 +1042,66 @@ export async function toggleJoinSupabase(
   return { id: eventId, going, joined: !existing };
 }
 
+const recomputeInterestedCount = async (
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<number> => {
+  const { count, error } = await supabase
+    .from('event_interests')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_id', eventId);
+  throwIfSupabaseError(error, 'count event interests');
+  return count ?? 0;
+};
+
+// Mirrors toggleJoinSupabase exactly, against event_interests instead of
+// event_joins -- deliberately does not touch events.going_base or anything
+// else going-related. No going_base-equivalent baseline here: unlike going
+// (which had pre-existing seeded attendee counts to preserve), interest is a
+// brand-new feature with no historical baseline to account for.
+export async function toggleInterestedSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  eventId: string,
+): Promise<InterestedResult | null> {
+  const { data: event, error: eventError } = await supabase
+    .from('events')
+    .select('id')
+    .eq('id', eventId)
+    .maybeSingle();
+  throwIfSupabaseError(eventError, 'load event');
+  if (!event) {
+    return null;
+  }
+  await ensureUser(supabase, userId);
+
+  const { data: existing, error: existingError } = await supabase
+    .from('event_interests')
+    .select('event_id')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  throwIfSupabaseError(existingError, 'load event interest');
+
+  if (existing) {
+    const { error } = await supabase
+      .from('event_interests')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('user_id', userId);
+    throwIfSupabaseError(error, 'remove event interest');
+  } else {
+    const { error } = await supabase
+      .from('event_interests')
+      .insert({ event_id: eventId, user_id: userId });
+    throwIfSupabaseError(error, 'mark event interest');
+  }
+
+  const interestedCount = await recomputeInterestedCount(supabase, eventId);
+  return { id: eventId, interestedCount, interested: !existing };
+}
+
 export async function reportEventSupabase(
   supabase: SupabaseClient,
   userId: string,
@@ -877,18 +1126,16 @@ export async function reportEventSupabase(
   );
   // Idempotent: a unique (event_id, reporter_id) constraint on event_reports
   // means a repeat report from the same user is a silent no-op, not an error.
-  const { error } = await supabase
-    .from('event_reports')
-    .upsert(
-      {
-        details: submission.details,
-        event_id: eventId,
-        evidence_image_url: evidenceImageUrl,
-        reason: submission.reason,
-        reporter_id: userId,
-      },
-      { ignoreDuplicates: true, onConflict: 'event_id,reporter_id' },
-    );
+  const { error } = await supabase.from('event_reports').upsert(
+    {
+      details: submission.details,
+      event_id: eventId,
+      evidence_image_url: evidenceImageUrl,
+      reason: submission.reason,
+      reporter_id: userId,
+    },
+    { ignoreDuplicates: true, onConflict: 'event_id,reporter_id' },
+  );
   throwIfSupabaseError(error, 'report event');
   return { ok: true, reported: true };
 }

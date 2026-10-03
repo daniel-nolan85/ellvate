@@ -30,6 +30,11 @@ export interface CommunityEvent {
   readonly going: number;
   readonly joined: boolean;
   readonly attendees: readonly PersonRef[];
+  // "I'm interested" -- deliberately separate from going/joined/attendees
+  // (see 0082_event_interests.sql's own WHY): a lighter-weight signal that
+  // doesn't commit to attending and isn't scored anywhere.
+  readonly interestedCount: number;
+  readonly interested: boolean;
   readonly editedAt: string | null;
 }
 
@@ -73,10 +78,21 @@ export interface EventAttendeesPage {
   readonly nextCursor: string | null;
 }
 
+export interface EventInterestedPage {
+  readonly interested: readonly PersonRef[];
+  readonly nextCursor: string | null;
+}
+
 export interface JoinResult {
   readonly id: string;
   readonly going: number;
   readonly joined: boolean;
+}
+
+export interface InterestedResult {
+  readonly id: string;
+  readonly interestedCount: number;
+  readonly interested: boolean;
 }
 
 export interface ComposedEvent {
@@ -112,7 +128,11 @@ export type CreatedEventResult =
     };
 
 export type CreateEventResult =
-  | { readonly ok: true; readonly event: CommunityEvent; readonly xpAward: XpGrantOutcome }
+  | {
+      readonly ok: true;
+      readonly event: CommunityEvent;
+      readonly xpAward: XpGrantOutcome;
+    }
   | {
       readonly ok: false;
       readonly code: 'invalid_event' | 'media_upload_failed';
