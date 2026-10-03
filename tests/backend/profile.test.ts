@@ -512,6 +512,34 @@ describe('cover photo upload', () => {
 
     expect(summary?.profile.coverUrl).toBe(COVER_DATA_URL);
   });
+
+  test('clears coverUrl when removeCover is set', async () => {
+    await updateProfile(ctx(), {
+      cover: { dataUrl: COVER_DATA_URL, filename: 'banner.jpg' },
+    });
+
+    const result = await updateProfile(ctx(), { removeCover: true });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.coverUrl).toBeNull();
+    }
+    expect(
+      getState().users.find((user) => user.id === DEMO_USER_ID)?.coverUrl,
+    ).toBeNull();
+  });
+
+  test('a new cover upload wins over removeCover in the same request', async () => {
+    const result = await updateProfile(ctx(), {
+      cover: { dataUrl: COVER_DATA_URL, filename: 'banner.jpg' },
+      removeCover: true,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.coverUrl).toBe(COVER_DATA_URL);
+    }
+  });
 });
 
 describe('avatar upload', () => {
@@ -563,6 +591,34 @@ describe('avatar upload', () => {
     const summary = await getPublicProfile(ctx(), 'user-mia');
 
     expect(summary?.profile.avatarUrl).toBe(AVATAR_DATA_URL);
+  });
+
+  test('clears avatarUrl when removeAvatar is set', async () => {
+    await updateProfile(ctx(), {
+      avatar: { dataUrl: AVATAR_DATA_URL, filename: 'me.jpg' },
+    });
+
+    const result = await updateProfile(ctx(), { removeAvatar: true });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.avatarUrl).toBeNull();
+    }
+    expect(
+      getState().users.find((user) => user.id === DEMO_USER_ID)?.avatarUrl,
+    ).toBeNull();
+  });
+
+  test('a new avatar upload wins over removeAvatar in the same request', async () => {
+    const result = await updateProfile(ctx(), {
+      avatar: { dataUrl: AVATAR_DATA_URL, filename: 'me.jpg' },
+      removeAvatar: true,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.avatarUrl).toBe(AVATAR_DATA_URL);
+    }
   });
 });
 

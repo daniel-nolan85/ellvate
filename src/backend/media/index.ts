@@ -195,6 +195,21 @@ export function extractCoverUpload(input: unknown): RawMediaUpload | null {
   return { dataUrl, filename };
 }
 
+// WHY: a plain boolean flag, separate from `avatar`/`cover` above, so
+// "clear the photo" doesn't have to be smuggled through the upload fields
+// as some sentinel value -- a caller sending both a removal flag and a new
+// upload in the same request means "replace it," so the upload always
+// takes precedence wherever both are read.
+export function wantsAvatarRemoval(input: unknown): boolean {
+  const raw = isRecord(input) ? input : {};
+  return raw.removeAvatar === true;
+}
+
+export function wantsCoverRemoval(input: unknown): boolean {
+  const raw = isRecord(input) ? input : {};
+  return raw.removeCover === true;
+}
+
 // WHY: a business logo is a single image like an avatar, not a gallery item
 // — reads `raw.newLogo` (matching the `newMedia` naming convention) rather
 // than a bare `logo` field. Mirrors extractAvatarUpload's permissive/strict

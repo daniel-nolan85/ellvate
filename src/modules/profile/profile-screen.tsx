@@ -255,6 +255,20 @@ export function ProfileScreen() {
     });
   };
 
+  const removeAvatar = () => {
+    updateProfile.mutate(
+      { removeAvatar: true },
+      { onSuccess: () => showToast('Photo removed.') },
+    );
+  };
+
+  const removeCover = () => {
+    updateProfile.mutate(
+      { removeCover: true },
+      { onSuccess: () => showToast('Cover photo removed.') },
+    );
+  };
+
   const toggleDraftInterest = (interest: string) => {
     setDraftInterests((current) => {
       if (current.includes(interest)) {
@@ -650,6 +664,65 @@ export function ProfileScreen() {
                   }}
                 >
                   <VStack space="lg">
+                    {profile.data?.profile.avatarUrl ||
+                    profile.data?.profile.coverUrl ? (
+                      <VStack space="xs">
+                        <Text
+                          className="font-inter-semibold text-content"
+                          size="sm"
+                        >
+                          Photo
+                        </Text>
+                        {profile.data?.profile.avatarUrl ? (
+                          <HStack className="items-center gap-3">
+                            <Avatar
+                              name={displayName}
+                              size="sm"
+                              src={profile.data.profile.avatarUrl}
+                            />
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={updateProfile.isPending}
+                              onPress={removeAvatar}
+                            >
+                              <Text
+                                className="font-inter-medium text-destructive"
+                                size="sm"
+                              >
+                                Remove photo
+                              </Text>
+                            </Pressable>
+                          </HStack>
+                        ) : null}
+                        {profile.data?.profile.coverUrl ? (
+                          <HStack className="items-center gap-3">
+                            <Image
+                              accessibilityLabel="Your cover photo"
+                              contentFit="cover"
+                              source={{ uri: profile.data.profile.coverUrl }}
+                              style={{
+                                borderRadius: 8,
+                                height: 36,
+                                width: 56,
+                              }}
+                            />
+                            <Pressable
+                              accessibilityRole="button"
+                              disabled={updateProfile.isPending}
+                              onPress={removeCover}
+                            >
+                              <Text
+                                className="font-inter-medium text-destructive"
+                                size="sm"
+                              >
+                                Remove cover photo
+                              </Text>
+                            </Pressable>
+                          </HStack>
+                        ) : null}
+                      </VStack>
+                    ) : null}
+
                     <VStack space="xs">
                       <Text
                         className="font-inter-semibold text-content"

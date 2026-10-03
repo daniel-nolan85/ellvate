@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { extractAvatarUpload, extractCoverUpload } from '@/src/backend/media';
+import {
+  extractAvatarUpload,
+  extractCoverUpload,
+  wantsAvatarRemoval,
+  wantsCoverRemoval,
+} from '@/src/backend/media';
 import { defaultDisplayName } from '@/src/backend/store';
 import type { CommunityRole, NotificationPrefs } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
@@ -182,6 +187,9 @@ export async function updateProfileSupabase(
       payload = { ...payload, avatar_url: avatarUrl };
       replacedAvatarUrl = current.avatar_url;
     }
+  } else if (wantsAvatarRemoval(input)) {
+    payload = { ...payload, avatar_url: null };
+    replacedAvatarUrl = current.avatar_url;
   }
 
   const coverUpload = extractCoverUpload(input);
@@ -198,6 +206,9 @@ export async function updateProfileSupabase(
       payload = { ...payload, cover_url: coverUrl };
       replacedCoverUrl = current.cover_url;
     }
+  } else if (wantsCoverRemoval(input)) {
+    payload = { ...payload, cover_url: null };
+    replacedCoverUrl = current.cover_url;
   }
 
   const { data, error } = await supabase

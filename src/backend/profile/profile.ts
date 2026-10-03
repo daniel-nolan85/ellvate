@@ -1,4 +1,9 @@
-import { extractAvatarUpload, extractCoverUpload } from '@/src/backend/media';
+import {
+  extractAvatarUpload,
+  extractCoverUpload,
+  wantsAvatarRemoval,
+  wantsCoverRemoval,
+} from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, setState } from '@/src/backend/store';
 import type {
@@ -123,6 +128,8 @@ function updateProfileMemory(
     current.onboardedAt === null && next.onboardedAt !== null;
   const avatarUpload = extractAvatarUpload(input);
   const coverUpload = extractCoverUpload(input);
+  const removeAvatar = wantsAvatarRemoval(input);
+  const removeCover = wantsCoverRemoval(input);
 
   const updated = setState((state) => ({
     ...state,
@@ -130,8 +137,16 @@ function updateProfileMemory(
       user.id === userId
         ? {
             ...user,
-            avatarUrl: avatarUpload ? avatarUpload.dataUrl : user.avatarUrl,
-            coverUrl: coverUpload ? coverUpload.dataUrl : user.coverUrl,
+            avatarUrl: avatarUpload
+              ? avatarUpload.dataUrl
+              : removeAvatar
+                ? null
+                : user.avatarUrl,
+            coverUrl: coverUpload
+              ? coverUpload.dataUrl
+              : removeCover
+                ? null
+                : user.coverUrl,
             name: validation.update.name ?? user.name,
             profile: next,
             xp: justOnboarded ? user.xp + WELCOME_XP : user.xp,

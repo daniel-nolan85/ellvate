@@ -92,6 +92,10 @@ export interface ProfileUpdateInput {
   readonly notificationPrefs?: Partial<NotificationPrefs>;
   readonly avatar?: AvatarUploadInput;
   readonly cover?: CoverUploadInput;
+  // Clears the current photo instead of replacing it -- ignored if `avatar`/
+  // `cover` is also set in the same request (uploading a new one wins).
+  readonly removeAvatar?: boolean;
+  readonly removeCover?: boolean;
   readonly activityVisible?: boolean;
 }
 
