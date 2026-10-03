@@ -528,7 +528,16 @@ export function EventDetailScreen({
                       className={`rounded-full px-5 py-2.5 ${
                         event.joined ? 'bg-success' : 'bg-accent'
                       }`}
-                      onPress={() => toggleJoin.mutate(event.id)}
+                      onPress={() =>
+                        toggleJoin.mutate(event.id, {
+                          onError: (error) =>
+                            showToast(
+                              error instanceof Error
+                                ? error.message
+                                : "Couldn't update your RSVP. Try again.",
+                            ),
+                        })
+                      }
                     >
                       <Text className="font-inter-semibold text-[13px] text-accent-foreground">
                         {event.joined ? 'Going ✓' : 'Join event'}
@@ -559,7 +568,16 @@ export function EventDetailScreen({
                           ? 'border-accent bg-accent/10'
                           : 'border-surface-hairline bg-paper'
                       }`}
-                      onPress={() => toggleInterested.mutate(event.id)}
+                      onPress={() =>
+                        toggleInterested.mutate(event.id, {
+                          onError: (error) =>
+                            showToast(
+                              error instanceof Error
+                                ? error.message
+                                : "Couldn't update your interest. Try again.",
+                            ),
+                        })
+                      }
                     >
                       <Text
                         className={`font-inter-semibold text-[13px] ${

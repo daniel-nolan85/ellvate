@@ -13,7 +13,10 @@ import { Spinner } from '@/src/components/ui/spinner';
 import { Sheet } from '@/src/components/ui/sheet';
 import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
-import { ScreenTitle, useFloatingContentClearance } from '@/src/modules/community-shell';
+import {
+  ScreenTitle,
+  useFloatingContentClearance,
+} from '@/src/modules/community-shell';
 import { ApiError } from '@/src/services/api';
 
 import { EventComposer } from './event-composer';
@@ -81,13 +84,20 @@ export function EventsScreen({ onOpenEvent }: EventsScreenProps = {}) {
   const restToRender: readonly CommunityEvent[] =
     eventsView.isPending || eventsView.isError ? [] : rest;
 
-  const handleToggleJoin = (eventId: string) => {
-    toggleJoin.mutate(eventId);
-  };
-
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 2200);
+  };
+
+  const handleToggleJoin = (eventId: string) => {
+    toggleJoin.mutate(eventId, {
+      onError: (error) =>
+        showToast(
+          error instanceof Error
+            ? error.message
+            : "Couldn't update your RSVP. Try again.",
+        ),
+    });
   };
 
   return (
