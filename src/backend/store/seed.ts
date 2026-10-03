@@ -29,7 +29,15 @@ const HOUR_MS = 60 * 60 * 1000;
 const isoHoursBeforeSeedNow = (hours: number): string =>
   new Date(Date.parse(SEED_NOW_ISO) - hours * HOUR_MS).toISOString();
 
-const EVENT_WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+const EVENT_WEEKDAYS = [
+  'SUN',
+  'MON',
+  'TUE',
+  'WED',
+  'THU',
+  'FRI',
+  'SAT',
+] as const;
 
 // WHY: anchored to the real wall clock (like isoHoursBeforeSeedNow above) so
 // seeded events always land in the future relative to whenever the app is
@@ -40,7 +48,11 @@ const seedEventFields = (
   daysFromSeedNow: number,
   hour: number,
   minute: number,
-): { readonly startsAt: string; readonly dayLabel: string; readonly dateLabel: string } => {
+): {
+  readonly startsAt: string;
+  readonly dayLabel: string;
+  readonly dateLabel: string;
+} => {
   const date = new Date(Date.parse(SEED_NOW_ISO));
   date.setUTCDate(date.getUTCDate() + daysFromSeedNow);
   date.setUTCHours(hour, minute, 0, 0);
@@ -73,6 +85,12 @@ interface SeedUserInput {
   readonly xp: number;
   readonly missionsCompleted: number;
   readonly previousRank: number | null;
+  // Hours before SEED_NOW_ISO this member joined -- gives every seeded user
+  // a distinct, deterministic createdAt (see StoredUser's own WHY) instead
+  // of all collapsing to the same instant, which would defeat the point of
+  // a tiebreaker in exactly the demo data most likely to render a tied
+  // leaderboard.
+  readonly joinedHoursAgo: number;
   readonly pinnedPostId?: string | null;
   readonly isAdmin?: boolean;
 }
@@ -80,6 +98,7 @@ interface SeedUserInput {
 const seedUser = ({
   id,
   isAdmin = false,
+  joinedHoursAgo,
   missionsCompleted,
   name,
   pinnedPostId = null,
@@ -91,6 +110,7 @@ const seedUser = ({
   xp,
   missionsCompleted,
   onLeaderboard: true,
+  createdAt: isoHoursBeforeSeedNow(joinedHoursAgo),
   previousRank,
   title: 'LAKE EXPLORER',
   profile: emptyProfile(),
@@ -107,6 +127,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 3820,
     missionsCompleted: 41,
     previousRank: 1,
+    joinedHoursAgo: 24 * 400,
   }),
   seedUser({
     id: 'user-andre',
@@ -114,6 +135,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 3540,
     missionsCompleted: 38,
     previousRank: 3,
+    joinedHoursAgo: 24 * 350,
   }),
   seedUser({
     id: 'user-jordan',
@@ -121,6 +143,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 3110,
     missionsCompleted: 35,
     previousRank: 2,
+    joinedHoursAgo: 24 * 300,
   }),
   seedUser({
     id: 'user-priya',
@@ -128,6 +151,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 2640,
     missionsCompleted: 29,
     previousRank: 6,
+    joinedHoursAgo: 24 * 250,
   }),
   seedUser({
     id: 'user-sam',
@@ -135,6 +159,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 2190,
     missionsCompleted: 24,
     previousRank: 5,
+    joinedHoursAgo: 24 * 200,
   }),
   seedUser({
     id: DEMO_USER_ID,
@@ -142,6 +167,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 1980,
     missionsCompleted: 21,
     previousRank: 7,
+    joinedHoursAgo: 24 * 150,
     // Seeded so the demo shows the pin feature already in use, matching the
     // Announcements post that used to be globally pinned before pinning
     // became per-user.
@@ -153,6 +179,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 0,
     missionsCompleted: 0,
     previousRank: null,
+    joinedHoursAgo: 24 * 400,
     isAdmin: true,
   }),
   seedUser({
@@ -161,6 +188,7 @@ const seedUsers = (): readonly StoredUser[] => [
     xp: 0,
     missionsCompleted: 0,
     previousRank: null,
+    joinedHoursAgo: 24 * 100,
   }),
 ];
 
@@ -457,7 +485,8 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     authorId: 'user-sam',
     businessName: 'Crystal Clear Pool Care',
     category: 'pool-spa',
-    description: 'Weekly pool cleaning, chemical balancing, and equipment repair.',
+    description:
+      'Weekly pool cleaning, chemical balancing, and equipment repair.',
     contactPhone: '(702) 555-0176',
     contactEmail: 'sam@crystalclearpools.example',
     contactWebsite: null,
@@ -471,7 +500,8 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     authorId: 'user-priya',
     businessName: 'Priya Rao Web Design',
     category: 'tech-web',
-    description: 'Websites and small business branding for neighbors — from a neighbor.',
+    description:
+      'Websites and small business branding for neighbors — from a neighbor.',
     contactPhone: null,
     contactEmail: 'priya@priyaraodesign.example',
     contactWebsite: 'https://priyaraodesign.example',
@@ -538,7 +568,8 @@ const seedBusinessListings = (): readonly StoredBusinessListing[] => [
     authorId: 'user-sam',
     businessName: 'Village Golf Carts',
     category: 'professional-trade',
-    description: 'Golf cart sales, rentals, and repairs, with same-day service for residents.',
+    description:
+      'Golf cart sales, rentals, and repairs, with same-day service for residents.',
     contactPhone: '(702) 555-0134',
     contactEmail: null,
     contactWebsite: null,
@@ -559,7 +590,8 @@ const seedBusinessListings = (): readonly StoredBusinessListing[] => [
     authorId: DEMO_USER_ID,
     businessName: 'Promenade Coffee Roasters',
     category: 'restaurants-bars',
-    description: 'Small-batch coffee roaster and cafe, opening soon on the promenade.',
+    description:
+      'Small-batch coffee roaster and cafe, opening soon on the promenade.',
     contactPhone: null,
     contactEmail: null,
     contactWebsite: null,
@@ -582,26 +614,27 @@ const seedBusinessListings = (): readonly StoredBusinessListing[] => [
 // listings (business-1, business-2), authored by someone other than the
 // listing's own owner (self-review is forbidden). business-3 is pending and
 // owned by DEMO_USER_ID, so it deliberately has no seeded review.
-const seedBusinessListingReviews = (): readonly StoredBusinessListingReview[] => [
-  {
-    id: 'business-review-1',
-    listingId: 'business-1',
-    authorId: 'user-mia',
-    rating: 5,
-    body: 'Best patio on the lake — the happy hour app specials are unbeatable.',
-    createdAt: isoHoursBeforeSeedNow(25),
-    editedAt: null,
-  },
-  {
-    id: 'business-review-2',
-    listingId: 'business-2',
-    authorId: DEMO_USER_ID,
-    rating: 4,
-    body: 'Fixed our cart same-day and the price was fair.',
-    createdAt: isoHoursBeforeSeedNow(10),
-    editedAt: null,
-  },
-];
+const seedBusinessListingReviews =
+  (): readonly StoredBusinessListingReview[] => [
+    {
+      id: 'business-review-1',
+      listingId: 'business-1',
+      authorId: 'user-mia',
+      rating: 5,
+      body: 'Best patio on the lake — the happy hour app specials are unbeatable.',
+      createdAt: isoHoursBeforeSeedNow(25),
+      editedAt: null,
+    },
+    {
+      id: 'business-review-2',
+      listingId: 'business-2',
+      authorId: DEMO_USER_ID,
+      rating: 4,
+      body: 'Fixed our cart same-day and the price was fair.',
+      createdAt: isoHoursBeforeSeedNow(10),
+      editedAt: null,
+    },
+  ];
 
 // Dummy dev-only content so the three petition status tabs (open, succeeded,
 // expired) all have something to look at -- required signature counts here
@@ -637,7 +670,7 @@ const seedPetitions = (): readonly StoredPetition[] => [
       'The Loop Trail has three separate pothole clusters between the golf course crossing and the fountain overlook — bad enough now that a few neighbours have stopped running it after dark. Asking the board to get it repaved before it gets worse.',
     hoaEmailSentAt: isoHoursBeforeSeedNow(96),
     hoaResponse:
-      'Thanks for flagging this — we\'ve added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.',
+      "Thanks for flagging this — we've added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.",
     hoaResponseAt: isoHoursBeforeSeedNow(48),
     id: 'petition-loop-trail-repaving',
     requiredSignatures: 40,
@@ -667,15 +700,51 @@ const seedPetitions = (): readonly StoredPetition[] => [
 ];
 
 const seedPetitionSignatures = (): readonly StoredPetitionSignature[] => [
-  { createdAt: isoHoursBeforeSeedNow(70), petitionId: 'petition-marina-lighting', userId: 'user-mia' },
-  { createdAt: isoHoursBeforeSeedNow(65), petitionId: 'petition-marina-lighting', userId: 'user-andre' },
-  { createdAt: isoHoursBeforeSeedNow(50), petitionId: 'petition-marina-lighting', userId: 'user-priya' },
-  { createdAt: isoHoursBeforeSeedNow(230), petitionId: 'petition-loop-trail-repaving', userId: 'user-mia' },
-  { createdAt: isoHoursBeforeSeedNow(220), petitionId: 'petition-loop-trail-repaving', userId: 'user-andre' },
-  { createdAt: isoHoursBeforeSeedNow(210), petitionId: 'petition-loop-trail-repaving', userId: 'user-jordan' },
-  { createdAt: isoHoursBeforeSeedNow(200), petitionId: 'petition-loop-trail-repaving', userId: 'user-sam' },
-  { createdAt: isoHoursBeforeSeedNow(470), petitionId: 'petition-village-guest-parking', userId: 'user-mia' },
-  { createdAt: isoHoursBeforeSeedNow(460), petitionId: 'petition-village-guest-parking', userId: 'user-riley' },
+  {
+    createdAt: isoHoursBeforeSeedNow(70),
+    petitionId: 'petition-marina-lighting',
+    userId: 'user-mia',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(65),
+    petitionId: 'petition-marina-lighting',
+    userId: 'user-andre',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(50),
+    petitionId: 'petition-marina-lighting',
+    userId: 'user-priya',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(230),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-mia',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(220),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-andre',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(210),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-jordan',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(200),
+    petitionId: 'petition-loop-trail-repaving',
+    userId: 'user-sam',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(470),
+    petitionId: 'petition-village-guest-parking',
+    userId: 'user-mia',
+  },
+  {
+    createdAt: isoHoursBeforeSeedNow(460),
+    petitionId: 'petition-village-guest-parking',
+    userId: 'user-riley',
+  },
 ];
 
 const seedPetitionComments = (): readonly StoredPetitionComment[] => [

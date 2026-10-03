@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { GET as getLeaderboardRoute } from '../../app/api/leaderboard+api';
-import { getLeaderboard, getLeaderboardPage } from '../../src/backend/leaderboard';
-import { memoryContext } from '../../src/backend/http';
 import {
-  DEMO_USER_ID,
-  resetStore,
-  setState,
-} from '../../src/backend/store';
+  getLeaderboard,
+  getLeaderboardPage,
+} from '../../src/backend/leaderboard';
+import { memoryContext } from '../../src/backend/http';
+import { DEMO_USER_ID, resetStore, setState } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
 
@@ -51,6 +50,35 @@ describe('getLeaderboard', () => {
     expect(leaders.slice(0, 2).map((entry) => entry.user.id)).toEqual([
       'user-mia',
       'user-andre',
+    ]);
+  });
+
+  test('breaks a full xp + missionsCompleted tie by earliest-joined first', async () => {
+    setState((state) => ({
+      ...state,
+      users: state.users.map((user) => {
+        // Andre joined before Jordan (seed.ts's own joinedHoursAgo) -- with
+        // xp and missionsCompleted now identical too, createdAt is the only
+        // thing left to decide their order, and it must be deterministic
+        // rather than whatever order the users array happens to iterate in.
+        if (user.id === 'user-andre') {
+          return { ...user, xp: 500, missionsCompleted: 10 };
+        }
+        if (user.id === 'user-jordan') {
+          return { ...user, xp: 500, missionsCompleted: 10 };
+        }
+        return user;
+      }),
+    }));
+
+    const { leaders } = await getLeaderboard(ctx());
+    const ranked = leaders.filter((entry) =>
+      ['user-andre', 'user-jordan'].includes(entry.user.id),
+    );
+
+    expect(ranked.map((entry) => entry.user.id)).toEqual([
+      'user-andre',
+      'user-jordan',
     ]);
   });
 
@@ -178,7 +206,9 @@ describe('getLeaderboardPage', () => {
         ...state.xpLedger,
         {
           amount: 90,
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date(
+            Date.now() - 2 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
           id: 'xp-test-page',
           reason: 'mission_completed',
           refId: 'mission-3',
@@ -384,6 +414,38 @@ describe('getLeaderboard (windowed ranges)', () => {
     const { leaders } = await getLeaderboard(ctx(), 'week');
 
     expect(leaders).toHaveLength(0);
+  });
+
+  test('breaks a windowed xp + missionsCompleted tie by earliest-joined first, matching the all-time order', async () => {
+    // Priya joined before Sam (seed.ts's own joinedHoursAgo). Give them
+    // identical windowed activity so xp and missionsCompleted both tie --
+    // the only thing left to break the tie is createdAt, and it must agree
+    // with how the all-time view would order the same two members, not fall
+    // back to some other arbitrary order specific to this windowed query.
+    seedLedgerEntry({
+      amount: 10,
+      createdAt: daysAgoIso(1),
+      reason: 'post_created',
+      refId: 'post-priya',
+      userId: 'user-priya',
+    });
+    seedLedgerEntry({
+      amount: 10,
+      createdAt: daysAgoIso(1),
+      reason: 'post_created',
+      refId: 'post-sam',
+      userId: 'user-sam',
+    });
+
+    const { leaders } = await getLeaderboard(ctx(), 'week');
+    const ranked = leaders.filter((entry) =>
+      ['user-priya', 'user-sam'].includes(entry.user.id),
+    );
+
+    expect(ranked.map((entry) => entry.user.id)).toEqual([
+      'user-priya',
+      'user-sam',
+    ]);
   });
 
   test('computes rankDelta against the immediately preceding window of equal length', async () => {

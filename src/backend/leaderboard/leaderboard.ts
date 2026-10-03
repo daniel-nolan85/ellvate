@@ -7,7 +7,11 @@ import {
   getLeaderboardPageSupabase,
   getLeaderboardSupabase,
 } from './leaderboard-supabase';
-import type { LeaderboardEntry, LeaderboardPage, LeaderboardResult } from './types';
+import type {
+  LeaderboardEntry,
+  LeaderboardPage,
+  LeaderboardResult,
+} from './types';
 import {
   addToTally,
   DAY_MS,
@@ -27,9 +31,15 @@ export const MAX_LEADERBOARD_PAGE_SIZE = 50;
 // Ranked by XP first -- the headline number -- with missionsCompleted only
 // breaking ties between equal XP totals, not driving rank on its own (a
 // member with more XP always outranks one with fewer, regardless of either
-// one's mission count).
+// one's mission count). createdAt (earliest-joined-first) is the final
+// tiebreaker once both of those match too -- same field, same direction, as
+// rankTally's own tieBreakAscendingMs below, so a tied member lands in the
+// same relative order on This week/This month as they do on All time
+// instead of each view falling back to its own arbitrary leftover order.
 const byXpThenMissions = (a: StoredUser, b: StoredUser): number =>
-  b.xp - a.xp || b.missionsCompleted - a.missionsCompleted;
+  b.xp - a.xp ||
+  b.missionsCompleted - a.missionsCompleted ||
+  Date.parse(a.createdAt) - Date.parse(b.createdAt);
 
 const toEntry = (
   user: StoredUser,
@@ -76,7 +86,12 @@ function tallyLedgerEntries(
     if (createdMs < windowStartMs || createdMs >= windowEndMs) {
       continue;
     }
-    addToTally(tally, entry.userId, entry.amount, entry.reason === 'mission_completed');
+    addToTally(
+      tally,
+      entry.userId,
+      entry.amount,
+      entry.reason === 'mission_completed',
+    );
   }
   return tally;
 }
@@ -99,30 +114,51 @@ function getWindowedLeaderboardMemory(
   const currentStart = now - days * DAY_MS;
   const previousStart = now - 2 * days * DAY_MS;
 
-  const currentTally = tallyLedgerEntries(xpLedger, currentStart, now, excludedUserIds);
-  const previousTally = tallyLedgerEntries(xpLedger, previousStart, currentStart, excludedUserIds);
+  const currentTally = tallyLedgerEntries(
+    xpLedger,
+    currentStart,
+    now,
+    excludedUserIds,
+  );
+  const previousTally = tallyLedgerEntries(
+    xpLedger,
+    previousStart,
+    currentStart,
+    excludedUserIds,
+  );
+  // Same createdAt tiebreak byXpThenMissions uses for the all-time view --
+  // see rankTally's own WHY for why this needs to be passed explicitly
+  // rather than baked into WindowedTally itself.
+  const createdAtMsById = new Map(
+    users.map((user) => [user.id, Date.parse(user.createdAt)]),
+  );
   const previousRanks = new Map(
-    rankTally(previousTally).map(({ rank, userId: id }) => [id, rank]),
+    rankTally(previousTally, createdAtMsById).map(({ rank, userId: id }) => [
+      id,
+      rank,
+    ]),
   );
 
   return {
-    leaders: rankTally(currentTally).map(({ rank, userId: id }) => {
-      const tally = currentTally.get(id);
-      const user = usersById.get(id);
-      const previousRank = previousRanks.get(id);
-      return {
-        rank,
-        user: {
-          avatarUrl: user?.avatarUrl ?? null,
-          id,
-          name: user?.name ?? 'Former member',
-        },
-        isMe: id === userId,
-        missionsCompleted: tally?.missionsCompleted ?? 0,
-        xp: tally?.xp ?? 0,
-        rankDelta: previousRank === undefined ? 0 : previousRank - rank,
-      };
-    }),
+    leaders: rankTally(currentTally, createdAtMsById).map(
+      ({ rank, userId: id }) => {
+        const tally = currentTally.get(id);
+        const user = usersById.get(id);
+        const previousRank = previousRanks.get(id);
+        return {
+          rank,
+          user: {
+            avatarUrl: user?.avatarUrl ?? null,
+            id,
+            name: user?.name ?? 'Former member',
+          },
+          isMe: id === userId,
+          missionsCompleted: tally?.missionsCompleted ?? 0,
+          xp: tally?.xp ?? 0,
+          rankDelta: previousRank === undefined ? 0 : previousRank - rank,
+        };
+      },
+    ),
   };
 }
 
@@ -167,7 +203,11 @@ function getLeaderboardPageMemory(
   limit: number,
   cursor: string | null,
 ): LeaderboardPage {
-  return paginateLeaders(getLeaderboardMemory(userId, range).leaders, limit, cursor);
+  return paginateLeaders(
+    getLeaderboardMemory(userId, range).leaders,
+    limit,
+    cursor,
+  );
 }
 
 // ---------------------------------------------------------------------------

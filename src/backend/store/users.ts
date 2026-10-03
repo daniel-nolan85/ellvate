@@ -50,6 +50,7 @@ export function ensureUser(userId: string): StoredUser {
     xp: 0,
     missionsCompleted: 0,
     onLeaderboard: true,
+    createdAt: new Date().toISOString(),
     previousRank: null,
     title: DEFAULT_PROGRESS_TITLE,
     profile: defaultProfile(),

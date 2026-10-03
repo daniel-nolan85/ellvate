@@ -3,7 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { paginateInMemory } from '@/src/lib/cursor-pagination';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 
-import type { LeaderboardEntry, LeaderboardPage, LeaderboardResult } from './types';
+import type {
+  LeaderboardEntry,
+  LeaderboardPage,
+  LeaderboardResult,
+} from './types';
 import {
   DAY_MS,
   RANGE_DAYS,
@@ -13,7 +17,7 @@ import {
 } from './windowed-tally';
 
 const LEADERBOARD_SELECT =
-  'id,name,avatar_url,xp,missions_completed,previous_rank';
+  'id,name,avatar_url,xp,missions_completed,previous_rank,created_at';
 
 interface LeaderRow {
   readonly id: string;
@@ -22,6 +26,7 @@ interface LeaderRow {
   readonly xp: number;
   readonly missions_completed: number;
   readonly previous_rank: number | null;
+  readonly created_at: string;
 }
 
 const toEntry = (
@@ -46,7 +51,14 @@ async function getAllTimeLeaderboardSupabase(
     .select(LEADERBOARD_SELECT)
     .eq('on_leaderboard', true)
     .order('xp', { ascending: false })
-    .order('missions_completed', { ascending: false });
+    .order('missions_completed', { ascending: false })
+    // Final tiebreaker once both of the above match too (e.g. a brand-new
+    // community where several members share the same onboarding-bonus-only
+    // total) -- earliest-joined first, matching the windowed views' own
+    // createdAt tiebreak below, so a tied member ranks the same on All time
+    // as on This week/This month instead of each view falling back to its
+    // own unordered leftover order.
+    .order('created_at', { ascending: true });
   throwIfSupabaseError(error, 'load leaderboard');
   const rows = (data ?? []) as unknown as LeaderRow[];
   return {
@@ -66,6 +78,7 @@ interface MemberRow {
   readonly id: string;
   readonly name: string;
   readonly avatar_url: string | null;
+  readonly created_at: string;
 }
 
 // Tallies every XP-earning ledger entry (posting, creating an event/
@@ -89,10 +102,13 @@ async function getWindowedLeaderboardSupabase(
   const currentStartIso = new Date(now - days * DAY_MS).toISOString();
   const previousStartIso = new Date(now - 2 * days * DAY_MS).toISOString();
 
-  const { data: tallyData, error: tallyError } = await supabase.rpc('windowed_xp_tally', {
-    p_current_start: currentStartIso,
-    p_previous_start: previousStartIso,
-  });
+  const { data: tallyData, error: tallyError } = await supabase.rpc(
+    'windowed_xp_tally',
+    {
+      p_current_start: currentStartIso,
+      p_previous_start: previousStartIso,
+    },
+  );
   throwIfSupabaseError(tallyError, 'load windowed xp tally');
 
   // Same exclusion the all-time leaderboard already applies via its own
@@ -105,7 +121,9 @@ async function getWindowedLeaderboardSupabase(
     .eq('on_leaderboard', false);
   throwIfSupabaseError(excludedError, 'load leaderboard-excluded members');
   const excludedIds = new Set(
-    ((excludedData ?? []) as unknown as { readonly id: string }[]).map((row) => row.id),
+    ((excludedData ?? []) as unknown as { readonly id: string }[]).map(
+      (row) => row.id,
+    ),
   );
 
   const tallyRows = ((tallyData ?? []) as unknown as WindowedTallyRow[]).filter(
@@ -120,22 +138,37 @@ async function getWindowedLeaderboardSupabase(
       .filter((row) => row.current_xp > 0 || row.current_missions_completed > 0)
       .map((row) => [
         row.user_id,
-        { missionsCompleted: row.current_missions_completed, xp: row.current_xp },
+        {
+          missionsCompleted: row.current_missions_completed,
+          xp: row.current_xp,
+        },
       ]),
   );
   const previousTally = new Map<string, WindowedTally>(
     tallyRows
-      .filter((row) => row.previous_xp > 0 || row.previous_missions_completed > 0)
+      .filter(
+        (row) => row.previous_xp > 0 || row.previous_missions_completed > 0,
+      )
       .map((row) => [
         row.user_id,
-        { missionsCompleted: row.previous_missions_completed, xp: row.previous_xp },
+        {
+          missionsCompleted: row.previous_missions_completed,
+          xp: row.previous_xp,
+        },
       ]),
   );
 
-  const memberIds = [...currentTally.keys()];
+  // Union of both windows' ids, not just the current one -- previousTally
+  // can rank members currentTally never heard of (active last window, quiet
+  // this one), and createdAtMsById below needs to cover both sides for the
+  // tiebreak to actually apply to a previous-window tie too, not just the
+  // current one.
+  const memberIds = [
+    ...new Set([...currentTally.keys(), ...previousTally.keys()]),
+  ];
   const { data: memberData, error: memberError } = await supabase
     .from('app_users')
-    .select('id,name,avatar_url')
+    .select('id,name,avatar_url,created_at')
     .in('id', memberIds);
   throwIfSupabaseError(memberError, 'load leaderboard members');
   const membersById = new Map(
@@ -144,29 +177,43 @@ async function getWindowedLeaderboardSupabase(
       member,
     ]),
   );
+  // Same createdAt tiebreak the all-time view applies via its own
+  // .order('created_at') -- see rankTally's own WHY for why this needs to
+  // be passed explicitly rather than baked into WindowedTally itself.
+  const createdAtMsById = new Map(
+    [...membersById.entries()].map(([id, member]) => [
+      id,
+      Date.parse(member.created_at),
+    ]),
+  );
 
   const previousRanks = new Map(
-    rankTally(previousTally).map(({ rank, userId: id }) => [id, rank]),
+    rankTally(previousTally, createdAtMsById).map(({ rank, userId: id }) => [
+      id,
+      rank,
+    ]),
   );
 
   return {
-    leaders: rankTally(currentTally).map(({ rank, userId: id }) => {
-      const tally = currentTally.get(id);
-      const member = membersById.get(id);
-      const previousRank = previousRanks.get(id);
-      return {
-        rank,
-        user: {
-          avatarUrl: member?.avatar_url ?? null,
-          id,
-          name: member?.name ?? 'Former member',
-        },
-        isMe: id === userId,
-        missionsCompleted: tally?.missionsCompleted ?? 0,
-        xp: tally?.xp ?? 0,
-        rankDelta: previousRank === undefined ? 0 : previousRank - rank,
-      };
-    }),
+    leaders: rankTally(currentTally, createdAtMsById).map(
+      ({ rank, userId: id }) => {
+        const tally = currentTally.get(id);
+        const member = membersById.get(id);
+        const previousRank = previousRanks.get(id);
+        return {
+          rank,
+          user: {
+            avatarUrl: member?.avatar_url ?? null,
+            id,
+            name: member?.name ?? 'Former member',
+          },
+          isMe: id === userId,
+          missionsCompleted: tally?.missionsCompleted ?? 0,
+          xp: tally?.xp ?? 0,
+          rankDelta: previousRank === undefined ? 0 : previousRank - rank,
+        };
+      },
+    ),
   };
 }
 

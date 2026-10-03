@@ -1,7 +1,8 @@
 import type { ReportReason } from '@/src/lib/report-reasons';
 
 export type MissionStatus = 'active' | 'done';
-export type MissionTheme = 'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
+export type MissionTheme =
+  'trail' | 'water' | 'village' | 'day' | 'night' | 'social';
 export type CommunityRole = 'resident' | 'new' | 'business' | 'visitor';
 export type XpReason =
   | 'mission_completed'
@@ -45,6 +46,12 @@ export interface StoredUser {
   // app's own admin) earn XP/complete missions normally while never
   // appearing on the Leaderboard. Defaults true for every real member.
   readonly onLeaderboard: boolean;
+  // Mirrors app_users.created_at (Supabase) -- the Leaderboard's final
+  // tiebreaker (earliest-joined first) once xp and missionsCompleted are
+  // both tied, so rank order is deterministic instead of depending on
+  // whatever order a query happens to return matching rows in. See
+  // windowed-tally.ts's rankTally for where this is actually used.
+  readonly createdAt: string;
   readonly previousRank: number | null;
   readonly title: string;
   readonly profile: StoredProfile;
@@ -292,11 +299,7 @@ export interface StoredServiceReviewReport {
 // chip literally reading "Services" inside the Businesses section would be
 // confusing -- 'professional-trade' covers that bucket instead.
 export type BusinessCategory =
-  | 'restaurants-bars'
-  | 'goods'
-  | 'hospitality'
-  | 'professional-trade'
-  | 'other';
+  'restaurants-bars' | 'goods' | 'hospitality' | 'professional-trade' | 'other';
 
 export interface StoredBusinessListing {
   readonly id: string;
@@ -321,7 +324,8 @@ export interface StoredBusinessListing {
   // state -- rejection is deletion, mirroring every other report-resolution
   // flow in this app.
   readonly verificationStatus: 'pending' | 'verified';
-  readonly verificationMethod: 'domain_match' | 'ai_auto' | 'admin_manual' | null;
+  readonly verificationMethod:
+    'domain_match' | 'ai_auto' | 'admin_manual' | null;
   // Claude's reasoning, populated only when the assisted tier routes to an
   // admin -- null for domain_match/ai_auto and while still unreviewed.
   readonly verificationNotes: string | null;
@@ -474,7 +478,8 @@ export interface StoredXpLedgerEntry {
   readonly createdAt: string;
 }
 
-export type BookmarkTargetType = 'post' | 'event' | 'mission' | 'service' | 'petition' | 'business';
+export type BookmarkTargetType =
+  'post' | 'event' | 'mission' | 'service' | 'petition' | 'business';
 
 export interface StoredBookmark {
   readonly id: string;

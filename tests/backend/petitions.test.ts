@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { GET as getPetitions, POST as postPetition } from '../../app/api/petitions+api';
+import {
+  GET as getPetitions,
+  POST as postPetition,
+} from '../../app/api/petitions+api';
 import { GET as getGate } from '../../app/api/petitions/gate+api';
 import { GET as getPetitionRoute } from '../../app/api/petitions/[id]/index+api';
 import { POST as postSign } from '../../app/api/petitions/[id]/sign+api';
@@ -19,7 +22,12 @@ import {
 } from '../../src/backend/petitions';
 import { toggleMute } from '../../src/backend/mutes';
 import type { ValidReportSubmission } from '@/src/backend/reports';
-import { DEMO_USER_ID, getState, resetStore, setState } from '../../src/backend/store';
+import {
+  DEMO_USER_ID,
+  getState,
+  resetStore,
+  setState,
+} from '../../src/backend/store';
 import type { StoredPetition, StoredUser } from '../../src/backend/store';
 
 const ctx = (userId: string = DEMO_USER_ID) => memoryContext(userId);
@@ -44,6 +52,7 @@ function unlockPetitions(): void {
     const needed = Math.max(0, PETITIONS_UNLOCK_MIN_USERS - existing);
     const extra: StoredUser[] = Array.from({ length: needed }, (_, index) => ({
       avatarUrl: null,
+      createdAt: new Date().toISOString(),
       id: `fixture-user-${index}`,
       isAdmin: false,
       missionsCompleted: 0,
@@ -94,7 +103,10 @@ function seedPetition(overrides: Partial<StoredPetition> = {}): StoredPetition {
     title: 'Fixture petition',
     ...overrides,
   };
-  setState((current) => ({ ...current, petitions: [...current.petitions, stored] }));
+  setState((current) => ({
+    ...current,
+    petitions: [...current.petitions, stored],
+  }));
   return stored;
 }
 
@@ -121,7 +133,9 @@ describe('getPetitionsGate', () => {
   });
 
   test('GET /api/petitions/gate returns the same shape', async () => {
-    const response = await getGate(new Request('http://test/api/petitions/gate'));
+    const response = await getGate(
+      new Request('http://test/api/petitions/gate'),
+    );
     const body = (await response.json()) as { unlocked: boolean };
     expect(body.unlocked).toBe(false);
   });
@@ -168,7 +182,9 @@ describe('createPetition', () => {
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.petition.requiredSignatures).toBe(computeRequiredSignatures(totalUsers));
+      expect(result.petition.requiredSignatures).toBe(
+        computeRequiredSignatures(totalUsers),
+      );
       expect(result.petition.signatureCount).toBe(0);
       expect(result.petition.status).toBe('open');
     }
@@ -226,8 +242,12 @@ describe('createPetition', () => {
     seedPetition({ status: 'open', title: 'Open one' });
     seedPetition({ status: 'succeeded', title: 'Succeeded one' });
 
-    const response = await getPetitions(new Request('http://test/api/petitions'));
-    const body = (await response.json()) as { petitions: readonly { title: string }[] };
+    const response = await getPetitions(
+      new Request('http://test/api/petitions'),
+    );
+    const body = (await response.json()) as {
+      petitions: readonly { title: string }[];
+    };
     expect(body.petitions.map((p) => p.title)).toEqual(['Open one']);
   });
 });
@@ -239,14 +259,20 @@ describe('listPetitionsPage', () => {
     seedPetition({ id: 'p-succeeded', status: 'succeeded' });
     seedPetition({ id: 'p-expired', status: 'expired' });
 
-    expect((await listPetitionsPage(ctx(), { status: 'open' })).petitions.map((p) => p.id)).toEqual([
-      'p-open',
-    ]);
     expect(
-      (await listPetitionsPage(ctx(), { status: 'succeeded' })).petitions.map((p) => p.id),
+      (await listPetitionsPage(ctx(), { status: 'open' })).petitions.map(
+        (p) => p.id,
+      ),
+    ).toEqual(['p-open']);
+    expect(
+      (await listPetitionsPage(ctx(), { status: 'succeeded' })).petitions.map(
+        (p) => p.id,
+      ),
     ).toEqual(['p-succeeded']);
     expect(
-      (await listPetitionsPage(ctx(), { status: 'expired' })).petitions.map((p) => p.id),
+      (await listPetitionsPage(ctx(), { status: 'expired' })).petitions.map(
+        (p) => p.id,
+      ),
     ).toEqual(['p-expired']);
   });
 
@@ -271,12 +297,18 @@ describe('getMyPetitionsView', () => {
       ...current,
       petitionSignatures: [
         ...current.petitionSignatures,
-        { createdAt: '2026-01-02T00:00:00.000Z', petitionId: signedOnly.id, userId: DEMO_USER_ID },
+        {
+          createdAt: '2026-01-02T00:00:00.000Z',
+          petitionId: signedOnly.id,
+          userId: DEMO_USER_ID,
+        },
       ],
     }));
 
     const page = await getMyPetitionsView(ctx(DEMO_USER_ID));
-    expect(page.petitions.map((p) => p.id).sort()).toEqual([started.id, signedOnly.id].sort());
+    expect(page.petitions.map((p) => p.id).sort()).toEqual(
+      [started.id, signedOnly.id].sort(),
+    );
   });
 
   test('does not duplicate a petition the caller both started and signed', async () => {
@@ -286,7 +318,11 @@ describe('getMyPetitionsView', () => {
       ...current,
       petitionSignatures: [
         ...current.petitionSignatures,
-        { createdAt: '2026-01-02T00:00:00.000Z', petitionId: petition.id, userId: DEMO_USER_ID },
+        {
+          createdAt: '2026-01-02T00:00:00.000Z',
+          petitionId: petition.id,
+          userId: DEMO_USER_ID,
+        },
       ],
     }));
 
@@ -310,12 +346,20 @@ describe('getPetition', () => {
       ...current,
       petitionSignatures: [
         ...current.petitionSignatures,
-        { createdAt: '2026-01-02T00:00:00.000Z', petitionId: petition.id, userId: 'other-user' },
+        {
+          createdAt: '2026-01-02T00:00:00.000Z',
+          petitionId: petition.id,
+          userId: 'other-user',
+        },
       ],
     }));
 
-    expect((await getPetition(ctx(DEMO_USER_ID), petition.id))?.signed).toBe(false);
-    expect((await getPetition(ctx('other-user'), petition.id))?.signed).toBe(true);
+    expect((await getPetition(ctx(DEMO_USER_ID), petition.id))?.signed).toBe(
+      false,
+    );
+    expect((await getPetition(ctx('other-user'), petition.id))?.signed).toBe(
+      true,
+    );
   });
 
   test('returns null for an unknown petition', async () => {
@@ -378,12 +422,20 @@ describe('toggleSignature', () => {
   });
 
   test('unsigning a petition that already succeeded is still allowed and never reverts status', async () => {
-    const petition = seedPetition({ requiredSignatures: 1, signatureCount: 1, status: 'succeeded' });
+    const petition = seedPetition({
+      requiredSignatures: 1,
+      signatureCount: 1,
+      status: 'succeeded',
+    });
     setState((current) => ({
       ...current,
       petitionSignatures: [
         ...current.petitionSignatures,
-        { createdAt: '2026-01-02T00:00:00.000Z', petitionId: petition.id, userId: DEMO_USER_ID },
+        {
+          createdAt: '2026-01-02T00:00:00.000Z',
+          petitionId: petition.id,
+          userId: DEMO_USER_ID,
+        },
       ],
     }));
 
@@ -405,16 +457,21 @@ describe('toggleSignature', () => {
 
   test('POST /api/petitions/[id]/sign round-trips through the route', async () => {
     const petition = seedPetition({ requiredSignatures: 5 });
-    const response = await postSign(new Request('http://test/sign', { method: 'POST' }), {
-      id: petition.id,
-    });
+    const response = await postSign(
+      new Request('http://test/sign', { method: 'POST' }),
+      {
+        id: petition.id,
+      },
+    );
     expect(response.status).toBe(200);
     const body = (await response.json()) as { signed: boolean };
     expect(body.signed).toBe(true);
   });
 
   test('GET /api/petitions/[id] 404s for an unknown id', async () => {
-    const response = await getPetitionRoute(new Request('http://test/x'), { id: 'nope' });
+    const response = await getPetitionRoute(new Request('http://test/x'), {
+      id: 'nope',
+    });
     expect(response.status).toBe(404);
   });
 });
@@ -427,12 +484,18 @@ describe('reportPetition', () => {
     await reportPetition(ctx(), petition.id, TEST_REPORT_SUBMISSION);
 
     expect(
-      getState().petitionReports.filter((report) => report.petitionId === petition.id),
+      getState().petitionReports.filter(
+        (report) => report.petitionId === petition.id,
+      ),
     ).toHaveLength(1);
   });
 
   test('returns petition_not_found for an unknown petition', async () => {
-    const result = await reportPetition(ctx(), 'does-not-exist', TEST_REPORT_SUBMISSION);
+    const result = await reportPetition(
+      ctx(),
+      'does-not-exist',
+      TEST_REPORT_SUBMISSION,
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('petition_not_found');
