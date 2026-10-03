@@ -52,6 +52,7 @@ function unlockPetitions(): void {
     const needed = Math.max(0, PETITIONS_UNLOCK_MIN_USERS - existing);
     const extra: StoredUser[] = Array.from({ length: needed }, (_, index) => ({
       avatarUrl: null,
+      coverUrl: null,
       createdAt: new Date().toISOString(),
       id: `fixture-user-${index}`,
       isAdmin: false,

@@ -46,6 +46,7 @@ export function ensureUser(userId: string): StoredUser {
     id: userId,
     name: defaultDisplayName(userId),
     avatarUrl: null,
+    coverUrl: null,
     isAdmin: false,
     xp: 0,
     missionsCompleted: 0,

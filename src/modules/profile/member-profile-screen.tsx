@@ -1,10 +1,20 @@
 import { useState } from 'react';
-import { Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 
-import { ReportSheet, type ReportSubmission } from '@/src/components/shared/report-sheet';
+import {
+  ReportSheet,
+  type ReportSubmission,
+} from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
 import { ConfirmModal } from '@/src/components/ui/confirm-modal';
@@ -23,7 +33,11 @@ import {
 import { useSession } from '@/src/platform/session';
 import { ApiError } from '@/src/services/api';
 
-import { useBlockUser, useBlockedUsers, useReportMember } from './use-block-user';
+import {
+  useBlockUser,
+  useBlockedUsers,
+  useReportMember,
+} from './use-block-user';
 import { useMemberProfile } from './use-profile';
 import { XpHero } from './xp-hero';
 
@@ -62,7 +76,7 @@ function StatCard({
       // completed", "Services listed", "Petitions started") on a card this
       // narrow (4 per row); with no horizontal padding at all, wrapped
       // words sat flush against the card's rounded edges.
-      className='flex-1 items-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card'
+      className="flex-1 items-center gap-2 rounded-2xl border border-surface-hairline bg-paper px-1.5 py-3.5 shadow-card"
       disabled={!onPress}
       onPress={onPress}
     >
@@ -71,8 +85,8 @@ function StatCard({
       >
         <Icon color={CATEGORY_ACCENT_ICON_COLOR[tone]} name={icon} size={16} />
       </View>
-      <Text className='font-inter-bold text-[18px] text-content'>{value}</Text>
-      <Text className='text-center text-text-muted' size='xs'>
+      <Text className="font-inter-bold text-[18px] text-content">{value}</Text>
+      <Text className="text-center text-text-muted" size="xs">
         {label}
       </Text>
     </Pressable>
@@ -99,9 +113,9 @@ export function MemberProfileScreen({
   const blockedUsers = useBlockedUsers();
   const blockUser = useBlockUser();
   const reportMember = useReportMember();
-  const isBlocked = blockedUsers.data?.blocked.some(
-    (blocked) => blocked.userId === userId,
-  ) ?? false;
+  const isBlocked =
+    blockedUsers.data?.blocked.some((blocked) => blocked.userId === userId) ??
+    false;
   const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
   const [reportSheetOpen, setReportSheetOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -152,7 +166,7 @@ export function MemberProfileScreen({
     // from being flattened into that wrapper by RN's view-flattening
     // optimization -- the same #3092 class of bug the header fix below
     // targets, but at the container level.
-    <View className='bg-canvas' collapsable={false} style={{ height: '100%' }}>
+    <View className="bg-canvas" collapsable={false} style={{ height: '100%' }}>
       {/* No manual close button -- this screen is presented as a native
           formSheet (see app/_layout.tsx), whose own grabber, swipe-to-
           dismiss, and tap-outside already cover closing it. A `formSheet`
@@ -190,11 +204,11 @@ export function MemberProfileScreen({
           to a plain, edge-to-edge modal with none of that chrome, so it
           uses the live inset instead -- same reasoning as digest-screen. */}
       <HStack
-        className='items-center justify-between px-5 pb-3'
+        className="items-center justify-between px-5 pb-3"
         collapsable={false}
         style={{ paddingTop: Platform.OS === 'ios' ? 36 : insets.top + 8 }}
       >
-        <Heading className='font-inter-bold' size='xl'>
+        <Heading className="font-inter-bold" size="xl">
           Neighbour
         </Heading>
       </HStack>
@@ -208,31 +222,50 @@ export function MemberProfileScreen({
           />
         }
       >
-        <VStack className='items-center px-5 pb-2 pt-6' space='sm'>
+        {/* Cover photo -- read-only here (no edit control, unlike the
+            owner's own Profile screen): same banner-behind-the-avatar
+            treatment, just nothing to tap since this isn't the member's own
+            screen. */}
+        <View className="h-[110px] w-full bg-secondary">
+          {member.data?.profile.coverUrl ? (
+            <Image
+              accessibilityLabel={`${displayName}'s cover photo`}
+              contentFit="cover"
+              source={{ uri: member.data.profile.coverUrl }}
+              style={{ width: '100%', height: '100%' }}
+            />
+          ) : null}
+        </View>
+        <VStack
+          className="items-center px-5 pb-2"
+          space="sm"
+          style={{ marginTop: -48 }}
+        >
           <Avatar
+            className="border-4 border-canvas"
             name={displayName}
-            size='2xl'
+            size="2xl"
             src={member.data?.profile.avatarUrl ?? undefined}
           />
-          <Heading className='font-inter-bold' size='lg'>
+          <Heading className="font-inter-bold" size="lg">
             {displayName}
           </Heading>
         </VStack>
 
         {member.isPending ? (
-          <View className='items-center py-10'>
-            <Spinner size='xlarge' />
+          <View className="items-center py-10">
+            <Spinner size="xlarge" />
           </View>
         ) : member.isError ? (
-          <VStack className='gap-1 px-5' space='xs'>
-            <Text className='text-center text-text-muted' size='sm'>
+          <VStack className="gap-1 px-5" space="xs">
+            <Text className="text-center text-text-muted" size="sm">
               Couldn&apos;t load this profile.
             </Text>
             {/* Surfaces the actual failure instead of a silent dead end --
                 this has come back reported as "not loading" with no further
                 detail to diagnose from; showing the real status/message
                 here means the next report can include it. */}
-            <Text className='text-center text-[11px] text-text-subtle'>
+            <Text className="text-center text-[11px] text-text-subtle">
               {member.error instanceof ApiError
                 ? `Error ${member.error.status}${member.error.code ? ` (${member.error.code})` : ''}: ${member.error.message}`
                 : member.error instanceof Error
@@ -241,7 +274,7 @@ export function MemberProfileScreen({
             </Text>
           </VStack>
         ) : (
-          <VStack className='gap-4 px-5 pt-4'>
+          <VStack className="gap-4 px-5 pt-4">
             {/* The same XpHero the signed-in user's own Profile screen
                 shows (moved there from the Missions screen, which didn't
                 need its own copy), not a second component. Missions stays
@@ -257,144 +290,164 @@ export function MemberProfileScreen({
               xpToNextLevel={member.data.stats?.xpToNextLevel ?? 0}
             />
 
-            <VStack space='sm'>
-              <Text className='font-inter-bold text-content' size='sm'>
+            <VStack space="sm">
+              <Text className="font-inter-bold text-content" size="sm">
                 Activity
               </Text>
-              <HStack space='sm'>
+              <HStack space="sm">
                 <StatCard
-                  icon='MessageCircle'
-                  label='Posts'
+                  icon="MessageCircle"
+                  label="Posts"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=post`)
+                      ? () =>
+                          router.push(`/member/${userId}/activity?filter=post`)
                       : undefined
                   }
-                  tone='plum'
+                  tone="plum"
                   value={String(member.data.stats?.postsCount ?? 0)}
                 />
                 <StatCard
-                  icon='CalendarDays'
-                  label='Events created'
+                  icon="CalendarDays"
+                  label="Events created"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=event`)
+                      ? () =>
+                          router.push(`/member/${userId}/activity?filter=event`)
                       : undefined
                   }
-                  tone='lake'
+                  tone="lake"
                   value={String(member.data.stats?.eventsCreated ?? 0)}
                 />
                 <StatCard
-                  icon='CalendarDays'
-                  label='Events attended'
+                  icon="CalendarDays"
+                  label="Events attended"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=event`)
+                      ? () =>
+                          router.push(`/member/${userId}/activity?filter=event`)
                       : undefined
                   }
-                  tone='lake'
+                  tone="lake"
                   value={String(member.data.stats?.eventsAttended ?? 0)}
                 />
               </HStack>
-              <HStack space='sm'>
+              <HStack space="sm">
                 <StatCard
-                  icon='Star'
-                  label='Missions created'
+                  icon="Star"
+                  label="Missions created"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=mission`)
+                      ? () =>
+                          router.push(
+                            `/member/${userId}/activity?filter=mission`,
+                          )
                       : undefined
                   }
-                  tone='palm'
+                  tone="palm"
                   value={String(member.data.stats?.missionsCreated ?? 0)}
                 />
                 <StatCard
-                  icon='Star'
-                  label='Missions completed'
+                  icon="Star"
+                  label="Missions completed"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=mission`)
+                      ? () =>
+                          router.push(
+                            `/member/${userId}/activity?filter=mission`,
+                          )
                       : undefined
                   }
-                  tone='palm'
+                  tone="palm"
                   value={String(member.data.stats?.missionsCompleted ?? 0)}
                 />
                 <StatCard
-                  icon='Store'
-                  label='Services listed'
+                  icon="Store"
+                  label="Services listed"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=service`)
+                      ? () =>
+                          router.push(
+                            `/member/${userId}/activity?filter=service`,
+                          )
                       : undefined
                   }
-                  tone='accent'
+                  tone="accent"
                   value={String(member.data.stats?.servicesListed ?? 0)}
                 />
                 <StatCard
-                  icon='FileSignature'
-                  label='Petitions started'
+                  icon="FileSignature"
+                  label="Petitions started"
                   onPress={
                     activityShared
-                      ? () => router.push(`/member/${userId}/activity?filter=petition`)
+                      ? () =>
+                          router.push(
+                            `/member/${userId}/activity?filter=petition`,
+                          )
                       : undefined
                   }
-                  tone='plum'
+                  tone="plum"
                   value={String(member.data.stats?.petitionsStarted ?? 0)}
                 />
               </HStack>
             </VStack>
 
-            <VStack space='sm'>
-              <Text className='font-inter-bold text-content' size='sm'>
+            <VStack space="sm">
+              <Text className="font-inter-bold text-content" size="sm">
                 Community role
               </Text>
-              <Text className='text-text-muted' size='sm'>
+              <Text className="text-text-muted" size="sm">
                 {member.data.profile.role
                   ? ROLE_LABELS[member.data.profile.role]
                   : 'Not shared'}
               </Text>
             </VStack>
 
-            <VStack space='sm'>
-              <Text className='font-inter-bold text-content' size='sm'>
+            <VStack space="sm">
+              <Text className="font-inter-bold text-content" size="sm">
                 Interests
               </Text>
               {member.data.profile.interests.length > 0 ? (
-                <HStack className='flex-wrap gap-2'>
+                <HStack className="flex-wrap gap-2">
                   {member.data.profile.interests.map((interest) => (
-                    <Badge key={interest} variant='accent'>
+                    <Badge key={interest} variant="accent">
                       {interest}
                     </Badge>
                   ))}
                 </HStack>
               ) : (
-                <Text className='text-text-muted' size='sm'>
+                <Text className="text-text-muted" size="sm">
                   None selected yet
                 </Text>
               )}
             </VStack>
 
             {!isSelf && !blockedUsers.isPending ? (
-              <VStack className='pt-2'>
+              <VStack className="pt-2">
                 <Divider />
                 <Pressable
-                  accessibilityRole='button'
-                  className='flex-row items-center gap-3 py-3.5'
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-3 py-3.5"
                   onPress={isBlocked ? handleUnblock : openConfirmBlock}
                 >
                   <Icon name={isBlocked ? 'Eye' : 'EyeOff'} size={18} />
-                  <Text className='text-[14px] text-content'>
-                    {isBlocked ? 'Unblock this neighbour' : 'Block this neighbour'}
+                  <Text className="text-[14px] text-content">
+                    {isBlocked
+                      ? 'Unblock this neighbour'
+                      : 'Block this neighbour'}
                   </Text>
                 </Pressable>
                 <Divider />
                 <Pressable
-                  accessibilityRole='button'
-                  className='flex-row items-center gap-3 py-3.5'
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-3 py-3.5"
                   onPress={() => setReportSheetOpen(true)}
                 >
-                  <Icon color='rgb(231,0,11)' name='AlertCircle' size={18} />
-                  <Text className='text-[14px]' style={{ color: 'rgb(231,0,11)' }}>
+                  <Icon color="rgb(231,0,11)" name="AlertCircle" size={18} />
+                  <Text
+                    className="text-[14px]"
+                    style={{ color: 'rgb(231,0,11)' }}
+                  >
                     Report this member
                   </Text>
                 </Pressable>
@@ -405,7 +458,7 @@ export function MemberProfileScreen({
       </ScrollView>
 
       <ConfirmModal
-        confirmLabel='Block'
+        confirmLabel="Block"
         destructive
         message={`You won't see ${displayName}'s posts, comments, events, missions, or services anymore. Unblock them anytime from Profile → Blocked users.`}
         onClose={() => setConfirmBlockOpen(false)}
@@ -430,11 +483,11 @@ export function MemberProfileScreen({
 
       {toast ? (
         <View
-          className='absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3'
+          className="absolute left-[18px] right-[18px] flex-row items-center gap-2.5 rounded-[10px] bg-primary px-4 py-3"
           style={{ bottom: insets.bottom + 24 }}
         >
-          <Icon color='rgb(250,250,250)' name='AlertCircle' size={16} />
-          <Text className='flex-1 text-[14px] text-primary-foreground'>
+          <Icon color="rgb(250,250,250)" name="AlertCircle" size={16} />
+          <Text className="flex-1 text-[14px] text-primary-foreground">
             {toast}
           </Text>
         </View>

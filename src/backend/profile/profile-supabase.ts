@@ -1,22 +1,27 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { extractAvatarUpload } from '@/src/backend/media';
+import { extractAvatarUpload, extractCoverUpload } from '@/src/backend/media';
 import { defaultDisplayName } from '@/src/backend/store';
 import type { CommunityRole, NotificationPrefs } from '@/src/backend/store';
 import { throwIfSupabaseError } from '@/src/services/supabase';
 import { removeStorageObjects, uploadDataUrl } from '@/src/services/storage';
 
 import { WELCOME_XP } from './profile';
-import type { ProfileResult, UpdateProfileResult, UserProfile } from './profile';
+import type {
+  ProfileResult,
+  UpdateProfileResult,
+  UserProfile,
+} from './profile';
 import { validateProfileUpdate } from './validate';
 import type { ProfileUpdate } from './validate';
 
 const PROFILE_SELECT =
-  'name,avatar_url,role,interests,notif_events,notif_replies,notif_missions,notif_digest,notif_petitions,onboarded_at,activity_visible';
+  'name,avatar_url,cover_url,role,interests,notif_events,notif_replies,notif_missions,notif_digest,notif_petitions,onboarded_at,activity_visible';
 
 interface AppUserProfileRow {
   readonly name: string;
   readonly avatar_url: string | null;
+  readonly cover_url: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly notif_events: boolean;
@@ -35,6 +40,7 @@ const toUserProfile = (
   userId,
   name: row.name,
   avatarUrl: row.avatar_url,
+  coverUrl: row.cover_url,
   role: row.role,
   interests: row.interests,
   notificationPrefs: {
@@ -106,6 +112,7 @@ const mergedRow = (
   return {
     name: current.name,
     avatar_url: current.avatar_url,
+    cover_url: current.cover_url,
     role,
     interests,
     notif_events: prefs.events,
@@ -177,6 +184,22 @@ export async function updateProfileSupabase(
     }
   }
 
+  const coverUpload = extractCoverUpload(input);
+  let replacedCoverUrl: string | null = null;
+  if (coverUpload) {
+    const coverUrl = await uploadDataUrl(
+      supabase,
+      coverUpload.dataUrl,
+      coverUpload.filename,
+      'covers',
+      userId,
+    );
+    if (coverUrl) {
+      payload = { ...payload, cover_url: coverUrl };
+      replacedCoverUrl = current.cover_url;
+    }
+  }
+
   const { data, error } = await supabase
     .from('app_users')
     .update(payload)
@@ -189,6 +212,9 @@ export async function updateProfileSupabase(
   }
   if (replacedAvatarUrl) {
     await removeStorageObjects(supabase, [replacedAvatarUrl]);
+  }
+  if (replacedCoverUrl) {
+    await removeStorageObjects(supabase, [replacedCoverUrl]);
   }
   return {
     justOnboarded,

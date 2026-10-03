@@ -116,6 +116,7 @@ const seedUser = ({
   profile: emptyProfile(),
   mutedUserIds: [],
   avatarUrl: null,
+  coverUrl: null,
   isAdmin,
   pinnedPostId,
 });

@@ -1,4 +1,4 @@
-import { extractAvatarUpload } from '@/src/backend/media';
+import { extractAvatarUpload, extractCoverUpload } from '@/src/backend/media';
 import type { RequestContext } from '@/src/backend/http';
 import { ensureUser, setState } from '@/src/backend/store';
 import type {
@@ -20,6 +20,7 @@ export interface UserProfile {
   readonly userId: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly coverUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly notificationPrefs: NotificationPrefs;
@@ -41,17 +42,20 @@ export interface UpdateProfileSuccess {
   readonly justOnboarded: boolean;
 }
 
-export type UpdateProfileResult = ProfileValidationFailure | UpdateProfileSuccess;
+export type UpdateProfileResult =
+  ProfileValidationFailure | UpdateProfileSuccess;
 
 const toUserProfile = (
   userId: string,
   name: string,
   profile: StoredProfile,
   avatarUrl: string | null,
+  coverUrl: string | null,
 ): UserProfile => ({
   userId,
   name,
   avatarUrl,
+  coverUrl,
   role: profile.role,
   interests: profile.interests,
   notificationPrefs: profile.notificationPrefs,
@@ -89,7 +93,13 @@ const applyUpdate = (
 function getProfileMemory(userId: string): ProfileResult {
   const user = ensureUser(userId);
   return {
-    profile: toUserProfile(userId, user.name, user.profile, user.avatarUrl),
+    profile: toUserProfile(
+      userId,
+      user.name,
+      user.profile,
+      user.avatarUrl,
+      user.coverUrl,
+    ),
   };
 }
 
@@ -105,12 +115,14 @@ function updateProfileMemory(
   const current = ensureUser(userId).profile;
   const merged = applyUpdate(current, validation.update);
   const next =
-    current.onboardedAt === null && validation.update.onboardingComplete === true
+    current.onboardedAt === null &&
+    validation.update.onboardingComplete === true
       ? { ...merged, onboardedAt: new Date().toISOString() }
       : merged;
   const justOnboarded =
     current.onboardedAt === null && next.onboardedAt !== null;
   const avatarUpload = extractAvatarUpload(input);
+  const coverUpload = extractCoverUpload(input);
 
   const updated = setState((state) => ({
     ...state,
@@ -119,6 +131,7 @@ function updateProfileMemory(
         ? {
             ...user,
             avatarUrl: avatarUpload ? avatarUpload.dataUrl : user.avatarUrl,
+            coverUrl: coverUpload ? coverUpload.dataUrl : user.coverUrl,
             name: validation.update.name ?? user.name,
             profile: next,
             xp: justOnboarded ? user.xp + WELCOME_XP : user.xp,
@@ -128,17 +141,22 @@ function updateProfileMemory(
   }));
   const updatedUser = updated.users.find((user) => user.id === userId);
   const avatarUrl = updatedUser?.avatarUrl ?? null;
+  const coverUrl = updatedUser?.coverUrl ?? null;
 
   return {
     justOnboarded,
     ok: true,
-    profile: toUserProfile(userId, updatedUser?.name ?? '', next, avatarUrl),
+    profile: toUserProfile(
+      userId,
+      updatedUser?.name ?? '',
+      next,
+      avatarUrl,
+      coverUrl,
+    ),
   };
 }
 
-export async function getProfile(
-  ctx: RequestContext,
-): Promise<ProfileResult> {
+export async function getProfile(ctx: RequestContext): Promise<ProfileResult> {
   return ctx.supabase
     ? getProfileSupabase(ctx.supabase, ctx.userId)
     : getProfileMemory(ctx.userId);

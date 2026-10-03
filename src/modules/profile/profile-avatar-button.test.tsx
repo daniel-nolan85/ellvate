@@ -26,6 +26,7 @@ const mockedRequestJson = jest.mocked(requestJson);
 const baseProfile: UserProfile = {
   activityVisible: false,
   avatarUrl: null,
+  coverUrl: null,
   interests: [],
   name: 'Demo member',
   notificationPrefs: {

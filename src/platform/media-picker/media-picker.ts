@@ -55,3 +55,19 @@ export async function pickAvatarImage(): Promise<PickedImage | null> {
   const asset = result.canceled ? null : result.assets[0];
   return asset?.base64 ? toPickedImage(asset) : null;
 }
+
+// Picks and crops a single wide banner image for a profile cover photo --
+// same shape as pickAvatarImage, just a 3:1 aspect instead of square, to
+// match the banner-behind-the-avatar space it fills. Returns null if the
+// user cancels or the picked asset lacks base64 data.
+export async function pickCoverImage(): Promise<PickedImage | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    allowsEditing: true,
+    aspect: [3, 1],
+    base64: true,
+    mediaTypes: ['images'],
+    quality: 0.8,
+  });
+  const asset = result.canceled ? null : result.assets[0];
+  return asset?.base64 ? toPickedImage(asset) : null;
+}

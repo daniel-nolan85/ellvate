@@ -36,6 +36,9 @@ export interface StoredUser {
   readonly id: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  // Shown behind the avatar on the Profile screen and the public
+  // member-profile screen -- same visibility as avatarUrl, not private.
+  readonly coverUrl: string | null;
   // Community admin -- distinct from dashboard_admins, which only gates
   // login to the separate /admin moderation tool. Drives the "admin" mark
   // shown next to this user's name on their own content.

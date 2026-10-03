@@ -1,7 +1,15 @@
 import { useState, type ReactNode } from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Switch,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 
 import { Avatar } from '@/src/components/ui/avatar';
@@ -28,8 +36,11 @@ import {
   resetOnboardingComplete,
   ROLES,
 } from '@/src/modules/onboarding';
-import { getClerkConfiguration, publicEnvironment } from '@/src/platform/environment';
-import { pickAvatarImage } from '@/src/platform/media-picker';
+import {
+  getClerkConfiguration,
+  publicEnvironment,
+} from '@/src/platform/environment';
+import { pickAvatarImage, pickCoverImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
 
 import { AccountIdentifiersSheet } from './account-identifiers-sheet';
@@ -161,7 +172,6 @@ function Row({
   );
 }
 
-
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const tabBarClearance = useFloatingContentClearance();
@@ -178,7 +188,9 @@ export function ProfileScreen() {
   // safe to render in every auth mode.
   const clerkReady = getClerkConfiguration().status === 'ready';
 
-  const [activeSheet, setActiveSheet] = useState<'edit' | 'identifiers' | null>(null);
+  const [activeSheet, setActiveSheet] = useState<'edit' | 'identifiers' | null>(
+    null,
+  );
   const [draftName, setDraftName] = useState('');
   const [draftRole, setDraftRole] = useState<CommunityRole | null>(null);
   const [draftInterests, setDraftInterests] = useState<readonly string[]>([]);
@@ -198,7 +210,8 @@ export function ProfileScreen() {
   // guessed from the 'You' placeholder above -- the heading text can say
   // 'You' while the real name loads, but a wrong-looking 'Y' initial would
   // briefly misrepresent the person.
-  const stillLoadingRealProfile = session.status === 'signed-in' && !profile.data;
+  const stillLoadingRealProfile =
+    session.status === 'signed-in' && !profile.data;
   const prefs = profile.data?.profile.notificationPrefs;
   const currentRole = profile.data?.profile.role ?? null;
   const currentRoleOption = currentRole
@@ -223,6 +236,19 @@ export function ProfileScreen() {
     }
     updateProfile.mutate({
       avatar: {
+        dataUrl: `data:${asset.mimeType};base64,${asset.base64}`,
+        filename: asset.filename,
+      },
+    });
+  };
+
+  const pickCover = async () => {
+    const asset = await pickCoverImage();
+    if (!asset) {
+      return;
+    }
+    updateProfile.mutate({
+      cover: {
         dataUrl: `data:${asset.mimeType};base64,${asset.base64}`,
         filename: asset.filename,
       },
@@ -254,7 +280,9 @@ export function ProfileScreen() {
       {
         name,
         ...(draftRole ? { role: draftRole } : {}),
-        ...(draftInterests.length >= MIN_PICKS ? { interests: draftInterests } : {}),
+        ...(draftInterests.length >= MIN_PICKS
+          ? { interests: draftInterests }
+          : {}),
       },
       { onSuccess: () => setActiveSheet(null) },
     );
@@ -346,47 +374,78 @@ export function ProfileScreen() {
           />
         }
       >
-        <VStack className="mx-5 items-center gap-3 rounded-[20px] border border-surface-hairline bg-paper px-5 pb-5 pt-6 shadow-card">
+        <View className="mx-5 overflow-hidden rounded-[20px] border border-surface-hairline bg-paper shadow-card">
+          {/* Cover photo -- fills what used to be plain whitespace above the
+              avatar. A separate Pressable/edit button from the avatar's own
+              below: tapping the banner changes the cover, tapping the
+              avatar changes the avatar, and the two must never fire off the
+              same gesture. */}
           <Pressable
-            accessibilityLabel="Change your photo"
+            accessibilityLabel="Change your cover photo"
             accessibilityRole="button"
-            className="relative"
+            className="h-[110px] w-full bg-secondary"
             disabled={updateProfile.isPending}
-            onPress={pickAvatar}
+            onPress={pickCover}
           >
-            <Avatar
-              loading={stillLoadingRealProfile}
-              name={displayName}
-              size="2xl"
-              src={profile.data?.profile.avatarUrl ?? undefined}
-            />
-            <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-paper bg-accent">
-              {updateProfile.isPending ? (
-                <Spinner size="small" />
-              ) : (
-                <Icon color="rgb(255,255,255)" name="Edit" size={14} />
-              )}
+            {profile.data?.profile.coverUrl ? (
+              <Image
+                accessibilityLabel="Your cover photo"
+                contentFit="cover"
+                source={{ uri: profile.data.profile.coverUrl }}
+                style={{ width: '100%', height: '100%' }}
+              />
+            ) : null}
+            <View className="absolute bottom-2 right-2 h-8 w-8 items-center justify-center rounded-full border-2 border-paper bg-accent">
+              <Icon color="rgb(255,255,255)" name="Edit" size={14} />
             </View>
           </Pressable>
-          <VStack className="items-center" space="xs">
-            <Heading className="font-inter-bold" size="lg">
-              {displayName}
-            </Heading>
-            <Text className="text-text-muted" size="sm">
-              {subtitle}
-            </Text>
-          </VStack>
-          <Button
-            action="secondary"
-            className="rounded-full bg-secondary px-5"
-            onPress={openEditProfile}
-            size="sm"
+
+          <VStack
+            className="items-center gap-3 px-5 pb-5"
+            style={{ marginTop: -48 }}
           >
-            <ButtonText className="font-inter-semibold text-[13px] text-content">
-              Edit profile
-            </ButtonText>
-          </Button>
-        </VStack>
+            <Pressable
+              accessibilityLabel="Change your photo"
+              accessibilityRole="button"
+              className="relative"
+              disabled={updateProfile.isPending}
+              onPress={pickAvatar}
+            >
+              <Avatar
+                className="border-4 border-paper"
+                loading={stillLoadingRealProfile}
+                name={displayName}
+                size="2xl"
+                src={profile.data?.profile.avatarUrl ?? undefined}
+              />
+              <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-paper bg-accent">
+                {updateProfile.isPending ? (
+                  <Spinner size="small" />
+                ) : (
+                  <Icon color="rgb(255,255,255)" name="Edit" size={14} />
+                )}
+              </View>
+            </Pressable>
+            <VStack className="items-center" space="xs">
+              <Heading className="font-inter-bold" size="lg">
+                {displayName}
+              </Heading>
+              <Text className="text-text-muted" size="sm">
+                {subtitle}
+              </Text>
+            </VStack>
+            <Button
+              action="secondary"
+              className="rounded-full bg-secondary px-5"
+              onPress={openEditProfile}
+              size="sm"
+            >
+              <ButtonText className="font-inter-semibold text-[13px] text-content">
+                Edit profile
+              </ButtonText>
+            </Button>
+          </VStack>
+        </View>
 
         {stats.data ? (
           <Pressable
@@ -496,7 +555,11 @@ export function ProfileScreen() {
             }
             value={clerkReady ? undefined : 'Not available in this build'}
           />
-          <Row icon="Mail" label="Contact us" onPress={() => router.push('/contact')} />
+          <Row
+            icon="Mail"
+            label="Contact us"
+            onPress={() => router.push('/contact')}
+          />
           <Row
             icon="FileText"
             label="Terms of Service"
@@ -527,8 +590,16 @@ export function ProfileScreen() {
             }
             value={MARKETING_URL ? undefined : 'Not available yet'}
           />
-          <Row icon="Globe" label="About" onPress={() => router.push('/about')} />
-          <Row icon="ArrowLeft" label="Sign out" onPress={() => setSignOutOpen(true)} />
+          <Row
+            icon="Globe"
+            label="About"
+            onPress={() => router.push('/about')}
+          />
+          <Row
+            icon="ArrowLeft"
+            label="Sign out"
+            onPress={() => setSignOutOpen(true)}
+          />
           <Row
             danger
             icon="AlertCircle"
@@ -538,13 +609,17 @@ export function ProfileScreen() {
         </SectionCard>
       </ScrollView>
 
-      <Sheet onClose={() => setActiveSheet(null)} visible={activeSheet === 'edit'}>
-        {activeSheet === 'edit' ? (maxContentHeight: number) => (
-          <VStack className="px-5 pb-2 pt-1" space="md">
-            <Text className="font-inter-bold text-[17px] text-content">
-              Edit profile
-            </Text>
-            {/* The Save button lives INSIDE this ScrollView (as its last
+      <Sheet
+        onClose={() => setActiveSheet(null)}
+        visible={activeSheet === 'edit'}
+      >
+        {activeSheet === 'edit'
+          ? (maxContentHeight: number) => (
+              <VStack className="px-5 pb-2 pt-1" space="md">
+                <Text className="font-inter-bold text-[17px] text-content">
+                  Edit profile
+                </Text>
+                {/* The Save button lives INSIDE this ScrollView (as its last
                 item) rather than as a fixed sibling below it -- a fixed
                 sibling has no scroll container of its own, so once the
                 sheet's total content (title + this box + button) exceeds
@@ -566,127 +641,153 @@ export function ProfileScreen() {
                 gap above the ScrollView); 200 is a floor so a momentary
                 keyboard-transition measurement never collapses it to
                 nothing. */}
-            <ScrollView
-              style={{
-                maxHeight: Math.min(440, Math.max(200, maxContentHeight - 56)),
-              }}
-            >
-              <VStack space="lg">
-                <VStack space="xs">
-                  <Text className="font-inter-semibold text-content" size="sm">
-                    Name
-                  </Text>
-                  <Text className="text-text-muted" size="xs">
-                    This is how neighbours see you on posts and the leaderboard.
-                  </Text>
-                  <Input size="lg">
-                    <InputField
-                      autoFocus
-                      maxLength={50}
-                      onChangeText={setDraftName}
-                      onSubmitEditing={saveProfile}
-                      placeholder="First name"
-                      value={draftName}
-                    />
-                  </Input>
-                </VStack>
-
-                <VStack space="xs">
-                  <Text className="font-inter-semibold text-content" size="sm">
-                    Community role
-                  </Text>
-                  <VStack space="xs">
-                    {ROLES.map((role) => {
-                      const selected = draftRole === role.id;
-                      return (
-                        <Pressable
-                          accessibilityRole="button"
-                          className={`flex-row items-center gap-3 rounded-2xl px-4 py-3 ${
-                            selected
-                              ? 'border border-accent bg-accent'
-                              : 'border border-surface-hairline bg-canvas'
-                          }`}
-                          key={role.id}
-                          onPress={() => setDraftRole(role.id)}
-                          testID={`profile-role-${role.id}`}
-                        >
-                          <Icon
-                            color={selected ? '#fff' : 'rgb(181,80,44)'}
-                            name={role.icon}
-                            size={18}
-                          />
-                          <View className="flex-1">
-                            <Text
-                              className={`font-inter-semibold text-[14px] ${
-                                selected ? 'text-accent-foreground' : 'text-content'
-                              }`}
-                            >
-                              {role.title}
-                            </Text>
-                            <Text
-                              className={`text-[12px] ${
-                                selected ? 'text-[rgba(250,250,250,0.6)]' : 'text-text-muted'
-                              }`}
-                            >
-                              {role.sub}
-                            </Text>
-                          </View>
-                          {selected ? (
-                            <Icon color="#fff" name="CheckCircle" size={18} />
-                          ) : null}
-                        </Pressable>
-                      );
-                    })}
-                  </VStack>
-                </VStack>
-
-                <VStack className="pb-1" space="xs">
-                  <Text className="font-inter-semibold text-content" size="sm">
-                    Interests
-                  </Text>
-                  <Text className="text-text-muted" size="xs">
-                    Pick {MIN_PICKS}–{MAX_PICKS} things you&apos;re into.
-                  </Text>
-                  <View className="flex-row flex-wrap gap-2 pb-1">
-                    {INTERESTS.map((interest) => {
-                      const selected = draftInterests.includes(interest);
-                      return (
-                        <Pressable
-                          accessibilityRole="button"
-                          className={`rounded-full px-4 py-2.5 ${
-                            selected ? 'bg-accent' : 'bg-secondary'
-                          }`}
-                          key={interest}
-                          onPress={() => toggleDraftInterest(interest)}
-                          testID={`profile-interest-${interest.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                        >
-                          <Text
-                            className={`font-inter-medium text-[13px] ${
-                              selected ? 'text-accent-foreground' : 'text-content'
-                            }`}
-                          >
-                            {interest}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </VStack>
-
-                <Button
-                  className="h-[52px] rounded-2xl bg-accent"
-                  isDisabled={draftName.trim().length === 0 || updateProfile.isPending}
-                  onPress={saveProfile}
-                  size="lg"
+                <ScrollView
+                  style={{
+                    maxHeight: Math.min(
+                      440,
+                      Math.max(200, maxContentHeight - 56),
+                    ),
+                  }}
                 >
-                  <ButtonText className="font-inter-semibold text-accent-foreground">
-                    {updateProfile.isPending ? 'Saving…' : 'Save'}
-                  </ButtonText>
-                </Button>
+                  <VStack space="lg">
+                    <VStack space="xs">
+                      <Text
+                        className="font-inter-semibold text-content"
+                        size="sm"
+                      >
+                        Name
+                      </Text>
+                      <Text className="text-text-muted" size="xs">
+                        This is how neighbours see you on posts and the
+                        leaderboard.
+                      </Text>
+                      <Input size="lg">
+                        <InputField
+                          autoFocus
+                          maxLength={50}
+                          onChangeText={setDraftName}
+                          onSubmitEditing={saveProfile}
+                          placeholder="First name"
+                          value={draftName}
+                        />
+                      </Input>
+                    </VStack>
+
+                    <VStack space="xs">
+                      <Text
+                        className="font-inter-semibold text-content"
+                        size="sm"
+                      >
+                        Community role
+                      </Text>
+                      <VStack space="xs">
+                        {ROLES.map((role) => {
+                          const selected = draftRole === role.id;
+                          return (
+                            <Pressable
+                              accessibilityRole="button"
+                              className={`flex-row items-center gap-3 rounded-2xl px-4 py-3 ${
+                                selected
+                                  ? 'border border-accent bg-accent'
+                                  : 'border border-surface-hairline bg-canvas'
+                              }`}
+                              key={role.id}
+                              onPress={() => setDraftRole(role.id)}
+                              testID={`profile-role-${role.id}`}
+                            >
+                              <Icon
+                                color={selected ? '#fff' : 'rgb(181,80,44)'}
+                                name={role.icon}
+                                size={18}
+                              />
+                              <View className="flex-1">
+                                <Text
+                                  className={`font-inter-semibold text-[14px] ${
+                                    selected
+                                      ? 'text-accent-foreground'
+                                      : 'text-content'
+                                  }`}
+                                >
+                                  {role.title}
+                                </Text>
+                                <Text
+                                  className={`text-[12px] ${
+                                    selected
+                                      ? 'text-[rgba(250,250,250,0.6)]'
+                                      : 'text-text-muted'
+                                  }`}
+                                >
+                                  {role.sub}
+                                </Text>
+                              </View>
+                              {selected ? (
+                                <Icon
+                                  color="#fff"
+                                  name="CheckCircle"
+                                  size={18}
+                                />
+                              ) : null}
+                            </Pressable>
+                          );
+                        })}
+                      </VStack>
+                    </VStack>
+
+                    <VStack className="pb-1" space="xs">
+                      <Text
+                        className="font-inter-semibold text-content"
+                        size="sm"
+                      >
+                        Interests
+                      </Text>
+                      <Text className="text-text-muted" size="xs">
+                        Pick {MIN_PICKS}–{MAX_PICKS} things you&apos;re into.
+                      </Text>
+                      <View className="flex-row flex-wrap gap-2 pb-1">
+                        {INTERESTS.map((interest) => {
+                          const selected = draftInterests.includes(interest);
+                          return (
+                            <Pressable
+                              accessibilityRole="button"
+                              className={`rounded-full px-4 py-2.5 ${
+                                selected ? 'bg-accent' : 'bg-secondary'
+                              }`}
+                              key={interest}
+                              onPress={() => toggleDraftInterest(interest)}
+                              testID={`profile-interest-${interest.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                            >
+                              <Text
+                                className={`font-inter-medium text-[13px] ${
+                                  selected
+                                    ? 'text-accent-foreground'
+                                    : 'text-content'
+                                }`}
+                              >
+                                {interest}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </VStack>
+
+                    <Button
+                      className="h-[52px] rounded-2xl bg-accent"
+                      isDisabled={
+                        draftName.trim().length === 0 || updateProfile.isPending
+                      }
+                      onPress={saveProfile}
+                      size="lg"
+                    >
+                      <ButtonText className="font-inter-semibold text-accent-foreground">
+                        {updateProfile.isPending ? 'Saving…' : 'Save'}
+                      </ButtonText>
+                    </Button>
+                  </VStack>
+                </ScrollView>
               </VStack>
-            </ScrollView>
-          </VStack>
-        ) : null}
+            )
+          : null}
       </Sheet>
 
       {clerkReady ? (

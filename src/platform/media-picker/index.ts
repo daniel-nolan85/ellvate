@@ -1,5 +1,6 @@
 export {
   pickAvatarImage,
+  pickCoverImage,
   pickGalleryImages,
   type PickedImage,
   type PickGalleryImagesOptions,

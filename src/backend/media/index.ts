@@ -173,6 +173,28 @@ export function extractAvatarUpload(input: unknown): RawMediaUpload | null {
   return { dataUrl, filename };
 }
 
+// WHY: a cover/banner photo is a single image like an avatar, not a gallery
+// item -- reads `raw.cover` (one object), mirroring extractAvatarUpload's
+// permissive/strict split exactly (missing or malformed shape is "no
+// change"; a real data URL that violates a limit rejects the request).
+export function extractCoverUpload(input: unknown): RawMediaUpload | null {
+  const raw = isRecord(input) ? input : {};
+  const cover = isRecord(raw.cover) ? raw.cover : null;
+  if (!cover) {
+    return null;
+  }
+  const dataUrl = typeof cover.dataUrl === 'string' ? cover.dataUrl : '';
+  if (!dataUrl.startsWith('data:')) {
+    return null;
+  }
+  const filename =
+    typeof cover.filename === 'string' ? cover.filename : 'cover';
+  assertValidFilename(filename);
+  assertValidDataUrl(dataUrl);
+
+  return { dataUrl, filename };
+}
+
 // WHY: a business logo is a single image like an avatar, not a gallery item
 // — reads `raw.newLogo` (matching the `newMedia` naming convention) rather
 // than a bare `logo` field. Mirrors extractAvatarUpload's permissive/strict

@@ -52,6 +52,7 @@ describe('getProfile', () => {
         userId: DEMO_USER_ID,
         name: 'You',
         avatarUrl: null,
+        coverUrl: null,
         role: null,
         interests: [],
         notificationPrefs: defaultPrefs,
@@ -72,6 +73,7 @@ describe('getProfile', () => {
       userId: 'user-ghost',
       name: defaultDisplayName('user-ghost'),
       avatarUrl: null,
+      coverUrl: null,
       role: null,
       interests: [],
       notificationPrefs: defaultPrefs,
@@ -104,6 +106,7 @@ describe('getPublicProfile (requester differs from member)', () => {
       userId: 'user-mia',
       name: 'Mia Lake',
       avatarUrl: null,
+      coverUrl: null,
       role: null,
       interests: [],
       activityVisible: true,
@@ -187,15 +190,15 @@ describe('getPublicProfile (requester differs from member)', () => {
   });
 
   test('surfaces the member’s own activityVisible choice, not the requester’s', async () => {
-    expect((await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible).toBe(
-      true,
-    );
+    expect(
+      (await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible,
+    ).toBe(true);
 
     await updateProfile(ctx('user-mia'), { activityVisible: false });
 
-    expect((await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible).toBe(
-      false,
-    );
+    expect(
+      (await getPublicProfile(ctx(), 'user-mia'))?.profile.activityVisible,
+    ).toBe(false);
   });
 });
 
@@ -210,7 +213,10 @@ describe('GET /api/users/:userId/profile', () => {
     const body = (await response.json()) as {
       profile: { name: string; userId: string };
     };
-    expect(body.profile).toMatchObject({ name: 'Mia Lake', userId: 'user-mia' });
+    expect(body.profile).toMatchObject({
+      name: 'Mia Lake',
+      userId: 'user-mia',
+    });
   });
 
   test('returns 404 for an unknown member', async () => {
@@ -409,7 +415,10 @@ describe('updateProfile', () => {
     expect((await getProfile(ctx())).profile.onboardedAt).toBeNull();
 
     setSystemTime(new Date('2026-07-13T09:00:00.000Z'));
-    await updateProfile(ctx(), { interests: ['A', 'B', 'C'], onboardingComplete: true });
+    await updateProfile(ctx(), {
+      interests: ['A', 'B', 'C'],
+      onboardingComplete: true,
+    });
 
     expect((await getProfile(ctx())).profile.onboardedAt).toBe(
       '2026-07-13T09:00:00.000Z',
@@ -434,6 +443,74 @@ describe('updateProfile', () => {
     if (result.ok) {
       expect(result.profile.onboardedAt).toBe('2026-07-12T10:00:00.000Z');
     }
+  });
+});
+
+describe('cover photo upload', () => {
+  const COVER_DATA_URL = 'data:image/jpeg;base64,ZmFrZS1jb3Zlci1ieXRlcw==';
+
+  test('sets coverUrl from an uploaded data URL', async () => {
+    const result = await updateProfile(ctx(), {
+      cover: { dataUrl: COVER_DATA_URL, filename: 'banner.jpg' },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.coverUrl).toBe(COVER_DATA_URL);
+    }
+    expect(
+      getState().users.find((user) => user.id === DEMO_USER_ID)?.coverUrl,
+    ).toBe(COVER_DATA_URL);
+  });
+
+  test('leaves coverUrl untouched when no cover is included in the update', async () => {
+    await updateProfile(ctx(), {
+      cover: { dataUrl: COVER_DATA_URL, filename: 'banner.jpg' },
+    });
+
+    const result = await updateProfile(ctx(), { role: 'resident' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.coverUrl).toBe(COVER_DATA_URL);
+    }
+  });
+
+  test('ignores a malformed cover payload without a data URL', async () => {
+    const result = await updateProfile(ctx(), {
+      cover: { dataUrl: 'not-a-data-url', filename: 'banner.jpg' },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.coverUrl).toBeNull();
+    }
+  });
+
+  test('is independent of avatarUrl -- uploading one never touches the other', async () => {
+    const AVATAR_DATA_URL = 'data:image/jpeg;base64,ZmFrZS1hdmF0YXItYnl0ZXM=';
+    await updateProfile(ctx(), {
+      avatar: { dataUrl: AVATAR_DATA_URL, filename: 'me.jpg' },
+    });
+    const result = await updateProfile(ctx(), {
+      cover: { dataUrl: COVER_DATA_URL, filename: 'banner.jpg' },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.avatarUrl).toBe(AVATAR_DATA_URL);
+      expect(result.profile.coverUrl).toBe(COVER_DATA_URL);
+    }
+  });
+
+  test('propagates the new cover to the public member profile', async () => {
+    await updateProfile(ctx('user-mia'), {
+      cover: { dataUrl: COVER_DATA_URL, filename: 'banner.jpg' },
+    });
+
+    const summary = await getPublicProfile(ctx(), 'user-mia');
+
+    expect(summary?.profile.coverUrl).toBe(COVER_DATA_URL);
   });
 });
 
@@ -501,6 +578,7 @@ describe('GET /api/me/profile', () => {
         userId: DEMO_USER_ID,
         name: 'You',
         avatarUrl: null,
+        coverUrl: null,
         role: null,
         interests: [],
         notificationPrefs: defaultPrefs,

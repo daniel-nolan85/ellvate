@@ -1,6 +1,9 @@
 import type { RequestContext } from '@/src/backend/http';
 import { getState, type CommunityRole } from '@/src/backend/store';
-import { DEFAULT_PROGRESS_TITLE, getMissionsView } from '@/src/backend/missions';
+import {
+  DEFAULT_PROGRESS_TITLE,
+  getMissionsView,
+} from '@/src/backend/missions';
 import { getMutedUserIds } from '@/src/backend/mutes';
 
 import {
@@ -13,6 +16,7 @@ export interface PublicMemberRow {
   readonly id: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly coverUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly activityVisible: boolean;
@@ -22,6 +26,7 @@ export interface PublicProfile {
   readonly userId: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly coverUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly activityVisible: boolean;
@@ -65,11 +70,14 @@ export interface PublicMemberSummary {
 // insert for memberUserId while still authenticated as the requester, either
 // violating RLS (Supabase) or silently creating a ghost user (memory mode).
 function getMemberRowMemory(memberUserId: string): PublicMemberRow | null {
-  const user = getState().users.find((candidate) => candidate.id === memberUserId);
+  const user = getState().users.find(
+    (candidate) => candidate.id === memberUserId,
+  );
   return user
     ? {
         activityVisible: user.profile.activityVisible,
         avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
         id: user.id,
         interests: user.profile.interests,
         name: user.name,
@@ -104,9 +112,8 @@ function getMemberActivityCountsMemory(
     eventsAttended: events.filter((event) =>
       event.joinedBy.includes(memberUserId),
     ).length,
-    eventsCreated: events.filter(
-      (event) => event.authorId === memberUserId,
-    ).length,
+    eventsCreated: events.filter((event) => event.authorId === memberUserId)
+      .length,
     missionsCreated: missions.filter(
       (mission) => mission.authorId === memberUserId,
     ).length,
@@ -132,7 +139,9 @@ function getBlockedMembersMemory(
   const { users } = getState();
   return mutedUserIds.flatMap((id) => {
     const user = users.find((candidate) => candidate.id === id);
-    return user ? [{ avatarUrl: user.avatarUrl, name: user.name, userId: user.id }] : [];
+    return user
+      ? [{ avatarUrl: user.avatarUrl, name: user.name, userId: user.id }]
+      : [];
   });
 }
 
@@ -180,6 +189,7 @@ export async function getPublicProfile(
     profile: {
       activityVisible: memberRow.activityVisible,
       avatarUrl: memberRow.avatarUrl,
+      coverUrl: memberRow.coverUrl,
       interests: memberRow.interests,
       name: memberRow.name,
       role: memberRow.role,

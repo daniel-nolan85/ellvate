@@ -17,6 +17,7 @@ export interface UserProfile {
   readonly userId: string;
   readonly name: string;
   readonly avatarUrl: string | null;
+  readonly coverUrl: string | null;
   readonly role: CommunityRole | null;
   readonly interests: readonly string[];
   readonly notificationPrefs: NotificationPrefs;
@@ -49,7 +50,13 @@ export interface MemberActivityStats {
 interface MemberProfileResponse {
   readonly profile: Pick<
     UserProfile,
-    'userId' | 'name' | 'role' | 'interests' | 'avatarUrl' | 'activityVisible'
+    | 'userId'
+    | 'name'
+    | 'role'
+    | 'interests'
+    | 'avatarUrl'
+    | 'coverUrl'
+    | 'activityVisible'
   >;
   readonly stats: MemberActivityStats;
 }
@@ -73,12 +80,18 @@ export interface AvatarUploadInput {
   readonly dataUrl: string;
 }
 
+export interface CoverUploadInput {
+  readonly filename: string;
+  readonly dataUrl: string;
+}
+
 export interface ProfileUpdateInput {
   readonly name?: string;
   readonly role?: CommunityRole | null;
   readonly interests?: readonly string[];
   readonly notificationPrefs?: Partial<NotificationPrefs>;
   readonly avatar?: AvatarUploadInput;
+  readonly cover?: CoverUploadInput;
   readonly activityVisible?: boolean;
 }
 

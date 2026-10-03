@@ -11,6 +11,7 @@ interface FakeMemberRow {
   readonly id: string;
   readonly name: string;
   readonly avatar_url: string | null;
+  readonly cover_url: string | null;
   readonly role: string | null;
   readonly interests: readonly string[];
   readonly activity_visible: boolean;
@@ -65,6 +66,7 @@ describe('getMemberRowSupabase (requester differs from member)', () => {
       'user-other': {
         activity_visible: true,
         avatar_url: 'https://example.com/avatar.jpg',
+        cover_url: null,
         id: 'user-other',
         interests: ['Kayaking'],
         name: 'Other Neighbour',
@@ -77,6 +79,7 @@ describe('getMemberRowSupabase (requester differs from member)', () => {
     expect(row).toEqual({
       activityVisible: true,
       avatarUrl: 'https://example.com/avatar.jpg',
+      coverUrl: null,
       id: 'user-other',
       interests: ['Kayaking'],
       name: 'Other Neighbour',

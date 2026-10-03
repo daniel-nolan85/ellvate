@@ -4,12 +4,14 @@ import { throwIfSupabaseError } from '@/src/services/supabase';
 
 import type { MemberActivityCounts, PublicMemberRow } from './public-profile';
 
-const MEMBER_SELECT = 'id,name,avatar_url,role,interests,activity_visible';
+const MEMBER_SELECT =
+  'id,name,avatar_url,cover_url,role,interests,activity_visible';
 
 interface MemberRow {
   readonly id: string;
   readonly name: string;
   readonly avatar_url: string | null;
+  readonly cover_url: string | null;
   readonly role: PublicMemberRow['role'];
   readonly interests: readonly string[];
   readonly activity_visible: boolean;
@@ -35,6 +37,7 @@ export async function getMemberRowSupabase(
   return {
     activityVisible: row.activity_visible,
     avatarUrl: row.avatar_url,
+    coverUrl: row.cover_url,
     id: row.id,
     interests: row.interests,
     name: row.name,
@@ -48,7 +51,13 @@ export async function getMemberRowSupabase(
 export async function getMemberDisplayRowsSupabase(
   supabase: SupabaseClient,
   memberUserIds: readonly string[],
-): Promise<readonly { readonly id: string; readonly name: string; readonly avatarUrl: string | null }[]> {
+): Promise<
+  readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly avatarUrl: string | null;
+  }[]
+> {
   const { data, error } = await supabase
     .from('app_users')
     .select('id,name,avatar_url')
