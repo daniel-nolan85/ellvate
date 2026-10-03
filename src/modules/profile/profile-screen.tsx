@@ -412,7 +412,7 @@ export function ProfileScreen() {
               onPress={pickAvatar}
             >
               <Avatar
-                className="border-4 border-paper"
+                className="rounded-full border-4 border-paper"
                 loading={stillLoadingRealProfile}
                 name={displayName}
                 size="2xl"

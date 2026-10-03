@@ -242,7 +242,7 @@ export function MemberProfileScreen({
           style={{ marginTop: -48 }}
         >
           <Avatar
-            className="border-4 border-canvas"
+            className="rounded-full border-4 border-canvas"
             name={displayName}
             size="2xl"
             src={member.data?.profile.avatarUrl ?? undefined}
