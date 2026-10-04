@@ -94,8 +94,10 @@ export function Sheet({
   // since (unlike a plain pushed screen) a Modal's own window doesn't get
   // Android's automatic adjustResize handling for free.
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, (event) => {
       setKeyboardHeight(event.endCoordinates.height);
     });
@@ -202,7 +204,8 @@ export function Sheet({
     return null;
   }
 
-  const panelMaxHeight = windowHeight - insets.top - MIN_TOP_GAP - keyboardHeight;
+  const panelMaxHeight =
+    windowHeight - insets.top - MIN_TOP_GAP - keyboardHeight;
   const maxContentHeight = Math.max(
     0,
     panelMaxHeight - HANDLE_AREA_HEIGHT - insets.bottom - 12,
@@ -216,15 +219,29 @@ export function Sheet({
       transparent
       visible
     >
-      {/* 'height' rather than Android's usual `undefined` (which relies on
-          the OS's automatic adjustResize) -- this whole tree lives inside
-          the <Modal> above, a separate native Dialog window that Android's
-          Activity-level adjustResize does not reach, so without an explicit
-          behavior here the keyboard would simply overlap this panel's
-          fields on Android with no avoidance at all. */}
+      {/* iOS uses KeyboardAvoidingView's own 'padding' behavior, which works
+          fine here. Android used to pass behavior="height" instead (its
+          closest equivalent, since Android's automatic adjustResize doesn't
+          reach a Modal's separate Dialog window) -- but that behavior works
+          by RN measuring this view's own frame and shrinking it, and inside
+          a transparent, statusBarTranslucent Modal that measurement never
+          actually shrinks the view in practice: `justify-end` keeps
+          anchoring the panel to the screen's untouched physical bottom,
+          under the keyboard, even though the panel's own `maxHeight` below
+          (driven by the SAME keyboardHeight this component already tracks
+          via its own Keyboard listener) correctly shrinks its *size* --
+          right size, wrong position. Applying that already-tracked height
+          directly as marginBottom sidesteps RN's Android-in-Modal resize
+          path entirely and repositions the panel using a value already
+          proven correct (it's the same one panelMaxHeight below uses). */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-end"
+        style={
+          Platform.OS === 'android'
+            ? { marginBottom: keyboardHeight }
+            : undefined
+        }
       >
         <Pressable
           accessibilityLabel="Close"
