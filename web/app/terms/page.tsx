@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { LegalPageShell, LegalSection } from '@/components/legal/legal-page-shell';
 import { BRAND } from '@/lib/content';
 
-const title = `Terms of Service — ${BRAND.appName}`;
+const title = `Terms of Service - ${BRAND.appName}`;
 const description = `The terms that govern your use of ${BRAND.appName}.`;
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 25, 2026';
+const LAST_UPDATED = 'October 5, 2026';
 
 export default function TermsOfServicePage() {
   return (
@@ -39,8 +39,8 @@ export default function TermsOfServicePage() {
         <p>
           {BRAND.appName} is a place for {BRAND.community} residents to talk with each
           other, find out what&rsquo;s happening locally, take part in neighborhood
-          missions, discover local services, and raise issues with the HOA board through
-          petitions. It&rsquo;s a community tool, not an official channel of the HOA board
+          missions, discover local services and businesses, and raise issues with the HOA
+          board through petitions. It&rsquo;s a community tool, not an official channel of the HOA board
           itself, and we don&rsquo;t guarantee any particular response or outcome from the
           board.
         </p>
@@ -63,7 +63,7 @@ export default function TermsOfServicePage() {
         <p>
           {BRAND.appName} works because people are decent to each other on it. We have{' '}
           <strong>zero tolerance for objectionable content or abusive behavior</strong> of
-          any kind — harassment, hate speech, threats, sexual content involving minors, or
+          any kind - harassment, hate speech, threats, sexual content involving minors, or
           content that promotes violence or illegal activity will get content removed and
           accounts suspended or terminated, without warning for serious violations. Our{' '}
           <Link className="underline" href="/guidelines">
@@ -81,7 +81,7 @@ export default function TermsOfServicePage() {
         </ul>
         <p>
           Petitions specifically are a way to raise a genuine local issue with the HOA
-          board — they must stay focused on the issue itself, not name or accuse specific
+          board - they must stay focused on the issue itself, not name or accuse specific
           board members or staff. A petition reaching its signature goal is a respectful
           request for the board&rsquo;s consideration, never a demand or a guarantee of any
           particular outcome or timeline. Petitions open once the community reaches 200
@@ -95,13 +95,13 @@ export default function TermsOfServicePage() {
         <p>
           You own the posts, comments, photos, and other content you create in{' '}
           {BRAND.appName}. By posting it, you grant us a license to display, distribute,
-          and store it within the app so other members can see it — nothing more.
+          and store it within the app so other members can see it - nothing more.
           You&rsquo;re responsible for making sure you have the right to post whatever you
           share.
         </p>
         <p>
-          Content that other members have engaged with — for example, an event people have
-          joined or a mission others are mid-progress on — may stay visible to the
+          Content that other members have engaged with - for example, an event people have
+          joined or a mission others are mid-progress on - may stay visible to the
           community even after you delete your account, but will no longer be attributed
           to your name.
         </p>
@@ -139,7 +139,7 @@ export default function TermsOfServicePage() {
           your own judgment when meeting up with people or businesses you find through
           {' '}{BRAND.appName}. A &ldquo;Verified&rdquo; badge on a business listing means
           only that we confirmed a plausible connection between the person who created the
-          listing and the business itself &mdash; it is not a guarantee that the listing is
+          listing and the business itself - it is not a guarantee that the listing is
           accurate or complete, and it is not an endorsement of the business.
         </p>
         <p>

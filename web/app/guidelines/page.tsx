@@ -7,7 +7,7 @@ import {
 } from '@/components/legal/legal-page-shell';
 import { BRAND } from '@/lib/content';
 
-const title = `Community Guidelines — ${BRAND.appName}`;
+const title = `Community Guidelines - ${BRAND.appName}`;
 const description = `How we expect neighbours to treat each other on ${BRAND.appName}.`;
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 24, 2026';
+const LAST_UPDATED = 'October 5, 2026';
 
 export default function CommunityGuidelinesPage() {
   return (
@@ -31,7 +31,7 @@ export default function CommunityGuidelinesPage() {
       <LegalSection id="why" title="Why these exist">
         <p>
           {BRAND.appName} only works if it feels like {BRAND.community} does in
-          person — friendly, direct, and looking out for each other. These
+          person - friendly, direct, and looking out for each other. These
           guidelines describe what that looks like in practice. They sit
           alongside our{' '}
           <Link
@@ -48,7 +48,7 @@ export default function CommunityGuidelinesPage() {
         <p>
           Post the way you&rsquo;d talk to someone across the fence. Disagree
           with an idea without attacking the person who posted it. Assume good
-          faith — most posts here are from someone trying to make the community
+          faith - most posts here are from someone trying to make the community
           better, find a recommendation, or just say hello.
         </p>
       </LegalSection>
@@ -72,7 +72,7 @@ export default function CommunityGuidelinesPage() {
         </ul>
         <p>
           Content like this gets removed when reported, and repeated or severe
-          violations can lead to losing access to the app — see the Moderation
+          violations can lead to losing access to the app - see the Moderation
           section of our{' '}
           <Link
             className="text-foreground underline-offset-2 hover:underline"
@@ -86,9 +86,9 @@ export default function CommunityGuidelinesPage() {
 
       <LegalSection id="the-right-place" title="Post in the right place">
         <p>
-          The forum is organized into channels — Announcements, HOA, Marina
+          The forum is organized into channels - Announcements, HOA, Marina
           &amp; Boating, Golf, Trails, Dining, Sports Club, Buy &amp; Sell, and
-          General — so neighbours can find what they&rsquo;re looking for
+          General - so neighbours can find what they&rsquo;re looking for
           without wading through everything else. Pick the channel that actually
           fits (General is there for anything genuinely topic-less), and keep
           Announcements and HOA for genuinely official or board-related
@@ -98,14 +98,15 @@ export default function CommunityGuidelinesPage() {
 
       <LegalSection id="reviews-and-petitions" title="Reviews and petitions">
         <p>
-          Service reviews are for your own honest experience with a local
-          business, not a place to settle a personal dispute or leave a review
-          for a business you&rsquo;ve never actually used.
+          Service and business listing reviews are for your own honest
+          experience with a local business, not a place to settle a personal
+          dispute or leave a review for a business you&rsquo;ve never actually
+          used.
         </p>
         <p>
           Petitions are a respectful way to raise a real local issue with the
-          HOA board. Keep a petition focused on the issue itself — not on naming
-          or accusing specific board members or staff — and remember that
+          HOA board. Keep a petition focused on the issue itself - not on naming
+          or accusing specific board members or staff - and remember that
           reaching the signature goal means the board will consider it, not that
           any particular outcome is guaranteed.
         </p>
@@ -115,20 +116,20 @@ export default function CommunityGuidelinesPage() {
         <p>
           The Businesses section of the Directory is for restaurants, bars,
           shops, and other established local businesses to post their hours,
-          a current special, and photos for the community — it&rsquo;s free,
+          a current special, and photos for the community - it&rsquo;s free,
           and it&rsquo;s meant to be run by someone with a genuine connection
           to the business, not a customer or a competitor. A listing is the
           business&rsquo;s own claim about itself; we don&rsquo;t
           independently verify that everything in it is accurate.
         </p>
         <p>
-          New listings are checked before they go public — automatically when
-          possible, or by an admin when it isn&rsquo;t — so that a
+          New listings are checked before they go public - automatically when
+          possible, or by an admin when it isn&rsquo;t - so that a
           &ldquo;Verified&rdquo; badge means we confirmed a plausible
           connection between whoever created the listing and the business
           itself, not that we&rsquo;ve audited its contents. If you believe a
           listing is fake, or run by someone with no real connection to the
-          business it claims to represent, please report it — we may remove
+          business it claims to represent, please report it - we may remove
           or unverify a listing at our discretion.
         </p>
       </LegalSection>
@@ -139,13 +140,13 @@ export default function CommunityGuidelinesPage() {
           <strong className="text-foreground">Report</strong> flags it for our
           moderators, and <strong className="text-foreground">Block</strong>{' '}
           hides that member&rsquo;s posts, comments, events, missions, services,
-          business listings, and petitions from you entirely — you can manage
+          business listings, and petitions from you entirely - you can manage
           who you&rsquo;ve blocked, and unblock them, any time from your
           profile.
         </p>
         <p>
           A small &ldquo;Admin&rdquo; badge next to a member&rsquo;s name means
-          their account is a genuine {BRAND.appName} admin — it&rsquo;s there so
+          their account is a genuine {BRAND.appName} admin - it&rsquo;s there so
           you can tell official content apart from someone imitating an admin.
           Anyone claiming to represent the HOA board or {BRAND.appName} without
           that mark should be reported.
@@ -154,7 +155,7 @@ export default function CommunityGuidelinesPage() {
 
       <LegalSection id="enforcement" title="Enforcement">
         <p>
-          We review reports and act on them at our discretion — anything from
+          We review reports and act on them at our discretion - anything from
           removing a single post to suspending or terminating an account,
           depending on what happened and whether it&rsquo;s happened before.
         </p>

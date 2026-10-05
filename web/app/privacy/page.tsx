@@ -6,7 +6,7 @@ import {
 } from '@/components/legal/legal-page-shell';
 import { BRAND } from '@/lib/content';
 
-const title = `Privacy Policy — ${BRAND.appName}`;
+const title = `Privacy Policy - ${BRAND.appName}`;
 const description = `How ${BRAND.appName} collects, uses, and protects your information.`;
 
 export const metadata: Metadata = {
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const LAST_UPDATED = 'September 24, 2026';
+const LAST_UPDATED = 'October 5, 2026';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -46,25 +46,29 @@ export default function PrivacyPolicyPage() {
         <p>
           <strong className="text-foreground">Account information.</strong> When
           you sign up, we collect your email address (used to sign in via a
-          one-time code) and the display name and profile photo you choose to
-          add. We don&rsquo;t require or collect your real legal name, home
-          address, or date of birth.
+          one-time code) and the display name, profile photo, and cover photo
+          you choose to add. Your display name and profile photo can also be
+          found by other members through in-app search. We don&rsquo;t
+          require or collect your real legal name, home address, or date of
+          birth.
         </p>
         <p>
           <strong className="text-foreground">Content you create.</strong> Forum
           posts and comments, event and mission listings, service directory
-          listings and reviews, business listings, petitions and petition
-          comments, and any photos you attach to them. Visible to other
-          members of the community unless you delete it or your account — a
+          listings and reviews, business listings and reviews, petitions and
+          petition comments, and any photos you attach to them. Visible to other
+          members of the community unless you delete it or your account - a
           business listing stays visible only to you until it&rsquo;s
           verified (see Who we share it with, below, for how that works).
         </p>
         <p>
           <strong className="text-foreground">Activity within the app.</strong>{' '}
-          Which events you&rsquo;ve joined, missions you&rsquo;ve completed,
-          posts you&rsquo;ve liked, any posts, events, missions, services, or
-          petitions you&rsquo;ve bookmarked, and your notification preferences —
-          used to run those features and show you relevant activity.
+          Which events you&rsquo;ve joined or marked interested in, missions
+          you&rsquo;ve completed, posts you&rsquo;ve liked, any posts, events,
+          missions, services, or petitions you&rsquo;ve bookmarked, and your
+          notification preferences - used to run those features and show you
+          relevant activity. XP earned from these activities also determines
+          your position on the public Leaderboard, visible to other members.
         </p>
         <p>
           <strong className="text-foreground">
@@ -73,7 +77,7 @@ export default function PrivacyPolicyPage() {
           A push-notification token (so we can deliver notifications
           you&rsquo;ve opted into), and automatically generated crash and error
           reports if the app encounters a bug. These reports may include device
-          type, OS version, and the state of the app at the time of the crash —
+          type, OS version, and the state of the app at the time of the crash -
           never your private messages or account credentials.
         </p>
         <p>
@@ -85,14 +89,14 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="how-we-use-it" title="How we use your information">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            To operate the core features of the app — forum, events, missions,
+            To operate the core features of the app - forum, events, missions,
             services, business listings, petitions, and notifications.
           </li>
           <li>To let you sign in securely without managing a password.</li>
           <li>To respond when you contact us or report content.</li>
           <li>To diagnose and fix bugs, using crash and error reports.</li>
           <li>
-            To keep the community safe — reviewing reported content, and
+            To keep the community safe - reviewing reported content, and
             enforcing our Terms of Service.
           </li>
         </ul>
@@ -106,25 +110,25 @@ export default function PrivacyPolicyPage() {
         </p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong className="text-foreground">Clerk</strong> — handles sign-in
+            <strong className="text-foreground">Clerk</strong> - handles sign-in
             and authentication.
           </li>
           <li>
-            <strong className="text-foreground">Supabase</strong> — hosts our
+            <strong className="text-foreground">Supabase</strong> - hosts our
             database and stores uploaded photos.
           </li>
           <li>
-            <strong className="text-foreground">Sentry</strong> — receives crash
+            <strong className="text-foreground">Sentry</strong> - receives crash
             and error reports to help us fix bugs.
           </li>
           <li>
-            <strong className="text-foreground">Resend</strong> — delivers
+            <strong className="text-foreground">Resend</strong> - delivers
             transactional emails such as a message sent through Contact Us, a
             petition being forwarded to the HOA board, or a notice that your
             account was removed.
           </li>
           <li>
-            <strong className="text-foreground">Anthropic</strong> — powers the
+            <strong className="text-foreground">Anthropic</strong> - powers the
             in-app AI Assistant, and helps verify business listings. Messages
             you send the Assistant are shared with Anthropic to generate a
             response. When you submit a business listing, its details (name,
@@ -136,7 +140,7 @@ export default function PrivacyPolicyPage() {
             models.
           </li>
           <li>
-            <strong className="text-foreground">Apple and Google</strong> —
+            <strong className="text-foreground">Apple and Google</strong> -
             distribute the app through the App Store and Google Play, and
             deliver push notifications on their platforms.
           </li>
@@ -155,21 +159,22 @@ export default function PrivacyPolicyPage() {
             <strong className="text-foreground">
               Notification preferences
             </strong>{' '}
-            — choose what you&rsquo;re notified about, any time, from your
+            - choose what you&rsquo;re notified about, any time, from your
             profile.
           </li>
           <li>
-            <strong className="text-foreground">Blocking</strong> — hide another
+            <strong className="text-foreground">Blocking</strong> - hide another
             member&rsquo;s posts, comments, events, missions, services,
             business listings, and petitions from your own feeds, without
             notifying them.
           </li>
           <li>
-            <strong className="text-foreground">Reporting</strong> — flag
-            content that violates our Terms of Service for review.
+            <strong className="text-foreground">Reporting</strong> - flag
+            content, or a member&rsquo;s profile, that violates our Terms of
+            Service for review.
           </li>
           <li>
-            <strong className="text-foreground">Account deletion</strong> —
+            <strong className="text-foreground">Account deletion</strong> -
             permanently delete your account and everything you&rsquo;ve posted,
             directly from your profile, at any time. This can&rsquo;t be undone.
             Content you created that other members are actively participating
@@ -177,7 +182,7 @@ export default function PrivacyPolicyPage() {
             but is no longer attributed to your name.
           </li>
           <li>
-            <strong className="text-foreground">Data requests</strong> — to ask
+            <strong className="text-foreground">Data requests</strong> - to ask
             what information we hold about you, or to request a copy of it,
             reach us through the Contact Us page in the app.
           </li>
@@ -206,8 +211,8 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection id="security" title="Security">
         <p>
-          We use industry-standard safeguards — encrypted connections, access
-          controls, and row-level security on our database — to protect your
+          We use industry-standard safeguards - encrypted connections, access
+          controls, and row-level security on our database - to protect your
           information. No system is perfectly secure, but we take reasonable
           steps to protect what you share with us.
         </p>
