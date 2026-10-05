@@ -42,7 +42,7 @@ const SUGGESTIONS: readonly string[] = [
 ];
 
 const APOLOGY_TEXT =
-  'Sorry — I could not reach the assistant just now. Please try again in a moment.';
+  'Sorry - I could not reach the assistant just now. Please try again in a moment.';
 
 const toMessages = (
   entries: readonly ChatEntry[],

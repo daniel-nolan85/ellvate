@@ -61,7 +61,7 @@ export function AccountIdentifiersSheet({
             Email address
           </Heading>
           <Text className="text-text-muted" size="sm">
-            Changing your email replaces it — the old one stops working right
+            Changing your email replaces it - the old one stops working right
             away.
           </Text>
           <VStack className="overflow-hidden rounded-2xl border border-surface-hairline">

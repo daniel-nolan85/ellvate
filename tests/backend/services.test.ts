@@ -573,7 +573,7 @@ describe('listServiceReviews', () => {
     const reviews = await listServiceReviews(ctx(), 'service-1');
     expect(reviews.map((review) => review.body)).toEqual([
       'Second opinion',
-      'Riley has been walking our lab for months — always on time and sends photos!',
+      'Riley has been walking our lab for months - always on time and sends photos!',
     ]);
   });
 
@@ -610,7 +610,7 @@ describe('listServiceReviewsPage', () => {
       limit: 1,
     });
     expect(second.reviews.map((review) => review.body)).toEqual([
-      'Riley has been walking our lab for months — always on time and sends photos!',
+      'Riley has been walking our lab for months - always on time and sends photos!',
     ]);
     expect(second.nextCursor).toBeNull();
   });
@@ -1022,7 +1022,7 @@ describe('service routes', () => {
       nextCursor: string | null;
     };
     expect(second.reviews.map((review) => review.body)).toEqual([
-      'Riley has been walking our lab for months — always on time and sends photos!',
+      'Riley has been walking our lab for months - always on time and sends photos!',
     ]);
     expect(second.nextCursor).toBeNull();
   });

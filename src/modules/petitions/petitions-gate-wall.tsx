@@ -31,7 +31,7 @@ export function PetitionsGateWall({ usersNeeded }: PetitionsGateWallProps) {
         </Text>
         <Text className="text-center text-[14px] leading-5 text-text-muted">
           {usersNeeded > 0
-            ? `${usersNeeded} more ${usersNeeded === 1 ? 'neighbor needs' : 'neighbors need'} to join before petitions open — this keeps the signature goal meaningful, whatever size the community ends up.`
+            ? `${usersNeeded} more ${usersNeeded === 1 ? 'neighbor needs' : 'neighbors need'} to join before petitions open - this keeps the signature goal meaningful, whatever size the community ends up.`
             : 'Petitions are almost ready to open.'}
         </Text>
       </VStack>

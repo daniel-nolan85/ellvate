@@ -213,7 +213,7 @@ export function MissionDetailScreen({
   const describeCheckInPhotoError = (error: unknown, action: 'update' | 'remove'): string => {
     if (error instanceof ApiError) {
       if (error.code === 'not_completed') {
-        return 'This mission doesn’t look complete yet — try refreshing.';
+        return 'This mission doesn’t look complete yet - try refreshing.';
       }
       if (error.code === 'mission_not_found') {
         return 'This mission is no longer available.';
@@ -304,7 +304,7 @@ export function MissionDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (missionReportTarget === 'user') {
@@ -336,7 +336,7 @@ export function MissionDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setCommentSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (commentReportTarget === 'user') {
@@ -650,7 +650,7 @@ export function MissionDetailScreen({
                   {mission.status === 'active' && mission.accepted ? (
                     <VStack className="gap-2.5">
                       <Text className="text-[12px] leading-4 text-text-muted">
-                        Check in honestly — the adventure is the point.
+                        Check in honestly - the adventure is the point.
                       </Text>
                       {checkInPhoto ? (
                         <HStack className="items-center gap-2.5">
@@ -829,7 +829,7 @@ export function MissionDetailScreen({
                 </VStack>
               ) : commentList.length === 0 ? (
                 <Text className="py-2 text-text-muted" size="sm">
-                  No comments yet — start the conversation.
+                  No comments yet - start the conversation.
                 </Text>
               ) : null}
             </VStack>

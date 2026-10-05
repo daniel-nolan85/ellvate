@@ -81,7 +81,7 @@ export function PetitionRow({ petition, onOpen }: PetitionRowProps) {
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setMenuOpen(false);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (reportTarget === 'user') {

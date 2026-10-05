@@ -275,7 +275,7 @@ export function ServiceComposer({
               <Text className="text-[13px] text-text-muted">
                 {logo
                   ? 'Shown instead of the category icon.'
-                  : 'Optional — without one, a category icon is shown.'}
+                  : 'Optional - without one, a category icon is shown.'}
               </Text>
               {logo ? (
                 <Pressable onPress={() => setLogo(null)}>

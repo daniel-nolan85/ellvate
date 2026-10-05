@@ -245,7 +245,7 @@ export function MissionComposer({
               value={description}
             />
             <Text className="text-[12px] text-text-muted">
-              Break it into stops — add one for each place or task along the way.
+              Break it into stops - add one for each place or task along the way.
             </Text>
             {stops.length > 0 ? (
               <VStack space="xs">

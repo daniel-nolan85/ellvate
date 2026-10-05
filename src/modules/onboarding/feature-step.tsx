@@ -50,7 +50,7 @@ function ForumArt() {
           Best spots to kayak at sunrise?
         </Heading>
         <Text className="leading-[21px] text-text-muted" size="sm">
-          New to the lake — where do you all put in before the wind picks up?
+          New to the lake - where do you all put in before the wind picks up?
         </Text>
       </VStack>
       <HStack className="items-center" space="sm">
@@ -247,7 +247,7 @@ function AssistantArt() {
         <AiMark color="#fff" size={18} />
       </View>
       <Text className="flex-1 font-sans text-[13px] leading-[19px] text-accent-foreground">
-        &quot;Any networking events this weekend?&quot; — ask me things like that,
+        &quot;Any networking events this weekend?&quot; - ask me things like that,
         anytime.
       </Text>
     </View>
@@ -274,14 +274,14 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <EventsArt />,
     eyebrow: 'EVENTS',
     id: 'events',
-    sub: 'Every mixer, market and fountain show — one calendar, one tap to join.',
+    sub: 'Every mixer, market and fountain show - one calendar, one tap to join.',
     title: 'Never miss what’s happening',
   },
   {
     art: () => <MissionsArt />,
     eyebrow: 'MISSIONS',
     id: 'missions',
-    sub: 'Check in at real places around the lake and earn XP — moving feels better with a scoreboard.',
+    sub: 'Check in at real places around the lake and earn XP - moving feels better with a scoreboard.',
     title: 'Turn your walks into wins',
   },
   {
@@ -295,7 +295,7 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <LeaderboardArt />,
     eyebrow: 'LEADERBOARD',
     id: 'leaderboard',
-    sub: 'Every mission earns XP, levels you up, and moves you up the board — see how you stack up against your neighbours.',
+    sub: 'Every mission earns XP, levels you up, and moves you up the board - see how you stack up against your neighbours.',
     title: 'Climb the ranks',
   },
   {
@@ -309,14 +309,14 @@ export const MOMENTS: readonly Moment[] = [
     art: () => <DigestArt />,
     eyebrow: 'WEEKLY DIGEST',
     id: 'digest',
-    sub: "A recap every week — the posts everyone was talking about, the events that happened, and what's coming up next.",
+    sub: "A recap every week - the posts everyone was talking about, the events that happened, and what's coming up next.",
     title: 'Never wonder what you missed',
   },
   {
     art: () => <AssistantArt />,
     eyebrow: 'LAKE ASSISTANT',
     id: 'assistant',
-    sub: 'It searches live events, forum posts, missions and services to answer — available to everyone, anytime.',
+    sub: 'It searches live events, forum posts, missions and services to answer - available to everyone, anytime.',
     title: 'Or just ask',
   },
 ];

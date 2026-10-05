@@ -735,7 +735,7 @@ describe('listBusinessListingReviews', () => {
     const reviews = await listBusinessListingReviews(ctx(), 'business-1');
     expect(reviews.map((review) => review.body)).toEqual([
       'Second opinion',
-      'Best patio on the lake — the happy hour app specials are unbeatable.',
+      'Best patio on the lake - the happy hour app specials are unbeatable.',
     ]);
   });
 
@@ -789,7 +789,7 @@ describe('listBusinessListingReviewsPage', () => {
       limit: 1,
     });
     expect(second.reviews.map((review) => review.body)).toEqual([
-      'Best patio on the lake — the happy hour app specials are unbeatable.',
+      'Best patio on the lake - the happy hour app specials are unbeatable.',
     ]);
     expect(second.nextCursor).toBeNull();
   });
@@ -1151,7 +1151,7 @@ describe('business listing review routes', () => {
       nextCursor: string | null;
     };
     expect(second.reviews.map((review) => review.body)).toEqual([
-      'Best patio on the lake — the happy hour app specials are unbeatable.',
+      'Best patio on the lake - the happy hour app specials are unbeatable.',
     ]);
     expect(second.nextCursor).toBeNull();
   });

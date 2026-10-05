@@ -132,7 +132,7 @@ export function PetitionComposer({
         <Text className="font-inter-bold text-[17px] text-content">Start a petition</Text>
         <Text className="text-[13px] text-text-muted">
           Once enough neighbors sign, an admin reviews it and shares it with the HOA
-          board as a respectful request for consideration — not a demand. It&apos;s a
+          board as a respectful request for consideration - not a demand. It&apos;s a
           way to make sure your voice is heard, not a guarantee the board will act on
           it. The community will be updated here once the petition succeeds, and
           again if the board responds.
@@ -143,7 +143,7 @@ export function PetitionComposer({
           <Text className="font-inter-semibold text-[13px] text-content">
             {projectedSignatureGoal(totalUsers)} signatures
           </Text>{' '}
-          to succeed — 20% of the community. That number locks in the moment you start the
+          to succeed - 20% of the community. That number locks in the moment you start the
           petition.
         </Text>
 
@@ -260,7 +260,7 @@ export function PetitionComposer({
             ) : null}
           </VStack>
           <Text className="flex-1 text-[13px] leading-5 text-text-muted">
-            This petition is about the issue, not individuals — I won&apos;t name or
+            This petition is about the issue, not individuals - I won&apos;t name or
             accuse specific board members or staff.
           </Text>
         </Pressable>

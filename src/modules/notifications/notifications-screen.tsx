@@ -215,7 +215,7 @@ export function NotificationsScreen() {
         <VStack className="items-center gap-3 px-8 py-16" space="sm">
           <Icon name="Bell" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
-            All caught up — nothing here yet.
+            All caught up - nothing here yet.
           </Text>
         </VStack>
       ) : (

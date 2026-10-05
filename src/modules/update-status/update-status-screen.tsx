@@ -81,14 +81,14 @@ export function UpdateStatusScreen() {
               Current launch
             </Text>
             <StatusRow label="EAS Update enabled" value={String(diagnostics.isEnabled)} />
-            <StatusRow label="Channel" value={diagnostics.channel ?? '—'} />
-            <StatusRow label="Runtime version" value={diagnostics.runtimeVersion ?? '—'} />
+            <StatusRow label="Channel" value={diagnostics.channel ?? '-'} />
+            <StatusRow label="Runtime version" value={diagnostics.runtimeVersion ?? '-'} />
             <StatusRow
               label="Embedded launch (never updated)"
               value={String(diagnostics.isEmbeddedLaunch)}
             />
             <StatusRow label="Active update ID" value={diagnostics.updateId ?? '(embedded)'} />
-            <StatusRow label="Update created at" value={diagnostics.createdAt ?? '—'} />
+            <StatusRow label="Update created at" value={diagnostics.createdAt ?? '-'} />
             <StatusRow label="Emergency launch" value={String(diagnostics.isEmergencyLaunch)} />
             {diagnostics.emergencyLaunchReason ? (
               <StatusRow
@@ -122,7 +122,7 @@ export function UpdateStatusScreen() {
               </Text>
               <Text className="text-content" size="sm">
                 {checkResult.status}
-                {checkResult.error ? ` — ${checkResult.error}` : ''}
+                {checkResult.error ? ` - ${checkResult.error}` : ''}
               </Text>
             </VStack>
           ) : null}

@@ -175,7 +175,7 @@ export function MissionCheckInGalleryScreen({
         onError: () => showToast('Couldn’t submit your report. Try again.'),
         onSuccess: () => {
           setReportTarget(null);
-          showToast('Thanks — our moderators will take a look.');
+          showToast('Thanks - our moderators will take a look.');
         },
       },
     );

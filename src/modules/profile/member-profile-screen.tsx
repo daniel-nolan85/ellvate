@@ -149,7 +149,7 @@ export function MemberProfileScreen({
         onError: () => showToast('Couldn’t submit your report. Try again.'),
         onSuccess: () => {
           setReportSheetOpen(false);
-          showToast('Thanks — our moderators will take a look.');
+          showToast('Thanks - our moderators will take a look.');
         },
       },
     );

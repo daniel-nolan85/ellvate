@@ -259,7 +259,7 @@ const seedPosts = (
     createdAt: isoHoursBeforeSeedNow(2),
     title: 'Best spots to kayak at sunrise?',
     excerpt:
-      'New to the lake — where do you all put in before the wind picks up? Looking for calm water near the village.',
+      'New to the lake - where do you all put in before the wind picks up? Looking for calm water near the village.',
     replies: replyCount(comments, 'post-1'),
     likes: 61,
     likedBy: [],
@@ -285,7 +285,7 @@ const seedPosts = (
     createdAt: isoHoursBeforeSeedNow(24),
     title: 'New patio at the waterfront bistro',
     excerpt:
-      'They finally opened lakeside seating. Go early — it filled up fast on Saturday.',
+      'They finally opened lakeside seating. Go early - it filled up fast on Saturday.',
     replies: replyCount(comments, 'post-3'),
     likes: 92,
     likedBy: [],
@@ -476,7 +476,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     businessName: "King's Mobile Detailing",
     category: 'automotive',
     description:
-      'Full interior and exterior detailing at your driveway — no drop-off needed.',
+      'Full interior and exterior detailing at your driveway - no drop-off needed.',
     contactPhone: '(702) 555-0198',
     contactEmail: null,
     contactWebsite: 'https://kingsdetailing.example',
@@ -506,7 +506,7 @@ const seedServiceListings = (): readonly StoredServiceListing[] => [
     businessName: 'Priya Rao Web Design',
     category: 'tech-web',
     description:
-      'Websites and small business branding for neighbors — from a neighbor.',
+      'Websites and small business branding for neighbors - from a neighbor.',
     contactPhone: null,
     contactEmail: 'priya@priyaraodesign.example',
     contactWebsite: 'https://priyaraodesign.example',
@@ -523,7 +523,7 @@ const seedServiceReviews = (): readonly StoredServiceReview[] => [
     listingId: 'service-1',
     authorId: 'user-mia',
     rating: 5,
-    body: 'Riley has been walking our lab for months — always on time and sends photos!',
+    body: 'Riley has been walking our lab for months - always on time and sends photos!',
     createdAt: isoHoursBeforeSeedNow(40),
     editedAt: null,
   },
@@ -626,7 +626,7 @@ const seedBusinessListingReviews =
       listingId: 'business-1',
       authorId: 'user-mia',
       rating: 5,
-      body: 'Best patio on the lake — the happy hour app specials are unbeatable.',
+      body: 'Best patio on the lake - the happy hour app specials are unbeatable.',
       createdAt: isoHoursBeforeSeedNow(25),
       editedAt: null,
     },
@@ -654,7 +654,7 @@ const seedPetitions = (): readonly StoredPetition[] => [
     deadlineAt: isoHoursBeforeSeedNow(-648),
     deadlineDays: 30,
     description:
-      'The walkway between the marina and the north parking lot is pitch black after sunset — several of us have nearly tripped over the uneven pavers. A few solar path lights would go a long way for anyone walking home after dark.',
+      'The walkway between the marina and the north parking lot is pitch black after sunset - several of us have nearly tripped over the uneven pavers. A few solar path lights would go a long way for anyone walking home after dark.',
     hoaEmailSentAt: null,
     hoaResponse: null,
     hoaResponseAt: null,
@@ -672,10 +672,10 @@ const seedPetitions = (): readonly StoredPetition[] => [
     deadlineAt: isoHoursBeforeSeedNow(-96),
     deadlineDays: 14,
     description:
-      'The Loop Trail has three separate pothole clusters between the golf course crossing and the fountain overlook — bad enough now that a few neighbours have stopped running it after dark. Asking the board to get it repaved before it gets worse.',
+      'The Loop Trail has three separate pothole clusters between the golf course crossing and the fountain overlook - bad enough now that a few neighbours have stopped running it after dark. Asking the board to get it repaved before it gets worse.',
     hoaEmailSentAt: isoHoursBeforeSeedNow(96),
     hoaResponse:
-      "Thanks for flagging this — we've added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.",
+      "Thanks for flagging this - we've added the Loop Trail resurfacing to the Q3 maintenance budget. Crews are scheduled to start the week of the 14th, weather permitting.",
     hoaResponseAt: isoHoursBeforeSeedNow(48),
     id: 'petition-loop-trail-repaving',
     requiredSignatures: 40,
@@ -755,7 +755,7 @@ const seedPetitionSignatures = (): readonly StoredPetitionSignature[] => [
 const seedPetitionComments = (): readonly StoredPetitionComment[] => [
   {
     authorId: 'user-mia',
-    body: 'Been wanting this for ages — signed!',
+    body: 'Been wanting this for ages - signed!',
     createdAt: isoHoursBeforeSeedNow(60),
     editedAt: null,
     id: 'petition-comment-1',

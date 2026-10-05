@@ -557,7 +557,7 @@ export function ActivityScreen() {
         <VStack className="items-center gap-3 px-8 py-16" space="sm">
           <Icon name="Star" size={28} />
           <Text className="text-center text-[14px] text-text-muted">
-            Nothing here yet — posts, events, missions, services, and
+            Nothing here yet - posts, events, missions, services, and
             petitions you create will show up in one place.
           </Text>
         </VStack>

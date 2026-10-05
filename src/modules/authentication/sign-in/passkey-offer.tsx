@@ -11,7 +11,7 @@ import { Text } from '@/src/components/ui/text';
 import { VStack } from '@/src/components/ui/vstack';
 
 const BENEFITS = [
-  'Faster — one look and you’re in',
+  'Faster - one look and you’re in',
   'Safer than a password',
   'Only works on your own phone',
 ] as const;
@@ -72,7 +72,7 @@ export function PasskeyOffer({
         </Centered>
       ) : phase === 'error' ? (
         <Centered
-          body="No problem — you can turn on Face ID later in Settings. Your password still works."
+          body="No problem - you can turn on Face ID later in Settings. Your password still works."
           icon="AlertCircle"
           iconColor="rgb(120,108,94)"
           iconTint="rgb(245,245,245)"
@@ -112,7 +112,7 @@ export function PasskeyOffer({
                   Skip the password next time
                 </Heading>
                 <Text className="leading-6 text-muted-foreground" size="md">
-                  Turn on Face ID so you can sign in with just a look — nothing
+                  Turn on Face ID so you can sign in with just a look - nothing
                   to type, nothing to remember.
                 </Text>
               </VStack>

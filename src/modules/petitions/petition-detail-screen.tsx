@@ -194,7 +194,7 @@ export function PetitionDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         closeCommentActions();
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (commentReportTarget === 'user') {
@@ -251,7 +251,7 @@ export function PetitionDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setMenuOpen(false);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (petitionReportTarget === 'user') {
@@ -417,7 +417,7 @@ export function PetitionDetailScreen({
                       signatures
                     </Text>
                     <Text className="text-[12px] text-text-muted">
-                      That&rsquo;s 20% of the community — the goal was set when
+                      That&rsquo;s 20% of the community - the goal was set when
                       this petition started and won&rsquo;t change.
                     </Text>
                   </VStack>
@@ -425,7 +425,7 @@ export function PetitionDetailScreen({
                   <Text className="text-[12px] leading-4 text-text-muted">
                     Reaching the goal sends this to the HOA board as a
                     respectful request for consideration, reviewed by an admin
-                    first — not a guarantee of any particular outcome or
+                    first - not a guarantee of any particular outcome or
                     timeline. The community will be updated here once the
                     petition succeeds, and again if the board responds.
                   </Text>
@@ -484,12 +484,12 @@ export function PetitionDetailScreen({
                     {petition.status === 'succeeded'
                       ? 'What happened'
                       : 'Discussion'}{' '}
-                    — {commentList.length} comments
+                    - {commentList.length} comments
                   </Text>
                   <Text className="text-[12px] leading-4 text-text-muted">
                     {petition.status === 'succeeded'
-                      ? 'Share updates on what actually happened — keep it constructive and focused on outcomes, not individuals.'
-                      : 'Share info, support, or concerns about this petition — keep it constructive and focused on the issue, not individuals.'}
+                      ? 'Share updates on what actually happened - keep it constructive and focused on outcomes, not individuals.'
+                      : 'Share info, support, or concerns about this petition - keep it constructive and focused on the issue, not individuals.'}
                   </Text>
 
                   {comments.isPending ? (
@@ -499,8 +499,8 @@ export function PetitionDetailScreen({
                   ) : commentList.length === 0 ? (
                     <Text className="py-2 text-text-muted" size="sm">
                       {petition.status === 'succeeded'
-                        ? 'No updates yet — be the first to share what happened.'
-                        : 'No comments yet — be the first to share your thoughts.'}
+                        ? 'No updates yet - be the first to share what happened.'
+                        : 'No comments yet - be the first to share your thoughts.'}
                     </Text>
                   ) : null}
                 </>

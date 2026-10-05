@@ -194,7 +194,7 @@ export function BusinessDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (reportTarget === 'user') {
@@ -226,7 +226,7 @@ export function BusinessDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setReviewSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (reviewReportTarget === 'user') {
@@ -537,7 +537,7 @@ export function BusinessDetailScreen({
                 </VStack>
               ) : reviewList.length === 0 ? (
                 <Text className="py-2 text-text-muted" size="sm">
-                  No reviews yet — be the first to share how it went.
+                  No reviews yet - be the first to share how it went.
                 </Text>
               ) : null}
             </VStack>

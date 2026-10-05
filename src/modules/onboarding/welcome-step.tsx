@@ -70,7 +70,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           Your lakeside neighbourhood, in your pocket.
         </Text>
         <Text className="mt-3.5 leading-6 text-[rgba(250,250,250,0.65)]" size="md">
-          Forum, events, real-world missions, and local services — everything happening around
+          Forum, events, real-world missions, and local services - everything happening around
           the lake, with the people who live here.
         </Text>
         <Text className="mt-[18px] text-[rgba(250,250,250,0.6)]" size="xs">

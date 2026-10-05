@@ -80,7 +80,7 @@ export function AssistantScreen({ onClose }: AssistantScreenProps) {
               size="sm"
             >
               Events, missions, local businesses, or what neighbours are
-              posting around Lake Las Vegas — just ask.
+              posting around Lake Las Vegas - just ask.
             </Text>
           </VStack>
         ) : null}

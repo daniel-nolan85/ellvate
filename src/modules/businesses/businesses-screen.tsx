@@ -80,7 +80,7 @@ export function BusinessesScreen({ headerExtra, onOpenListing }: BusinessesScree
             ? { message: 'Listed! Your business is live.', variant: 'live' }
             : {
                 message:
-                  'Listed! Pending review — visible only to you until approved.',
+                  'Listed! Pending review - visible only to you until approved.',
                 variant: 'pending',
               },
         );

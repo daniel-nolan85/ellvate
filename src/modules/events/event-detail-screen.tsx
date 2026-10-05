@@ -290,7 +290,7 @@ export function EventDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (eventReportTarget === 'user') {
@@ -322,7 +322,7 @@ export function EventDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setCommentSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (commentReportTarget === 'user') {
@@ -514,7 +514,7 @@ export function EventDetailScreen({
                       ))}
                     </HStack>
                     <Pressable
-                      accessibilityLabel={`See everyone going — ${event.going} people`}
+                      accessibilityLabel={`See everyone going - ${event.going} people`}
                       accessibilityRole="button"
                       className="flex-1"
                       onPress={() => setAttendeesOpen(true)}
@@ -552,7 +552,7 @@ export function EventDetailScreen({
                       attendee avatar stack. */}
                   <HStack className="items-center" space="sm">
                     <Pressable
-                      accessibilityLabel={`See everyone interested — ${event.interestedCount} people`}
+                      accessibilityLabel={`See everyone interested - ${event.interestedCount} people`}
                       accessibilityRole="button"
                       className="flex-1"
                       onPress={() => setInterestedOpen(true)}
@@ -632,7 +632,7 @@ export function EventDetailScreen({
                 </VStack>
               ) : commentList.length === 0 ? (
                 <Text className="py-2 text-text-muted" size="sm">
-                  No comments yet — start the conversation.
+                  No comments yet - start the conversation.
                 </Text>
               ) : null}
             </VStack>

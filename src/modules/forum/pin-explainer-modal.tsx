@@ -55,7 +55,7 @@ export function PinExplainerModal({
           </Text>
           <Text className='text-text-muted' size='sm'>
             Pinned posts move to the top of the feed. You can only have one
-            pinned at a time — pinning another post replaces it.
+            pinned at a time - pinning another post replaces it.
           </Text>
           <Pressable
             accessibilityLabel='Don’t show this again'

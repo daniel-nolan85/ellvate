@@ -346,7 +346,7 @@ const describeEvents = (events: readonly EventSummary[]): string =>
 
 const describeMissions = (missions: readonly MissionSummary[]): string =>
   `Missions worth a look: ${missions
-    .map((mission) => `${mission.title} — ${mission.description} (${mission.xp} XP)`)
+    .map((mission) => `${mission.title} - ${mission.description} (${mission.xp} XP)`)
     .join('; ')}.`;
 
 // WHY: the excerpt (the post's actual free-text body) is included, not just
@@ -357,7 +357,7 @@ const describePosts = (posts: readonly PostSummary[]): string =>
   `From the community forum: ${posts
     .map(
       (post) =>
-        `"${post.title}" in ${post.forum} — ${post.excerpt} (${post.replies} replies)`,
+        `"${post.title}" in ${post.forum} - ${post.excerpt} (${post.replies} replies)`,
     )
     .join('; ')}.`;
 
@@ -365,7 +365,7 @@ const describePetitions = (petitions: readonly PetitionSummary[]): string =>
   `Open petitions to the HOA board: ${petitions
     .map(
       (petition) =>
-        `"${petition.title}" — ${petition.description} (${petition.signatureCount}/${petition.requiredSignatures} signatures)`,
+        `"${petition.title}" - ${petition.description} (${petition.signatureCount}/${petition.requiredSignatures} signatures)`,
     )
     .join('; ')}.`;
 
@@ -373,14 +373,14 @@ const describeServices = (services: readonly ServiceSummary[]): string =>
   `Local businesses that match: ${services
     .map(
       (service) =>
-        `${service.businessName} (${service.category}) — ${service.description}${
+        `${service.businessName} (${service.category}) - ${service.description}${
           service.hours ? ` (${service.hours})` : ''
         }`,
     )
     .join('; ')}.`;
 
 const NO_MATCH_REPLY =
-  "I couldn't tell what that's about from local search alone — try asking about events, missions, services, or forum posts, or check the tabs directly.";
+  "I couldn't tell what that's about from local search alone - try asking about events, missions, services, or forum posts, or check the tabs directly.";
 
 // WHY: distinct from the tool-selection bug fixed earlier — this is a
 // "the user named a category" signal, not a router deciding which tools are

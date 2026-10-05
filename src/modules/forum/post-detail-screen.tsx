@@ -269,7 +269,7 @@ export function PostDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setPostSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (postReportTarget === 'user') {
@@ -341,7 +341,7 @@ export function PostDetailScreen({
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setCommentSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (commentReportTarget === 'user') {
@@ -644,7 +644,7 @@ export function PostDetailScreen({
                 </VStack>
               ) : commentList.length === 0 ? (
                 <Text className="py-2 text-text-muted" size="sm">
-                  No comments yet — start the conversation.
+                  No comments yet - start the conversation.
                 </Text>
               ) : null}
             </VStack>

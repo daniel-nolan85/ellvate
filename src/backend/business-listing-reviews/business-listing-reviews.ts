@@ -196,7 +196,7 @@ function createBusinessListingReviewMemory(
   ) {
     return {
       code: 'already_reviewed',
-      message: 'You’ve already reviewed this listing — edit your existing review instead.',
+      message: 'You’ve already reviewed this listing - edit your existing review instead.',
       ok: false,
     };
   }

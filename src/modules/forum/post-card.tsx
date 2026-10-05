@@ -218,7 +218,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
       onError: () => showToast('Couldn’t submit your report. Try again.'),
       onSuccess: () => {
         setCardSheetMode(null);
-        showToast('Thanks — our moderators will take a look.');
+        showToast('Thanks - our moderators will take a look.');
       },
     };
     if (reportTarget === 'user') {

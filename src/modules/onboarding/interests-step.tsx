@@ -46,7 +46,7 @@ export function InterestsStep({ picks, onToggle, onNext, chrome }: InterestsStep
       {chrome}
       <ObTitle
         eyebrow="Your feed"
-        sub="This seeds your forum feed and event picks — like choosing your first three artists on a music app. You can update these anytime."
+        sub="This seeds your forum feed and event picks - like choosing your first three artists on a music app. You can update these anytime."
         title={`Pick ${MIN_PICKS}-${MAX_PICKS} interests`}
       />
       <View className="flex-1 flex-row flex-wrap content-start gap-2 px-5 py-4">

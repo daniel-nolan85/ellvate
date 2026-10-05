@@ -69,7 +69,7 @@ export function NotificationsStep({
       {chrome}
       <ObTitle
         eyebrow="Notifications"
-        sub="Choose what you'd like to be notified about — never marketing spam, and you can change these anytime in your profile."
+        sub="Choose what you'd like to be notified about - never marketing spam, and you can change these anytime in your profile."
         title="What should we let you know about?"
       />
       <View className="flex-1 gap-2.5 px-5 py-4">

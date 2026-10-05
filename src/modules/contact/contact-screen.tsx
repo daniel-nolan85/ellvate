@@ -65,7 +65,7 @@ export function ContactScreen() {
             <Icon color="rgb(74,141,98)" name="CheckCircle" size={28} />
             <Text className="font-inter-semibold text-[15px] text-content">Message sent</Text>
             <Text className="px-6 text-center text-[13px] text-text-muted">
-              Thanks for reaching out — a moderator will follow up if needed.
+              Thanks for reaching out - a moderator will follow up if needed.
             </Text>
             <Button onPress={() => router.back()} variant="outline">
               <ButtonText>Back to profile</ButtonText>
@@ -75,7 +75,7 @@ export function ContactScreen() {
           <>
             <Text className="text-[14px] leading-[20px] text-text-muted">
               Reporting a specific post, comment, or listing? Use the report
-              option on that item instead — this goes straight to the
+              option on that item instead - this goes straight to the
               moderators for anything else.
             </Text>
 
