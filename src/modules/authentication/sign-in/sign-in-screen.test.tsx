@@ -1,8 +1,8 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Linking } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { useAuth, useSignIn, useSignUp } from '@clerk/expo';
+import * as WebBrowser from 'expo-web-browser';
 
 import { SignInScreen } from './sign-in-screen';
 
@@ -56,9 +56,15 @@ const createClerkMocks = () => {
     },
   };
 
-  mockedUseAuth.mockReturnValue({ isLoaded: true } as ReturnType<typeof useAuth>);
-  mockedUseSignIn.mockReturnValue({ signIn } as unknown as ReturnType<typeof useSignIn>);
-  mockedUseSignUp.mockReturnValue({ signUp } as unknown as ReturnType<typeof useSignUp>);
+  mockedUseAuth.mockReturnValue({ isLoaded: true } as ReturnType<
+    typeof useAuth
+  >);
+  mockedUseSignIn.mockReturnValue({ signIn } as unknown as ReturnType<
+    typeof useSignIn
+  >);
+  mockedUseSignUp.mockReturnValue({ signUp } as unknown as ReturnType<
+    typeof useSignUp
+  >);
 
   return { signIn, signUp };
 };
@@ -76,7 +82,10 @@ const reachConsentStep = async (
   });
 
   await act(async () => {
-    fireEvent.changeText(view.getByTestId('auth-identifier-input'), 'new-user@example.invalid');
+    fireEvent.changeText(
+      view.getByTestId('auth-identifier-input'),
+      'new-user@example.invalid',
+    );
   });
   await act(async () => {
     fireEvent.press(view.getByText('Continue'));
@@ -122,7 +131,9 @@ describe('SignInScreen consent step', () => {
   test('checking the box and agreeing calls confirmConsent with legalAccepted and advances to the code step', async () => {
     const { signIn, signUp } = createClerkMocks();
     signUp.create.mockResolvedValueOnce({ error: undefined });
-    signUp.verifications.sendEmailCode.mockResolvedValueOnce({ error: undefined });
+    signUp.verifications.sendEmailCode.mockResolvedValueOnce({
+      error: undefined,
+    });
 
     const view = await renderSignInScreen({ onAuthenticated: jest.fn() });
 
@@ -144,7 +155,13 @@ describe('SignInScreen consent step', () => {
 
   test('tapping the Terms of Service link opens it without toggling the checkbox', async () => {
     const { signIn } = createClerkMocks();
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    // Linking.openURL fails silently from inside this screen's Sheet (a
+    // native Modal) on iOS -- see sign-in-screen.tsx's own WHY comment --
+    // so the real link opens through expo-web-browser's in-app browser
+    // instead, which this test asserts against.
+    const openBrowserAsync = jest
+      .spyOn(WebBrowser, 'openBrowserAsync')
+      .mockResolvedValue({ type: WebBrowser.WebBrowserResultType.DISMISS });
     const view = await renderSignInScreen({ onAuthenticated: jest.fn() });
 
     await reachConsentStep(view, signIn);
@@ -153,12 +170,13 @@ describe('SignInScreen consent step', () => {
       fireEvent.press(view.getByText('Terms of Service'));
     });
 
-    expect(openURL).toHaveBeenCalledWith('https://example.com/terms');
-    expect(view.getByTestId('auth-consent-checkbox').props.accessibilityState.checked).toBe(
-      false,
-    );
+    expect(openBrowserAsync).toHaveBeenCalledWith('https://example.com/terms');
+    expect(
+      view.getByTestId('auth-consent-checkbox').props.accessibilityState
+        .checked,
+    ).toBe(false);
 
-    openURL.mockRestore();
+    openBrowserAsync.mockRestore();
   });
 
   test('Cancel returns to the identifier step without starting sign-up, keeping what was typed', async () => {
