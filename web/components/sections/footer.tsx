@@ -16,7 +16,7 @@ export function Footer() {
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Be first to know</h2>
           <p className="mt-4 text-muted-foreground">
-            <Wordmark className="text-foreground text-lg" /> is live on iOS now — Android is on the way.
+            <Wordmark className="text-foreground text-lg" /> is live on iOS now - Android is on the way.
           </p>
           <Button asChild size="lg" className="mt-6">
             <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">

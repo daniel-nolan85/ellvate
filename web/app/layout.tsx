@@ -18,7 +18,7 @@ const fraunces = Fraunces({
   variable: '--font-fraunces',
 });
 
-const title = `${BRAND.appName} — The ${BRAND.community} neighborhood app`;
+const title = `${BRAND.appName} - The ${BRAND.community} neighborhood app`;
 const description = `${BRAND.appName} brings ${BRAND.community} together in one app: forum discussions, an events calendar, neighborhood missions, a local services directory, a leaderboard, and an AI assistant that knows the community. Coming soon to iOS and Android.`;
 
 export const metadata: Metadata = {

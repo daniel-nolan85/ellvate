@@ -53,7 +53,7 @@ export function WaitlistForm({
 
       markDone(
         data.alreadyJoined ? (
-          "You're already on the list — we'll be in touch."
+          "You're already on the list - we'll be in touch."
         ) : (
           <>
             You&apos;re on the list. We&apos;ll email you the moment <Wordmark className="text-base" /> launches on
