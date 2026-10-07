@@ -133,7 +133,7 @@ export function Nav() {
           })}
         </nav>
         <Button asChild size="sm" className="hidden lg:inline-flex">
-          <a href="#download">Download the app</a>
+          <a href="#top">Download the app</a>
         </Button>
         <button
           type="button"
@@ -167,7 +167,7 @@ export function Nav() {
             })}
           </div>
           <Button asChild size="sm" className="mt-3 w-full">
-            <a href="#download" onClick={() => setMobileOpen(false)}>
+            <a href="#top" onClick={() => setMobileOpen(false)}>
               Download the app
             </a>
           </Button>

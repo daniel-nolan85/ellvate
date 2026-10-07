@@ -37,14 +37,12 @@ export function Hero() {
               community - all in one app.
             </p>
           </FadeIn>
-          <FadeIn delay={0.24} className="mt-8 w-full">
-            <div
-              id="download"
-              className="flex scroll-mt-24 flex-col items-center gap-3 sm:flex-row lg:items-start"
-            >
-              <AppStoreBadge href={BRAND.appStoreUrl} />
-              <GooglePlayBadge href={BRAND.playStoreUrl} />
-            </div>
+          <FadeIn
+            delay={0.24}
+            className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:items-start"
+          >
+            <AppStoreBadge href={BRAND.appStoreUrl} />
+            <GooglePlayBadge href={BRAND.playStoreUrl} />
           </FadeIn>
         </div>
         <FadeIn delay={0.3} className="mx-auto w-full max-w-xs lg:max-w-sm">
