@@ -15,9 +15,8 @@ export const BRAND = {
   // text.
   companyLegalName: 'Nolancode LLC',
   companyUrl: 'https://www.nolancode.com',
-  // Live on iOS as of launch -- Android is still pre-launch, hence the
-  // waitlist form staying up for that platform only (see Hero/Footer).
   appStoreUrl: 'https://apps.apple.com/us/app/ellvate/id6805611205',
+  playStoreUrl: 'https://play.google.com/store/apps/details?id=com.ellvate.app',
 } as const;
 
 export type FeatureAccent = 'accent' | 'amber' | 'lake' | 'palm' | 'plum';
@@ -210,7 +209,7 @@ export const faqs = [
   },
   {
     question: 'What devices will it support?',
-    answer: 'iOS and Android at launch, built as a single native app for both.',
+    answer: 'iOS and Android, built as a single native app for both.',
   },
   {
     question: 'Can I list my own business or service?',

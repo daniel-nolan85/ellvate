@@ -6,7 +6,6 @@ import { Menu, X } from 'lucide-react';
 import { CactusMark } from '@/components/brand/cactus-mark';
 import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
-import { BRAND } from '@/lib/content';
 
 // Directory isn't its own nav link -- it's one of the features, reachable
 // from the Features overview strip (#features) like any other, so listing
@@ -134,9 +133,7 @@ export function Nav() {
           })}
         </nav>
         <Button asChild size="sm" className="hidden lg:inline-flex">
-          <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">
-            Download on iOS
-          </a>
+          <a href="#download">Download the app</a>
         </Button>
         <button
           type="button"
@@ -170,8 +167,8 @@ export function Nav() {
             })}
           </div>
           <Button asChild size="sm" className="mt-3 w-full">
-            <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}>
-              Download on iOS
+            <a href="#download" onClick={() => setMobileOpen(false)}>
+              Download the app
             </a>
           </Button>
         </nav>

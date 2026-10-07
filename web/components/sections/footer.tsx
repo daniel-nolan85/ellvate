@@ -1,31 +1,24 @@
-import { ArrowUpRight } from 'lucide-react';
-
 import { CactusMark } from '@/components/brand/cactus-mark';
 import { NolancodeLogo } from '@/components/brand/nolancode-logo';
 import { Wordmark } from '@/components/brand/wordmark';
 import { CopyrightYear } from '@/components/copyright-year';
 import { Reveal } from '@/components/motion/reveal';
-import { Button } from '@/components/ui/button';
+import { AppStoreBadge, GooglePlayBadge } from '@/components/store-badges';
 import { BRAND } from '@/lib/content';
-import { WaitlistForm } from '@/modules/waitlist';
 
 export function Footer() {
   return (
     <footer className="border-t border-border/60">
       <div className="mx-auto max-w-3xl px-6 py-24 text-center">
         <Reveal>
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Be first to know</h2>
+          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Get the app</h2>
           <p className="mt-4 text-muted-foreground">
-            <Wordmark className="text-foreground text-lg" /> is live on iOS now - Android is on the way.
+            <Wordmark className="text-foreground text-lg" /> is live on iOS and Android.
           </p>
-          <Button asChild size="lg" className="mt-6">
-            <a href={BRAND.appStoreUrl} target="_blank" rel="noopener noreferrer">
-              Download on the App Store
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
-          </Button>
-          <p className="mt-8 text-sm text-muted-foreground">On Android? Join the waitlist below.</p>
-          <WaitlistForm className="mx-auto mt-4 max-w-md" />
+          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <AppStoreBadge href={BRAND.appStoreUrl} />
+            <GooglePlayBadge href={BRAND.playStoreUrl} />
+          </div>
         </Reveal>
       </div>
       <div className="border-t border-white/10 bg-[#080c10]">

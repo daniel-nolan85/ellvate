@@ -4,10 +4,7 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 // Split out of hero.tsx specifically so hero.tsx itself can stay a Server
-// Component -- it imports WaitlistForm through the modules/waitlist barrel,
-// which also re-exports a server-only function (joinWaitlist); barrel
-// imports like that only work from a Server Component. Only this piece
-// needs the client-side scroll tracking.
+// Component -- only this piece needs the client-side scroll tracking.
 export function DesertGlow() {
   const ref = useRef<HTMLDivElement>(null);
   // Tracks scroll only across the hero's own height, so the dune drifts as
