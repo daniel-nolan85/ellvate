@@ -23,6 +23,7 @@ import {
   getEventsViewSupabase,
   getMyEventsViewSupabase,
   listEventsPageSupabase,
+  pickEffectiveFeaturedId,
   reportEventSupabase,
   toggleInterestedSupabase,
   toggleJoinSupabase,
@@ -197,23 +198,27 @@ function listEventsPageMemory(
   const { events, users } = getState();
   const viewer = users.find((user) => user.id === userId);
   const mutedUserIds = new Set(viewer?.mutedUserIds ?? []);
-  const filtered = events
-    .filter((event) => isUpcoming(event.startsAt))
+  const upcoming = events.filter((event) => isUpcoming(event.startsAt));
+  const effectiveFeaturedId = pickEffectiveFeaturedId(
+    upcoming.map((event) => toCommunityEvent(event, userId, users)),
+  );
+  const filtered = upcoming
     .filter((event) => !date || event.startsAt.slice(0, 10) === date)
     .filter((event) => !mutedUserIds.has(event.authorId))
     .map((event) => ({
       event,
       id: event.id,
-      sortKey: `${event.featured ? '1' : '0'}${String(
+      sortKey: `${event.id === effectiveFeaturedId ? '1' : '0'}${String(
         MAX_EVENT_TIMESTAMP - Date.parse(event.startsAt),
       ).padStart(13, '0')}`,
     }));
   const page = paginateInMemory(filtered, limit, cursor);
 
   return {
-    events: page.items.map((item) =>
-      toCommunityEvent(item.event, userId, users),
-    ),
+    events: page.items.map((item) => ({
+      ...toCommunityEvent(item.event, userId, users),
+      featured: item.event.id === effectiveFeaturedId,
+    })),
     nextCursor: page.nextCursor,
   };
 }

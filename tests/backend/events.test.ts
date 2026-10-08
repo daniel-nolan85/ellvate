@@ -621,6 +621,120 @@ describe('listEventsPage', () => {
   });
 });
 
+// A manually-featured event always wins (see the "featured first" test
+// above, which relies on seeded event-1). These cover the fallback that
+// kicks in once nothing is explicitly featured -- e.g. the featured event
+// passed and nobody picked a new one from the admin dashboard -- so the
+// hero slot never just sits empty.
+describe('listEventsPage (auto-featured fallback)', () => {
+  const clearSeedEvents = async () => {
+    await deleteEvent(ctx('user-hoa'), 'event-1');
+    await deleteEvent(ctx('user-mia'), 'event-2');
+    await deleteEvent(ctx('user-andre'), 'event-3');
+    await deleteEvent(ctx('user-jordan'), 'event-4');
+  };
+
+  test('falls back to the highest-demand upcoming event when nothing is explicitly featured', async () => {
+    await clearSeedEvents();
+    const quiet = await createEvent(ctx(), {
+      date: futureDate(10),
+      place: 'Clubhouse',
+      tag: 'Community',
+      time: '10:00',
+      title: 'Quiet morning walk',
+    });
+    const popular = await createEvent(ctx(), {
+      date: futureDate(12),
+      place: 'Water Stage',
+      tag: 'Music',
+      time: '18:00',
+      title: 'Big concert',
+    });
+    expect(quiet.ok && popular.ok).toBe(true);
+    if (!quiet.ok || !popular.ok) {
+      return;
+    }
+
+    await toggleJoin(ctx('user-mia'), popular.event.id);
+    await toggleJoin(ctx('user-andre'), popular.event.id);
+    await toggleJoin(ctx('user-jordan'), quiet.event.id);
+
+    const page = await listEventsPage(ctx(), { limit: 20 });
+    expect(page.events[0]).toMatchObject({
+      id: popular.event.id,
+      featured: true,
+    });
+    expect(
+      page.events.find((event) => event.id === quiet.event.id)?.featured,
+    ).toBe(false);
+  });
+
+  test('ranks by combined going + interested demand, not going alone', async () => {
+    await clearSeedEvents();
+    const moreGoing = await createEvent(ctx(), {
+      date: futureDate(10),
+      place: 'Clubhouse',
+      tag: 'Community',
+      time: '10:00',
+      title: 'Three going, nobody interested',
+    });
+    const moreOverall = await createEvent(ctx(), {
+      date: futureDate(12),
+      place: 'Water Stage',
+      tag: 'Music',
+      time: '18:00',
+      title: 'One going, three interested',
+    });
+    expect(moreGoing.ok && moreOverall.ok).toBe(true);
+    if (!moreGoing.ok || !moreOverall.ok) {
+      return;
+    }
+
+    // moreGoing: going=3, interested=0 -- demand 3.
+    await toggleJoin(ctx('user-mia'), moreGoing.event.id);
+    await toggleJoin(ctx('user-andre'), moreGoing.event.id);
+    await toggleJoin(ctx('user-jordan'), moreGoing.event.id);
+
+    // moreOverall: going=1, interested=3 -- demand 4, higher combined
+    // despite fewer people going.
+    await toggleJoin(ctx('user-priya'), moreOverall.event.id);
+    await toggleInterested(ctx('user-sam'), moreOverall.event.id);
+    await toggleInterested(ctx('user-hoa'), moreOverall.event.id);
+    await toggleInterested(ctx('user-riley'), moreOverall.event.id);
+
+    const page = await listEventsPage(ctx(), { limit: 20 });
+    expect(page.events[0]?.id).toBe(moreOverall.event.id);
+  });
+
+  test('breaks an equal-demand tie by the soonest start date', async () => {
+    await clearSeedEvents();
+    const later = await createEvent(ctx(), {
+      date: futureDate(20),
+      place: 'Clubhouse',
+      tag: 'Community',
+      time: '10:00',
+      title: 'Later, equal demand',
+    });
+    const sooner = await createEvent(ctx(), {
+      date: futureDate(10),
+      place: 'Water Stage',
+      tag: 'Music',
+      time: '18:00',
+      title: 'Sooner, equal demand',
+    });
+    expect(later.ok && sooner.ok).toBe(true);
+    if (!later.ok || !sooner.ok) {
+      return;
+    }
+
+    await toggleJoin(ctx('user-mia'), later.event.id);
+    await toggleJoin(ctx('user-mia'), sooner.event.id);
+
+    const page = await listEventsPage(ctx(), { limit: 20 });
+    expect(page.events[0]?.id).toBe(sooner.event.id);
+  });
+});
+
 describe('GET /api/events/:id', () => {
   test('returns the event when it exists', async () => {
     const response = await getEventRoute(

@@ -327,6 +327,34 @@ const matchesEventDate = (
   date: string | null,
 ): boolean => !date || event.startsAt.slice(0, 10) === date;
 
+// Picks which event gets the hero "Featured" slot on the events list: the
+// admin's explicit choice (events.featured) if it's still upcoming,
+// otherwise a stand-in chosen automatically so the slot doesn't just sit
+// empty because nobody re-picked after the last featured event passed.
+// Ranked by combined going + interested demand, soonest-starting as the
+// tiebreaker. This is a per-request presentation choice only -- never
+// written back to the database, so the admin dashboard's own event list
+// (and every other reader of `featured`, e.g. a single event fetched by id,
+// bookmarks, the digest) keeps showing the honest stored flag. Shared by
+// both backends' listEventsPage since it only needs the common
+// CommunityEvent shape, not either one's raw row type.
+export function pickEffectiveFeaturedId(
+  events: readonly CommunityEvent[],
+): string | null {
+  const explicit = events.find((event) => event.featured);
+  if (explicit) {
+    return explicit.id;
+  }
+  if (events.length === 0) {
+    return null;
+  }
+  const ranked = [...events].sort((a, b) => {
+    const demand = b.going + b.interestedCount - (a.going + a.interestedCount);
+    return demand !== 0 ? demand : Date.parse(a.startsAt) - Date.parse(b.startsAt);
+  });
+  return ranked[0].id;
+}
+
 // The paginated, optionally date-filtered counterpart to
 // getEventsViewSupabase, mirroring getMyEventsViewSupabase's precedent
 // below: fetches the same rows getEventsViewSupabase already does, maps and
@@ -394,16 +422,19 @@ export async function listEventsPageSupabase(
     ]),
   );
 
-  const filtered = eventRows
-    .map((row) =>
-      toCommunityEvent(
-        row,
-        joinedByEvent(row.id),
-        userId,
-        nameById,
-        interestedByEvent(row.id),
-      ),
-    )
+  const mappedEvents = eventRows.map((row) =>
+    toCommunityEvent(
+      row,
+      joinedByEvent(row.id),
+      userId,
+      nameById,
+      interestedByEvent(row.id),
+    ),
+  );
+  const effectiveFeaturedId = pickEffectiveFeaturedId(mappedEvents);
+
+  const filtered = mappedEvents
+    .map((event) => ({ ...event, featured: event.id === effectiveFeaturedId }))
     .filter((event) => matchesEventDate(event, date))
     .map((event) => ({
       event,
