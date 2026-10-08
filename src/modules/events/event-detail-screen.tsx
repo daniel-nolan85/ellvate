@@ -520,9 +520,14 @@ export function EventDetailScreen({
                       className="flex-1"
                       onPress={() => setAttendeesOpen(true)}
                     >
-                      <Text className="text-text-muted underline" size="sm">
+                      <Badge
+                        rightIcon={
+                          <Icon color="rgb(120,108,94)" name="ChevronRight" size={12} />
+                        }
+                        variant="muted"
+                      >
                         {event.going} going
-                      </Text>
+                      </Badge>
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
@@ -577,9 +582,14 @@ export function EventDetailScreen({
                       className="flex-1"
                       onPress={() => setInterestedOpen(true)}
                     >
-                      <Text className="text-text-muted underline" size="sm">
+                      <Badge
+                        rightIcon={
+                          <Icon color="rgb(120,108,94)" name="ChevronRight" size={12} />
+                        }
+                        variant="muted"
+                      >
                         {event.interestedCount} interested
-                      </Text>
+                      </Badge>
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
