@@ -25,6 +25,7 @@ import {
 import { useLoadMoreOnScroll } from '@/src/components/shared/use-load-more-on-scroll';
 import { Avatar } from '@/src/components/ui/avatar';
 import { Badge } from '@/src/components/ui/badge';
+import { Box } from '@/src/components/ui/box';
 import { Divider } from '@/src/components/ui/divider';
 import { Heading } from '@/src/components/ui/heading';
 import { HStack } from '@/src/components/ui/hstack';
@@ -551,6 +552,25 @@ export function EventDetailScreen({
                       unlike going it doesn't bump a shared count or the
                       attendee avatar stack. */}
                   <HStack className="items-center" space="sm">
+                    {/* Invisible, same-markup twin of the going row's avatar
+                        stack above -- not a fixed-width spacer, since the
+                        real stack's width varies with attendee count. This
+                        is the only way to keep "going"/"interested" text
+                        left-aligned with each other at any count. */}
+                    <HStack className="opacity-0" pointerEvents="none">
+                      {event.attendees.map((attendee, index) => (
+                        <Box
+                          className={`rounded-full border-2 border-paper ${index > 0 ? '-ml-[9px]' : ''}`}
+                          key={attendee.id}
+                        >
+                          <Avatar
+                            name={attendee.name}
+                            size="xs"
+                            src={attendee.avatarUrl ?? undefined}
+                          />
+                        </Box>
+                      ))}
+                    </HStack>
                     <Pressable
                       accessibilityLabel={`See everyone interested - ${event.interestedCount} people`}
                       accessibilityRole="button"

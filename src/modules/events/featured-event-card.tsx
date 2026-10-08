@@ -109,7 +109,7 @@ export function FeaturedEventCard({
             ))}
           </HStack>
           <Text className="flex-1 text-[rgba(250,250,250,0.75)]" size="xs">
-            {event.going} going
+            {event.going} going · {event.interestedCount} interested
           </Text>
           <BookmarkButton
             activeColor="rgb(250,250,250)"
