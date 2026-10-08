@@ -195,9 +195,8 @@ export const businessCategories = [
 
 export const faqs = [
   {
-    question: `When does ${BRAND.appName} launch?`,
-    answer:
-      "We're putting the finishing touches on the app now. Join the waitlist and we'll email you the moment it's available.",
+    question: `Is ${BRAND.appName} available yet?`,
+    answer: `Yes - ${BRAND.appName} is live now on iOS and Android. Download it for free and jump right in.`,
   },
   {
     question: 'Is it free to use?',
