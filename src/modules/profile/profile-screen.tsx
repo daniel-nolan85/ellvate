@@ -496,6 +496,11 @@ export function ProfileScreen() {
             label="Weekly Recap"
             onPress={() => router.push('/digest')}
           />
+          <Row
+            icon="Share"
+            label="Spread the Word"
+            onPress={() => router.push('/spread-the-word')}
+          />
         </SectionCard>
 
         {profile.data && profile.data.profile.interests.length > 0 ? (

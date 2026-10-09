@@ -6,6 +6,7 @@ export type { BlockedMember } from './use-block-user';
 export { PointsHistoryScreen } from './points-history-screen';
 export { ProfileAvatarButton } from './profile-avatar-button';
 export { ProfileScreen } from './profile-screen';
+export { SpreadTheWordScreen } from './spread-the-word-screen';
 export { useMemberProfile, useProfile } from './use-profile';
 export { usePointsHistory } from './use-points-history';
 export type {
