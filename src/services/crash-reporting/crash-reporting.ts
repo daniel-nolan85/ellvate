@@ -2,6 +2,8 @@ import * as Sentry from '@sentry/react-native';
 
 import { publicEnvironment } from '@/src/platform/environment';
 
+import { isBenignNetworkInterruption } from './benign-network-interruption';
+
 let initialized = false;
 
 // No-ops when EXPO_PUBLIC_SENTRY_DSN isn't set, which keeps local/demo
@@ -16,6 +18,8 @@ export function initCrashReporting(): void {
   initialized = true;
   try {
     Sentry.init({
+      beforeSend: (event, hint) =>
+        isBenignNetworkInterruption(hint?.originalException) ? null : event,
       dsn: publicEnvironment.sentryDsn,
       environment: __DEV__ ? 'development' : 'production',
       tracesSampleRate: 0,
