@@ -1,6 +1,7 @@
 export {
   handleAssistantChat,
   respondToChat,
+  settleSafely,
 } from './orchestrator';
 export {
   assistantRateLimit,

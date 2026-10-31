@@ -408,6 +408,29 @@ interface FallbackMatch {
   readonly description: string;
 }
 
+// WHY: respondWithLocalSearch is the last line of defense once the
+// Anthropic path itself has already failed over here -- there's no further
+// fallback beyond it, so a transient Supabase hiccup in any ONE of its five
+// concurrent category lookups must not sink the whole reply. A plain
+// Promise.all would propagate that single rejection and turn a "couldn't
+// find petitions right now" into a flat 503 for a question that only asked
+// about events. Treating a failed category as "no results" lets the other
+// four still answer normally; the failure is still logged for visibility.
+export async function settleSafely<T>(
+  promise: Promise<readonly T[]>,
+  label: string,
+): Promise<readonly T[]> {
+  try {
+    return await promise;
+  } catch (error) {
+    console.error(
+      `[assistant] ${label} lookup failed, treating as no results:`,
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+}
+
 async function resolveFallbackMatch<T>(
   tool: AssistantTool,
   contentMatches: readonly T[],
@@ -421,7 +444,7 @@ async function resolveFallbackMatch<T>(
   if (!namedCategories.has(tool)) {
     return null;
   }
-  const browsed = await browse();
+  const browsed = await settleSafely(browse(), tool);
   return browsed.length > 0 ? { description: describe(browsed), tool } : null;
 }
 
@@ -451,11 +474,11 @@ async function respondWithLocalSearch(
   );
 
   const [events, missions, posts, services, petitions] = await Promise.all([
-    searchEvents(ctx, text),
-    searchMissions(ctx, text),
-    searchPosts(ctx, text),
-    searchServices(ctx, text),
-    searchPetitions(ctx, text),
+    settleSafely(searchEvents(ctx, text), 'search_events'),
+    settleSafely(searchMissions(ctx, text), 'search_missions'),
+    settleSafely(searchPosts(ctx, text), 'search_posts'),
+    settleSafely(searchServices(ctx, text), 'search_services'),
+    settleSafely(searchPetitions(ctx, text), 'search_petitions'),
   ]);
 
   const matches = (

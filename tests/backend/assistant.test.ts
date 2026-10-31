@@ -8,6 +8,7 @@ import {
   searchMissions,
   searchPosts,
   searchServices,
+  settleSafely,
 } from '../../src/backend/assistant';
 import { createPost } from '../../src/backend/forum';
 import { memoryContext, resetWriteRateLimits } from '../../src/backend/http';
@@ -168,6 +169,20 @@ describe('local search', () => {
     expect((await searchMissions(ctx, '')).length).toBeLessThanOrEqual(3);
     expect((await searchPosts(ctx, '')).length).toBeLessThanOrEqual(3);
     expect((await searchServices(ctx, '')).length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('settleSafely', () => {
+  test('passes through a resolved value unchanged', async () => {
+    expect(await settleSafely(Promise.resolve(['a', 'b']), 'search_events')).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+
+  test('treats a rejected promise as no results instead of throwing', async () => {
+    const rejected = Promise.reject(new Error('database request failed'));
+    await expect(settleSafely(rejected, 'search_petitions')).resolves.toEqual([]);
   });
 });
 
