@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Share, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Haptics from 'expo-haptics';
@@ -21,7 +21,9 @@ import { categoryAccent } from '@/src/lib/category-accent';
 import { formatRelativeTime } from '@/src/lib/relative-time';
 import { BookmarkButton } from '@/src/modules/bookmarks';
 import { useBlockUser, useOpenProfile, useReportMember } from '@/src/modules/profile';
+import { publicEnvironment } from '@/src/platform/environment';
 import { useSession } from '@/src/platform/session';
+import { shareContent } from '@/src/platform/share-content';
 
 import { PinExplainerModal } from './pin-explainer-modal';
 import { PostComposer } from './post-composer';
@@ -132,8 +134,10 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
   };
 
   const handleShare = () => {
-    void Share.share({
-      message: `${post.title}\n\n${post.excerpt}`,
+    const link = publicEnvironment.marketingUrl ?? 'https://ellvate.com';
+    void shareContent({
+      imageUrl: post.media?.[0]?.url,
+      text: `${post.title}\n\n${post.excerpt}\n\nShared via eLLVate: ${link}`,
     });
   };
 

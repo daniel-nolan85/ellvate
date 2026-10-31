@@ -5,7 +5,6 @@ import {
   Linking,
   Platform,
   Pressable,
-  Share,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,7 +35,9 @@ import {
   useOpenProfile,
   useReportMember,
 } from '@/src/modules/profile';
+import { publicEnvironment } from '@/src/platform/environment';
 import { useSession } from '@/src/platform/session';
+import { shareContent } from '@/src/platform/share-content';
 import { ApiError } from '@/src/services/api';
 
 import { BUSINESS_CATEGORY_LABEL, businessCategoryAccent } from './business-category';
@@ -295,8 +296,10 @@ export function BusinessDetailScreen({
             if (!listing) {
               return;
             }
-            void Share.share({
-              message: `${listing.businessName}\n\n${listing.description}`,
+            const link = publicEnvironment.marketingUrl ?? 'https://ellvate.com';
+            void shareContent({
+              imageUrl: listing.media?.[0]?.url ?? listing.logo?.url,
+              text: `${listing.businessName}\n\n${listing.description}\n\nShared via eLLVate: ${link}`,
             });
           }}
         >

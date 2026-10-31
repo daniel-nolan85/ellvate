@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Share,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,8 +40,10 @@ import {
   useOpenProfile,
   useReportMember,
 } from '@/src/modules/profile';
+import { publicEnvironment } from '@/src/platform/environment';
 import { pickGalleryImages, type PickedImage } from '@/src/platform/media-picker';
 import { useSession } from '@/src/platform/session';
+import { shareContent } from '@/src/platform/share-content';
 import { ApiError } from '@/src/services/api';
 
 import { MissionCheckInThumbnailRow } from './mission-check-in-gallery';
@@ -465,8 +466,10 @@ export function MissionDetailScreen({
             if (!mission) {
               return;
             }
-            void Share.share({
-              message: `${mission.title}\n\n${mission.description}`,
+            const link = publicEnvironment.marketingUrl ?? 'https://ellvate.com';
+            void shareContent({
+              imageUrl: mission.media?.[0]?.url,
+              text: `${mission.title}\n\n${mission.description}\n\nShared via eLLVate: ${link}`,
             });
           }}
         >

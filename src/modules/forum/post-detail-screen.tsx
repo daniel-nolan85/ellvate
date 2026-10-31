@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Share,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
@@ -40,7 +39,9 @@ import {
   useOpenProfile,
   useReportMember,
 } from '@/src/modules/profile';
+import { publicEnvironment } from '@/src/platform/environment';
 import { useSession } from '@/src/platform/session';
+import { shareContent } from '@/src/platform/share-content';
 
 import { PinExplainerModal } from './pin-explainer-modal';
 import { PostComposer } from './post-composer';
@@ -441,7 +442,11 @@ export function PostDetailScreen({
             if (!post) {
               return;
             }
-            void Share.share({ message: `${post.title}\n\n${post.excerpt}` });
+            const link = publicEnvironment.marketingUrl ?? 'https://ellvate.com';
+            void shareContent({
+              imageUrl: post.media?.[0]?.url,
+              text: `${post.title}\n\n${post.excerpt}\n\nShared via eLLVate: ${link}`,
+            });
           }}
         >
           <Icon color="rgb(120,108,94)" name="Share" size={18} />

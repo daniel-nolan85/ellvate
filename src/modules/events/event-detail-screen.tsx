@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,7 +40,9 @@ import {
   useOpenProfile,
   useReportMember,
 } from '@/src/modules/profile';
+import { publicEnvironment } from '@/src/platform/environment';
 import { useSession } from '@/src/platform/session';
+import { shareContent } from '@/src/platform/share-content';
 
 import { EventComposer } from './event-composer';
 import {
@@ -383,8 +384,10 @@ export function EventDetailScreen({
             if (!event) {
               return;
             }
-            void Share.share({
-              message: `${event.title}\n\n${formatDayLabel(event.dayLabel)} ${event.dateLabel} · ${event.timeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}\n${event.place}\n${event.cost ?? 'Free'}`,
+            const link = publicEnvironment.marketingUrl ?? 'https://ellvate.com';
+            void shareContent({
+              imageUrl: event.media?.[0]?.url,
+              text: `${event.title}\n\n${formatDayLabel(event.dayLabel)} ${event.dateLabel} · ${event.timeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ''}\n${event.place}\n${event.cost ?? 'Free'}\n\nShared via eLLVate: ${link}`,
             });
           }}
         >
