@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 
 import { AdminBadge } from '@/src/components/shared/admin-badge';
 import { EditedMark } from '@/src/components/shared/edited-mark';
+import { LikeButton } from '@/src/components/shared/like-button';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import { ReportSheetContent, type ReportSubmission } from '@/src/components/shared/report-sheet';
 import { Avatar } from '@/src/components/ui/avatar';
@@ -318,26 +319,7 @@ export function PostCard({ onOpen, onToggleLike, pinAction, post }: PostCardProp
         </VStack>
       </Pressable>
       <HStack className='items-center' space='sm'>
-        <Pressable
-          className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
-            post.liked ? 'bg-amber-subtle' : 'bg-secondary'
-          }`}
-          onPress={handleLike}
-        >
-          <Icon
-            color={post.liked ? COLOR_AMBER : COLOR_CONTENT}
-            fill={post.liked ? COLOR_AMBER : 'none'}
-            name='Favourite'
-            size={14}
-          />
-          <Text
-            className={`font-inter-semibold text-[12px] leading-[16px] ${
-              post.liked ? 'text-amber' : 'text-content'
-            }`}
-          >
-            {post.likes}
-          </Text>
-        </Pressable>
+        <LikeButton likes={post.likes} liked={post.liked} onPress={handleLike} />
         <Pressable
           accessibilityLabel='Open comments'
           accessibilityRole='button'

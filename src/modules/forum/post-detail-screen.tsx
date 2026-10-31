@@ -16,6 +16,7 @@ import { AllCaughtUp } from '@/src/components/shared/all-caught-up';
 import { CommentComposer } from '@/src/components/shared/comment-composer';
 import { CommentItem } from '@/src/components/shared/comment-item';
 import { EditedMark } from '@/src/components/shared/edited-mark';
+import { LikeButton } from '@/src/components/shared/like-button';
 import { MediaGallery } from '@/src/components/shared/media-gallery';
 import {
   ReportSheetContent,
@@ -570,28 +571,13 @@ export function PostDetailScreen({
                     </Text>
                   ) : null}
                   <HStack className="items-center" space="sm">
-                    <Pressable
-                      className={`flex-row items-center gap-1.5 rounded-full px-3 py-[7px] ${
-                        post.liked ? 'bg-amber-subtle' : 'bg-secondary'
-                      }`}
+                    <LikeButton
+                      likes={post.likes}
+                      liked={post.liked}
                       onPress={() =>
                         toggleLike.mutate({ forum: 'All', postId: post.id })
                       }
-                    >
-                      <Icon
-                        color={post.liked ? 'rgb(217,123,41)' : 'rgb(37,30,23)'}
-                        fill={post.liked ? 'rgb(217,123,41)' : 'none'}
-                        name="Favourite"
-                        size={14}
-                      />
-                      <Text
-                        className={`font-inter-semibold text-[12px] leading-[16px] ${
-                          post.liked ? 'text-amber' : 'text-content'
-                        }`}
-                      >
-                        {post.likes}
-                      </Text>
-                    </Pressable>
+                    />
                     <HStack className="flex-row items-center gap-1.5 rounded-full bg-secondary px-3 py-[7px]">
                       <Icon
                         color="rgb(37,30,23)"
